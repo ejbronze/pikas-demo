@@ -18,9 +18,11 @@ Todo importe es entero en moneda menor. `wallet_balances` deriva el saldo de ent
 
 Cada mutación financiera requiere `idempotency_key`, actor y timestamp. Una evolución de producción añadirá doble entrada, tabla append-only de auditoría, conciliación diaria con procesador, referencias externas, trabajos de discrepancia y estados de refund. Los webhooks verificarán firma y reutilizarán claves idempotentes.
 
+El checkout POS utiliza `purchases` y `purchase_items` como instantánea operativa y `wallet_ledger_entries` como fuente contable. `complete_pos_purchase` vuelve a obtener precios y controles bajo una transacción, bloquea estudiante/wallet, rechaza restricciones y crea el débito, la compra y sus artículos de forma atómica. La unicidad de `idempotency_key` protege los reintentos. Triggers impiden editar o borrar compras y asientos completados; un reverso futuro deberá ser compensatorio.
+
 ## Demo y producción
 
-El demo se activa solo con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` y persiste datos ficticios en el navegador para evaluar flujos compartidos. La aplicación no debe caer silenciosamente a demo en producción. Sin URL/anon key, el cliente server Supabase falla con un mensaje de configuración.
+El demo se activa solo con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` y persiste datos ficticios en el navegador para evaluar flujos compartidos. POS aplica una transición indivisible sobre el mismo estado usado por Familia y Estudiante. Es una garantía de demostración de un solo navegador, no una transacción multiusuario. La aplicación no cae silenciosamente a demo en producción: `/pos` muestra configuración requerida hasta enlazar las acciones Supabase. Sin URL/anon key, el cliente server Supabase falla con un mensaje de configuración.
 
 ## Privacidad estudiantil
 
@@ -28,4 +30,4 @@ Recolectar el mínimo necesario, limitar lecturas por escuela/familia, evitar ID
 
 ## Próximas capas
 
-POS consumirá un token QR opaco y solo recibirá nombre preferido, foto, elegibilidad y resultado de compra. Administración usará permisos por escuela y auditoría. Pagos futuros se aislarán tras un proveedor tokenizado; PIKAS nunca almacenará números de tarjeta.
+POS todavía necesita un token QR opaco, binding de la UI con las interfaces Supabase, revalidación de vistas y pruebas reales de RLS/concurrencia. Administración usará permisos por escuela y auditoría para reversos futuros. Pagos futuros se aislarán tras un proveedor tokenizado; PIKAS nunca almacenará números de tarjeta.

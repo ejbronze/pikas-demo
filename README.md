@@ -2,6 +2,41 @@
 
 PIKAS es una aplicación escolar unificada para familias, estudiantes y personal de cafetería. Comparte perfiles, controles, movimientos, preórdenes y presupuestos en un único Next.js App Router. Administración tiene un punto de entrada preparado para una fase posterior.
 
+## Aplicación en vivo
+
+**URL:** [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app)
+
+- **Estado:** despliegue de producción de Vercel `Ready`; página principal y accesos de Familia, Estudiante y Cafetería verificados en navegador el **11 de agosto de 2026**.
+- **Modalidad:** demo pública con datos ficticios y persistencia local por navegador. No conecta con un proyecto Supabase ni procesa dinero real.
+- **Versión desplegada:** todavía muestra el prototipo POS estático. El milestone POS funcional descrito abajo está implementado solo en este checkout hasta que se publique una nueva versión.
+- **Limitaciones importantes:** las credenciales demo seleccionan un rol pero no se comparan con cuentas reales. Administración no tiene acceso demo público.
+
+## Acceso de demostración
+
+| Rol | Identificador | Credencial | Destino | Disponibilidad y alcance |
+| --- | --- | --- | --- | --- |
+| Familia | `familia@demo.pikas.do` | `pikas-demo` | `/familias` | Disponible en el despliegue y en local con demo mode. Acceso verificado el 11-08-2026. |
+| Estudiante | `PK-10982` | PIN `pikas-demo` | `/estudiante` | Disponible en el despliegue y en local con demo mode. Muestra la experiencia ficticia de Sofi. |
+| Cafetería/POS | `cafeteria@demo.pikas.do` | `pikas-demo` | `/pos` | Local: compra demo funcional y persistente. Despliegue actual: prototipo estático hasta una nueva publicación. |
+| Administración | No disponible | No disponible | `/admin` | Sin acceso demo público; la ruta es un placeholder de una fase futura. |
+
+Estas combinaciones son los atajos publicados para evaluación. En demo mode, el manejador comprueba únicamente el formato mínimo y el rol enviado: **no verifica que el identificador o la contraseña coincidan con una cuenta**. No uses este comportamiento como evidencia de autenticación, ni reutilices contraseñas reales.
+
+### Códigos estudiantiles de demostración
+
+| Estudiante ficticio | Código | PIN | Escuela | Uso real en el demo | Estado verificado |
+| --- | --- | --- | --- | --- | --- |
+| Sofía “Sofi” Rosa | `PK-10982` | `pikas-demo` en el acceso estudiantil publicado | Instituto Nueva Generación | Local: acceso estudiantil y POS funcional; puede comprar Pasta con pollo. Despliegue actual: acceso estudiantil y respuesta POS estática. | Código POS local exacto, activo y verificado. |
+| Mateo Rosa | `PK-11804` | No provisionado para login | Instituto Nueva Generación | Local: código POS funcional y registro familiar. Despliegue actual: no realiza una verificación real. | Código POS local exacto; no es una cuenta estudiantil. |
+
+`packages/data-access/src/mock-data.ts` conserva fixtures anteriores con los códigos sin prefijo `10982`, `11804` y `118204` (Valentina). No alimentan el acceso ni el POS de la aplicación unificada desplegada y **no son credenciales reutilizables**.
+
+## Estado de Cafetería/POS
+
+En local demo, `/pos` exige un código ficticio exacto y activo, muestra únicamente identidad y controles necesarios, comparte el catálogo con Estudiante y permite carrito, cantidades, confirmación y compra. Usa importes enteros en centavos, valida saldo, límites, disponibilidad, alergias y bloqueos, conserva precios y evita duplicados mediante una clave idempotente. La compra y el movimiento se guardan juntos; saldo, disponible diario e historial se actualizan en POS, Estudiante y Familia y sobreviven una recarga en el mismo navegador.
+
+La migración `202608110003_pos_purchases.sql` añade el modelo y RPC atómico para Supabase. No se aplicó a un proyecto vivo y la interfaz de producción permanece bloqueada explícitamente hasta conectar las acciones Supabase; nunca cae silenciosamente a fixtures. Siguen pendientes QR, búsqueda por nombre, reversos autorizados y verificación real de producción. Consulta [Línea base del producto](docs/PRODUCT_BASELINE.md) y [Catálogo de funcionalidades](docs/FEATURE_CATALOG.md).
+
 ## Stack y arquitectura
 
 - Next.js 16, React 19, TypeScript estricto y Tailwind CSS.
@@ -30,13 +65,7 @@ Para probar el producto sin Supabase, confirma que `.env.local` contenga:
 NEXT_PUBLIC_PIKAS_DEMO_MODE=true
 ```
 
-Credenciales demo mostradas en `/login`:
-
-- Familia: `familia@demo.pikas.do` / `pikas-demo`
-- Estudiante: `PK-10982` / `pikas-demo`
-- Cafetería: `cafeteria@demo.pikas.do` / `pikas-demo`
-
-No son cuentas reales y no se deben reutilizar como contraseñas. El modo demo no recoge tarjetas ni mueve dinero.
+Las credenciales de evaluación están en [Acceso de demostración](#acceso-de-demostración). No son cuentas reales. El modo demo no recoge tarjetas ni mueve dinero.
 
 ## Guía de evaluación del producto
 
@@ -54,6 +83,8 @@ Para reiniciar completamente los datos demo, abre las herramientas del navegador
 localStorage.removeItem("pikas:unified-demo:v2");
 location.reload();
 ```
+
+El estado guardado por versiones anteriores recibe el catálogo y el historial POS sin perder cambios familiares. Para repetir el checkout desde la línea base exacta, limpia el almacenamiento antes del recorrido.
 
 ### Recorrido recomendado: Familia
 
@@ -78,11 +109,12 @@ location.reload();
 ### Recorrido recomendado: Cafetería
 
 1. Inicia sesión con la cuenta de Cafetería añadida por Oscar.
-2. Introduce `PK-10982` en `/pos` y comprueba la elegibilidad.
-3. Confirma que el rol solo muestra la información mínima necesaria.
-4. Intenta abrir `/familias` o `/estudiante` directamente. Debe regresar a `/pos` con un aviso de falta de permiso.
-
-El resultado de elegibilidad del POS todavía es demostrativo: no completa una venta ni escribe en el ledger de producción.
+2. Prueba `PK-00000`: debe aparecer un error sin datos estudiantiles.
+3. Introduce `PK-10982`; confirma Sofi, saldo, límites, alergias y bloqueos.
+4. Confirma que Pizza escolar y Bebidas energéticas no se pueden añadir. Añade Pasta con pollo.
+5. Revisa el total, confirma la compra y abre su detalle en Historial POS.
+6. Sal y entra como Estudiante y Familia; el mismo movimiento y saldo reducido deben aparecer después de refrescar.
+7. Intenta abrir `/familias` o `/estudiante` con la sesión POS. Debe regresar a `/pos` con un aviso de falta de permiso.
 
 ### Comportamientos de seguridad esperados
 
@@ -105,6 +137,8 @@ supabase db reset      # aplica migrations + seed.sql
 Configura `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Reserva `SUPABASE_SERVICE_ROLE_KEY` para procesos estrictamente del servidor; nunca uses ni expongas esa clave en componentes cliente. Crea los usuarios Auth de desarrollo de forma local y enlaza sus UUID con `profiles`; las contraseñas no se guardan en el repositorio.
 
 La migración `supabase/migrations/202608110001_unified_pikas.sql` crea el modelo, RLS, la vista de saldos y un RPC transaccional e idempotente de preórdenes. `202608110002_auth_storage_hardening.sql` restringe las columnas editables del perfil y configura el bucket privado de avatares.
+
+`202608110003_pos_purchases.sql` añade `purchases`, `purchase_items`, políticas de lectura por alcance, protección de registros completados y `complete_pos_purchase`. El RPC vuelve a consultar precios y reglas, bloquea estudiante/wallet, crea débito y compra en una transacción y reutiliza la compra ante la misma clave idempotente. `seed.sql` incluye dos estudiantes ficticios, wallets, controles, ledger, alergias, bloqueos y artículos disponibles/no disponibles. Los usuarios Auth se crean fuera del repositorio y se vinculan a perfiles; el seed no contiene contraseñas.
 
 En producción, el código estudiantil se resuelve exclusivamente en servidor y la credencial se valida mediante Supabase Auth, que almacena el hash y aplica sus controles de autenticación. El demo actual usa una cookie `httpOnly` de rol y está claramente aislado.
 
@@ -132,12 +166,14 @@ Públicas: `/`, `/login`, `/forgot-password`, `/actualizar-contrasena`. Familias
 
 Crea un único proyecto Vercel con raíz del repositorio y comando `npm run build`. Configura las variables de Supabase para Preview y Production, deja demo mode desactivado, aplica migraciones antes de promover y valida las políticas con usuarios de cada rol.
 
+El despliegue público enlazado arriba es deliberadamente una demo sin Supabase. Esta configuración es adecuada para evaluación del prototipo, no para lanzamiento con datos reales.
+
 ## Limitaciones actuales
 
 - Sin credenciales Supabase en este checkout, la evaluación local usa persistencia aislada en `localStorage`; la integración y el esquema de producción están preparados, pero los formularios todavía deben conectarse al adaptador Supabase antes de lanzar.
 - El QR es un marcador demo; producción necesita tokens opacos, firmados y de corta vida.
 - El código de Storage privado, recuperación de contraseña y sesiones Supabase está implementado, pero necesita un proyecto Supabase configurado para probarse de extremo a extremo.
 - Los seis recorridos Playwright locales cubren Familia, Estudiante y Cafetería en escritorio y móvil; no sustituyen las futuras pruebas contra Supabase real ni una auditoría de accesibilidad completa.
-- El usuario de Cafetería incorporado por Oscar puede iniciar sesión con el rol `pos` y acceder a una validación limitada de estudiantes. La finalización contable de compras sigue fuera de esta fase. Administración continúa como placeholder. No hay pagos, liquidación, transferencias reales ni integración SIS.
+- El POS funcional de este checkout utiliza el adaptador demo del navegador. La ruta de producción rechaza usar fixtures hasta aplicar migraciones, provisionar perfiles Auth y conectar las acciones Supabase definidas. Administración continúa como placeholder. No hay pagos, liquidación, transferencias reales ni integración SIS.
 
-Consulta [Arquitectura](docs/ARCHITECTURE.md) para decisiones de seguridad, privacidad y evolución.
+Consulta [Arquitectura](docs/ARCHITECTURE.md), [Línea base del producto](docs/PRODUCT_BASELINE.md), [Catálogo de funcionalidades](docs/FEATURE_CATALOG.md) y [Registro de cambios del producto](docs/CHANGELOG_PRODUCT.md) para decisiones, alcance y evolución.
