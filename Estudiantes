@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pikas | App del Estudiante</title>
+  <style>
+    :root{
+      --primary:#5b3df5;
+      --primary2:#7a5cff;
+      --bg:#f4f6fb;
+      --card:#ffffff;
+      --ink:#1a2340;
+      --muted:#73809a;
+      --line:#e8ecf5;
+      --success:#12a871;
+      --danger:#e14d5a;
+      --warning:#f5a524;
+      --shadow:0 18px 44px rgba(37,49,88,.10);
+      --radius:24px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:linear-gradient(180deg,#eef2ff 0%, #f7f9fd 26%, #f4f6fb 100%);
+      color:var(--ink);
+    }
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .phone-shell{
+      width:min(430px,100%);
+      min-height:100vh;
+      margin:0 auto;
+      background:var(--bg);
+      position:relative;
+      box-shadow:0 0 0 1px rgba(255,255,255,.5);
+    }
+    .top{
+      padding:20px 18px 8px;
+    }
+    .status{
+      display:flex;justify-content:space-between;align-items:center;
+      font-size:12px;color:var(--muted);margin-bottom:12px
+    }
+    .brand-row{
+      display:flex;align-items:center;justify-content:space-between;margin-bottom:16px
+    }
+    .brand{
+      display:flex;align-items:center;gap:12px
+    }
+    .brand-badge{
+      width:44px;height:44px;border-radius:16px;
+      background:linear-gradient(135deg,var(--primary),var(--primary2));
+      color:#fff;display:grid;place-items:center;font-weight:900;font-size:18px;
+      box-shadow:0 10px 24px rgba(91,61,245,.25)
+    }
+    .brand strong{display:block;font-size:18px}
+    .brand small{color:var(--muted)}
+    .ghost-btn{
+      border:0;background:#fff;width:42px;height:42px;border-radius:14px;box-shadow:var(--shadow)
+    }
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .hero-wallet{
+      margin:0 18px;
+      padding:20px;
+      color:#fff;
+      background:linear-gradient(135deg,#3820c8 0%, #5b3df5 48%, #7a5cff 100%);
+      position:relative;overflow:hidden
+    }
+    .hero-wallet:before,.hero-wallet:after{
+      content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.09)
+    }
+    .hero-wallet:before{width:180px;height:180px;right:-65px;top:-60px}
+    .hero-wallet:after{width:120px;height:120px;left:-30px;bottom:-55px}
+    .hero-wallet small{opacity:.8}
+    .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:relative;z-index:1}
+    .hero-top .mini-chip{
+      border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
+      padding:8px 10px;border-radius:999px;font-size:12px;font-weight:700
+    }
+    .balance{
+      font-size:40px;font-weight:900;letter-spacing:-1px;margin:6px 0 16px;position:relative;z-index:1
+    }
+    .hero-meta{
+      display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative;z-index:1
+    }
+    .meta{
+      background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;padding:11px 12px
+    }
+    .meta span{display:block;font-size:11px;opacity:.8;margin-bottom:4px}
+    .meta strong{font-size:14px}
+    .section{
+      padding:18px;
+    }
+    .section-head{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:14px
+    }
+    .section-head h2{
+      margin:0;font-size:18px
+    }
+    .section-head a{
+      text-decoration:none;color:var(--primary);font-size:13px;font-weight:800
+    }
+    .student-id{
+      padding:16px;
+      display:grid;
+      grid-template-columns:1fr 92px;
+      gap:14px;
+      align-items:center;
+    }
+    .student-id .name{font-size:20px;font-weight:900;margin-bottom:3px}
+    .student-id .school{font-size:12px;color:var(--muted);margin-bottom:12px}
+    .id-tags{display:flex;flex-wrap:wrap;gap:8px}
+    .pill{
+      padding:7px 10px;border-radius:999px;background:#f1efff;color:var(--primary);
+      font-size:11px;font-weight:800
+    }
+    .qr{
+      width:92px;height:92px;border-radius:18px;background:
+      linear-gradient(90deg,#000 10%,transparent 10%) 0 0/12px 12px,
+      linear-gradient(#000 10%,transparent 10%) 0 0/12px 12px,
+      #fff;
+      border:8px solid #fff;
+      box-shadow:inset 0 0 0 1px var(--line), 0 10px 24px rgba(0,0,0,.08)
+    }
+    .quick-grid{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:10px
+    }
+    .quick{
+      border:0;background:#fff;border-radius:18px;padding:14px 6px;
+      box-shadow:var(--shadow);text-align:center
+    }
+    .quick .ico{font-size:22px;margin-bottom:8px}
+    .quick span{display:block;font-size:11px;font-weight:800;line-height:1.2}
+    .menu-list,.list{
+      display:flex;flex-direction:column;gap:12px
+    }
+    .item{
+      background:#fff;border-radius:20px;padding:14px;box-shadow:var(--shadow)
+    }
+    .row{
+      display:flex;align-items:center;gap:12px
+    }
+    .thumb{
+      width:54px;height:54px;border-radius:16px;display:grid;place-items:center;
+      font-size:26px;flex:0 0 auto
+    }
+    .thumb.food1{background:linear-gradient(135deg,#ffefc3,#ffc46b)}
+    .thumb.food2{background:linear-gradient(135deg,#d5f8d7,#66d69c)}
+    .thumb.food3{background:linear-gradient(135deg,#ffd7d7,#ff9d9d)}
+    .thumb.cine{background:linear-gradient(135deg,#ddd7ff,#a290ff)}
+    .thumb.wallet{background:linear-gradient(135deg,#d4e7ff,#8ebcff)}
+    .item strong{display:block;font-size:15px}
+    .item small{color:var(--muted)}
+    .price{
+      margin-left:auto;font-weight:900
+    }
+    .action-btn,.action-btn-light{
+      border:0;border-radius:14px;padding:10px 12px;font-weight:800
+    }
+    .action-btn{background:var(--primary);color:#fff}
+    .action-btn-light{background:#f1efff;color:var(--primary)}
+    .item-bottom{
+      margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px
+    }
+    .cards{
+      display:flex;gap:12px;overflow:auto;padding-bottom:2px
+    }
+    .bank-card{
+      min-width:220px;border-radius:22px;padding:16px;color:#fff;
+      background:linear-gradient(135deg,#20305e,#4561a5 55%, #5d80d8);
+      box-shadow:var(--shadow)
+    }
+    .bank-card.alt{
+      background:linear-gradient(135deg,#0f7258,#14a37d 55%, #37c396);
+    }
+    .bank-card small{opacity:.8}
+    .bank-card .number{margin:18px 0 12px;font-size:18px;font-weight:900;letter-spacing:1px}
+    .subcard{
+      background:#fff;border-radius:20px;padding:14px;box-shadow:var(--shadow)
+    }
+    .subcard h3{margin:0 0 6px;font-size:16px}
+    .subcard p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .budget-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:12px
+    }
+    .budget{
+      background:#fff;border-radius:20px;padding:14px;box-shadow:var(--shadow)
+    }
+    .budget .kpi{font-size:24px;font-weight:900;margin:6px 0}
+    .budget .bar{height:10px;background:#eceff6;border-radius:99px;overflow:hidden;margin-top:10px}
+    .budget .bar div{height:100%;border-radius:inherit}
+    .tx{
+      display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:12px;box-shadow:var(--shadow)
+    }
+    .tx .amt{margin-left:auto;font-weight:900}
+    .tx .amt.negative{color:var(--danger)}
+    .tx .amt.positive{color:var(--success)}
+    .bottom-space{height:110px}
+    .nav{
+      position:fixed;left:50%;transform:translateX(-50%);
+      bottom:0;width:min(430px,100%);
+      background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
+      border-top:1px solid var(--line);padding:10px 12px 14px;z-index:40
+    }
+    .nav-grid{
+      display:grid;grid-template-columns:repeat(5,1fr);gap:6px
+    }
+    .nav-btn{
+      border:0;background:transparent;padding:8px 4px;border-radius:16px;color:var(--muted)
+    }
+    .nav-btn.active{background:#f1efff;color:var(--primary)}
+    .nav-btn .nicon{display:block;font-size:20px;margin-bottom:4px}
+    .nav-btn span:last-child{font-size:11px;font-weight:800}
+    .page{display:none}
+    .page.active{display:block}
+    .modal{
+      position:fixed;inset:0;background:rgba(16,24,44,.48);display:none;
+      align-items:flex-end;justify-content:center;z-index:60
+    }
+    .modal.open{display:flex}
+    .sheet{
+      width:min(430px,100%);background:#fff;border-radius:26px 26px 0 0;padding:16px 18px 26px;
+      max-height:88vh;overflow:auto;box-shadow:0 -20px 50px rgba(0,0,0,.18)
+    }
+    .grabber{
+      width:44px;height:5px;border-radius:99px;background:#d7deeb;margin:0 auto 14px
+    }
+    .sheet-head{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:16px
+    }
+    .sheet-head h3{margin:0}
+    .close{
+      border:0;background:#f2f4f8;border-radius:12px;width:38px;height:38px
+    }
+    .option-grid{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0
+    }
+    .option{
+      border:1px solid var(--line);background:#fff;border-radius:16px;padding:14px 8px;font-weight:900
+    }
+    .option.selected{border-color:var(--primary);background:#f3f0ff;color:var(--primary)}
+    .label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .input{
+      width:100%;border:1px solid var(--line);border-radius:14px;padding:13px 12px;margin-bottom:14px
+    }
+    .full-btn{
+      width:100%;border:0;background:var(--primary);color:#fff;padding:14px;border-radius:16px;font-weight:900
+    }
+    .toast{
+      position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
+      bottom:100px;background:#1f2845;color:#fff;padding:12px 16px;border-radius:14px;
+      box-shadow:0 14px 38px rgba(0,0,0,.22);opacity:0;transition:.28s;z-index:80;
+      width:calc(min(430px,100%) - 36px);text-align:center
+    }
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  </style>
+</head>
+<body>
+  <div class="phone-shell">
+    <div class="top">
+      <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+      <div class="brand-row">
+        <div class="brand">
+          <div class="brand-badge">P</div>
+          <div>
+            <strong>Pikas</strong>
+            <small>Wallet escolar y digital</small>
+          </div>
+        </div>
+        <button class="ghost-btn">🔔</button>
+      </div>
+    </div>
+
+    <section class="page active" id="home">
+      <div class="hero-wallet card">
+        <div class="hero-top">
+          <div>
+            <small>Saldo disponible</small>
+            <div class="balance" id="balance">RD$ 1,850</div>
+          </div>
+          <div class="mini-chip">Estudiante activo</div>
+        </div>
+        <div class="hero-meta">
+          <div class="meta">
+            <span>Disponible hoy</span>
+            <strong>RD$ 250</strong>
+          </div>
+          <div class="meta">
+            <span>Última recarga</span>
+            <strong>RD$ 500 · hoy</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>Mi identificación</h2>
+          <a href="#" onclick="notify('QR listo para escanear');return false">Mostrar QR</a>
+        </div>
+        <div class="student-id card">
+          <div>
+            <div class="name">Valentina Gómez</div>
+            <div class="school">Instituto Nueva Generación · 3.º B</div>
+            <div class="id-tags">
+              <span class="pill">ID 118204</span>
+              <span class="pill">Cafetería activa</span>
+              <span class="pill">Entrada colegio</span>
+            </div>
+          </div>
+          <div class="qr" title="Código QR"></div>
+        </div>
+      </div>
+
+      <div class="section" style="padding-top:0">
+        <div class="section-head">
+          <h2>Acciones rápidas</h2>
+        </div>
+        <div class="quick-grid">
+          <button class="quick" onclick="openSheet('recharge')"><div class="ico">💳</div><span>Recargar</span></button>
+          <button class="quick" onclick="openSheet('send')"><div class="ico">↗</div><span>Enviar saldo</span></button>
+          <button class="quick" onclick="goPage('school')"><div class="ico">🍽️</div><span>Menú</span></button>
+          <button class="quick" onclick="goPage('wallet')"><div class="ico">🎟️</div><span>Gastos</span></button>
+        </div>
+      </div>
+
+      <div class="section" style="padding-top:0">
+        <div class="section-head">
+          <h2>Movimientos recientes</h2>
+          <a href="#" onclick="goPage('activity');return false">Ver todo</a>
+        </div>
+        <div class="list">
+          <div class="tx"><div class="thumb wallet">🥪</div><div><strong>Sándwich + jugo</strong><small>Cafetería escolar · hoy 10:15 a. m.</small></div><div class="amt negative">- RD$ 140</div></div>
+          <div class="tx"><div class="thumb wallet">🎬</div><div><strong>Reserva cine</strong><small>Plan personal · ayer 6:30 p. m.</small></div><div class="amt negative">- RD$ 300</div></div>
+          <div class="tx"><div class="thumb wallet">💰</div><div><strong>Recarga recibida</strong><small>Mamá · hoy 7:45 a. m.</small></div><div class="amt positive">+ RD$ 500</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="school">
+      <div class="section">
+        <div class="section-head">
+          <h2>Colegio</h2>
+          <a href="#" onclick="notify('Vista semanal del menú');return false">Semana</a>
+        </div>
+        <div class="menu-list">
+          <div class="item">
+            <div class="row">
+              <div class="thumb food1">🍝</div>
+              <div><strong>Pasta con pollo</strong><small>Jueves · Almuerzo · disponible</small></div>
+              <div class="price">RD$ 180</div>
+            </div>
+            <div class="item-bottom">
+              <small style="color:var(--muted)">Sin maní · Apta para preorden</small>
+              <button class="action-btn" onclick="notify('Preorden realizada')">Preordenar</button>
+            </div>
+          </div>
+          <div class="item">
+            <div class="row">
+              <div class="thumb food2">🥪</div>
+              <div><strong>Sándwich integral</strong><small>Viernes · Recreo · disponible</small></div>
+              <div class="price">RD$ 120</div>
+            </div>
+            <div class="item-bottom">
+              <small style="color:var(--muted)">Bajo en azúcar</small>
+              <button class="action-btn" onclick="notify('Preorden realizada')">Preordenar</button>
+            </div>
+          </div>
+          <div class="item">
+            <div class="row">
+              <div class="thumb food3">🍕</div>
+              <div><strong>Pizza escolar</strong><small>Viernes · Almuerzo · disponible</small></div>
+              <div class="price">RD$ 150</div>
+            </div>
+            <div class="item-bottom">
+              <small style="color:var(--muted)">Contiene lactosa</small>
+              <button class="action-btn-light" onclick="notify('Producto marcado con alerta alimenticia')">Ver alerta</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-head" style="margin-top:18px">
+          <h2>Órdenes programadas</h2>
+        </div>
+        <div class="subcard">
+          <h3>Jueves · 12:30 p. m.</h3>
+          <p>Pasta con pollo ya apartada. Se entregará al presentar el código del estudiante en la cafetería.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="wallet">
+      <div class="section">
+        <div class="section-head">
+          <h2>Mi wallet</h2>
+          <a href="#" onclick="notify('Módulo futuro de billetera digital');return false">Futuro</a>
+        </div>
+
+        <div class="cards">
+          <div class="bank-card">
+            <small>Tarjeta vinculada</small>
+            <div class="number">•••• 4242</div>
+            <div style="display:flex;justify-content:space-between"><span style="font-size:12px;opacity:.85">Visa personal</span><strong style="font-size:13px">Solo consulta</strong></div>
+          </div>
+          <div class="bank-card alt">
+            <small>Tarjeta vinculada</small>
+            <div class="number">•••• 1188</div>
+            <div style="display:flex;justify-content:space-between"><span style="font-size:12px;opacity:.85">Mastercard familiar</span><strong style="font-size:13px">Control de gastos</strong></div>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="budget-grid">
+          <div class="budget">
+            <small style="color:var(--muted)">Presupuesto cine</small>
+            <div class="kpi">RD$ 600</div>
+            <small>Usado: RD$ 300 de RD$ 600</small>
+            <div class="bar"><div style="width:50%;background:linear-gradient(90deg,#7a5cff,#b19bff)"></div></div>
+          </div>
+          <div class="budget">
+            <small style="color:var(--muted)">Gasto escolar</small>
+            <div class="kpi">RD$ 980</div>
+            <small>Este mes en comida y recreos</small>
+            <div class="bar"><div style="width:70%;background:linear-gradient(90deg,#2ea6ff,#7dc5ff)"></div></div>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="item">
+          <div class="row">
+            <div class="thumb cine">🎬</div>
+            <div>
+              <strong>Plan para cine</strong>
+              <small>Define cuánto dinero quieres reservar para entretenimiento.</small>
+            </div>
+          </div>
+          <div class="item-bottom">
+            <small style="color:var(--muted)">Incluye boletos, combos y transporte.</small>
+            <button class="action-btn-light" onclick="openSheet('budget')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="item" style="margin-top:12px">
+          <div class="row">
+            <div class="thumb wallet">🪪</div>
+            <div>
+              <strong>Visión futura de Pikas</strong>
+              <small>Una sola app para colegio, compras diarias, control de gastos y envío de dinero.</small>
+            </div>
+          </div>
+          <div class="item-bottom">
+            <small style="color:var(--muted)">La tarjeta se puede consultar, aunque el crédito no lo maneje el estudiante.</small>
+            <button class="action-btn" onclick="notify('Roadmap de wallet guardado')">Entendido</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="activity">
+      <div class="section">
+        <div class="section-head">
+          <h2>Actividad</h2>
+          <a href="#" onclick="notify('Filtros próximamente');return false">Filtrar</a>
+        </div>
+        <div class="list">
+          <div class="tx"><div class="thumb wallet">💰</div><div><strong>Recarga recibida</strong><small>Mamá · hoy 7:45 a. m.</small></div><div class="amt positive">+ RD$ 500</div></div>
+          <div class="tx"><div class="thumb wallet">🥪</div><div><strong>Sándwich + jugo</strong><small>Cafetería escolar · hoy 10:15 a. m.</small></div><div class="amt negative">- RD$ 140</div></div>
+          <div class="tx"><div class="thumb wallet">👫</div><div><strong>Saldo enviado a Diego P.</strong><small>Transferencia entre estudiantes · ayer</small></div><div class="amt negative">- RD$ 80</div></div>
+          <div class="tx"><div class="thumb wallet">🎬</div><div><strong>Reserva cine</strong><small>Entretenimiento · ayer 6:30 p. m.</small></div><div class="amt negative">- RD$ 300</div></div>
+          <div class="tx"><div class="thumb wallet">🍛</div><div><strong>Menú del día</strong><small>Cafetería escolar · lun 12:35 p. m.</small></div><div class="amt negative">- RD$ 190</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="profile">
+      <div class="section">
+        <div class="section-head">
+          <h2>Perfil</h2>
+        </div>
+        <div class="subcard">
+          <h3>Valentina Gómez</h3>
+          <p>Estudiante · 3.º B · ID 118204</p>
+          <div style="height:12px"></div>
+          <div class="id-tags">
+            <span class="pill">Alergia: maní</span>
+            <span class="pill">Límite diario: RD$ 250</span>
+            <span class="pill">Notificaciones activas</span>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="subcard">
+          <h3>Funciones disponibles</h3>
+          <p>Saldo, recarga, transferencias, menú del colegio, preorden, seguimiento de gastos y wallet futura para uso diario.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="bottom-space"></div>
+  </div>
+
+  <div class="nav">
+    <div class="nav-grid">
+      <button class="nav-btn active" data-page="home"><span class="nicon">⌂</span><span>Inicio</span></button>
+      <button class="nav-btn" data-page="school"><span class="nicon">🍽️</span><span>Colegio</span></button>
+      <button class="nav-btn" data-page="wallet"><span class="nicon">💼</span><span>Wallet</span></button>
+      <button class="nav-btn" data-page="activity"><span class="nicon">↔</span><span>Actividad</span></button>
+      <button class="nav-btn" data-page="profile"><span class="nicon">☺</span><span>Perfil</span></button>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="sheet">
+      <div class="grabber"></div>
+      <div class="sheet-head">
+        <h3 id="sheetTitle">Acción</h3>
+        <button class="close" onclick="closeSheet()">✕</button>
+      </div>
+      <div id="sheetContent"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const modal=document.getElementById('modal');
+    const title=document.getElementById('sheetTitle');
+    const content=document.getElementById('sheetContent');
+    let selectedAmount=500;
+
+    document.querySelectorAll('.nav-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>goPage(btn.dataset.page));
+    });
+
+    function goPage(id){
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.page===id));
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function openSheet(type){
+      modal.classList.add('open');
+      if(type==='recharge'){
+        title.textContent='Recargar saldo';
+        content.innerHTML=`
+          <span class="label">Selecciona un monto</span>
+          <div class="option-grid">
+            <button class="option selected" onclick="pick(this,300)">RD$ 300</button>
+            <button class="option" onclick="pick(this,500)">RD$ 500</button>
+            <button class="option" onclick="pick(this,1000)">RD$ 1,000</button>
+          </div>
+          <span class="label">Otro monto</span>
+          <input class="input" id="customAmount" type="number" placeholder="Escribe un monto">
+          <span class="label">Método de origen</span>
+          <select class="input">
+            <option>Saldo familiar</option>
+            <option>Tarjeta Visa •••• 4242</option>
+            <option>Tarjeta Mastercard •••• 1188</option>
+          </select>
+          <button class="full-btn" onclick="doRecharge()">Confirmar recarga</button>
+        `;
+      }
+      if(type==='send'){
+        title.textContent='Enviar saldo';
+        content.innerHTML=`
+          <span class="label">Enviar a</span>
+          <input class="input" id="toUser" placeholder="Nombre o ID del estudiante">
+          <span class="label">Monto</span>
+          <input class="input" id="sendAmount" type="number" placeholder="Ej. 100">
+          <span class="label">Motivo</span>
+          <select class="input">
+            <option>Compartir saldo</option>
+            <option>Devolver dinero</option>
+            <option>Apoyo entre amigos</option>
+          </select>
+          <button class="full-btn" onclick="doSend()">Enviar saldo</button>
+        `;
+      }
+      if(type==='budget'){
+        title.textContent='Configurar gasto de cine';
+        content.innerHTML=`
+          <span class="label">Presupuesto mensual para cine</span>
+          <input class="input" value="600" type="number">
+          <span class="label">Incluye</span>
+          <select class="input">
+            <option>Boletos + combo</option>
+            <option>Solo boletos</option>
+            <option>Boletos + combo + transporte</option>
+          </select>
+          <span class="label">Meta por salida</span>
+          <input class="input" value="300" type="number">
+          <button class="full-btn" onclick="saveBudget()">Guardar presupuesto</button>
+        `;
+      }
+    }
+
+    function closeSheet(){
+      modal.classList.remove('open');
+    }
+
+    function pick(el,val){
+      selectedAmount=val;
+      document.querySelectorAll('.option').forEach(o=>o.classList.remove('selected'));
+      el.classList.add('selected');
+      const c=document.getElementById('customAmount');
+      if(c) c.value='';
+    }
+
+    function doRecharge(){
+      const custom=document.getElementById('customAmount');
+      const amount=(custom && Number(custom.value)>0) ? Number(custom.value) : selectedAmount;
+      const balance=document.getElementById('balance');
+      const current=parseInt(balance.textContent.replace(/[^\d]/g,''),10) || 0;
+      balance.textContent='RD$ ' + (current + amount).toLocaleString('es-DO');
+      closeSheet();
+      notify('Recarga aplicada por RD$ ' + amount.toLocaleString('es-DO'));
+    }
+
+    function doSend(){
+      const to=document.getElementById('toUser').value || 'otro estudiante';
+      const amount=Number(document.getElementById('sendAmount').value || 0);
+      if(!amount){
+        notify('Escribe un monto válido');
+        return;
+      }
+      closeSheet();
+      notify('Se enviaron RD$ ' + amount.toLocaleString('es-DO') + ' a ' + to);
+    }
+
+    function saveBudget(){
+      closeSheet();
+      notify('Presupuesto de cine actualizado');
+    }
+
+    function notify(msg){
+      const t=document.getElementById('toast');
+      t.textContent=msg;
+      t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'),2600);
+    }
+  </script>
+</body>
+</html>
