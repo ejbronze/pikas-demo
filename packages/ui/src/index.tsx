@@ -1,0 +1,6 @@
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+export function Brand({ compact = false }: { compact?: boolean }) { return <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-2xl bg-white/20 text-xl font-black">P</span>{!compact && <span className="text-xl font-black tracking-tight">PIKAS</span>}</div> }
+export function Avatar({ name, className = "" }: { name: string; className?: string }) { const initials = name.split(" ").map((word) => word[0]).slice(0,2).join(""); return <span aria-hidden className={`grid size-11 shrink-0 place-items-center rounded-full bg-violet-100 font-black text-violet-700 ${className}`}>{initials}</span> }
+export function EmptyState({ children }: { children: ReactNode }) { return <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">{children}</div> }
+export function DemoBadge() { return <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Demostración</span> }
+export function Button({ className="", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) { return <button className={`rounded-xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:opacity-50 ${className}`} {...props} /> }
