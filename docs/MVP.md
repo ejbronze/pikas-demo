@@ -1,11 +1,18 @@
 # Alcance del MVP
 
-Esta fase ofrece dos experiencias responsivas en español. Familias pueden revisar saldos, estudiantes, movimientos, límites, alergias y productos bloqueados, además de simular una recarga en memoria. Estudiantes pueden consultar identificación, saldo y límite diario, revisar movimientos y menú, simular preórdenes y configurar un presupuesto personal durante la sesión.
+PIKAS 0.3.0 ofrece una aplicación responsiva unificada en español para Familia, Estudiante y Cafetería/POS. Las tres experiencias comparten estudiantes ficticios, wallets, controles, catálogo, preórdenes, compras y movimientos dentro del mismo navegador.
+
+## Incluido en el demo
+
+- Familia: saldos, estudiantes vinculados, recargas ficticias, límites, alergias, bloqueos, movimientos y preórdenes.
+- Estudiante: saldo y disponible diario, menú con restricciones, preórdenes, historial, presupuesto personal, perfil y QR visual.
+- Cafetería/POS: lookup exacto por código, identidad mínima, restricciones, carrito, checkout, recibo e historial compartido.
+- Guards por rol, logout, navegación responsiva y persistencia versionada en `localStorage`.
 
 ## Fuera de alcance
 
-No hay autenticación, procesador de pagos, transferencias reales, persistencia de cambios, POS ni administración. El QR es un patrón visual expresamente inválido. No se solicita ni almacena información financiera.
+No hay dinero real, procesador de pagos, integración SIS, QR verificable, búsqueda POS por nombre, administración funcional, refunds/reversos, conciliación ni sincronización entre dispositivos. Auth, PostgreSQL/RLS, correo y Storage de Supabase están preparados en código, pero no conectados ni verificados con un proyecto vivo.
 
 ## Criterio de demostración
 
-Recargas, controles, presupuestos y preórdenes son estado local del navegador y se pierden al recargar. Los avisos de interfaz lo comunican explícitamente.
+El demo usa exclusivamente datos ficticios. Los cambios sobreviven una recarga en el mismo navegador y origen, pero no se comparten con otros perfiles o dispositivos. El alias público está autorizado como demo mode; no representa autenticación ni persistencia de producción.

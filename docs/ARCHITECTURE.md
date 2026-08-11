@@ -10,7 +10,7 @@ La interfaz usa Server Components como límite inicial. Los componentes cliente 
 
 `profiles.id` coincide con `auth.users.id`. `family_members` concede permisos explícitos sobre una familia. Un estudiante puede tener `profile_id` al activar acceso. Las políticas comprueban pertenencia familiar, identidad estudiantil, escuela del POS o rol administrativo. Los estudiantes no tienen políticas para modificar controles, alergias, restricciones o ledger.
 
-Adultos y personal —incluido el usuario de cafetería añadido por Oscar— usan email/contraseña de Supabase Auth. El perfil de cafetería recibe `role = 'pos'` y queda vinculado a su escuela. Para código + PIN estudiantil, una futura función server-only debe aplicar rate limiting, comparar Argon2id/bcrypt y crear una sesión limitada. Nunca se guarda un PIN plano. Recuperación usa el email de Supabase y devuelve una respuesta no enumerable.
+Adultos y personal de cafetería usarán email/contraseña de Supabase Auth. El perfil de cafetería recibe `role = 'pos'` y queda vinculado a su escuela. Para código + PIN estudiantil, una futura función server-only debe aplicar rate limiting, comparar Argon2id/bcrypt y crear una sesión limitada. Nunca se guarda un PIN plano. Recuperación usa el email de Supabase y devuelve una respuesta no enumerable.
 
 ## Integridad financiera y mutaciones
 
@@ -22,7 +22,15 @@ El checkout POS utiliza `purchases` y `purchase_items` como instantánea operati
 
 ## Demo y producción
 
-El demo se activa solo con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` y persiste datos ficticios en el navegador para evaluar flujos compartidos. POS aplica una transición indivisible sobre el mismo estado usado por Familia y Estudiante. Es una garantía de demostración de un solo navegador, no una transacción multiusuario. La aplicación no cae silenciosamente a demo en producción: `/pos` muestra configuración requerida hasta enlazar las acciones Supabase. Sin URL/anon key, el cliente server Supabase falla con un mensaje de configuración.
+El demo se activa solo con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` y persiste datos ficticios en el navegador para evaluar flujos compartidos. POS aplica una transición indivisible sobre el mismo estado usado por Familia y Estudiante. Es una garantía de demostración de un solo navegador, no una transacción multiusuario. El alias público tiene demo mode autorizado explícitamente; una futura instancia con datos reales debe desactivarlo y exige URL/anon key, perfiles Auth y acciones Supabase enlazadas.
+
+## Shell y navegación responsiva
+
+Familia y Estudiante comparten `AppShell` y una configuración tipada de destinos con coincidencia exacta o por prefijo. Desde `md`, el shell usa una columna lateral sticky y una columna de contenido `minmax(0,1fr)`; en móvil usa cinco destinos primarios, safe-area padding y logout accesible. Estudiante conserva **Mi plan** en el sidebar y dashboard, mientras **Mis compras** ocupa un destino móvil propio.
+
+## Identidad visual
+
+Los activos aprobados viven en `apps/web/public/brand/`. `BrandLogo` centraliza la selección del logo horizontal o mark en Next Image; `globals.css` define tokens semánticos para superficies, texto, foco, estados y color de marca. Las experiencias conservan sus acentos de rol: azul/teal para Familia, violeta/amarillo para Estudiante y teal/navy para POS. Consulta la [Guía de marca](BRAND_GUIDE.md).
 
 ## Privacidad estudiantil
 

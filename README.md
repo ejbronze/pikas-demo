@@ -2,13 +2,29 @@
 
 PIKAS es una aplicación escolar unificada para familias, estudiantes y personal de cafetería. Comparte perfiles, controles, movimientos, preórdenes y presupuestos en un único Next.js App Router. Administración tiene un punto de entrada preparado para una fase posterior.
 
+La versión local actual es **0.4.0**, una mejora compatible de identidad visual, navegación responsiva, accesibilidad y documentación.
+
+## Novedades de 0.4.0
+
+- Sistema visual semántico con Navy, Teal, Yellow y Cream de PIKAS.
+- Logo aplicado con intención en landing, login y shells responsivos; iconos de aplicación derivados del mark.
+- Identidad de Familia, Estudiante, POS y Administración conservada por rol.
+- Consulta la [Guía de marca](docs/BRAND_GUIDE.md) para activos, tokens y usos permitidos.
+
+## Novedades de 0.3.0
+
+- Navegación Estudiante corregida con sidebar estable en tablet/escritorio y barra inferior segura en móvil.
+- **Mis compras** tiene destino y estado activo propios; ya no se representa como Perfil.
+- Densidad visual más ligera en landing, dashboards, tarjetas y controles sin cambiar reglas ni datos.
+- Navegación centralizada, foco visible, logout móvil y protección frente a desbordamiento/solapamiento.
+
 ## Aplicación en vivo
 
 **URL:** [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app)
 
 - **Estado:** despliegue de producción de Vercel `Ready`; página principal y accesos de Familia, Estudiante y Cafetería verificados en navegador el **11 de agosto de 2026**.
 - **Modalidad:** demo pública con datos ficticios y persistencia local por navegador. No conecta con un proyecto Supabase ni procesa dinero real.
-- **Versión desplegada:** todavía muestra el prototipo POS estático. El milestone POS funcional descrito abajo está implementado solo en este checkout hasta que se publique una nueva versión.
+- **Versión desplegada:** contiene el milestone POS funcional y demo auth autorizada. No contiene todavía los refinamientos locales 0.3.0 de este árbol de trabajo.
 - **Limitaciones importantes:** las credenciales demo seleccionan un rol pero no se comparan con cuentas reales. Administración no tiene acceso demo público.
 
 ## Acceso de demostración
@@ -17,7 +33,7 @@ PIKAS es una aplicación escolar unificada para familias, estudiantes y personal
 | --- | --- | --- | --- | --- |
 | Familia | `familia@demo.pikas.do` | `pikas-demo` | `/familias` | Disponible en el despliegue y en local con demo mode. Acceso verificado el 11-08-2026. |
 | Estudiante | `PK-10982` | PIN `pikas-demo` | `/estudiante` | Disponible en el despliegue y en local con demo mode. Muestra la experiencia ficticia de Sofi. |
-| Cafetería/POS | `cafeteria@demo.pikas.do` | `pikas-demo` | `/pos` | Local: compra demo funcional y persistente. Despliegue actual: prototipo estático hasta una nueva publicación. |
+| Cafetería/POS | `cafeteria@demo.pikas.do` | `pikas-demo` | `/pos` | Compra demo funcional y persistente en local y en el despliegue público. |
 | Administración | No disponible | No disponible | `/admin` | Sin acceso demo público; la ruta es un placeholder de una fase futura. |
 
 Estas combinaciones son los atajos publicados para evaluación. En demo mode, el manejador comprueba únicamente el formato mínimo y el rol enviado: **no verifica que el identificador o la contraseña coincidan con una cuenta**. No uses este comportamiento como evidencia de autenticación, ni reutilices contraseñas reales.
@@ -26,22 +42,22 @@ Estas combinaciones son los atajos publicados para evaluación. En demo mode, el
 
 | Estudiante ficticio | Código | PIN | Escuela | Uso real en el demo | Estado verificado |
 | --- | --- | --- | --- | --- | --- |
-| Sofía “Sofi” Rosa | `PK-10982` | `pikas-demo` en el acceso estudiantil publicado | Instituto Nueva Generación | Local: acceso estudiantil y POS funcional; puede comprar Pasta con pollo. Despliegue actual: acceso estudiantil y respuesta POS estática. | Código POS local exacto, activo y verificado. |
-| Mateo Rosa | `PK-11804` | No provisionado para login | Instituto Nueva Generación | Local: código POS funcional y registro familiar. Despliegue actual: no realiza una verificación real. | Código POS local exacto; no es una cuenta estudiantil. |
+| Sofía “Sofi” Rosa | `PK-10982` | `pikas-demo` en el acceso estudiantil publicado | Instituto Nueva Generación | Acceso estudiantil y POS funcional; puede comprar Pasta con pollo. | Código POS exacto, activo y verificado. |
+| Mateo Rosa | `PK-11804` | No provisionado para login | Instituto Nueva Generación | Código POS funcional y registro familiar. | Código POS exacto; no es una cuenta estudiantil. |
 
 `packages/data-access/src/mock-data.ts` conserva fixtures anteriores con los códigos sin prefijo `10982`, `11804` y `118204` (Valentina). No alimentan el acceso ni el POS de la aplicación unificada desplegada y **no son credenciales reutilizables**.
 
 ## Estado de Cafetería/POS
 
-En local demo, `/pos` exige un código ficticio exacto y activo, muestra únicamente identidad y controles necesarios, comparte el catálogo con Estudiante y permite carrito, cantidades, confirmación y compra. Usa importes enteros en centavos, valida saldo, límites, disponibilidad, alergias y bloqueos, conserva precios y evita duplicados mediante una clave idempotente. La compra y el movimiento se guardan juntos; saldo, disponible diario e historial se actualizan en POS, Estudiante y Familia y sobreviven una recarga en el mismo navegador.
+En demo mode local y público, `/pos` exige un código ficticio exacto y activo, muestra únicamente identidad y controles necesarios, comparte el catálogo con Estudiante y permite carrito, cantidades, confirmación y compra. Usa importes enteros en centavos, valida saldo, límites, disponibilidad, alergias y bloqueos, conserva precios y evita duplicados mediante una clave idempotente. La compra y el movimiento se guardan juntos; saldo, disponible diario e historial se actualizan en POS, Estudiante y Familia y sobreviven una recarga en el mismo navegador.
 
-La migración `202608110003_pos_purchases.sql` añade el modelo y RPC atómico para Supabase. No se aplicó a un proyecto vivo y la interfaz de producción permanece bloqueada explícitamente hasta conectar las acciones Supabase; nunca cae silenciosamente a fixtures. Siguen pendientes QR, búsqueda por nombre, reversos autorizados y verificación real de producción. Consulta [Línea base del producto](docs/PRODUCT_BASELINE.md) y [Catálogo de funcionalidades](docs/FEATURE_CATALOG.md).
+Las migraciones Supabase y el seed ficticio fueron aplicados al proyecto de desarrollo enlazado; también existen perfiles ficticios de Familia, Sofi y Cafetería. El alias público sigue siendo demo local y la UI de Familia/Estudiante todavía requiere su binding final a datos live antes de una operación real. Siguen pendientes QR, búsqueda por nombre, reversos autorizados y verificación real de producción. Consulta [Línea base del producto](docs/PRODUCT_BASELINE.md) y [Catálogo de funcionalidades](docs/FEATURE_CATALOG.md).
 
 ## Guía de demostración
 
 La [Guía de demostración de PIKAS](docs/DEMO_GUIDE.md) es el recorrido visual para presentadores, evaluadores y QA. Dura aproximadamente **8–12 minutos** y cubre Familia → Estudiante → Cafetería/POS → compra → comprobación del movimiento en los tres roles. Sus [capturas verificadas](docs/assets/demo-guide/) sirven como respaldo para una presentación.
 
-El entorno recomendado y verificado es este checkout en `feature/unified-pikas-app`, abierto en `http://localhost:3000` con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true`. El preview actual requiere autenticación de Vercel. **La producción pública todavía contiene el POS estático anterior y no representa el checkout funcional de esta rama.**
+El entorno recomendado para revisar 0.4.0 es este checkout en `feature/unified-pikas-app`, abierto en `http://localhost:3000` con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true`. El preview puede requerir autenticación de Vercel. La producción pública contiene el POS funcional, pero no estos cambios locales hasta una publicación posterior autorizada.
 
 | Experiencia | Acceso demo | Punto principal |
 | --- | --- | --- |
@@ -72,7 +88,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Abre `http://localhost:3000`. En `.env.local`, `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` habilita exclusivamente el adaptador local persistido en el navegador. Producción no debe activar ese valor.
+Abre `http://localhost:3000`. En `.env.local`, `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` habilita el adaptador persistido en el navegador. El alias público ficticio también lo usa por autorización explícita; una implementación con datos reales no debe activarlo.
 
 Para probar el producto sin Supabase, confirma que `.env.local` contenga:
 
@@ -125,7 +141,7 @@ El estado guardado por versiones anteriores recibe el catálogo y el historial P
 
 ### Recorrido recomendado: Cafetería
 
-1. Inicia sesión con la cuenta de Cafetería añadida por Oscar.
+1. Inicia sesión con la cuenta ficticia de Cafetería.
 2. Prueba `PK-00000`: debe aparecer un error sin datos estudiantiles.
 3. Introduce `PK-10982`; confirma Sofi, saldo, límites, alergias y bloqueos.
 4. Confirma que Pizza escolar y Bebidas energéticas no se pueden añadir. Añade Pasta con pollo.
