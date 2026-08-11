@@ -1,6 +1,6 @@
 # Catálogo de funcionalidades PIKAS
 
-Última revisión: **11 de agosto de 2026**, checkpoint de `feature/unified-pikas-app`. “Functional with limitations” indica flujo demo verificado y/o producción preparada pero aún no validada contra Supabase.
+Última revisión: **11 de agosto de 2026**, versión local **0.4.0** de `feature/unified-pikas-app`. “Functional with limitations” indica flujo demo verificado y/o producción preparada pero aún no validada contra Supabase.
 
 ## Significado de estados
 
@@ -36,4 +36,14 @@
 | POS-020 | Historial de transacciones POS | Functional with limitations | Lista, búsqueda, detalle y vacío funcionan en demo; consulta Supabase preparada sin binding. |
 | POS-021 | Cierre de sesión | Functional | El endpoint de logout y el control accesible se verifican. |
 
-El despliegue público todavía ejecuta la versión anterior y no constituye evidencia de estos cambios hasta una nueva publicación.
+El despliegue público ejecuta el milestone POS funcional con demo auth autorizada. Los refinamientos locales de shell y densidad 0.3.0 no forman parte del alias público hasta una publicación posterior.
+
+## Navegación y presentación
+
+| Área | Estado | Evidencia y límites |
+| --- | --- | --- |
+| Shell Familia | Functional | Sidebar tablet/escritorio, cinco destinos móviles, logout y guards preservados. |
+| Shell Estudiante | Functional | Layout en columnas desde `md`, sidebar sticky y contenido sin overflow horizontal. |
+| Estado activo Estudiante | Functional | Coincidencia tipada por ruta; `/estudiante/transacciones` activa exclusivamente **Mis compras**. |
+| Navegación móvil Estudiante | Functional | Cinco destinos: Inicio, Menú, Pedidos, Mis compras y Perfil; Mi plan permanece en dashboard/sidebar. |
+| Densidad responsiva | Functional | Balance, acciones y actividad caben en laptop; controles conservan targets mínimos de 44 px. |

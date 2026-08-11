@@ -1,5 +1,54 @@
 # Registro de cambios del producto
 
+## 2026-08-11 — PIKAS 0.4.0: identidad visual
+
+Cambios locales sin commit ni despliegue, sobre la interfaz 0.3.0.
+
+### Implementado
+
+- Se integraron los activos de marca aprobados y metadatos/iconos de aplicación.
+- Se añadieron tokens semánticos de color, foco y superficie; Familia, Estudiante y POS conservan sus acentos de rol.
+- Landing, login y shell usan logo en proporciones apropiadas sin alterar flujos demo.
+- Se documentó el sistema en `docs/BRAND_GUIDE.md`.
+
+### Limitaciones sin cambios
+
+- Sin SVG, imagen Open Graph específica ni activo apto para impresión grande.
+- Supabase y persistencia real permanecen fuera de esta fase visual.
+
+## 2026-08-11 — Supabase de desarrollo: esquema y cuentas ficticias
+
+### Implementado
+
+- Se aplicaron las migraciones `202608110001` a `202608110004` al proyecto Supabase de desarrollo enlazado.
+- Se cargó únicamente `seed.sql` ficticio y se provisionaron perfiles de Familia, Sofi Estudiante y Cafetería.
+- Se corrigió la calificación de la función `public.current_role()` para evitar el conflicto con el keyword de PostgreSQL.
+- Se añadió un grant mínimo a `service_role` para provisionamiento server-only de perfiles, estudiantes y membresías familiares.
+
+### Pendiente
+
+- Conectar y probar contra Supabase real las pantallas de Familia y Estudiante, recuperación, Storage, RLS de usuario y recorridos Playwright live.
+
+## 2026-08-11 — PIKAS 0.3.0: shell responsivo y densidad visual
+
+Cambios locales sin commit ni despliegue, basados en `1c93c15` sobre `feature/unified-pikas-app`.
+
+### Implementado
+
+- Se corrigió el shell Estudiante para usar sidebar y contenido en columnas desde tablet, con sidebar sticky de altura de viewport y contenido `min-w-0`.
+- Se centralizó la configuración tipada de navegación con coincidencia exacta/prefijo y `aria-current` único.
+- **Mis compras** recibió destino propio; `/estudiante/transacciones` ya no activa Perfil.
+- La barra móvil conserva cinco destinos, incorpora safe-area padding y deja **Mi plan** como acción de dashboard/sidebar.
+- Se añadió logout móvil accesible y se redujo densidad en landing, tarjetas, balance, menú y controles sin alterar reglas de dominio.
+- Se amplió Playwright para proteger columnas desktop/tablet, navegación activa, overflow, obstrucción móvil y navegación Familia.
+- Se renovaron capturas y documentación para la versión y los entornos verificados.
+
+### Limitaciones sin cambios
+
+- Demo auth, datos y persistencia siguen siendo ficticios y locales al navegador.
+- Supabase Auth/RLS/Storage/RPC continúa sin conexión ni prueba live.
+- Administración, QR verificable, refunds/reversos, pagos y sincronización entre dispositivos siguen pendientes.
+
 ## 2026-08-11 — Guía visual de demostración
 
 Documentación preparada en `feature/unified-pikas-app` sobre el commit base `9448dda`; capturas obtenidas desde `http://localhost:3000` con demo mode activo. Sin despliegue ni cambios funcionales.

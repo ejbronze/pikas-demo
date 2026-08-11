@@ -25,24 +25,24 @@ create table public.budgets(id uuid primary key default gen_random_uuid(),studen
 create table public.notifications(id uuid primary key default gen_random_uuid(),profile_id uuid not null references public.profiles,type text not null,title text not null,body text not null,read_at timestamptz,created_at timestamptz not null default now());
 
 create or replace function public.current_role() returns user_role language sql stable security definer set search_path=public as $$select role from profiles where id=auth.uid()$$;
-create or replace function public.can_access_student(target uuid) returns boolean language sql stable security definer set search_path=public as $$select exists(select 1 from students s left join family_members fm on fm.family_id=s.family_id where s.id=target and (s.profile_id=auth.uid() or fm.profile_id=auth.uid() or current_role()='admin' or (current_role()='pos' and s.school_id=(select school_id from profiles where id=auth.uid()))))$$;
+create or replace function public.can_access_student(target uuid) returns boolean language sql stable security definer set search_path=public as $$select exists(select 1 from students s left join family_members fm on fm.family_id=s.family_id where s.id=target and (s.profile_id=auth.uid() or fm.profile_id=auth.uid() or public.current_role()='admin' or (public.current_role()='pos' and s.school_id=(select school_id from profiles where id=auth.uid()))))$$;
 alter table public.profiles enable row level security;alter table public.families enable row level security;alter table public.family_members enable row level security;alter table public.students enable row level security;alter table public.wallets enable row level security;alter table public.wallet_ledger_entries enable row level security;alter table public.student_controls enable row level security;alter table public.allergies enable row level security;alter table public.student_allergies enable row level security;alter table public.blocked_products enable row level security;alter table public.menu_items enable row level security;alter table public.preorders enable row level security;alter table public.preorder_items enable row level security;alter table public.budgets enable row level security;alter table public.notifications enable row level security;
-create policy profiles_select_self on public.profiles for select using(id=auth.uid() or current_role()='admin');
+create policy profiles_select_self on public.profiles for select using(id=auth.uid() or public.current_role()='admin');
 create policy profiles_update_self on public.profiles for update using(id=auth.uid()) with check(id=auth.uid());
-create policy family_members_select_linked on public.family_members for select using(profile_id=auth.uid() or current_role()='admin');
-create policy families_select_linked on public.families for select using(current_role()='admin' or exists(select 1 from family_members fm where fm.family_id=id and fm.profile_id=auth.uid()));
+create policy family_members_select_linked on public.family_members for select using(profile_id=auth.uid() or public.current_role()='admin');
+create policy families_select_linked on public.families for select using(public.current_role()='admin' or exists(select 1 from family_members fm where fm.family_id=id and fm.profile_id=auth.uid()));
 create policy students_select_scoped on public.students for select using(can_access_student(id));
-create policy students_parent_insert on public.students for insert with check(current_role()='parent' and exists(select 1 from family_members fm where fm.family_id=family_id and fm.profile_id=auth.uid() and fm.can_manage_students));
-create policy students_parent_update on public.students for update using(current_role()='parent' and can_access_student(id)) with check(current_role()='parent' and can_access_student(id));
+create policy students_parent_insert on public.students for insert with check(public.current_role()='parent' and exists(select 1 from family_members fm where fm.family_id=family_id and fm.profile_id=auth.uid() and fm.can_manage_students));
+create policy students_parent_update on public.students for update using(public.current_role()='parent' and can_access_student(id)) with check(public.current_role()='parent' and can_access_student(id));
 create policy wallets_select_scoped on public.wallets for select using(can_access_student(student_id));
 create policy ledger_select_scoped on public.wallet_ledger_entries for select using(exists(select 1 from wallets w where w.id=wallet_id and can_access_student(w.student_id)));
 -- No UPDATE or DELETE ledger policy: completed financial history is immutable to clients.
 create policy controls_select_scoped on public.student_controls for select using(can_access_student(student_id));
-create policy controls_parent_update on public.student_controls for update using(current_role() in ('parent','admin') and can_access_student(student_id)) with check(current_role() in ('parent','admin') and can_access_student(student_id));
+create policy controls_parent_update on public.student_controls for update using(public.current_role() in ('parent','admin') and can_access_student(student_id)) with check(public.current_role() in ('parent','admin') and can_access_student(student_id));
 create policy allergies_authenticated_read on public.allergies for select to authenticated using(true);
 create policy student_allergies_scoped_read on public.student_allergies for select using(can_access_student(student_id));
 create policy blocked_products_scoped_read on public.blocked_products for select using(can_access_student(student_id));
-create policy menu_school_read on public.menu_items for select to authenticated using(available and school_id=(select school_id from profiles where id=auth.uid()) or current_role()='admin');
+create policy menu_school_read on public.menu_items for select to authenticated using(available and school_id=(select school_id from profiles where id=auth.uid()) or public.current_role()='admin');
 create policy preorders_scoped_read on public.preorders for select using(can_access_student(student_id));
 create policy budgets_student_read on public.budgets for select using(can_access_student(student_id));
 create policy budgets_student_write on public.budgets for all using(student_id=(select id from students where profile_id=auth.uid())) with check(student_id=(select id from students where profile_id=auth.uid()));

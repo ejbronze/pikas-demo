@@ -2,17 +2,17 @@
 
 | Dato | Valor |
 | --- | --- |
-| Versión de la guía | 1.0 |
+| Versión de la guía | 1.2 para PIKAS 0.4.0 |
 | Última verificación | 11 de agosto de 2026 |
-| Código verificado | Recorrido y capturas basados en `9448dda`; guía versionada en esta rama |
+| Código verificado | Árbol de trabajo local sin commit, basado en `1c93c15` |
 | Rama | `feature/unified-pikas-app` |
 | Capturas | Aplicación local en demo mode, `http://localhost:3000` |
-| URL aplicable | `http://localhost:3000`; el [preview de la rama](https://pikas-demo-git-feature-unified-pikas-app-ejbronzes-projects.vercel.app) requiere autenticación de Vercel |
+| URL aplicable | 0.4.0: `http://localhost:3000`; el [sitio público](https://pikas-demo.vercel.app) conserva la versión desplegada anterior a estos refinamientos |
 | Duración estimada | 8–12 minutos |
 
 PIKAS demuestra una experiencia escolar compartida para Familia, Estudiante y Cafetería/POS: controles familiares, saldo y límites, catálogo, restricciones alimentarias y una compra visible entre roles. **Todas las cuentas, estudiantes, escuelas, restricciones y transacciones de esta guía son ficticias.** No introduzcas información real.
 
-> El sitio público [pikas-demo.vercel.app](https://pikas-demo.vercel.app) todavía contiene el POS estático anterior. Para presentar el checkout funcional documentado aquí, usa el checkout local de esta rama. No presentes el sitio de producción como evidencia de este milestone.
+> El sitio público [pikas-demo.vercel.app](https://pikas-demo.vercel.app) contiene el POS funcional y demo auth autorizada. Para presentar la identidad visual 0.4.0, usa el checkout local hasta que exista una publicación posterior autorizada.
 
 ## 1. Antes de comenzar
 
@@ -23,7 +23,7 @@ PIKAS demuestra una experiencia escolar compartida para Familia, Estudiante y Ca
 - Cerrar sesión antes de cambiar de rol evita sesiones obsoletas. Una cookie demo de rol dura hasta ocho horas.
 - Para comenzar limpio, ejecuta el proceso de [reinicio](#8-reinicio-y-repetibilidad-del-demo) antes de iniciar el recorrido.
 
-Limitaciones principales: el login demo selecciona un rol, no valida una cuenta real; no hay Supabase vivo, Admin, lectura QR, búsqueda por nombre, reversos ni refunds. Local es la única variante verificada con este POS funcional.
+Limitaciones principales: el login demo selecciona un rol, no valida una cuenta real; no hay Supabase vivo, Admin, lectura QR, búsqueda por nombre, reversos ni refunds. Local es la variante verificada para la interfaz 0.3.0; el POS funcional también está disponible en el demo público anterior.
 
 ![Página inicial pública de PIKAS](assets/demo-guide/01-landing-page.png)
 
@@ -35,9 +35,9 @@ Selecciona **Entrar a PIKAS** para abrir el selector de rol.
 
 | Experiencia | Método de acceso | Cuenta o código demo | Qué demostrar | Entorno |
 | --- | --- | --- | --- | --- |
-| Familia | Correo y contraseña | `familia@demo.pikas.do` / `pikas-demo` | Estudiantes vinculados, saldo, controles y movimientos | Local funcional; producción pública sin el POS nuevo |
+| Familia | Correo y contraseña | `familia@demo.pikas.do` / `pikas-demo` | Estudiantes vinculados, saldo, controles y movimientos | Local funcional; demo público funcional con la interfaz anterior |
 | Estudiante | Código y PIN | `PK-10982` / `pikas-demo` | Saldo, presupuesto, menú y compras | Local funcional; acceso básico disponible en producción |
-| Cafetería/POS | Correo y contraseña | `cafeteria@demo.pikas.do` / `pikas-demo` | Lookup, restricciones, carrito, checkout e historial | Solo local para este milestone funcional |
+| Cafetería/POS | Correo y contraseña | `cafeteria@demo.pikas.do` / `pikas-demo` | Lookup, restricciones, carrito, checkout e historial | Local 0.3.0 y demo público funcional |
 | Administración | No disponible | No disponible | Placeholder de una fase futura | No disponible |
 
 Códigos POS públicos y verificados: `PK-10982` muestra a Sofi; `PK-11804` muestra a Mateo; `PK-00000` se rechaza. El PIN solo está publicado para el acceso estudiantil de Sofi. Estas credenciales son atajos ficticios y no constituyen autenticación de producción.
@@ -79,15 +79,19 @@ Después de la compra POS:
 4. En **Mi plan**, el estudiante puede revisar su límite y meta; no puede cambiar alergias ni controles familiares.
 5. Después del checkout, abre **Mis compras** (`/estudiante/transacciones`): debe aparecer `Pasta con pollo`, estado completado, por RD$180.
 
-Las capturas de Estudiante usan el viewport móvil verificado, donde la navegación principal está en la barra inferior.
+La guía incluye capturas móvil y escritorio. En móvil, la navegación principal está en la barra inferior; en tablet/escritorio, permanece en un sidebar lateral.
+
+![Dashboard de Estudiante en escritorio con sidebar lateral](assets/demo-guide/18-student-desktop-dashboard.png)
 
 ![Dashboard móvil de Estudiante con saldo y accesos rápidos](assets/demo-guide/05-student-dashboard.png)
 
-La misma barra permite cambiar entre Inicio, Menú, Pedidos, Mi plan y Perfil:
+La barra permite cambiar entre Inicio, Menú, Pedidos, Mis compras y Perfil. **Mi plan** permanece como acción destacada en Inicio y destino del sidebar:
 
 ![Navegación móvil del dashboard de Estudiante](assets/demo-guide/06-student-mobile-navigation.png)
 
 ![Compra POS visible en el historial móvil del Estudiante](assets/demo-guide/16-student-transaction.png)
+
+![Mis compras del Estudiante en móvil](assets/demo-guide/19-student-mobile-purchases.png)
 
 ## 6. Recorrido de Cafetería/POS
 
@@ -167,8 +171,8 @@ location.reload();
 | El saldo parece anterior | La vista quedó abierta antes de la compra | Navega de nuevo a Inicio o recarga en el mismo perfil. |
 | Datos alterados por otro presentador | `localStorage` conserva cambios entre recargas | Ejecuta el reinicio de la sección 8. |
 | `/pos` devuelve no autorizado | La cookie pertenece a Familia/Estudiante o demo mode está apagado | Cierra sesión, habilita demo mode local e inicia como Cafetería. |
-| El preview no abre | El preview actual está protegido por autenticación de Vercel | Usa `http://localhost:3000` o solicita acceso al equipo; no uses producción como sustituto del POS funcional. |
-| Producción muestra el POS estático | `pikas-demo.vercel.app` sigue en la versión anterior | Presenta local desde esta rama hasta que exista una publicación autorizada. |
+| El preview no abre | El preview puede estar protegido por autenticación de Vercel | Usa `http://localhost:3000` o solicita acceso al equipo. |
+| Producción no muestra el refinamiento 0.3.0 | El árbol local no fue desplegado por esta tarea | Presenta local desde esta rama; el POS público sigue siendo funcional. |
 | Una imagen no aparece en GitHub | Ruta/capitalización incorrecta o archivo no incluido | Verifica que `docs/assets/demo-guide/<archivo>.png` exista y que el enlace sea relativo a `docs/DEMO_GUIDE.md`. |
 
 ## 10. Limitaciones conocidas
@@ -177,8 +181,8 @@ location.reload();
 | --- | --- |
 | Demo funcional | Familia, Estudiante y POS comparten datos ficticios en el mismo navegador; checkout, restricciones, saldo e historial funcionan y persisten al refrescar. |
 | Local | Entorno usado para las capturas y el recorrido completo. Requiere `NEXT_PUBLIC_PIKAS_DEMO_MODE=true`. |
-| Preview | URL de la rama existente, pero protegida por Vercel Authentication; no se usó como fuente de capturas públicas. |
-| Producción | URL pública disponible, pero conserva el prototipo POS estático anterior. |
+| Preview | Puede estar protegido por Vercel Authentication; no se usó como fuente de capturas 0.3.0. |
+| Producción | URL pública funcional en demo mode, anterior a los refinamientos locales 0.3.0. |
 | Autenticación | Cookie demo por rol; no valida contraseñas ni PIN con una identidad real y no es apta para producción. |
 | Supabase | Migraciones, RPC y adaptadores están preparados, pero no conectados ni probados contra un proyecto vivo. |
 | Administración | Sin experiencia demo; `/admin` es un placeholder. |
