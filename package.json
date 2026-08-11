@@ -1,14 +1,22 @@
 {
   "name": "pikas-mvp",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
   "scripts": {
-    "dev:family": "npm run dev -w @pikas/family-web",
-    "dev:student": "npm run dev -w @pikas/student-web",
+    "dev": "npm run dev -w @pikas/web",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e -w @pikas/web",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "supabase": "^2.113.0"
+  }
 }

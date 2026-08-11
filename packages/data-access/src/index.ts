@@ -1,4 +1,5 @@
 import { controls, families, menuItems, parents, preorders, students, transactions, wallets } from "./mock-data";
+export * from "./domain";
 
 const copy = <T>(value: T): T => structuredClone(value);
 export async function getFamily(familyId: string) { return copy(families.find((item) => item.id === familyId) ?? null) }
