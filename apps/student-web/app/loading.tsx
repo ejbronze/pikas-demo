@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="mx-auto max-w-5xl animate-pulse p-5" aria-label="Cargando portal"><div className="h-14 rounded-2xl bg-violet-100"/><div className="mt-5 h-64 rounded-3xl bg-violet-100"/></main>}

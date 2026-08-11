@@ -1,0 +1,3 @@
+import { getMenuItems, getStudent, getStudentControls, getStudentPreorders, getStudentTransactions, getStudentWallet } from "@pikas/data-access";
+import StudentPortal from "./portal";
+export default async function Page(){const id="student-valentina";const [student,wallet,controls,transactions,preorders]=await Promise.all([getStudent(id),getStudentWallet(id),getStudentControls(id),getStudentTransactions(id),getStudentPreorders(id)]);if(!student||!wallet||!controls)throw new Error("No pudimos cargar el perfil estudiantil.");const menu=await getMenuItems(student.schoolId);return <StudentPortal student={student} wallet={wallet} controls={controls} transactions={transactions} menu={menu} preorders={preorders}/>}

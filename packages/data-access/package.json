@@ -1,0 +1,1 @@
+{"name":"@pikas/data-access","version":"0.1.0","private":true,"types":"src/index.ts","exports":{".":"./src/index.ts"},"dependencies":{"@pikas/shared-types":"*"},"scripts":{"test":"vitest run","typecheck":"tsc --noEmit -p tsconfig.json"},"devDependencies":{"typescript":"^5.7.0","vitest":"^3.0.0"}}
