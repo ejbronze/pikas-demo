@@ -6,6 +6,7 @@ coverage
 .env*
 !.env.example
 .vercel
+supabase/.temp/
 playwright-report
 test-results
 project_sources/
