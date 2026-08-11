@@ -1,5 +1,15 @@
 # Registro de cambios del producto
 
+## 2026-08-11 — Guía visual de demostración
+
+Documentación preparada en `feature/unified-pikas-app` sobre el commit base `9448dda`; capturas obtenidas desde `http://localhost:3000` con demo mode activo. Sin despliegue ni cambios funcionales.
+
+- Se creó `docs/DEMO_GUIDE.md` con un recorrido reproducible de 8–12 minutos para Familia, Estudiante y Cafetería/POS.
+- Se capturaron pantallas originales de la aplicación local para acceso por rol, controles, navegación móvil, lookup inválido/válido, restricciones, carrito, confirmación, recibo, persistencia y visibilidad cruzada.
+- Se añadió al README una entrada destacada con audiencia, secuencia, entorno verificado y accesos demo.
+- Se documentaron el reinicio de `localStorage`, cambio seguro de roles, troubleshooting, checklist y diferencias entre local, preview protegido y producción con POS estático.
+- No se modificó el catálogo de funcionalidades: la verificación confirmó los estados y límites existentes.
+
 ## 2026-08-11 — Primer milestone funcional de Cafetería/POS
 
 Checkpoint de `feature/unified-pikas-app`; no desplegado a producción.

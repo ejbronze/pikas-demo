@@ -2,6 +2,8 @@
 
 Checkpoint de la rama `feature/unified-pikas-app` verificado el **11 de agosto de 2026**. El despliegue de producción [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app) continúa en la versión anterior hasta una publicación explícita.
 
+El recorrido reproducible para presentar esta línea base, incluidas capturas y reinicio del estado ficticio, está en la [Guía de demostración](DEMO_GUIDE.md).
+
 ## Estado general
 
 La aplicación unificada ofrece recorridos para Familia, Estudiante y Cafetería/POS. En demo mode usa una cookie de rol y un único estado ficticio versionado en `localStorage`; estudiantes, catálogo, compras, balances y movimientos se comparten entre las tres experiencias del mismo navegador. El demo no mueve fondos reales y sus credenciales no constituyen autenticación.

@@ -37,6 +37,21 @@ En local demo, `/pos` exige un código ficticio exacto y activo, muestra únicam
 
 La migración `202608110003_pos_purchases.sql` añade el modelo y RPC atómico para Supabase. No se aplicó a un proyecto vivo y la interfaz de producción permanece bloqueada explícitamente hasta conectar las acciones Supabase; nunca cae silenciosamente a fixtures. Siguen pendientes QR, búsqueda por nombre, reversos autorizados y verificación real de producción. Consulta [Línea base del producto](docs/PRODUCT_BASELINE.md) y [Catálogo de funcionalidades](docs/FEATURE_CATALOG.md).
 
+## Guía de demostración
+
+La [Guía de demostración de PIKAS](docs/DEMO_GUIDE.md) es el recorrido visual para presentadores, evaluadores y QA. Dura aproximadamente **8–12 minutos** y cubre Familia → Estudiante → Cafetería/POS → compra → comprobación del movimiento en los tres roles. Sus [capturas verificadas](docs/assets/demo-guide/) sirven como respaldo para una presentación.
+
+El entorno recomendado y verificado es este checkout en `feature/unified-pikas-app`, abierto en `http://localhost:3000` con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true`. El preview actual requiere autenticación de Vercel. **La producción pública todavía contiene el POS estático anterior y no representa el checkout funcional de esta rama.**
+
+| Experiencia | Acceso demo | Punto principal |
+| --- | --- | --- |
+| Familia | `familia@demo.pikas.do` / `pikas-demo` | Estudiantes, controles, saldo y movimientos |
+| Estudiante | `PK-10982` / PIN `pikas-demo` | Saldo, menú y compras |
+| Cafetería/POS | `cafeteria@demo.pikas.do` / `pikas-demo` | Validación, restricciones, carrito y checkout |
+| Administración | No disponible | Fase futura |
+
+Para la demostración POS, `PK-10982` devuelve Sofi, `PK-11804` devuelve Mateo y `PK-00000` se rechaza. Consulta la guía completa para el reinicio seguro, cambio de roles, limitaciones por entorno y solución de problemas.
+
 ## Stack y arquitectura
 
 - Next.js 16, React 19, TypeScript estricto y Tailwind CSS.
@@ -68,6 +83,8 @@ NEXT_PUBLIC_PIKAS_DEMO_MODE=true
 Las credenciales de evaluación están en [Acceso de demostración](#acceso-de-demostración). No son cuentas reales. El modo demo no recoge tarjetas ni mueve dinero.
 
 ## Guía de evaluación del producto
+
+El resumen técnico siguiente se conserva para pruebas exploratorias. Para una presentación paso a paso con capturas, tiempos, resultado esperado y resolución de problemas, usa la [guía visual](docs/DEMO_GUIDE.md).
 
 ### Antes de comenzar
 
