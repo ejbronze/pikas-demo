@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pikas | Portal de Familias</title>
+  <style>
+    :root{
+      --primary:#2457e6;
+      --primary-dark:#173ca5;
+      --primary-soft:#edf2ff;
+      --accent:#16a085;
+      --danger:#e74c3c;
+      --warning:#f39c12;
+      --ink:#14213d;
+      --muted:#6b7280;
+      --line:#e7eaf0;
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --shadow:0 12px 35px rgba(20,33,61,.08);
+      --radius:20px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+    }
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh;display:grid;grid-template-columns:270px 1fr}
+    .sidebar{
+      position:sticky;top:0;height:100vh;padding:26px 18px;
+      background:linear-gradient(180deg,#173ca5 0%,#2457e6 62%,#2d6cf3 100%);
+      color:white;display:flex;flex-direction:column;
+    }
+    .brand{display:flex;align-items:center;gap:12px;padding:4px 10px 28px}
+    .brand-mark{
+      width:45px;height:45px;border-radius:14px;background:white;color:var(--primary);
+      display:grid;place-items:center;font-size:22px;font-weight:900;
+      box-shadow:0 8px 20px rgba(0,0,0,.13)
+    }
+    .brand strong{display:block;font-size:18px}.brand span{font-size:12px;opacity:.78}
+    .nav{display:flex;flex-direction:column;gap:7px}
+    .nav-btn{
+      border:0;background:transparent;color:white;text-align:left;padding:13px 14px;border-radius:13px;
+      display:flex;align-items:center;gap:12px;opacity:.78;transition:.2s
+    }
+    .nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,.16);opacity:1}
+    .nav-btn .ico{font-size:18px;width:22px;text-align:center}
+    .sidebar-foot{margin-top:auto}
+    .help-card{background:rgba(255,255,255,.13);padding:15px;border-radius:16px;font-size:13px;line-height:1.45}
+    .help-card button{margin-top:10px;width:100%;border:0;background:#fff;color:var(--primary-dark);border-radius:10px;padding:9px;font-weight:750}
+    .main{min-width:0}
+    .topbar{
+      height:82px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;
+      justify-content:space-between;padding:0 34px;position:sticky;top:0;z-index:10
+    }
+    .mobile-menu{display:none;border:0;background:var(--primary-soft);padding:10px;border-radius:10px}
+    .school-name{font-size:14px;color:var(--muted)}.school-name strong{display:block;color:var(--ink);font-size:16px}
+    .top-actions{display:flex;align-items:center;gap:12px}
+    .icon-btn{border:1px solid var(--line);background:#fff;width:42px;height:42px;border-radius:12px;position:relative}
+    .badge-dot{position:absolute;right:8px;top:7px;width:8px;height:8px;background:var(--danger);border:2px solid white;border-radius:50%}
+    .profile{display:flex;align-items:center;gap:10px;padding-left:6px}
+    .avatar{width:42px;height:42px;border-radius:50%;background:#dce5ff;display:grid;place-items:center;font-weight:800;color:var(--primary-dark)}
+    .profile small{color:var(--muted);display:block}
+    .content{padding:30px 34px 50px;max-width:1500px;margin:auto}
+    .hero{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:24px}
+    .hero h1{margin:0 0 6px;font-size:30px}.hero p{margin:0;color:var(--muted)}
+    .primary-btn,.secondary-btn{
+      border:0;border-radius:13px;padding:12px 18px;font-weight:750;display:inline-flex;align-items:center;gap:8px
+    }
+    .primary-btn{background:var(--primary);color:white;box-shadow:0 8px 18px rgba(36,87,230,.22)}
+    .secondary-btn{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .student-tabs{display:flex;gap:12px;overflow:auto;padding-bottom:5px;margin-bottom:20px}
+    .student-chip{
+      min-width:220px;background:#fff;border:2px solid transparent;border-radius:16px;padding:12px;
+      display:flex;align-items:center;gap:11px;box-shadow:0 3px 14px rgba(20,33,61,.04)
+    }
+    .student-chip.active{border-color:var(--primary);background:var(--primary-soft)}
+    .student-photo{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:white;font-weight:900}
+    .student-chip strong{display:block}.student-chip small{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px}
+    .stack{display:flex;flex-direction:column;gap:22px}
+    .card{background:var(--card);border:1px solid rgba(231,234,240,.9);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card-pad{padding:22px}
+    .balance-card{
+      background:linear-gradient(125deg,#173ca5,#2457e6 58%,#4480ff);
+      color:#fff;padding:25px;position:relative;overflow:hidden;min-height:210px
+    }
+    .balance-card:before,.balance-card:after{
+      content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.09)
+    }
+    .balance-card:before{width:220px;height:220px;right:-65px;top:-90px}
+    .balance-card:after{width:140px;height:140px;right:90px;bottom:-100px}
+    .balance-card .label{opacity:.78}.balance{font-size:42px;font-weight:850;margin:8px 0 20px}
+    .balance-meta{display:flex;justify-content:space-between;gap:10px;align-items:end;position:relative;z-index:1}
+    .balance-meta small{display:block;opacity:.7}.balance-meta strong{font-size:14px}
+    .white-btn{border:0;background:#fff;color:var(--primary-dark);padding:11px 15px;border-radius:12px;font-weight:800}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .stat{padding:18px}.stat-top{display:flex;justify-content:space-between;align-items:center}
+    .stat .icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--primary-soft)}
+    .stat strong{font-size:22px;display:block;margin-top:14px}.stat span{font-size:12px;color:var(--muted)}
+    .section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}
+    .section-head h2{font-size:18px;margin:0}.section-head a{color:var(--primary);font-size:13px;font-weight:700;text-decoration:none}
+    .quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+    .quick{
+      border:1px solid var(--line);background:#fff;border-radius:15px;padding:14px 8px;text-align:center;color:var(--ink)
+    }
+    .quick:hover{border-color:var(--primary);background:var(--primary-soft)}
+    .quick .qicon{font-size:22px;margin-bottom:7px}.quick span{font-size:12px;font-weight:700;display:block}
+    .alert{
+      padding:14px;border-radius:14px;background:#fff7e8;border:1px solid #ffe1a8;
+      display:flex;gap:12px;align-items:flex-start
+    }
+    .alert strong{font-size:13px}.alert p{font-size:12px;color:#73510e;margin:4px 0 0;line-height:1.45}
+    .transactions{display:flex;flex-direction:column}
+    .transaction{
+      display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)
+    }
+    .transaction:last-child{border-bottom:0}
+    .tx-icon{width:44px;height:44px;border-radius:13px;background:#f1f4f9;display:grid;place-items:center;font-size:19px}
+    .transaction strong{font-size:14px}.transaction small{display:block;color:var(--muted);margin-top:3px}
+    .amount{font-weight:800}.amount.negative{color:var(--danger)}.amount.positive{color:var(--accent)}
+    .limit-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .progress{height:10px;background:#edf0f5;border-radius:99px;overflow:hidden}
+    .progress div{height:100%;width:64%;background:linear-gradient(90deg,var(--primary),#6d9cff);border-radius:inherit}
+    .limit-copy{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:7px}
+    .tags{display:flex;flex-wrap:wrap;gap:8px}
+    .tag{padding:8px 11px;border-radius:99px;background:#fff1f0;color:#b9382f;font-size:12px;font-weight:700;border:1px solid #ffd7d2}
+    .tag.info{background:#eef5ff;color:#2555a5;border-color:#d6e6ff}
+    .meal{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px}
+    .meal:last-child{margin-bottom:0}
+    .meal-img{width:56px;height:56px;border-radius:13px;background:linear-gradient(135deg,#ffdeb5,#f4a261);display:grid;place-items:center;font-size:27px}
+    .meal strong{display:block;font-size:14px}.meal small{color:var(--muted)}
+    .meal-status{margin-left:auto;font-size:11px;font-weight:800;background:#e8faf4;color:#13845e;padding:6px 8px;border-radius:99px}
+    .page{display:none}.page.active{display:block}
+    .table-tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+    .field{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 12px}
+    .full-table{width:100%;border-collapse:collapse}
+    .full-table th,.full-table td{text-align:left;padding:13px 10px;border-bottom:1px solid var(--line);font-size:13px}
+    .full-table th{color:var(--muted);font-weight:650}
+    .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .setting-box{border:1px solid var(--line);border-radius:15px;padding:17px}
+    .setting-box h3{margin:0 0 6px;font-size:15px}.setting-box p{font-size:12px;color:var(--muted);margin:0 0 13px}
+    .switch{position:relative;width:46px;height:26px;background:#d9dde6;border-radius:99px;display:inline-block}
+    .switch.active{background:var(--primary)}
+    .switch:after{content:"";position:absolute;width:20px;height:20px;top:3px;left:3px;background:white;border-radius:50%;transition:.2s}
+    .switch.active:after{left:23px}
+    .modal{
+      position:fixed;inset:0;background:rgba(11,22,46,.52);display:none;align-items:center;justify-content:center;padding:20px;z-index:100
+    }
+    .modal.open{display:flex}
+    .modal-box{background:white;width:min(490px,100%);border-radius:22px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.24)}
+    .modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h2{margin:0}
+    .close{border:0;background:#f1f3f7;border-radius:10px;width:36px;height:36px}
+    .amount-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+    .amount-option{border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px;font-weight:800}
+    .amount-option.selected{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-dark)}
+    .form-label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .form-input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
+    .toast{
+      position:fixed;right:25px;bottom:25px;background:#17213a;color:white;padding:14px 18px;border-radius:13px;
+      box-shadow:0 12px 30px rgba(0,0,0,.22);transform:translateY(120px);opacity:0;transition:.3s;z-index:120
+    }
+    .toast.show{transform:translateY(0);opacity:1}
+    @media(max-width:1050px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:800px){
+      .app{grid-template-columns:1fr}.sidebar{position:fixed;left:-285px;z-index:50;width:270px;transition:.25s}.sidebar.open{left:0}
+      .mobile-menu{display:block}.topbar{padding:0 18px}.content{padding:24px 18px 40px}.profile div:last-child{display:none}
+      .hero{align-items:flex-start;flex-direction:column}.quick-actions{grid-template-columns:repeat(2,1fr)}
+      .settings-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:560px){
+      .stats{grid-template-columns:1fr}.student-chip{min-width:190px}.balance{font-size:36px}
+      .full-table{min-width:680px}.table-wrap{overflow:auto}.top-actions .icon-btn:first-child{display:none}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div><strong>Pikas</strong><span>Portal de Familias</span></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-page="inicio"><span class="ico">⌂</span>Inicio</button>
+      <button class="nav-btn" data-page="movimientos"><span class="ico">↔</span>Movimientos</button>
+      <button class="nav-btn" data-page="precompras"><span class="ico">▣</span>Precompras</button>
+      <button class="nav-btn" data-page="controles"><span class="ico">⚙</span>Controles y salud</button>
+      <button class="nav-btn" data-page="perfil"><span class="ico">♙</span>Mi familia</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="help-card">
+        <strong>¿Necesitas ayuda?</strong><br>
+        Estamos disponibles para ayudarte con recargas y compras.
+        <button onclick="notify('Solicitud de soporte enviada')">Contactar soporte</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="mobile-menu" onclick="toggleMenu()">☰</button>
+        <div class="school-name">Portal del colegio<strong>Instituto Nueva Generación</strong></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn">? </button>
+        <button class="icon-btn">🔔<span class="badge-dot"></span></button>
+        <div class="profile">
+          <div class="avatar">OR</div>
+          <div><strong>Oscar Rosa</strong><small>Padre de familia</small></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="page active" id="inicio">
+        <div class="hero">
+          <div><h1>Hola, Oscar 👋</h1><p>Aquí puedes administrar el consumo escolar de tus hijos.</p></div>
+          <button class="primary-btn" onclick="openRecharge()">＋ Recargar saldo</button>
+        </div>
+
+        <div class="student-tabs" id="studentTabs"></div>
+
+        <div class="grid">
+          <div class="stack">
+            <div class="card balance-card">
+              <div class="label">Saldo disponible</div>
+              <div class="balance" id="balance">$2,450.00</div>
+              <div class="balance-meta">
+                <div><small>Estudiante</small><strong id="activeStudentName">Sofía Rosa</strong></div>
+                <div><small>Última recarga</small><strong>RD$ 1,500 · 2 ago.</strong></div>
+                <button class="white-btn" onclick="openRecharge()">Recargar</button>
+              </div>
+            </div>
+
+            <div class="stats">
+              <div class="card stat"><div class="stat-top"><span>Gastado este mes</span><div class="icon">🧾</div></div><strong id="monthSpent">RD$ 1,280</strong><span>12 compras realizadas</span></div>
+              <div class="card stat"><div class="stat-top"><span>Promedio diario</span><div class="icon">📊</div></div><strong>RD$ 142</strong><span>8 días con consumo</span></div>
+              <div class="card stat"><div class="stat-top"><span>Límite diario</span><div class="icon">🛡️</div></div><strong>RD$ 250</strong><span>Configurado por la familia</span></div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head"><h2>Acciones rápidas</h2></div>
+              <div class="quick-actions">
+                <button class="quick" onclick="openRecharge()"><div class="qicon">💳</div><span>Recargar</span></button>
+                <button class="quick" onclick="goPage('movimientos')"><div class="qicon">📋</div><span>Historial</span></button>
+                <button class="quick" onclick="goPage('precompras')"><div class="qicon">🥗</div><span>Precomprar</span></button>
+                <button class="quick" onclick="goPage('controles')"><div class="qicon">⚙️</div><span>Configurar</span></button>
+              </div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head"><h2>Últimos movimientos</h2><a href="#" onclick="goPage('movimientos');return false">Ver todos</a></div>
+              <div class="transactions" id="recentTransactions"></div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="alert">
+              <div>⚠️</div><div><strong>Alerta de saldo</strong><p>Te avisaremos cuando el saldo sea menor de RD$ 500. Puedes cambiar este valor en Controles.</p></div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head"><h2>Consumo diario</h2><a href="#">Esta semana</a></div>
+              <div class="limit-row"><div><strong>RD$ 160 consumidos</strong><div style="font-size:12px;color:var(--muted)">de RD$ 250 permitidos</div></div><div style="font-weight:850;color:var(--primary)">64%</div></div>
+              <div class="progress"><div></div></div>
+              <div class="limit-copy"><span>Disponible hoy: RD$ 90</span><span>Se reinicia mañana</span></div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head"><h2>Restricciones activas</h2><a href="#" onclick="goPage('controles');return false">Editar</a></div>
+              <div class="tags"><span class="tag">🥜 Maní</span><span class="tag">🥛 Lactosa</span><span class="tag info">🚫 Bebidas energéticas</span></div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head"><h2>Próximas precompras</h2><a href="#" onclick="goPage('precompras');return false">Ver menú</a></div>
+              <div class="meal"><div class="meal-img">🍝</div><div><strong>Pasta con pollo</strong><small>Jueves, 12:30 p. m. · RD$ 180</small></div><span class="meal-status">Pagado</span></div>
+              <div class="meal"><div class="meal-img">🥪</div><div><strong>Sándwich integral</strong><small>Viernes, 10:15 a. m. · RD$ 120</small></div><span class="meal-status">Pagado</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="movimientos">
+        <div class="hero"><div><h1>Movimientos</h1><p>Consulta recargas, compras, devoluciones y ajustes.</p></div><button class="primary-btn" onclick="openRecharge()">＋ Recargar saldo</button></div>
+        <div class="card card-pad">
+          <div class="table-tools">
+            <input class="field" id="searchTx" placeholder="Buscar movimiento..." oninput="renderTable()">
+            <select class="field" id="typeFilter" onchange="renderTable()"><option value="">Todos los tipos</option><option>Compra</option><option>Recarga</option></select>
+            <input class="field" type="date">
+          </div>
+          <div class="table-wrap"><table class="full-table"><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th>Estudiante</th><th>Monto</th><th>Estado</th></tr></thead><tbody id="txTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="page" id="precompras">
+        <div class="hero"><div><h1>Precompras</h1><p>Reserva comidas y meriendas antes de llegar a la cafetería.</p></div></div>
+        <div class="grid">
+          <div class="card card-pad">
+            <div class="section-head"><h2>Menú disponible</h2><a href="#">Semana actual</a></div>
+            <div class="meal"><div class="meal-img">🍗</div><div><strong>Pollo al horno con arroz</strong><small>Miércoles · RD$ 195</small></div><button class="secondary-btn" onclick="notify('Precompra agregada')">Agregar</button></div>
+            <div class="meal"><div class="meal-img">🥙</div><div><strong>Wrap de pollo y vegetales</strong><small>Jueves · RD$ 165</small></div><button class="secondary-btn" onclick="notify('Precompra agregada')">Agregar</button></div>
+            <div class="meal"><div class="meal-img">🍕</div><div><strong>Pizza de queso</strong><small>Viernes · RD$ 150</small></div><button class="secondary-btn" onclick="notify('Precompra agregada')">Agregar</button></div>
+          </div>
+          <div class="card card-pad">
+            <div class="section-head"><h2>Orden programada</h2></div>
+            <p style="color:var(--muted);font-size:13px">Selecciona una comida del menú para programar la entrega al estudiante.</p>
+            <label class="form-label">Estudiante</label><select class="form-input"><option>Sofía Rosa</option><option>Mateo Rosa</option></select>
+            <label class="form-label">Horario de entrega</label><select class="form-input"><option>Primer recreo · 10:15 a. m.</option><option>Almuerzo · 12:30 p. m.</option></select>
+            <button class="primary-btn" style="width:100%;justify-content:center" onclick="notify('Orden programada correctamente')">Confirmar precompra</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="controles">
+        <div class="hero"><div><h1>Controles y salud</h1><p>Define límites, prohibiciones, alertas y condiciones alimenticias.</p></div><button class="primary-btn" onclick="notify('Configuración guardada')">Guardar cambios</button></div>
+        <div class="card card-pad">
+          <div class="settings-grid">
+            <div class="setting-box"><h3>Límite diario de compra</h3><p>Monto máximo que el estudiante puede gastar cada día.</p><input class="form-input" value="250" type="number"></div>
+            <div class="setting-box"><h3>Alerta de saldo bajo</h3><p>Recibe una notificación al llegar a este monto.</p><input class="form-input" value="500" type="number"></div>
+            <div class="setting-box"><h3>Bloquear compras sin saldo</h3><p>No permitir consumos que dejen la cuenta en negativo.</p><span class="switch active" onclick="this.classList.toggle('active')"></span></div>
+            <div class="setting-box"><h3>Notificación inmediata</h3><p>Enviar una alerta después de cada compra.</p><span class="switch active" onclick="this.classList.toggle('active')"></span></div>
+            <div class="setting-box"><h3>Alergias</h3><p>El POS mostrará una alerta y bloqueará productos asociados.</p><input class="form-input" value="Maní, lactosa" placeholder="Ej.: nueces, gluten"></div>
+            <div class="setting-box"><h3>Categorías restringidas</h3><p>Productos que el estudiante no podrá comprar.</p><select class="form-input" multiple><option selected>Bebidas energéticas</option><option>Golosinas</option><option>Refrescos</option><option>Frituras</option></select></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="perfil">
+        <div class="hero"><div><h1>Mi familia</h1><p>Administra tus datos, estudiantes vinculados y métodos de pago.</p></div></div>
+        <div class="grid">
+          <div class="card card-pad">
+            <div class="section-head"><h2>Datos del tutor</h2></div>
+            <label class="form-label">Nombre completo</label><input class="form-input" value="Oscar Alejandro Rosa">
+            <label class="form-label">Correo electrónico</label><input class="form-input" value="oscar@example.com">
+            <label class="form-label">Teléfono</label><input class="form-input" value="+1 809 555 0123">
+            <button class="primary-btn" onclick="notify('Datos actualizados')">Actualizar datos</button>
+          </div>
+          <div class="card card-pad">
+            <div class="section-head"><h2>Estudiantes vinculados</h2></div>
+            <div class="meal"><div class="student-photo" style="background:#8e44ad">SR</div><div><strong>Sofía Rosa</strong><small>5.º A · Código 10982</small></div><span class="meal-status">Activo</span></div>
+            <div class="meal"><div class="student-photo" style="background:#e67e22">MR</div><div><strong>Mateo Rosa</strong><small>2.º B · Código 11804</small></div><span class="meal-status">Activo</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="rechargeModal">
+  <div class="modal-box">
+    <div class="modal-head"><div><h2>Recargar saldo</h2><div style="color:var(--muted);font-size:13px;margin-top:5px">Selecciona el monto para <span id="modalStudent">Sofía Rosa</span></div></div><button class="close" onclick="closeRecharge()">✕</button></div>
+    <div class="amount-options">
+      <button class="amount-option" onclick="selectAmount(this,500)">RD$ 500</button>
+      <button class="amount-option selected" onclick="selectAmount(this,1000)">RD$ 1,000</button>
+      <button class="amount-option" onclick="selectAmount(this,2000)">RD$ 2,000</button>
+    </div>
+    <label class="form-label">Otro monto</label><input id="customAmount" class="form-input" type="number" placeholder="Escribe un monto">
+    <label class="form-label">Método de pago</label><select class="form-input"><option>Visa terminada en 4242</option><option>Nueva tarjeta</option><option>Transferencia bancaria</option></select>
+    <button class="primary-btn" style="width:100%;justify-content:center" onclick="completeRecharge()">Pagar y recargar</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const students=[
+  {name:'Sofía Rosa', grade:'5.º A', initials:'SR', color:'#8e44ad', balance:2450, spent:1280},
+  {name:'Mateo Rosa', grade:'2.º B', initials:'MR', color:'#e67e22', balance:1680, spent:940}
+];
+const transactions=[
+  {date:'05 ago. 2026 · 10:18 a. m.',desc:'Cafetería principal · Jugo natural y sándwich',type:'Compra',student:'Sofía Rosa',amount:-160,status:'Completado',icon:'🥪'},
+  {date:'04 ago. 2026 · 12:34 p. m.',desc:'Cafetería principal · Almuerzo del día',type:'Compra',student:'Sofía Rosa',amount:-220,status:'Completado',icon:'🍽️'},
+  {date:'02 ago. 2026 · 6:45 p. m.',desc:'Recarga con tarjeta terminada en 4242',type:'Recarga',student:'Sofía Rosa',amount:1500,status:'Aprobado',icon:'💳'},
+  {date:'01 ago. 2026 · 10:22 a. m.',desc:'Quiosco deportivo · Agua y barra de cereal',type:'Compra',student:'Mateo Rosa',amount:-105,status:'Completado',icon:'🥤'},
+  {date:'31 jul. 2026 · 12:15 p. m.',desc:'Cafetería principal · Menú escolar',type:'Compra',student:'Mateo Rosa',amount:-190,status:'Completado',icon:'🍛'}
+];
+let activeStudent=0, selectedAmount=1000;
+function money(v){return 'RD$ '+Math.abs(v).toLocaleString('es-DO',{minimumFractionDigits:2})}
+function renderStudents(){
+  const el=document.getElementById('studentTabs');
+  el.innerHTML=students.map((s,i)=>`<button class="student-chip ${i===activeStudent?'active':''}" onclick="setStudent(${i})"><div class="student-photo" style="background:${s.color}">${s.initials}</div><div><strong>${s.name}</strong><small>${s.grade} · Saldo ${money(s.balance)}</small></div></button>`).join('');
+}
+function setStudent(i){
+  activeStudent=i; const s=students[i];
+  renderStudents();
+  document.getElementById('balance').textContent=money(s.balance);
+  document.getElementById('activeStudentName').textContent=s.name;
+  document.getElementById('modalStudent').textContent=s.name;
+  document.getElementById('monthSpent').textContent='RD$ '+s.spent.toLocaleString('es-DO');
+  renderRecent();renderTable();
+}
+function renderRecent(){
+  const name=students[activeStudent].name;
+  const arr=transactions.filter(t=>t.student===name).slice(0,4);
+  document.getElementById('recentTransactions').innerHTML=arr.map(t=>`<div class="transaction"><div class="tx-icon">${t.icon}</div><div><strong>${t.desc}</strong><small>${t.date}</small></div><div class="amount ${t.amount<0?'negative':'positive'}">${t.amount<0?'-':'+'}${money(t.amount)}</div></div>`).join('');
+}
+function renderTable(){
+  const q=(document.getElementById('searchTx')?.value||'').toLowerCase();
+  const type=document.getElementById('typeFilter')?.value||'';
+  const name=students[activeStudent].name;
+  const arr=transactions.filter(t=>t.student===name&&(!type||t.type===type)&&(!q||t.desc.toLowerCase().includes(q)));
+  const target=document.getElementById('txTable');
+  if(target) target.innerHTML=arr.map(t=>`<tr><td>${t.date}</td><td>${t.desc}</td><td>${t.type}</td><td>${t.student}</td><td class="amount ${t.amount<0?'negative':'positive'}">${t.amount<0?'-':'+'}${money(t.amount)}</td><td>${t.status}</td></tr>`).join('');
+}
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
+  document.getElementById('sidebar').classList.remove('open');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='movimientos')renderTable();
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
+function toggleMenu(){document.getElementById('sidebar').classList.toggle('open')}
+function openRecharge(){document.getElementById('rechargeModal').classList.add('open')}
+function closeRecharge(){document.getElementById('rechargeModal').classList.remove('open')}
+function selectAmount(btn,val){
+  selectedAmount=val;document.querySelectorAll('.amount-option').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');
+  document.getElementById('customAmount').value='';
+}
+function completeRecharge(){
+  const custom=Number(document.getElementById('customAmount').value);
+  const amount=custom>0?custom:selectedAmount;
+  students[activeStudent].balance+=amount;
+  transactions.unshift({date:'Ahora',desc:'Recarga de saldo simulada',type:'Recarga',student:students[activeStudent].name,amount,status:'Aprobado',icon:'💳'});
+  setStudent(activeStudent);closeRecharge();notify(`Recarga de ${money(amount)} completada`);
+}
+function notify(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)
+}
+renderStudents();renderRecent();renderTable();
+</script>
+</body>
+</html>
