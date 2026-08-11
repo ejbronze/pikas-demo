@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pikas Cafetería CRM</title>
+<style>
+:root{--p:#5b3df5;--pd:#3f28c6;--ps:#f1efff;--bg:#f5f7fb;--card:#fff;--ink:#17203b;--muted:#74809a;--line:#e6eaf2;--green:#16a06d;--red:#df4d59;--orange:#ef9b20;--shadow:0 12px 30px rgba(30,40,70,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--ink)}button,input,select{font:inherit}button{cursor:pointer}
+.app{min-height:100vh;display:grid;grid-template-columns:230px 1fr}.sidebar{background:#171d33;color:#fff;padding:20px 15px;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 22px}.brandmark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--p),#8a76ff);display:grid;place-items:center;font-weight:900}.brand small{display:block;color:#9aa4bd}.nav{display:flex;flex-direction:column;gap:7px}.nav button{border:0;background:transparent;color:#d6dbeb;text-align:left;padding:12px 13px;border-radius:12px}.nav button.active,.nav button:hover{background:#252d49;color:#fff}.sidefoot{margin-top:auto;color:#9aa4bd;font-size:12px;padding:10px}
+.top{height:72px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px}.top small{display:block;color:var(--muted)}.status{background:#edf9f4;color:#14805c;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:800}.main{min-width:0}.content{padding:24px}.page{display:none}.page.active{display:block}.hero{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:20px}.hero h1{margin:0 0 5px;font-size:26px}.hero p{margin:0;color:var(--muted)}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.pad{padding:18px}.modegrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:900px}.mode{border:2px solid transparent;background:#fff;border-radius:22px;padding:28px;text-align:left;box-shadow:var(--shadow)}.mode:hover{border-color:#d7d0ff}.modeicon{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;font-size:27px;margin-bottom:18px}.pikas{background:var(--ps);color:var(--p)}.cash{background:#eef9f4;color:var(--green)}.mode h2{margin:0 0 8px}.mode p{margin:0 0 18px;color:var(--muted);line-height:1.45}.start{display:inline-block;background:var(--p);color:white;border-radius:12px;padding:11px 14px;font-weight:800}.start.cashbtn{background:var(--green)}
+.pos{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px}.student{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:18px}.studentleft{display:flex;align-items:center;gap:12px}.avatar{width:52px;height:52px;border-radius:16px;background:var(--ps);display:grid;place-items:center;color:var(--p);font-weight:900}.student strong{display:block}.student small{color:var(--muted)}.tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}.tag{font-size:11px;padding:6px 8px;border-radius:999px;background:#f2f4f8}.tag.red{background:#fff0f0;color:#b43e49}.tag.orange{background:#fff6e8;color:#9d650e}.balance{text-align:right}.balance strong{font-size:24px}
+.toolbar{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap}.search{flex:1;min-width:220px}.field{border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 12px}.products{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px}.product{border:1px solid var(--line);background:#fff;border-radius:16px;padding:13px;text-align:left;position:relative}.product:hover{border-color:#cec5ff;background:#fbfaff}.product.blocked{opacity:.5;background:#fafafa}.prodicon{width:44px;height:44px;border-radius:13px;background:#f5f3ff;display:grid;place-items:center;font-size:22px;margin-bottom:10px}.product strong{display:block;font-size:14px}.product small{display:block;color:var(--muted);margin-top:2px}.price{font-weight:900;margin-top:10px}.stock{font-size:11px;color:var(--muted);margin-top:3px}.blocknote{position:absolute;right:8px;top:8px;background:#fff0f0;color:#b43e49;font-size:10px;font-weight:800;padding:5px 7px;border-radius:999px}
+.cart{position:sticky;top:88px}.carthead{display:flex;justify-content:space-between;align-items:center}.carthead h2{margin:0}.ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 10px}.cartlist{margin-top:14px;display:flex;flex-direction:column;gap:10px;max-height:320px;overflow:auto}.cartitem{display:grid;grid-template-columns:1fr auto;gap:10px;border-bottom:1px solid var(--line);padding-bottom:10px}.cartitem small{color:var(--muted)}.qty{display:flex;gap:6px;align-items:center;margin-top:6px}.qty button{border:0;background:#f0f2f7;width:26px;height:26px;border-radius:8px}.empty{text-align:center;color:var(--muted);padding:28px 6px}.summary{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}.sum{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px}.sum.total{font-size:18px;font-weight:900;margin-top:11px}.checkout{width:100%;border:0;background:var(--p);color:white;padding:14px;border-radius:14px;font-weight:900;margin-top:12px}.checkout.cashcheckout{background:var(--green)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric{padding:16px}.metric span{color:var(--muted);font-size:12px}.metric strong{display:block;font-size:25px;margin-top:5px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}th{color:var(--muted)}.ok{color:var(--green);font-weight:800}.low{color:var(--red);font-weight:800}
+.modal{position:fixed;inset:0;background:rgba(15,22,40,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:99}.modal.open{display:flex}.modalbox{width:min(470px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.22)}.modalhead{display:flex;justify-content:space-between;align-items:center}.modalhead h2{margin:0}.close{border:0;background:#f2f4f8;width:36px;height:36px;border-radius:10px}.scanbox{border:2px dashed #d0c9ff;border-radius:18px;background:#faf9ff;padding:26px;text-align:center;margin:16px 0}.manual-lookup{border-top:1px solid var(--line);margin-top:14px;padding-top:16px}.manual-lookup-title{font-size:13px;font-weight:850;margin-bottom:4px}.manual-lookup-help{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4}.lookup-row{display:grid;grid-template-columns:1fr auto;gap:8px}.lookup-btn{border:0;background:var(--p);color:#fff;border-radius:12px;padding:0 16px;font-weight:850}.lookup-hint{margin-top:8px;font-size:11px;color:var(--muted)}.scanbox b{display:block;margin-top:8px}.warning{background:#fff7e8;border:1px solid #ffe2ab;color:#73510c;padding:12px;border-radius:12px;font-size:12px;line-height:1.45;margin-top:10px}.primary{width:100%;border:0;background:var(--p);color:#fff;border-radius:12px;padding:12px;font-weight:850}.toast{position:fixed;right:22px;bottom:22px;background:#1d2642;color:#fff;padding:13px 16px;border-radius:12px;transform:translateY(80px);opacity:0;transition:.25s;z-index:120}.toast.show{transform:translateY(0);opacity:1}
+@media(max-width:1100px){.products{grid-template-columns:repeat(3,1fr)}.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{display:none}.pos{grid-template-columns:1fr}.cart{position:static}}@media(max-width:600px){.content{padding:16px}.modegrid{grid-template-columns:1fr}.products{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><div class="brandmark">P</div><div><strong>Pikas</strong><small>Cafetería CRM</small></div></div>
+  <div class="nav">
+    <button class="active" data-page="ventas">🛒 Ventas</button>
+    <button data-page="inventario">📦 Inventario</button>
+    <button data-page="movimientos">🧾 Movimientos</button>
+    <button data-page="cierres">💰 Cierre de caja</button>
+  </div>
+  <div class="sidefoot">Cafetería Principal<br>POS-01</div>
+</aside>
+<main class="main">
+  <div class="top"><div><strong>Instituto Nueva Generación</strong><small>Cafetería Principal · Turno mañana</small></div><div class="status">● En línea</div></div>
+  <div class="content">
+    <section id="ventas" class="page active">
+      <div id="chooser">
+        <div class="hero"><div><h1>Nueva venta</h1><p>Selecciona el tipo de venta para comenzar.</p></div></div>
+        <div class="modegrid">
+          <button class="mode" onclick="startPikas()"><div class="modeicon pikas">P</div><h2>Venta Pikas</h2><p>Identifica al estudiante y valida automáticamente saldo, alergias, límites y restricciones.</p><span class="start">Iniciar venta Pikas</span></button>
+          <button class="mode" onclick="startCash()"><div class="modeicon cash">💵</div><h2>Venta en efectivo</h2><p>Venta rápida sin identificar estudiante. Selecciona los productos y registra el pago.</p><span class="start cashbtn">Iniciar venta en efectivo</span></button>
+        </div>
+      </div>
+
+      <div id="posscreen" style="display:none">
+        <div class="hero"><div><h1 id="saleTitle">Venta Pikas</h1><p id="saleSub">Selecciona los productos.</p></div><button class="ghost" onclick="resetSale()">Cancelar venta</button></div>
+
+        <div id="studentCard" class="card pad student" style="display:none">
+          <div class="studentleft"><div class="avatar">VG</div><div><strong>Valentina Gómez</strong><small>3.º B · ID 118204</small><div class="tags"><span class="tag red">Alergia: maní</span><span class="tag orange">Límite diario RD$ 250</span><span class="tag">Lactosa: alerta</span></div></div></div>
+          <div class="balance"><small>Saldo disponible</small><strong>RD$ 1,850</strong></div>
+        </div>
+
+        <div class="pos">
+          <div>
+            <div class="toolbar"><input id="search" class="field search" placeholder="Buscar producto..." oninput="renderProducts()"><select id="cat" class="field" onchange="renderProducts()"><option value="">Todas las categorías</option><option>Comidas</option><option>Bebidas</option><option>Snacks</option></select></div>
+            <div id="products" class="products"></div>
+          </div>
+          <aside class="card pad cart">
+            <div class="carthead"><h2>Carrito</h2><button class="ghost" onclick="clearCart()">Vaciar</button></div>
+            <div id="cartlist" class="cartlist"></div>
+            <div class="summary"><div class="sum"><span>Subtotal</span><strong id="subtotal">RD$ 0</strong></div><div class="sum"><span>Productos</span><strong id="count">0</strong></div><div class="sum total"><span>Total</span><strong id="total">RD$ 0</strong></div></div>
+            <button id="checkoutBtn" class="checkout" onclick="checkout()">Cobrar con Pikas</button>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section id="inventario" class="page">
+      <div class="hero"><div><h1>Inventario</h1><p>Mercancía disponible en la cafetería.</p></div><button class="ghost" onclick="notify('Inventario actualizado')">Actualizar</button></div>
+      <div class="metrics"><div class="card metric"><span>Productos activos</span><strong>24</strong></div><div class="card metric"><span>Unidades disponibles</span><strong>386</strong></div><div class="card metric"><span>Stock bajo</span><strong style="color:var(--red)">4</strong></div><div class="card metric"><span>Valor inventario</span><strong>RD$ 42,600</strong></div></div>
+      <div style="height:18px"></div><div class="card pad tablewrap"><table><thead><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Precio</th><th>Estado</th></tr></thead><tbody id="inventory"></tbody></table></div>
+    </section>
+
+    <section id="movimientos" class="page">
+      <div class="hero"><div><h1>Movimientos</h1><p>Ventas recientes.</p></div></div>
+      <div class="card pad tablewrap"><table><thead><tr><th>Hora</th><th>Tipo</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead><tbody><tr><td>10:18 a. m.</td><td>Pikas</td><td>Valentina Gómez</td><td>RD$ 140</td><td class="ok">Pagado</td></tr><tr><td>10:16 a. m.</td><td>Efectivo</td><td>Venta libre</td><td>RD$ 95</td><td class="ok">Pagado</td></tr><tr><td>10:14 a. m.</td><td>Pikas</td><td>Mateo Rosa</td><td>RD$ 180</td><td class="ok">Pagado</td></tr></tbody></table></div>
+    </section>
+
+    <section id="cierres" class="page">
+      <div class="hero"><div><h1>Cierre de caja</h1><p>Resumen del turno actual.</p></div><button class="start cashbtn" onclick="notify('Cierre preliminar generado')">Generar cierre</button></div>
+      <div class="metrics"><div class="card metric"><span>Ventas Pikas</span><strong>RD$ 12,450</strong></div><div class="card metric"><span>Ventas efectivo</span><strong>RD$ 5,980</strong></div><div class="card metric"><span>Transacciones</span><strong>126</strong></div><div class="card metric"><span>Total del turno</span><strong>RD$ 18,430</strong></div></div>
+    </section>
+  </div>
+</main>
+</div>
+
+<div id="scanModal" class="modal">
+  <div class="modalbox">
+    <div class="modalhead">
+      <h2>Identificar estudiante</h2>
+      <button class="close" onclick="closeScan()">✕</button>
+    </div>
+
+    <div class="scanbox">
+      <div style="font-size:36px">▣</div>
+      <b>Escanea QR, carnet o NFC</b>
+      <small style="color:var(--muted);display:block;margin-top:5px">Acerca la identificación del estudiante al lector.</small>
+    </div>
+
+    <div class="manual-lookup">
+      <div class="manual-lookup-title">¿No tiene su carnet?</div>
+      <div class="manual-lookup-help">Escribe preferiblemente el <strong>código del estudiante</strong>. También puedes buscar por nombre.</div>
+      <div class="lookup-row">
+        <input id="studentLookup" class="field" placeholder="Código del estudiante (ej. 118204)" value="118204" onkeydown="if(event.key==='Enter') lookupStudent()">
+        <button class="lookup-btn" onclick="lookupStudent()">Buscar</button>
+      </div>
+      <div class="lookup-hint">Prioridad de búsqueda: código → nombre.</div>
+    </div>
+
+    <div id="lookupResult" style="display:none;margin-top:12px" class="card pad">
+      <div class="studentleft">
+        <div class="avatar">VG</div>
+        <div>
+          <strong>Valentina Gómez</strong>
+          <small>3.º B · Código 118204</small>
+        </div>
+      </div>
+      <button class="primary" style="margin-top:12px" onclick="identifyStudent()">Seleccionar estudiante</button>
+    </div>
+
+    <div class="warning">Cuando selecciones al estudiante, Pikas cargará automáticamente saldo, alergias, restricciones y límites antes de habilitar la compra.</div>
+  </div>
+</div>
+
+<div id="checkoutModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="checkoutTitle">Confirmar pago</h2><button class="close" onclick="closeCheckout()">✕</button></div><div id="checkoutContent"></div></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const products=[
+{id:1,name:'Sándwich integral',cat:'Comidas',price:120,stock:18,icon:'🥪',allergens:[]},
+{id:2,name:'Jugo natural',cat:'Bebidas',price:65,stock:26,icon:'🧃',allergens:[]},
+{id:3,name:'Barra con maní',cat:'Snacks',price:80,stock:12,icon:'🥜',allergens:['maní']},
+{id:4,name:'Pizza de queso',cat:'Comidas',price:150,stock:14,icon:'🍕',allergens:['lactosa']},
+{id:5,name:'Agua',cat:'Bebidas',price:45,stock:62,icon:'💧',allergens:[]},
+{id:6,name:'Yogurt',cat:'Snacks',price:90,stock:8,icon:'🥛',allergens:['lactosa']},
+{id:7,name:'Pasta con pollo',cat:'Comidas',price:180,stock:21,icon:'🍝',allergens:[]},
+{id:8,name:'Galletas',cat:'Snacks',price:70,stock:31,icon:'🍪',allergens:[]}
+];
+let mode=null,student=false,cart=[];
+function money(v){return 'RD$ '+v.toLocaleString('es-DO')}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(b.dataset.page).classList.add('active')});
+function startPikas(){mode='pikas';document.getElementById('scanModal').classList.add('open')}
+function startCash(){mode='cash';student=false;showPOS();document.getElementById('studentCard').style.display='none';document.getElementById('saleTitle').textContent='Venta en efectivo';document.getElementById('saleSub').textContent='Venta rápida sin restricciones de estudiante.';let b=document.getElementById('checkoutBtn');b.textContent='Cobrar en efectivo';b.classList.add('cashcheckout');renderProducts();renderCart()}
+function lookupStudent(){
+  const value=(document.getElementById('studentLookup').value||'').trim();
+  if(!value){notify('Escribe el código o nombre del estudiante');return}
+  const result=document.getElementById('lookupResult');
+  result.style.display='block';
+  if(value==='118204' || value.toLowerCase().includes('valentina')){
+    notify('Estudiante encontrado: Valentina Gómez');
+  }else{
+    result.querySelector('strong').textContent='Resultado de demostración';
+    result.querySelector('small').textContent='Código / búsqueda: '+value;
+    notify('Resultado encontrado para '+value);
+  }
+}
+function closeScan(){
+  document.getElementById('scanModal').classList.remove('open');
+  const r=document.getElementById('lookupResult');
+  if(r) r.style.display='none';
+}
+function identifyStudent(){student=true;closeScan();showPOS();document.getElementById('studentCard').style.display='grid';document.getElementById('saleTitle').textContent='Venta Pikas';document.getElementById('saleSub').textContent='Restricciones y saldo cargados para Valentina Gómez.';let b=document.getElementById('checkoutBtn');b.textContent='Cobrar con Pikas';b.classList.remove('cashcheckout');renderProducts();renderCart()}
+function showPOS(){document.getElementById('chooser').style.display='none';document.getElementById('posscreen').style.display='block'}
+function isBlocked(p){return mode==='pikas'&&student&&p.allergens.includes('maní')}
+function renderProducts(){let q=(document.getElementById('search').value||'').toLowerCase(),cat=document.getElementById('cat').value||'';let arr=products.filter(p=>(!q||p.name.toLowerCase().includes(q))&&(!cat||p.cat===cat));document.getElementById('products').innerHTML=arr.map(p=>`<button class="product ${isBlocked(p)?'blocked':''}" onclick="${isBlocked(p)?`blocked('${p.name}')`:`add(${p.id})`}">${isBlocked(p)?'<span class="blocknote">Bloqueado</span>':''}<div class="prodicon">${p.icon}</div><strong>${p.name}</strong><small>${p.cat}</small><div class="price">${money(p.price)}</div><div class="stock">Stock: ${p.stock}</div></button>`).join('')}
+function blocked(name){notify(name+' bloqueado por alergia registrada')}
+function add(id){let p=products.find(x=>x.id===id),e=cart.find(x=>x.id===id);if(e)e.qty++;else cart.push({...p,qty:1});renderCart()}
+function qty(id,d){let i=cart.find(x=>x.id===id);if(!i)return;i.qty+=d;if(i.qty<=0)cart=cart.filter(x=>x.id!==id);renderCart()}
+function clearCart(){cart=[];renderCart()}
+function renderCart(){let el=document.getElementById('cartlist');el.innerHTML=cart.length?cart.map(i=>`<div class="cartitem"><div><strong>${i.name}</strong><small>${money(i.price)} c/u</small><div class="qty"><button onclick="qty(${i.id},-1)">−</button><span>${i.qty}</span><button onclick="qty(${i.id},1)">＋</button></div></div><strong>${money(i.price*i.qty)}</strong></div>`).join(''):'<div class="empty">El carrito está vacío.</div>';let t=cart.reduce((s,i)=>s+i.price*i.qty,0);document.getElementById('subtotal').textContent=money(t);document.getElementById('total').textContent=money(t);document.getElementById('count').textContent=cart.reduce((s,i)=>s+i.qty,0)}
+function checkout(){let t=cart.reduce((s,i)=>s+i.price*i.qty,0);if(!t){notify('Agrega productos antes de cobrar');return}let m=document.getElementById('checkoutModal'),ttl=document.getElementById('checkoutTitle'),c=document.getElementById('checkoutContent');if(mode==='pikas'){ttl.textContent='Confirmar pago con Pikas';let over=t>250;c.innerHTML=`<div style="margin-top:14px"><strong>Valentina Gómez</strong><div style="color:var(--muted);font-size:13px">Saldo RD$ 1,850 · límite diario RD$ 250</div><div style="font-size:34px;font-weight:900;margin:16px 0">${money(t)}</div>${over?'<div class="warning">Esta compra supera el límite diario. Se requiere autorización del tutor.</div>':''}<button class="primary" style="margin-top:14px" onclick="${over?'requestApproval()':'completeSale()'}">${over?'Solicitar autorización':'Confirmar cobro'}</button></div>`}else{ttl.textContent='Cobro en efectivo';c.innerHTML=`<div style="color:var(--muted);font-size:13px;margin-top:14px">Total a cobrar</div><div style="font-size:34px;font-weight:900;margin:10px 0 14px">${money(t)}</div><input class="field" style="width:100%;margin-bottom:12px" type="number" value="${t}"><button class="primary" style="background:var(--green)" onclick="completeSale()">Registrar pago</button>`}m.classList.add('open')}
+function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open')}
+function requestApproval(){closeCheckout();notify('Solicitud enviada al tutor')}
+function completeSale(){closeCheckout();cart=[];renderCart();notify('Venta completada correctamente');setTimeout(resetSale,700)}
+function resetSale(){mode=null;student=false;cart=[];document.getElementById('chooser').style.display='block';document.getElementById('posscreen').style.display='none';renderCart()}
+function notify(msg){let t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
+document.getElementById('inventory').innerHTML=products.map(p=>`<tr><td>${p.name}</td><td>${p.cat}</td><td>${p.stock}</td><td>${money(p.price)}</td><td class="${p.stock<10?'low':'ok'}">${p.stock<10?'Stock bajo':'Disponible'}</td></tr>`).join('');
+renderProducts();renderCart();
+</script>
+</body>
+</html>
