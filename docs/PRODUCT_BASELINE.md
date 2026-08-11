@@ -1,14 +1,14 @@
 # Línea base del producto PIKAS
 
-Versión local **0.4.0** de la rama `feature/unified-pikas-app`, verificada el **11 de agosto de 2026**. El despliegue público [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app) contiene el POS funcional y demo auth autorizada, pero no incluye todavía los refinamientos locales 0.4.0.
+Versión local **0.5.0** en `main`, verificada el **11 de agosto de 2026**. El código se publica en esta fase, pero no se realiza un despliegue: [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app) puede conservar una versión anterior hasta una verificación independiente.
 
 El recorrido reproducible para presentar esta línea base, incluidas capturas y reinicio del estado ficticio, está en la [Guía de demostración](DEMO_GUIDE.md).
 
 ## Estado general
 
-La aplicación unificada ofrece recorridos para Familia, Estudiante y Cafetería/POS. En demo mode usa una cookie de rol y un único estado ficticio versionado en `localStorage`; estudiantes, catálogo, compras, balances y movimientos se comparten entre las tres experiencias del mismo navegador. El demo no mueve fondos reales y sus credenciales no constituyen autenticación. En 0.3.0, Familia y Estudiante comparten un shell responsivo con sidebar estable desde tablet, navegación móvil segura y estado activo exacto por ruta.
+La aplicación unificada ofrece recorridos para Familia, Estudiante, Cafetería/POS y dos espacios administrativos. En demo mode usa cookies de rol y un único estado ficticio versionado en `localStorage`; estudiantes, catálogo, conexiones, compras, balances, actividad y movimientos se comparten dentro del mismo navegador. El demo no mueve fondos reales. Familia/Estudiante/POS conservan el shell responsivo 0.4.0; Administración añade sidebar de escritorio y navegación inferior móvil.
 
-Producción tiene clientes Supabase de servidor y una migración POS nueva, pero no fue posible aplicar ni validar el esquema contra un proyecto vivo. Cuando demo mode está desactivado, `/pos` no usa fixtures silenciosamente: muestra una configuración requerida hasta que se conecten las acciones Supabase.
+Producción tiene clientes Supabase de servidor y migraciones POS. Esta tarea no aplica ni valida migraciones, no configura servicios y no toca datos live. Cuando demo mode está desactivado, las rutas administrativas muestran que la integración productiva está pendiente en vez de usar fixtures silenciosamente.
 
 ## Recorrido Cafetería/POS implementado
 

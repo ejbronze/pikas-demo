@@ -1,6 +1,6 @@
 # Alcance del MVP
 
-PIKAS 0.3.0 ofrece una aplicación responsiva unificada en español para Familia, Estudiante y Cafetería/POS. Las tres experiencias comparten estudiantes ficticios, wallets, controles, catálogo, preórdenes, compras y movimientos dentro del mismo navegador.
+PIKAS 0.5.0 ofrece una aplicación responsiva unificada en español para Familia, Estudiante, Cafetería/POS, Administración escolar y Administración de cafetería. Las experiencias comparten estudiantes ficticios, wallets, controles, catálogo, conexiones, preórdenes, compras y movimientos dentro del mismo navegador.
 
 ## Incluido en el demo
 
@@ -11,7 +11,7 @@ PIKAS 0.3.0 ofrece una aplicación responsiva unificada en español para Familia
 
 ## Fuera de alcance
 
-No hay dinero real, procesador de pagos, integración SIS, QR verificable, búsqueda POS por nombre, administración funcional, refunds/reversos, conciliación ni sincronización entre dispositivos. Auth, PostgreSQL/RLS, correo y Storage de Supabase están preparados en código, pero no conectados ni verificados con un proyecto vivo.
+No hay dinero real, procesador de pagos, integración SIS, QR verificable, búsqueda POS por nombre, refunds/reversos, conciliación ni sincronización entre dispositivos. Administración funciona como demo 0.5.0, pero sus organizaciones, invitaciones y auditoría aún no están conectadas a Supabase. Auth, PostgreSQL/RLS, correo y Storage requieren binding y verificación productiva.
 
 ## Criterio de demostración
 

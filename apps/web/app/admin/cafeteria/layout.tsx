@@ -1,0 +1,1 @@
+import {AdminShell} from "@/components/admin-shell";import {requireAdminRole} from "@/lib/auth/require-admin-role";export default async function Layout({children}:{children:React.ReactNode}){await requireAdminRole("cafeteria_admin");return <AdminShell kind="cafeteria">{children}</AdminShell>}

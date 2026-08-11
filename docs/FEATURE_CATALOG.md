@@ -1,6 +1,6 @@
 # Catálogo de funcionalidades PIKAS
 
-Última revisión: **11 de agosto de 2026**, versión local **0.4.0** de `feature/unified-pikas-app`. “Functional with limitations” indica flujo demo verificado y/o producción preparada pero aún no validada contra Supabase.
+Última revisión: **11 de agosto de 2026**, versión local **0.5.0** en `main`. “Functional with limitations” indica flujo demo verificado y/o producción preparada pero aún no validada contra Supabase.
 
 ## Significado de estados
 
@@ -36,7 +36,20 @@
 | POS-020 | Historial de transacciones POS | Functional with limitations | Lista, búsqueda, detalle y vacío funcionan en demo; consulta Supabase preparada sin binding. |
 | POS-021 | Cierre de sesión | Functional | El endpoint de logout y el control accesible se verifican. |
 
-El despliegue público ejecuta el milestone POS funcional con demo auth autorizada. Los refinamientos locales de shell y densidad 0.3.0 no forman parte del alias público hasta una publicación posterior.
+## Administración 0.5.0
+
+| ID | Función | Estado | Evidencia y límite |
+| --- | --- | --- | --- |
+| ADM-001 | Login y espacios administrativos | Functional with limitations | Credenciales demo exactas, guard de servidor y redirección por rol; Auth Supabase pendiente. |
+| ADM-002 | Padrón escolar | Functional with limitations | Búsqueda, filtro, estados, código enmascarado/regenerado y vista previa CSV; importación durable pendiente. |
+| ADM-003 | Administradores escolares | Functional with limitations | Invitar, activar, suspender y restablecer demo; protege el último admin activo. |
+| ADM-004 | Menú de cafetería | Functional with limitations | Precio/disponibilidad persisten y se reflejan en Estudiante/POS del mismo navegador. |
+| ADM-005 | Personal POS | Functional with limitations | Invitación y estados demo; correo/Auth y asignación productiva pendientes. |
+| ADM-006 | Conexiones Escuela–Cafetería | Functional with limitations | Estados y alcance mínimo afectan lookup/checkout; persistencia/RLS pendiente. |
+| ADM-007 | Actividad administrativa | Functional with limitations | Eventos demo visibles; auditoría durable append-only pendiente. |
+| ADM-008 | Fronteras de autorización | Functional with limitations | Política central, guards, pruebas unitarias y E2E; RLS organizacional pendiente. |
+
+El despliegue público no se modificó durante 0.5.0 y puede conservar una versión anterior. La fuente verificable de esta fase es el código y la suite local.
 
 ## Navegación y presentación
 

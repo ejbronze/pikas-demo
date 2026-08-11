@@ -1,5 +1,19 @@
 # Registro de cambios del producto
 
+## 2026-08-11 — PIKAS 0.5.0: base administrativa
+
+- Se añadieron espacios separados para Administración escolar y Administración de cafetería, con acceso demo exacto y guards por rol.
+- Se centralizó la matriz de permisos para padrón, administradores escolares, conexiones, menú, personal POS y checkout.
+- Escuela puede buscar, filtrar, archivar/reactivar, regenerar códigos, iniciar restablecimientos e inspeccionar una importación CSV ficticia sin exponer contraseñas.
+- Escuela administra conexiones Cafetería–Escuela y controla su alcance; los estados suspendido/revocado afectan lookup y checkout POS.
+- Cafetería administra catálogo, precios, disponibilidad, personal de caja y vistas transaccionales de alcance mínimo.
+- Invitaciones, cambios de cuenta, estudiantes, menú y conexiones producen actividad administrativa demo.
+- El mismo estado persistente propaga cambios del menú a Estudiante/POS y mantiene las compras visibles en Familia/Estudiante/POS.
+- Se añadieron pruebas unitarias de política y recorridos Playwright de fronteras administrativas, privacidad/CSV y propagación del menú.
+- Se actualizó documentación, credenciales y material visual a 0.5.0.
+
+Esta fase no desplegó, configuró Supabase ni modificó datos externos. Administración sigue usando el adaptador demo local; el binding productivo, RLS organizacional e invitaciones Auth quedan pendientes.
+
 ## 2026-08-11 — PIKAS 0.4.0: identidad visual
 
 Cambios locales sin commit ni despliegue, sobre la interfaz 0.3.0.

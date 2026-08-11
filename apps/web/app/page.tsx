@@ -62,6 +62,6 @@ export default function Home() {
         <article className="rounded-2xl bg-violet-700 p-6 text-white"><span className="text-sm font-bold text-violet-200">PARA ESTUDIANTES</span><h2 className="mt-2 text-2xl font-black">Tu día, a tu alcance</h2><p className="mt-3 text-violet-100">Una vista móvil, clara y rápida para comprar, planificar y aprender a organizar el dinero.</p></article>
       </section>
     </main>
-    <footer className="border-t px-5 py-6 text-center text-sm text-slate-500">PIKAS · Experiencia de demostración. No procesa dinero real.</footer>
+    <footer className="border-t px-5 py-6 text-center text-sm text-slate-500">PIKAS · Experiencia de demostración. No procesa dinero real. <Link className="ml-2 font-bold text-slate-600 underline" href="/admin/login">Acceso administrativo</Link></footer>
   </div>;
 }
