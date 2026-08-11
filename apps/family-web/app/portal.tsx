@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import type { Parent, Student, StudentControls, Transaction, Wallet } from "@pikas/shared-types";
-import { Avatar, Brand, Button, DemoBadge, EmptyState } from "@pikas/ui";
+import { Avatar, Brand, Button, DemoBadge, EmptyState, MockDataNotice } from "@pikas/ui";
 
 type StudentRecord = {student:Student;wallet:Wallet|null;controls:StudentControls|null;transactions:Transaction[]};
 type View = "inicio"|"movimientos"|"controles"|"familia";
@@ -17,6 +17,7 @@ export default function FamilyPortal({parent,records}:{parent:Parent;records:Stu
   function addFunds(){if(amount<=0)return;setSessionCredits(old=>({...old,[activeId]:(old[activeId]??0)+amount}));setTopup(false);setNotice(`Recarga demo de ${money(amount)} aplicada durante esta sesión.`)}
   const nav:[View,string,string][]=[["inicio","⌂","Inicio"],["movimientos","↔","Movimientos"],["controles","⚙","Controles"],["familia","☺","Mi familia"]];
   return <div className="min-h-screen md:grid md:grid-cols-[250px_1fr]">
+    <MockDataNotice />
     <aside className="hidden min-h-screen bg-gradient-to-b from-blue-900 to-blue-600 p-6 text-white md:block"><Brand/><nav className="mt-10 space-y-2" aria-label="Navegación principal">{nav.map(([id,icon,label])=><button key={id} onClick={()=>setView(id)} className={`nav-item w-full ${view===id?"nav-item-active":""}`}><span>{icon}</span>{label}</button>)}</nav><div className="mt-12 rounded-2xl bg-white/10 p-4 text-sm"><strong>¿Necesitas ayuda?</strong><p className="mt-2 text-blue-100">Este MVP utiliza información simulada.</p></div></aside>
     <div><header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b bg-white/95 px-5 backdrop-blur md:px-8"><div><span className="label">Portal de familias</span><p className="font-bold">Hola, {parent.name.split(" ")[0]} 👋</p></div><div className="flex items-center gap-3"><DemoBadge/><Avatar name={parent.name}/></div></header>
       <main className="mx-auto max-w-6xl p-4 pb-28 md:p-8">
