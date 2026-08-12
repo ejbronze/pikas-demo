@@ -12,6 +12,7 @@ export type PosStudentRecord = {
   spentTodayMinor: number;
   allergies: string[];
   blockedProducts: string[];
+  blockedProductIds: string[];
 };
 
 export type PosMenuItemRecord = {
@@ -21,17 +22,21 @@ export type PosMenuItemRecord = {
   category: string;
   priceMinor: number;
   allergens: string[];
+  ingredients: string[];
+  restrictionTags: string[];
+  imageUrl: string | null;
   available: boolean;
 };
 
 export type PosCartLine = { itemId: string; quantity: number };
 export type PosPurchaseRecord = {
   readonly id: string;
-  readonly studentId: string;
+  readonly studentId: string | null;
   readonly studentName: string;
   readonly items: ReadonlyArray<Readonly<{ itemId: string; name: string; quantity: number; unitPriceMinor: number }>>;
   readonly totalMinor: number;
   readonly status: "completed";
+  readonly paymentMethod: "student_wallet" | "cash";
   readonly employeeLabel: string;
   readonly idempotencyKey: string;
   readonly createdAt: string;
@@ -85,6 +90,7 @@ export function validatePosPurchase(
   const byId = new Map(menu.map((item) => [item.id, item]));
   const studentAllergies = new Set(student.allergies.map(normalized));
   const blocked = new Set(student.blockedProducts.map(normalized));
+  const blockedIds = new Set(student.blockedProductIds);
   const lines: Array<PosCartLine & { name: string; unitPriceMinor: number }> = [];
   let totalMinor = 0;
 
@@ -95,7 +101,7 @@ export function validatePosPurchase(
     const item = byId.get(line.itemId);
     if (!item) return { ok: false, reason: "item_not_found" };
     if (!item.available) return { ok: false, reason: "item_unavailable", itemName: item.name };
-    if (blocked.has(normalized(item.name))) return { ok: false, reason: "blocked_product", itemName: item.name };
+    if (blockedIds.has(item.id)||blocked.has(normalized(item.name))) return { ok: false, reason: "blocked_product", itemName: item.name };
     const allergen = item.allergens.find((value) => studentAllergies.has(normalized(value)));
     if (allergen) return { ok: false, reason: "allergy", itemName: item.name, allergen };
     const lineTotal = item.priceMinor * line.quantity;
@@ -133,21 +139,28 @@ export function preparePosPurchase(input: {
   employeeLabel: string;
   now: string;
   purchaseId: string;
+  paymentMethod?: "student_wallet" | "cash";
 }) {
   const duplicate = input.purchases.find((purchase) => purchase.idempotencyKey === input.idempotencyKey);
   if (duplicate) return { ok: true as const, duplicate: true, purchase: duplicate };
-  const validation = validatePosPurchase(input.student, input.menu, input.cart);
+  const validation = input.paymentMethod==="cash"?validateCashPurchase(input.menu,input.cart):validatePosPurchase(input.student, input.menu, input.cart);
   if (!validation.ok) return validation;
   const purchase: PosPurchaseRecord = Object.freeze({
     id: input.purchaseId,
-    studentId: input.student.id,
-    studentName: input.student.preferredName,
+    studentId: input.paymentMethod==="cash"?null:input.student.id,
+    studentName: input.paymentMethod==="cash"?"Venta en efectivo":input.student.preferredName,
     items: Object.freeze(validation.lines.map((line) => Object.freeze({ itemId: line.itemId, name: line.name, quantity: line.quantity, unitPriceMinor: line.unitPriceMinor }))),
     totalMinor: validation.totalMinor,
     status: "completed",
+    paymentMethod: input.paymentMethod??"student_wallet",
     employeeLabel: input.employeeLabel,
     idempotencyKey: input.idempotencyKey,
     createdAt: input.now,
   });
   return { ok: true as const, duplicate: false, purchase };
+}
+
+export function validateCashPurchase(menu:PosMenuItemRecord[],cart:PosCartLine[]):PosValidation{
+  const cashier={id:"cash",preferredName:"Efectivo",grade:"",code:"PK-00000",school:"",status:"active",walletStatus:"active",balanceMinor:Number.MAX_SAFE_INTEGER,dailyLimitMinor:Number.MAX_SAFE_INTEGER,perTransactionLimitMinor:Number.MAX_SAFE_INTEGER,spentTodayMinor:0,allergies:[],blockedProducts:[],blockedProductIds:[]} satisfies PosStudentRecord;
+  return validatePosPurchase(cashier,menu,cart);
 }

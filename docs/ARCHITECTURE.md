@@ -45,3 +45,10 @@ Recolectar el mínimo necesario, limitar lecturas por escuela/familia, evitar ID
 ## Próximas capas
 
 POS todavía necesita un token QR opaco, binding de la UI con las interfaces Supabase, revalidación de vistas y pruebas reales de RLS/concurrencia. Administración necesita persistencia organizacional, Auth para invitaciones y auditoría durable. Pagos futuros se aislarán tras un proveedor tokenizado; PIKAS nunca almacenará números de tarjeta.
+# Actualización 0.5.1
+
+El modo se selecciona con `NEXT_PUBLIC_PIKAS_DEMO_MODE`. Demo conserva cookies ficticias y `localStorage`; Supabase usa `@supabase/ssr`, valida sesiones y perfiles en servidor, y limita administradores mediante `organization_memberships`. `menu_items` es la primera fuente operativa compartida. El resto del grafo continúa en el adaptador demo durante esta fase.
+
+## Actualización 0.5.2
+
+`menu_items` conserva atributos operativos y se consume por rol. `blocked_products.menu_item_id` evita depender del nombre mutable. `purchases.payment_method` separa efectivo de billetera y una restricción SQL impide asociar ventas en efectivo a estudiantes. Los eventos administrativos se limitan por organización mediante RLS. Demo conserva un grafo equivalente en `localStorage`.

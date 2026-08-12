@@ -74,3 +74,10 @@ Las acciones actualizan `pikas:unified-demo:v2` en el navegador. Los cambios sob
 - Paginación respaldada por servidor, carga CSV real con trabajos reintentables y resumen durable de errores.
 - Revisión independiente de seguridad, privacidad y accesibilidad.
 - Cuentas docentes limitadas y administración de plataforma interna, después de definir alcance y revisión de privacidad.
+# Actualización 0.5.1
+
+Los guards verifican usuario, rol y membresía activa. Escuela y cafetería no pueden abrir el espacio de la otra; POS solo llega a `/pos`. RLS evita que cafetería navegue perfiles o padrón y limita cambios del menú a su organización. Rol y organización no son mutables desde clientes.
+
+## Actualización 0.5.2
+
+Cafetería lee solo asociaciones, catálogo, ventas y auditoría de su organización; no recibe una política para recorrer el padrón. POS obtiene verificación mínima tras asociación activa. Escuela conserva estado estudiantil y restricciones, y solo ve catálogos vinculados a su escuela.

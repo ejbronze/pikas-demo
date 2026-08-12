@@ -147,3 +147,10 @@ En Familia, revisa estudiantes, saldo, límites, restricciones, movimientos y pr
 Administración 0.5.0, sesiones y datos compartidos son demo local. No hay binding administrativo Supabase, RLS organizacional, invitaciones por correo, importación CSV productiva, sincronización entre dispositivos, SIS, QR verificable, búsqueda POS por nombre, pagos reales, refunds o conciliación. La URL pública puede corresponder a una versión anterior porque esta fase no despliega.
 
 Mantén esta guía sincronizada cuando cambien versión, rutas, etiquetas, credenciales, códigos, permisos, persistencia o capturas.
+# Nota 0.5.1
+
+Las cuentas existentes siguen usando la contraseña demo documentada en la interfaz. En Supabase, créelas solo en desarrollo con `PIKAS_DEMO_PASSWORD` y `npm run seed:supabase-auth`: `admin.escuela@demo.pikas.do` → `/admin/escuela`, `admin.cafeteria@demo.pikas.do` → `/admin/cafeteria`, y `cafeteria@demo.pikas.do` → `/pos`. Logout elimina la sesión; las cookies permiten conservarla tras refrescar.
+
+## Flujo 0.5.2
+
+Cambie un producto en Cafetería y actualice Estudiante, Familia o POS para observar la misma disponibilidad. En POS elija “Código estudiantil / NFC” para aplicar saldo, alergias y bloqueos, o “Venta en efectivo” para no afectar balances. El carrito se conserva al refrescar. Una imagen rota muestra iniciales con texto accesible.

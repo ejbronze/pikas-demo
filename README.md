@@ -132,10 +132,16 @@ Playwright cubre escritorio y móvil para Familia, Estudiante, POS y Administrac
 - [MVP](docs/MVP.md)
 - [Registro de cambios](docs/CHANGELOG_PRODUCT.md)
 
+## Modos de ejecución (0.5.2)
+
+`NEXT_PUBLIC_PIKAS_DEMO_MODE=true` conserva el demo público ficticio y su persistencia en el navegador. Con `false`, URL y anon key de Supabase son obligatorias: Auth conserva la sesión mediante cookies, valida el usuario en servidor y dirige `school_admin`, `cafeteria_admin` y `pos_operator` a sus espacios. El catálogo compartido se lee de Supabase y solo una membresía activa de cafetería puede editarlo.
+
+Para desarrollo: aplique las migraciones y `supabase/seed.sql` a un proyecto no productivo, configure `PIKAS_DEMO_PASSWORD` localmente y ejecute `npm run seed:supabase-auth`. La service-role key es exclusivamente de servidor. No se cambió producción ni se afirma preparación productiva.
+
 ## Limitaciones actuales
 
 - El modo demo es una simulación de un solo navegador, no autenticación ni persistencia multiusuario.
-- Administración 0.5.0 no está enlazada a Supabase, SIS, correo de invitación ni directorios institucionales.
+- En modo Supabase 0.5.2 Auth, membresías/alcance, catálogo, restricciones por producto, compras tipadas y auditoría tienen modelo remoto. Algunas acciones de familia, estudiante y wallet continúan en el adaptador demo.
 - La importación CSV es una vista previa demostrativa y aplica una fila ficticia conocida; no carga archivos reales al servidor.
 - QR sigue siendo visual; no hay lectura QR, búsqueda POS por nombre, refunds, reversos de compras completadas, pagos reales ni conciliación.
-- El sitio público puede corresponder a una versión anterior hasta que exista un despliegue 0.5.0 autorizado y verificado.
+- El sitio público puede corresponder a una versión anterior hasta que exista un despliegue 0.5.2 autorizado y verificado.

@@ -12,7 +12,7 @@ import {
 } from "@pikas/data-access";
 import {activePartnershipAllows,can,type AdminRole,type PartnershipScope,type PartnershipStatus} from "@/lib/admin-policy";
 
-export type DemoStudent = {id:string;firstName:string;lastName:string;preferredName:string;grade:string;code:string;status:"active"|"inactive"|"archived";balance:number;dailyLimit:number;perPurchaseLimit:number;spentToday:number;allergies:string[];blocked:string[]};
+export type DemoStudent = {id:string;firstName:string;lastName:string;preferredName:string;grade:string;code:string;status:"active"|"inactive"|"archived";balance:number;dailyLimit:number;perPurchaseLimit:number;spentToday:number;allergies:string[];blocked:string[];blockedProductIds?:string[]};
 export type DemoTx = {id:string;studentId:string;description:string;category:string;amount:number;status:"completed"|"pending"|"reversed";createdAt:string;purchaseId?:string};
 export type DemoOrder = {id:string;studentId:string;item:string;amount:number;status:"submitted"|"confirmed"|"cancelled";createdAt:string};
 export type DemoAdminUser={id:string;name:string;email:string;role:AdminRole;status:"active"|"suspended"|"inactive";scope:string;lastActivity:string};
@@ -23,18 +23,18 @@ export type DemoAdministration={school:{name:string;status:"active"};cafeteria:{
 type State = {parent:{name:string;email:string;phone:string};students:DemoStudent[];transactions:DemoTx[];orders:DemoOrder[];budget:{goal:string;limit:number;archived:boolean};menuItems:PosMenuItemRecord[];purchases:PosPurchaseRecord[];administration:DemoAdministration};
 
 const demoMenu: PosMenuItemRecord[] = [
-  {id:"menu-pasta",name:"Pasta con pollo",description:"Almuerzo completo, sin alérgenos registrados",category:"Almuerzo",priceMinor:18000,allergens:[],available:true},
-  {id:"menu-sandwich",name:"Sándwich integral",description:"Merienda escolar",category:"Merienda",priceMinor:12000,allergens:["Gluten"],available:true},
-  {id:"menu-pizza",name:"Pizza escolar",description:"Porción individual",category:"Almuerzo",priceMinor:15000,allergens:["Lactosa"],available:true},
-  {id:"menu-energy",name:"Bebidas energéticas",description:"Producto restringible",category:"Bebidas",priceMinor:11000,allergens:[],available:true},
-  {id:"menu-special",name:"Especial del día",description:"Agotado por hoy",category:"Almuerzo",priceMinor:20000,allergens:[],available:false},
+  {id:"menu-pasta",name:"Pasta con pollo",description:"Almuerzo completo",category:"Almuerzo",priceMinor:18000,allergens:[],ingredients:["Pasta","Pollo","Tomate"],restrictionTags:["Alto en proteína"],imageUrl:"/menu/pasta.svg",available:true},
+  {id:"menu-sandwich",name:"Sándwich integral",description:"Merienda escolar",category:"Merienda",priceMinor:12000,allergens:["Gluten"],ingredients:["Pan integral","Queso","Vegetales"],restrictionTags:[],imageUrl:"/menu/sandwich.svg",available:true},
+  {id:"menu-pizza",name:"Pizza escolar",description:"Porción individual",category:"Almuerzo",priceMinor:15000,allergens:["Lactosa"],ingredients:["Masa","Tomate","Queso"],restrictionTags:[],imageUrl:"/menu/pizza.svg",available:true},
+  {id:"menu-energy",name:"Bebidas energéticas",description:"Producto restringible",category:"Bebidas",priceMinor:11000,allergens:[],ingredients:["Agua carbonatada"],restrictionTags:["Cafeína"],imageUrl:"/menu/drink.svg",available:true},
+  {id:"menu-special",name:"Especial del día",description:"Agotado por hoy",category:"Almuerzo",priceMinor:20000,allergens:[],ingredients:["Arroz","Vegetales"],restrictionTags:[],imageUrl:null,available:false},
 ];
 
 const initial: State = {
   parent:{name:"Oscar Rosa",email:"familia@demo.pikas.do",phone:"809-555-0142"},
   students:[
-    {id:"sofia",firstName:"Sofía",lastName:"Rosa",preferredName:"Sofi",grade:"5.º A",code:"PK-10982",status:"active",balance:2450,dailyLimit:350,perPurchaseLimit:250,spentToday:160,allergies:["Maní","Lactosa"],blocked:["Bebidas energéticas"]},
-    {id:"mateo",firstName:"Mateo",lastName:"Rosa",preferredName:"Mateo",grade:"2.º B",code:"PK-11804",status:"active",balance:1680,dailyLimit:300,perPurchaseLimit:200,spentToday:105,allergies:[],blocked:["Bebidas energéticas"]},
+    {id:"sofia",firstName:"Sofía",lastName:"Rosa",preferredName:"Sofi",grade:"5.º A",code:"PK-10982",status:"active",balance:2450,dailyLimit:350,perPurchaseLimit:250,spentToday:160,allergies:["Maní","Lactosa"],blocked:["Bebidas energéticas"],blockedProductIds:["menu-energy"]},
+    {id:"mateo",firstName:"Mateo",lastName:"Rosa",preferredName:"Mateo",grade:"2.º B",code:"PK-11804",status:"active",balance:1680,dailyLimit:300,perPurchaseLimit:200,spentToday:105,allergies:[],blocked:["Bebidas energéticas"],blockedProductIds:["menu-energy"]},
   ],
   transactions:[
     {id:"tx1",studentId:"sofia",description:"Jugo natural y sándwich",category:"Alimentos",amount:-160,status:"completed",createdAt:"2026-08-11T10:18:00-04:00"},
@@ -82,11 +82,11 @@ type Context = {
   cancelOrder:(id:string)=>void;
   saveBudget:(goal:string,limit:number)=>void;
   lookupStudentForPos:(code:string)=>ReturnType<typeof lookupPosStudent>;
-  checkoutPos:(studentId:string,cart:PosCartLine[],idempotencyKey:string)=>CheckoutResult;
+  checkoutPos:(studentId:string|null,cart:PosCartLine[],idempotencyKey:string,paymentMethod?:"student_wallet"|"cash")=>CheckoutResult;
   adminUpdateStudent:(role:AdminRole,student:DemoStudent)=>boolean;
   adminAddStudent:(role:AdminRole,student:Omit<DemoStudent,"id"|"balance"|"spentToday"|"status">)=>boolean;
   adminUpdateMenu:(role:AdminRole,item:PosMenuItemRecord)=>boolean;
-  adminAddMenu:(role:AdminRole,item:PosMenuItemRecord)=>boolean;
+  adminAddMenu:(role:AdminRole,item:Omit<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl"> & Partial<Pick<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl">>)=>boolean;
   adminAddUser:(role:AdminRole,user:Omit<DemoAdminUser,"id"|"lastActivity">)=>boolean;
   adminSetUserStatus:(role:AdminRole,id:string,status:DemoAdminUser["status"])=>boolean;
   adminSetPartnership:(role:AdminRole,id:string,status:PartnershipStatus)=>boolean;
@@ -95,12 +95,15 @@ type Context = {
 
 const DemoContext = createContext<Context|null>(null);
 const storageKey = "pikas:unified-demo:v2";
-const toPosStudent = (student:DemoStudent):PosStudentRecord => ({id:student.id,preferredName:student.preferredName,grade:student.grade,code:student.code,school:"Instituto Nueva Generación",status:student.status,walletStatus:"active",balanceMinor:student.balance*100,dailyLimitMinor:student.dailyLimit*100,perTransactionLimitMinor:student.perPurchaseLimit*100,spentTodayMinor:student.spentToday*100,allergies:student.allergies,blockedProducts:student.blocked});
+const toPosStudent = (student:DemoStudent):PosStudentRecord => ({id:student.id,preferredName:student.preferredName,grade:student.grade,code:student.code,school:"Instituto Nueva Generación",status:student.status,walletStatus:"active",balanceMinor:student.balance*100,dailyLimitMinor:student.dailyLimit*100,perTransactionLimitMinor:student.perPurchaseLimit*100,spentTodayMinor:student.spentToday*100,allergies:student.allergies,blockedProducts:student.blocked,blockedProductIds:student.blockedProductIds??[]});
 
 export function DemoProvider({children}:{children:ReactNode}) {
   const [state,setState] = useState(initial);
   useEffect(()=>{
-    if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true") return;
+    if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true") {
+      fetch("/api/menu").then(response=>response.ok?response.json():Promise.reject()).then((payload:{items:PosMenuItemRecord[]})=>setState(current=>({...current,menuItems:payload.items}))).catch(()=>{});
+      return;
+    }
     const saved=localStorage.getItem(storageKey);
     if(!saved) return;
     try {
@@ -122,18 +125,18 @@ export function DemoProvider({children}:{children:ReactNode}) {
     cancelOrder:id=>commit(current=>{const order=current.orders.find(item=>item.id===id);if(!order||order.status==="cancelled")return current;return{...current,orders:current.orders.map(item=>item.id===id?{...item,status:"cancelled"}:item),students:current.students.map(item=>item.id===order.studentId?{...item,balance:item.balance+order.amount,spentToday:Math.max(0,item.spentToday-order.amount)}:item),transactions:[{id:crypto.randomUUID(),studentId:order.studentId,description:`Reverso de reserva: ${order.item}`,category:"Reembolso",amount:order.amount,status:"completed",createdAt:new Date().toISOString()},...current.transactions]}}),
     saveBudget:(goal,limit)=>commit(current=>({...current,budget:{goal,limit,archived:false}})),
     lookupStudentForPos:code=>{const partnership=state.administration.partnerships.find(item=>item.id==="partner-active");const operator=state.administration.users.find(item=>item.id==="pos-1");if(!partnership||!activePartnershipAllows(partnership.status,partnership.scope,"eligibility")||operator?.status!=="active")return{ok:false as const,reason:"unknown_code" as const};return lookupPosStudent(state.students.map(toPosStudent),code)},
-    checkoutPos:(studentId,cart,idempotencyKey)=>{
+    checkoutPos:(studentId,cart,idempotencyKey,paymentMethod="student_wallet")=>{
       const partnership=state.administration.partnerships.find(item=>item.id==="partner-active");const operator=state.administration.users.find(item=>item.id==="pos-1");if(!partnership||!activePartnershipAllows(partnership.status,partnership.scope,"transactions")||operator?.status!=="active")return{ok:false,message:"La conexión escuela–cafetería o la cuenta de caja no está activa."};const student=state.students.find(candidate=>candidate.id===studentId);
-      if(!student)return{ok:false,message:"El estudiante ya no está disponible."};
-      const prepared=preparePosPurchase({student:toPosStudent(student),menu:state.menuItems,cart,idempotencyKey,purchases:state.purchases,employeeLabel:"Cafetería demo · Caja 1",now:new Date().toISOString(),purchaseId:crypto.randomUUID()});
+      if(!student&&paymentMethod!=="cash")return{ok:false,message:"El estudiante ya no está disponible."};
+      const prepared=preparePosPurchase({student:toPosStudent(student??state.students[0]!),menu:state.menuItems,cart,idempotencyKey,purchases:state.purchases,employeeLabel:"Cafetería demo · Caja 1",now:new Date().toISOString(),purchaseId:crypto.randomUUID(),paymentMethod});
       if(!prepared.ok)return{ok:false,message:posValidationMessage(prepared)};
-      if(!prepared.duplicate){const amount=prepared.purchase.totalMinor/100;commit(current=>({...current,purchases:[prepared.purchase,...current.purchases],students:current.students.map(item=>item.id===studentId?{...item,balance:item.balance-amount,spentToday:item.spentToday+amount}:item),transactions:[{id:`ledger-${prepared.purchase.id}`,purchaseId:prepared.purchase.id,studentId,description:prepared.purchase.items.map(item=>`${item.quantity}× ${item.name}`).join(", "),category:"Compra en cafetería",amount:-amount,status:"completed",createdAt:prepared.purchase.createdAt},...current.transactions]}))}
+      if(!prepared.duplicate){const amount=prepared.purchase.totalMinor/100;commit(current=>({...current,purchases:[prepared.purchase,...current.purchases],students:paymentMethod==="cash"?current.students:current.students.map(item=>item.id===studentId?{...item,balance:item.balance-amount,spentToday:item.spentToday+amount}:item),transactions:paymentMethod==="cash"?current.transactions:[{id:`ledger-${prepared.purchase.id}`,purchaseId:prepared.purchase.id,studentId:studentId!,description:prepared.purchase.items.map(item=>`${item.quantity}× ${item.name}`).join(", "),category:"Compra en cafetería",amount:-amount,status:"completed",createdAt:prepared.purchase.createdAt},...current.transactions],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Caja Demo",action:paymentMethod==="cash"?"Venta en efectivo completada":"Compra con cuenta estudiantil",detail:`${prepared.purchase.items.length} productos · ${prepared.purchase.totalMinor} unidades menores`,createdAt:prepared.purchase.createdAt},...current.administration.audit]}}))}
       return prepared;
     },
     adminUpdateStudent:(role,student)=>{if(!can(role,"students:manage"))return false;commit(current=>({...current,students:current.students.map(item=>item.id===student.id?student:item),administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración escolar",action:"Estudiante actualizado",detail:student.preferredName,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
     adminAddStudent:(role,student)=>{if(!can(role,"students:manage"))return false;commit(current=>({...current,students:[...current.students,{...student,id:crypto.randomUUID(),balance:0,spentToday:0,status:"active"}],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración escolar",action:"Estudiante agregado",detail:student.preferredName,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminUpdateMenu:(role,item)=>{if(!can(role,"menu:manage"))return false;commit(current=>({...current,menuItems:current.menuItems.map(value=>value.id===item.id?item:value),administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración de cafetería",action:"Producto actualizado",detail:item.name,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminAddMenu:(role,item)=>{if(!can(role,"menu:manage"))return false;commit(current=>({...current,menuItems:[...current.menuItems,item],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración de cafetería",action:"Producto creado",detail:item.name,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
+    adminUpdateMenu:(role,item)=>{if(!can(role,"menu:manage"))return false;if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true")void fetch("/api/menu",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({...item,ingredients:[],dietaryTags:[],imageUrl:null})});commit(current=>({...current,menuItems:current.menuItems.map(value=>value.id===item.id?item:value),administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración de cafetería",action:"Producto actualizado",detail:item.name,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
+    adminAddMenu:(role,item)=>{if(!can(role,"menu:manage"))return false;const complete={...item,ingredients:item.ingredients??[],restrictionTags:item.restrictionTags??[],imageUrl:item.imageUrl??null};if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true")void fetch("/api/menu",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...complete,dietaryTags:complete.restrictionTags})});commit(current=>({...current,menuItems:[...current.menuItems,complete],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración de cafetería",action:"Producto creado",detail:item.name,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
     adminAddUser:(role,user)=>{const permission=user.role==="school_admin"?"school_admins:manage":"pos_users:manage";if(!can(role,permission))return false;commit(current=>({...current,administration:{...current.administration,users:[...current.administration.users,{...user,id:crypto.randomUUID(),lastActivity:"Invitación pendiente"}],audit:[{id:crypto.randomUUID(),actor:"Administración",action:"Invitación creada",detail:`${user.name} · ${user.email}`,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
     adminSetUserStatus:(role,id,status)=>{const user=state.administration.users.find(value=>value.id===id);if(!user||!can(role,user.role==="school_admin"?"school_admins:manage":"pos_users:manage"))return false;if(user.role==="school_admin"&&status!=="active"&&state.administration.users.filter(value=>value.role==="school_admin"&&value.status==="active").length<=1)return false;commit(current=>({...current,administration:{...current.administration,users:current.administration.users.map(value=>value.id===id?{...value,status}:value),audit:[{id:crypto.randomUUID(),actor:"Administración",action:"Estado de cuenta actualizado",detail:`${user.name}: ${status}`,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
     adminSetPartnership:(role,id,status)=>{if(!can(role,role==="school_admin"?"partnerships:review":"partnerships:request")||(role==="cafeteria_admin"&&status!=="pending"))return false;commit(current=>({...current,administration:{...current.administration,partnerships:current.administration.partnerships.map(value=>value.id===id?{...value,status}:value),audit:[{id:crypto.randomUUID(),actor:role==="school_admin"?"Administración escolar":"Administración de cafetería",action:"Conexión actualizada",detail:`${id}: ${status}`,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},

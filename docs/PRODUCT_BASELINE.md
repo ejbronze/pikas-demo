@@ -60,3 +60,10 @@ Para reiniciar: elimina `pikas:unified-demo:v2` del almacenamiento del origen. E
 - Seis recorridos Playwright configurados para Chromium escritorio y WebKit móvil, incluido checkout compartido POS → Estudiante → Familia.
 - TypeScript estricto, ESLint y build de producción.
 - Revisión manual en navegador de códigos válido/inválido, restricciones, compra, persistencia, sincronización, consola y overlays.
+# Línea base 0.5.1
+
+Supabase development mode respalda autenticación administrativa, alcance organizacional y menú compartido. Demo mode conserva las experiencias ficticias. Familia, wallet, controles, transacciones y preórdenes siguen fuera del alcance Supabase de esta versión.
+
+## Línea base 0.5.2
+
+Catálogo, disponibilidad, medios, restricciones por ID, forma de pago, asociación y auditoría comparten modelo operacional. Efectivo no altera balances; billetera conserva límites y controles. No se declara preparación productiva.

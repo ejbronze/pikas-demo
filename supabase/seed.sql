@@ -1,6 +1,13 @@
 -- Development metadata. Create Auth users through `supabase auth` or the Dashboard;
 -- never commit passwords. After creating users, replace the UUID placeholders locally.
 insert into public.schools(id,name) values('10000000-0000-0000-0000-000000000001','Instituto Nueva Generación') on conflict do nothing;
+insert into public.organizations(id,type,name,school_id) values
+('60000000-0000-0000-0000-000000000001','school','Instituto Nueva Generación','10000000-0000-0000-0000-000000000001'),
+('60000000-0000-0000-0000-000000000002','cafeteria','Cafetería PIKAS Central',null) on conflict do nothing;
+insert into public.cafeteria_locations(id,cafeteria_id,name) values
+('61000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000002','Caja principal') on conflict do nothing;
+insert into public.partnerships(id,school_id,cafeteria_id,location_id,status) values
+('62000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000002','61000000-0000-0000-0000-000000000001','active') on conflict do nothing;
 insert into public.families(id,family_code,display_name) values('20000000-0000-0000-0000-000000000001','PK-2048','Familia Rosa') on conflict do nothing;
 insert into public.allergies(name) values('Maní'),('Lactosa'),('Gluten') on conflict do nothing;
 insert into public.students(id,family_id,school_id,student_code,first_name,last_name,preferred_name,grade,status) values
@@ -20,6 +27,14 @@ insert into public.menu_items(id,school_id,name,description,category,price_minor
 ('50000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000001','Pizza escolar','Porción individual','Almuerzo',15000,true),
 ('50000000-0000-0000-0000-000000000004','10000000-0000-0000-0000-000000000001','Bebidas energéticas','Producto restringible','Bebidas',11000,true),
 ('50000000-0000-0000-0000-000000000005','10000000-0000-0000-0000-000000000001','Especial del día','Agotado por hoy','Almuerzo',20000,false) on conflict do nothing;
+update public.menu_items set cafeteria_id='60000000-0000-0000-0000-000000000002',location_id='61000000-0000-0000-0000-000000000001' where school_id='10000000-0000-0000-0000-000000000001';
+update public.menu_items set
+  ingredients=case name when 'Pasta con pollo' then array['Pasta','Pollo','Tomate'] when 'Sándwich integral' then array['Pan integral','Queso','Vegetales'] when 'Pizza escolar' then array['Masa','Tomate','Queso'] else array[]::text[] end,
+  allergens=case name when 'Sándwich integral' then array['Gluten'] when 'Pizza escolar' then array['Lactosa'] else array[]::text[] end,
+  dietary_tags=case name when 'Bebidas energéticas' then array['Cafeína'] else array[]::text[] end,
+  image_url=case name when 'Pasta con pollo' then '/menu/pasta.svg' when 'Sándwich integral' then '/menu/sandwich.svg' when 'Pizza escolar' then '/menu/pizza.svg' when 'Bebidas energéticas' then '/menu/drink.svg' else null end
+where school_id='10000000-0000-0000-0000-000000000001';
+update public.blocked_products b set menu_item_id=m.id from public.menu_items m where lower(m.name)=lower(b.product_name);
 insert into public.wallet_ledger_entries(wallet_id,transaction_type,amount_minor,direction,status,description,category,idempotency_key) values
 ('40000000-0000-0000-0000-000000000001','parent_top_up',261000,'credit','completed','Saldo inicial ficticio','Recarga','seed:sofia:credit'),
 ('40000000-0000-0000-0000-000000000001','cafeteria_purchase',16000,'debit','completed','Jugo natural y sándwich','Alimentos','seed:sofia:purchase'),

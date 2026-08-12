@@ -1,5 +1,22 @@
 # Registro de cambios del producto
 
+## 2026-08-12 — PIKAS 0.5.2: operación compartida
+
+- Catálogo compartido con ingredientes, alérgenos, etiquetas, imágenes ficticias y fallback accesible.
+- Bloqueos alimentarios enlazados a IDs estables y validados junto con alergias y disponibilidad en POS.
+- POS tablet-first con código/NFC, efectivo, carrito persistente y separación explícita de efectivo y billetera.
+- Menú visible en cafetería, POS, estudiante y familia; la disponibilidad afecta la orden inmediatamente.
+- Modelo Supabase ampliado para restricciones, forma de pago y auditoría organizacional con RLS.
+- Sin despliegue, cambios de Producción ni migraciones aplicadas a bases externas.
+
+## 2026-08-12 — PIKAS 0.5.1: Auth y datos compartidos
+
+- Supabase Auth para las cuentas ficticias escolar, cafetería y POS, con sesión por cookies, logout y guards de servidor.
+- Roles consistentes, organizaciones, ubicaciones, membresías y una asociación activa ficticia.
+- Menú compartido en Supabase con importes enteros y RLS por alcance.
+- Seed Auth exclusivamente de desarrollo; la contraseña se recibe por entorno y no se registra.
+- El demo público permanece ficticio. No hubo despliegue, cambio de variables de Producción ni migración externa.
+
 ## 2026-08-11 — PIKAS 0.5.0: base administrativa
 
 - Se añadieron espacios separados para Administración escolar y Administración de cafetería, con acceso demo exacto y guards por rol.

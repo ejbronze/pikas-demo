@@ -60,3 +60,15 @@ El despliegue público no se modificó durante 0.5.0 y puede conservar una versi
 | Estado activo Estudiante | Functional | Coincidencia tipada por ruta; `/estudiante/transacciones` activa exclusivamente **Mis compras**. |
 | Navegación móvil Estudiante | Functional | Cinco destinos: Inicio, Menú, Pedidos, Mis compras y Perfil; Mi plan permanece en dashboard/sidebar. |
 | Densidad responsiva | Functional | Balance, acciones y actividad caben en laptop; controles conservan targets mínimos de 44 px. |
+# Estado 0.5.1
+
+- Supabase: Auth escolar/cafetería/POS, sesión, guards, membresías y menú compartido.
+- Demo/local: familia, estudiante, wallet, controles, preórdenes, transacciones, importación y actividad.
+- Menú: nombre, descripción, categoría, precio entero, disponibilidad, ingredientes, alérgenos, etiquetas dietarias e imagen están modelados; la UI edita el subconjunto existente.
+
+## Estado 0.5.2
+
+- Catálogo compartido: Cafetería, POS, Estudiante y Familia.
+- POS: código/NFC, efectivo, carrito durable, advertencias, disponibilidad y recibos tipados.
+- Operación: asociación visible y enforced, auditoría y restricciones por ID estable.
+- Responsive: 390×844, 768×1024 y 1440×900.

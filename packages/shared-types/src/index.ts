@@ -1,4 +1,4 @@
-export type UserRole = "parent" | "student" | "admin" | "pos";
+export type UserRole = "parent" | "student" | "school_admin" | "cafeteria_admin" | "pos_operator";
 
 export interface Family { id: string; familyCode: string; primaryParentId: string }
 export interface Parent { id: string; familyId: string; name: string; email: string }
