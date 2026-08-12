@@ -129,3 +129,10 @@ test("target viewport has no horizontal overflow or meaningful console errors",a
   await signInAsStudent(page);for(const route of ["/estudiante/menu","/estudiante/transacciones"]){await page.goto(route);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true)}
   expect(errors).toEqual([]);
 });
+
+test("legacy persisted menu data is migrated without crashing",async({page})=>{
+  await page.goto("/");
+  await page.evaluate(()=>localStorage.setItem("pikas:unified-demo:v2",JSON.stringify({menuItems:[{id:"menu-pasta",name:"Pasta con pollo",description:"Registro anterior",category:"Almuerzo",priceMinor:18000,allergens:[],available:true}]})));
+  await page.reload();await page.goto("/login");await page.getByRole("tab",{name:"Estudiante"}).click();await page.getByRole("button",{name:/Entrar como estudiante/}).click();await page.goto("/estudiante/menu");
+  await expect(page.getByRole("article").filter({hasText:"Pasta con pollo"})).toContainText("Ingredientes:");
+});

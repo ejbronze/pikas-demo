@@ -30,6 +30,18 @@ const demoMenu: PosMenuItemRecord[] = [
   {id:"menu-special",name:"Especial del día",description:"Agotado por hoy",category:"Almuerzo",priceMinor:20000,allergens:[],ingredients:["Arroz","Vegetales"],restrictionTags:[],imageUrl:null,available:false},
 ];
 
+const normalizeMenu=(items:PosMenuItemRecord[])=>items.map(item=>{
+  const fallback=demoMenu.find(seed=>seed.id===item.id);
+  return {
+    ...fallback,
+    ...item,
+    ingredients:Array.isArray(item.ingredients)?item.ingredients:fallback?.ingredients??[],
+    allergens:Array.isArray(item.allergens)?item.allergens:fallback?.allergens??[],
+    restrictionTags:Array.isArray(item.restrictionTags)?item.restrictionTags:fallback?.restrictionTags??[],
+    imageUrl:item.imageUrl??fallback?.imageUrl??null,
+  };
+});
+
 const initial: State = {
   parent:{name:"Oscar Rosa",email:"familia@demo.pikas.do",phone:"809-555-0142"},
   students:[
@@ -108,7 +120,7 @@ export function DemoProvider({children}:{children:ReactNode}) {
     if(!saved) return;
     try {
       const parsed=JSON.parse(saved) as Partial<State>;
-      setState({...initial,...parsed,menuItems:parsed.menuItems??demoMenu,purchases:parsed.purchases??[],administration:parsed.administration??initial.administration});
+      setState({...initial,...parsed,menuItems:normalizeMenu(parsed.menuItems??demoMenu),purchases:parsed.purchases??[],administration:parsed.administration??initial.administration});
     } catch {
       localStorage.removeItem(storageKey);
     }
