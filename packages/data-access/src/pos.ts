@@ -29,6 +29,8 @@ export type PosMenuItemRecord = {
 };
 
 export type PosCartLine = { itemId: string; quantity: number };
+export type PosPaymentMethod = "student_wallet" | "cash";
+export type PosStudentAssociation = "required" | "student_linked" | "general_sale";
 export type PosPurchaseRecord = {
   readonly id: string;
   readonly studentId: string | null;
@@ -36,7 +38,14 @@ export type PosPurchaseRecord = {
   readonly items: ReadonlyArray<Readonly<{ itemId: string; name: string; quantity: number; unitPriceMinor: number }>>;
   readonly totalMinor: number;
   readonly status: "completed";
-  readonly paymentMethod: "student_wallet" | "cash";
+  readonly paymentMethod: PosPaymentMethod;
+  readonly studentAssociation: PosStudentAssociation;
+  readonly balanceImpactMinor: number;
+  readonly cashRegisterImpactMinor: number;
+  readonly cashReceivedMinor: number | null;
+  readonly changeProvidedMinor: number | null;
+  readonly cashierId: string;
+  readonly posStationId: string;
   readonly employeeLabel: string;
   readonly idempotencyKey: string;
   readonly createdAt: string;
@@ -116,6 +125,26 @@ export function validatePosPurchase(
   return { ok: true, totalMinor, lines };
 }
 
+export function validateCashPurchase(
+  student: PosStudentRecord,
+  menu: PosMenuItemRecord[],
+  cart: PosCartLine[],
+): PosValidation {
+  return validatePosPurchase({
+    ...student,
+    walletStatus: "active",
+    balanceMinor: Number.MAX_SAFE_INTEGER,
+    dailyLimitMinor: Number.MAX_SAFE_INTEGER,
+    perTransactionLimitMinor: Number.MAX_SAFE_INTEGER,
+    spentTodayMinor: 0,
+  }, menu, cart);
+}
+
+export function validateGeneralCashPurchase(menu: PosMenuItemRecord[], cart: PosCartLine[]): PosValidation {
+  const generalCustomer: PosStudentRecord = {id:"general",preferredName:"Venta general",grade:"",code:"PK-00000",school:"",status:"active",walletStatus:"active",balanceMinor:Number.MAX_SAFE_INTEGER,dailyLimitMinor:Number.MAX_SAFE_INTEGER,perTransactionLimitMinor:Number.MAX_SAFE_INTEGER,spentTodayMinor:0,allergies:[],blockedProducts:[],blockedProductIds:[]};
+  return validatePosPurchase(generalCustomer,menu,cart);
+}
+
 export const posValidationMessage = (result: Exclude<PosValidation, { ok: true }>) => {
   switch (result.reason) {
     case "allergy": return `No se puede completar: ${result.itemName} contiene ${result.allergen}, una alergia registrada.`;
@@ -131,7 +160,7 @@ export const posValidationMessage = (result: Exclude<PosValidation, { ok: true }
 };
 
 export function preparePosPurchase(input: {
-  student: PosStudentRecord;
+  student?: PosStudentRecord;
   menu: PosMenuItemRecord[];
   cart: PosCartLine[];
   idempotencyKey: string;
@@ -139,28 +168,41 @@ export function preparePosPurchase(input: {
   employeeLabel: string;
   now: string;
   purchaseId: string;
-  paymentMethod?: "student_wallet" | "cash";
+  paymentMethod?: PosPaymentMethod;
+  cashReceivedMinor?: number;
+  cashierId?: string;
+  posStationId?: string;
+  studentAssociation?: PosStudentAssociation;
 }) {
   const duplicate = input.purchases.find((purchase) => purchase.idempotencyKey === input.idempotencyKey);
   if (duplicate) return { ok: true as const, duplicate: true, purchase: duplicate };
-  const validation = input.paymentMethod==="cash"?validateCashPurchase(input.menu,input.cart):validatePosPurchase(input.student, input.menu, input.cart);
+  const paymentMethod = input.paymentMethod ?? "student_wallet";
+  const studentAssociation = paymentMethod === "student_wallet" ? "required" : input.studentAssociation ?? "student_linked";
+  if(studentAssociation !== "general_sale" && !input.student)return {ok:false as const,reason:"student_inactive" as const};
+  const validation = studentAssociation === "general_sale" ? validateGeneralCashPurchase(input.menu,input.cart) : paymentMethod === "cash" ? validateCashPurchase(input.student!,input.menu,input.cart) : validatePosPurchase(input.student!, input.menu, input.cart);
   if (!validation.ok) return validation;
+  const cashReceivedMinor = paymentMethod === "cash" ? input.cashReceivedMinor ?? validation.totalMinor : null;
+  if (cashReceivedMinor !== null && (!Number.isSafeInteger(cashReceivedMinor) || cashReceivedMinor < validation.totalMinor)) {
+    return { ok: false as const, reason: "invalid_quantity" as const };
+  }
   const purchase: PosPurchaseRecord = Object.freeze({
     id: input.purchaseId,
-    studentId: input.paymentMethod==="cash"?null:input.student.id,
-    studentName: input.paymentMethod==="cash"?"Venta en efectivo":input.student.preferredName,
+    studentId: studentAssociation === "general_sale" ? null : input.student!.id,
+    studentName: studentAssociation === "general_sale" ? "Venta general en efectivo" : input.student!.preferredName,
     items: Object.freeze(validation.lines.map((line) => Object.freeze({ itemId: line.itemId, name: line.name, quantity: line.quantity, unitPriceMinor: line.unitPriceMinor }))),
     totalMinor: validation.totalMinor,
     status: "completed",
-    paymentMethod: input.paymentMethod??"student_wallet",
+    paymentMethod,
+    studentAssociation,
+    balanceImpactMinor: paymentMethod === "student_wallet" ? -validation.totalMinor : 0,
+    cashRegisterImpactMinor: paymentMethod === "cash" ? validation.totalMinor : 0,
+    cashReceivedMinor,
+    changeProvidedMinor: cashReceivedMinor === null ? null : cashReceivedMinor - validation.totalMinor,
+    cashierId: input.cashierId ?? "pos-1",
+    posStationId: input.posStationId ?? "caja-1",
     employeeLabel: input.employeeLabel,
     idempotencyKey: input.idempotencyKey,
     createdAt: input.now,
   });
   return { ok: true as const, duplicate: false, purchase };
-}
-
-export function validateCashPurchase(menu:PosMenuItemRecord[],cart:PosCartLine[]):PosValidation{
-  const cashier={id:"cash",preferredName:"Efectivo",grade:"",code:"PK-00000",school:"",status:"active",walletStatus:"active",balanceMinor:Number.MAX_SAFE_INTEGER,dailyLimitMinor:Number.MAX_SAFE_INTEGER,perTransactionLimitMinor:Number.MAX_SAFE_INTEGER,spentTodayMinor:0,allergies:[],blockedProducts:[],blockedProductIds:[]} satisfies PosStudentRecord;
-  return validatePosPurchase(cashier,menu,cart);
 }

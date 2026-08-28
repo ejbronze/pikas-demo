@@ -13,13 +13,13 @@ import {
 import {activePartnershipAllows,can,type AdminRole,type PartnershipScope,type PartnershipStatus} from "@/lib/admin-policy";
 
 export type DemoStudent = {id:string;firstName:string;lastName:string;preferredName:string;grade:string;code:string;status:"active"|"inactive"|"archived";balance:number;dailyLimit:number;perPurchaseLimit:number;spentToday:number;allergies:string[];blocked:string[];blockedProductIds?:string[]};
-export type DemoTx = {id:string;studentId:string;description:string;category:string;amount:number;status:"completed"|"pending"|"reversed";createdAt:string;purchaseId?:string};
+export type DemoTx = {id:string;studentId:string;description:string;category:string;amount:number;status:"completed"|"pending"|"reversed";createdAt:string;purchaseId?:string;paymentMethod?:"student_wallet"|"cash";purchaseTotalMinor?:number;balanceImpactMinor?:number;cashRegisterImpactMinor?:number};
 export type DemoOrder = {id:string;studentId:string;item:string;amount:number;status:"submitted"|"confirmed"|"cancelled";createdAt:string};
 export type DemoAdminUser={id:string;name:string;email:string;role:AdminRole;status:"active"|"suspended"|"inactive";scope:string;lastActivity:string};
 export type DemoMembership={id:string;userId:string;organizationType:"school"|"cafeteria";organizationName:string;location?:string;role:AdminRole};
 export type DemoPartnership={id:string;schoolName:string;cafeteriaName:string;location:string;status:PartnershipStatus;scope:PartnershipScope[];requestedBy:"school"|"cafeteria"};
 export type DemoAudit={id:string;actor:string;action:string;detail:string;createdAt:string};
-export type DemoAdministration={school:{name:string;status:"active"};cafeteria:{name:string;status:"active";location:string};users:DemoAdminUser[];memberships:DemoMembership[];partnerships:DemoPartnership[];audit:DemoAudit[]};
+export type DemoAdministration={school:{name:string;status:"active"};cafeteria:{name:string;status:"active";location:string;cashCreditConversionEnabled:boolean};users:DemoAdminUser[];memberships:DemoMembership[];partnerships:DemoPartnership[];audit:DemoAudit[]};
 type State = {parent:{name:string;email:string;phone:string};students:DemoStudent[];transactions:DemoTx[];orders:DemoOrder[];budget:{goal:string;limit:number;archived:boolean};menuItems:PosMenuItemRecord[];purchases:PosPurchaseRecord[];administration:DemoAdministration};
 
 const demoMenu: PosMenuItemRecord[] = [
@@ -58,7 +58,7 @@ const initial: State = {
   menuItems:demoMenu,
   purchases:[],
   administration:{
-    school:{name:"Instituto Nueva Generación",status:"active"},cafeteria:{name:"Cafetería PIKAS Central",status:"active",location:"Caja principal"},
+    school:{name:"Instituto Nueva Generación",status:"active"},cafeteria:{name:"Cafetería PIKAS Central",status:"active",location:"Caja principal",cashCreditConversionEnabled:false},
     users:[
       {id:"sa-1",name:"Elena Méndez",email:"admin.escuela@demo.pikas.do",role:"school_admin",status:"active",scope:"Instituto Nueva Generación",lastActivity:"Hoy, 09:10"},
       {id:"sa-2",name:"Raúl Jiménez",email:"raul.admin@demo.pikas.do",role:"school_admin",status:"active",scope:"Instituto Nueva Generación",lastActivity:"Ayer, 16:40"},
@@ -94,7 +94,7 @@ type Context = {
   cancelOrder:(id:string)=>void;
   saveBudget:(goal:string,limit:number)=>void;
   lookupStudentForPos:(code:string)=>ReturnType<typeof lookupPosStudent>;
-  checkoutPos:(studentId:string|null,cart:PosCartLine[],idempotencyKey:string,paymentMethod?:"student_wallet"|"cash")=>CheckoutResult;
+  checkoutPos:(studentId:string|null,cart:PosCartLine[],idempotencyKey:string,paymentMethod?:"student_wallet"|"cash",cashReceivedMinor?:number,generalSale?:boolean)=>CheckoutResult;
   adminUpdateStudent:(role:AdminRole,student:DemoStudent)=>boolean;
   adminAddStudent:(role:AdminRole,student:Omit<DemoStudent,"id"|"balance"|"spentToday"|"status">)=>boolean;
   adminUpdateMenu:(role:AdminRole,item:PosMenuItemRecord)=>boolean;
@@ -120,7 +120,8 @@ export function DemoProvider({children}:{children:ReactNode}) {
     if(!saved) return;
     try {
       const parsed=JSON.parse(saved) as Partial<State>;
-      setState({...initial,...parsed,menuItems:normalizeMenu(parsed.menuItems??demoMenu),purchases:parsed.purchases??[],administration:parsed.administration??initial.administration});
+      const administration={...initial.administration,...parsed.administration,cafeteria:{...initial.administration.cafeteria,...parsed.administration?.cafeteria}};
+      setState({...initial,...parsed,menuItems:normalizeMenu(parsed.menuItems??demoMenu),purchases:parsed.purchases??[],administration});
     } catch {
       localStorage.removeItem(storageKey);
     }
@@ -137,12 +138,12 @@ export function DemoProvider({children}:{children:ReactNode}) {
     cancelOrder:id=>commit(current=>{const order=current.orders.find(item=>item.id===id);if(!order||order.status==="cancelled")return current;return{...current,orders:current.orders.map(item=>item.id===id?{...item,status:"cancelled"}:item),students:current.students.map(item=>item.id===order.studentId?{...item,balance:item.balance+order.amount,spentToday:Math.max(0,item.spentToday-order.amount)}:item),transactions:[{id:crypto.randomUUID(),studentId:order.studentId,description:`Reverso de reserva: ${order.item}`,category:"Reembolso",amount:order.amount,status:"completed",createdAt:new Date().toISOString()},...current.transactions]}}),
     saveBudget:(goal,limit)=>commit(current=>({...current,budget:{goal,limit,archived:false}})),
     lookupStudentForPos:code=>{const partnership=state.administration.partnerships.find(item=>item.id==="partner-active");const operator=state.administration.users.find(item=>item.id==="pos-1");if(!partnership||!activePartnershipAllows(partnership.status,partnership.scope,"eligibility")||operator?.status!=="active")return{ok:false as const,reason:"unknown_code" as const};return lookupPosStudent(state.students.map(toPosStudent),code)},
-    checkoutPos:(studentId,cart,idempotencyKey,paymentMethod="student_wallet")=>{
+    checkoutPos:(studentId,cart,idempotencyKey,paymentMethod="student_wallet",cashReceivedMinor,generalSale=false)=>{
       const partnership=state.administration.partnerships.find(item=>item.id==="partner-active");const operator=state.administration.users.find(item=>item.id==="pos-1");if(!partnership||!activePartnershipAllows(partnership.status,partnership.scope,"transactions")||operator?.status!=="active")return{ok:false,message:"La conexión escuela–cafetería o la cuenta de caja no está activa."};const student=state.students.find(candidate=>candidate.id===studentId);
-      if(!student&&paymentMethod!=="cash")return{ok:false,message:"El estudiante ya no está disponible."};
-      const prepared=preparePosPurchase({student:toPosStudent(student??state.students[0]!),menu:state.menuItems,cart,idempotencyKey,purchases:state.purchases,employeeLabel:"Cafetería demo · Caja 1",now:new Date().toISOString(),purchaseId:crypto.randomUUID(),paymentMethod});
+      if(!student&&!generalSale)return{ok:false,message:"Verifica un estudiante antes de completar la transacción."};
+      const prepared=preparePosPurchase({student:student?toPosStudent(student):undefined,menu:state.menuItems,cart,idempotencyKey,purchases:state.purchases,employeeLabel:"Cafetería demo · Caja 1",cashierId:"pos-1",posStationId:"caja-1",now:new Date().toISOString(),purchaseId:crypto.randomUUID(),paymentMethod,cashReceivedMinor,studentAssociation:generalSale?"general_sale":paymentMethod==="cash"?"student_linked":"required"});
       if(!prepared.ok)return{ok:false,message:posValidationMessage(prepared)};
-      if(!prepared.duplicate){const amount=prepared.purchase.totalMinor/100;commit(current=>({...current,purchases:[prepared.purchase,...current.purchases],students:paymentMethod==="cash"?current.students:current.students.map(item=>item.id===studentId?{...item,balance:item.balance-amount,spentToday:item.spentToday+amount}:item),transactions:paymentMethod==="cash"?current.transactions:[{id:`ledger-${prepared.purchase.id}`,purchaseId:prepared.purchase.id,studentId:studentId!,description:prepared.purchase.items.map(item=>`${item.quantity}× ${item.name}`).join(", "),category:"Compra en cafetería",amount:-amount,status:"completed",createdAt:prepared.purchase.createdAt},...current.transactions],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Caja Demo",action:paymentMethod==="cash"?"Venta en efectivo completada":"Compra con cuenta estudiantil",detail:`${prepared.purchase.items.length} productos · ${prepared.purchase.totalMinor} unidades menores`,createdAt:prepared.purchase.createdAt},...current.administration.audit]}}))}
+      if(!prepared.duplicate){const amount=prepared.purchase.totalMinor/100;commit(current=>({...current,purchases:[prepared.purchase,...current.purchases],students:paymentMethod==="cash"?current.students:current.students.map(item=>item.id===studentId?{...item,balance:item.balance-amount,spentToday:item.spentToday+amount}:item),transactions:generalSale?current.transactions:[{id:`ledger-${prepared.purchase.id}`,purchaseId:prepared.purchase.id,studentId:studentId!,description:prepared.purchase.items.map(item=>`${item.quantity}× ${item.name}`).join(", "),category:paymentMethod==="cash"?"Cash — Student-linked":"Cashless / PIKAS account",amount:paymentMethod==="cash"?0:-amount,status:"completed",createdAt:prepared.purchase.createdAt,paymentMethod,purchaseTotalMinor:prepared.purchase.totalMinor,balanceImpactMinor:prepared.purchase.balanceImpactMinor,cashRegisterImpactMinor:prepared.purchase.cashRegisterImpactMinor},...current.transactions],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Caja Demo",action:generalSale?"Cash — General sale":paymentMethod==="cash"?"Cash — Student-linked":"Cashless / PIKAS account",detail:`${student?.preferredName??"Sin estudiante"} · ${prepared.purchase.items.length} productos · ${prepared.purchase.totalMinor} unidades menores · ${prepared.purchase.posStationId}`,createdAt:prepared.purchase.createdAt},...current.administration.audit]}}))}
       return prepared;
     },
     adminUpdateStudent:(role,student)=>{if(!can(role,"students:manage"))return false;commit(current=>({...current,students:current.students.map(item=>item.id===student.id?student:item),administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración escolar",action:"Estudiante actualizado",detail:student.preferredName,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},

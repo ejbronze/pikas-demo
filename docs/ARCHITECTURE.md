@@ -52,3 +52,7 @@ El modo se selecciona con `NEXT_PUBLIC_PIKAS_DEMO_MODE`. Demo conserva cookies f
 ## Actualización 0.5.2
 
 `menu_items` conserva atributos operativos y se consume por rol. `blocked_products.menu_item_id` evita depender del nombre mutable. `purchases.payment_method` separa efectivo de billetera y una restricción SQL impide asociar ventas en efectivo a estudiantes. Los eventos administrativos se limitan por organización mediante RLS. Demo conserva un grafo equivalente en `localStorage`.
+
+## Actualización 0.5.3
+
+El contrato POS añade `studentAssociation` para distinguir cuenta PIKAS, efectivo asociado y efectivo general. `studentId` solo puede ser nulo en una venta general; los impactos de billetera y caja son campos separados. El adaptador demo excluye ventas generales del ledger estudiantil. Reportes y conciliación derivan valores del mismo snapshot inmutable de compra. PIKAS es diseñada y desarrollada por Palmchat Innovations LLC.

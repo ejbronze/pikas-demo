@@ -1,4 +1,4 @@
-# Administración y permisos de PIKAS 0.5.0
+# Administración y permisos de PIKAS 0.5.3
 
 Última revisión: **11 de agosto de 2026**. Esta guía describe la base administrativa local en modo demo; no afirma integración productiva con Supabase.
 
@@ -81,3 +81,7 @@ Los guards verifican usuario, rol y membresía activa. Escuela y cafetería no p
 ## Actualización 0.5.2
 
 Cafetería lee solo asociaciones, catálogo, ventas y auditoría de su organización; no recibe una política para recorrer el padrón. POS obtiene verificación mínima tras asociación activa. Escuela conserva estado estudiantil y restricciones, y solo ve catálogos vinculados a su escuela.
+
+## Actualización 0.5.3
+
+Cafetería puede consultar únicamente sus ventas autorizadas, filtrar y exportar snapshots, e ingresar un conteo de caja ficticio. POS solo verifica estudiantes cuando el flujo lo requiere. Las ventas generales no crean ni exponen datos estudiantiles. El crédito PIKAS futuro continúa restringido a administradores, separado de ventas y desactivado por defecto.

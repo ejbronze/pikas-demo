@@ -1,6 +1,6 @@
 # Línea base del producto PIKAS
 
-Versión local **0.5.0** en `main`, verificada el **11 de agosto de 2026**. El código se publica en esta fase, pero no se realiza un despliegue: [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app) puede conservar una versión anterior hasta una verificación independiente.
+Versión local **0.5.3**, verificada el **27 de agosto de 2026**. El código se publica a `main`, pero no se ejecuta un despliegue manual: [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app) puede conservar una versión anterior hasta una verificación independiente.
 
 El recorrido reproducible para presentar esta línea base, incluidas capturas y reinicio del estado ficticio, está en la [Guía de demostración](DEMO_GUIDE.md).
 
@@ -67,3 +67,7 @@ Supabase development mode respalda autenticación administrativa, alcance organi
 ## Línea base 0.5.2
 
 Catálogo, disponibilidad, medios, restricciones por ID, forma de pago, asociación y auditoría comparten modelo operacional. Efectivo no altera balances; billetera conserva límites y controles. No se declara preparación productiva.
+
+## Línea base 0.5.3
+
+La línea base añade tres tipos operativos de venta, separación explícita entre propiedad, pago e impactos, reportes/CSV y conciliación demo. Las ventas generales nunca aparecen en historiales estudiantiles. El producto identifica a Palmchat Innovations LLC como diseñadora y desarrolladora en superficies públicas.

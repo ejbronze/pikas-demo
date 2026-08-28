@@ -1,9 +1,14 @@
 # PIKAS
 
-PIKAS es una aplicación escolar unificada para Familias, Estudiantes, Cafetería/POS y Administración. La versión actual es **0.5.0** y añade la primera base administrativa funcional sin retirar los recorridos compartidos de 0.4.0.
+PIKAS es una aplicación escolar unificada para Familias, Estudiantes, Cafetería/POS y Administración. La versión actual es **0.5.3**, con operaciones POS compartidas, ventas PIKAS, efectivo asociado o general, reportes y conciliación demo.
 
-## Novedades de 0.5.0
+PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**. Esta atribución se muestra también en el footer público y en las entradas principal y administrativa.
 
+## Novedades de 0.5.3
+
+- Ventas PIKAS, efectivo asociado a estudiante y venta general en efectivo con impactos de saldo/caja separados.
+- Historiales estudiantiles que excluyen ventas generales y no presentan efectivo como débito de billetera.
+- Dashboard de cafetería, filtros, CSV y conciliación de efectivo con conteo humano opcional.
 - Dos espacios administrativos separados: Escuela y Cafetería.
 - Control centralizado de permisos para `school_admin`, `cafeteria_admin` y `pos_operator`.
 - Padrón escolar con búsqueda, estados, códigos enmascarados, regeneración e importación CSV con vista previa.
@@ -18,7 +23,7 @@ Consulta [Administración y permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), l
 
 **URL publicada anteriormente:** [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app)
 
-El código 0.5.0 de este repositorio se verifica localmente y se publica a `main` en este milestone, pero **esta tarea no despliega ni modifica Vercel o Supabase**. Por ello, no se afirma que la URL pública ejecute 0.5.0 hasta una verificación de despliegue independiente. El modo demo usa únicamente datos ficticios y no procesa dinero real.
+El código 0.5.3 de este repositorio se verifica localmente y se publica a `main` en este milestone. El push puede iniciar automatización externa, pero esta tarea no ejecuta un despliegue manual ni modifica Vercel o Supabase. No se afirma que la URL pública ejecute 0.5.3 hasta una verificación independiente.
 
 ## Cuentas de demostración
 
@@ -132,7 +137,7 @@ Playwright cubre escritorio y móvil para Familia, Estudiante, POS y Administrac
 - [MVP](docs/MVP.md)
 - [Registro de cambios](docs/CHANGELOG_PRODUCT.md)
 
-## Modos de ejecución (0.5.2)
+## Modos de ejecución (0.5.3)
 
 `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` conserva el demo público ficticio y su persistencia en el navegador. Con `false`, URL y anon key de Supabase son obligatorias: Auth conserva la sesión mediante cookies, valida el usuario en servidor y dirige `school_admin`, `cafeteria_admin` y `pos_operator` a sus espacios. El catálogo compartido se lee de Supabase y solo una membresía activa de cafetería puede editarlo.
 
@@ -141,7 +146,7 @@ Para desarrollo: aplique las migraciones y `supabase/seed.sql` a un proyecto no 
 ## Limitaciones actuales
 
 - El modo demo es una simulación de un solo navegador, no autenticación ni persistencia multiusuario.
-- En modo Supabase 0.5.2 Auth, membresías/alcance, catálogo, restricciones por producto, compras tipadas y auditoría tienen modelo remoto. Algunas acciones de familia, estudiante y wallet continúan en el adaptador demo.
+- En modo Supabase 0.5.3 Auth, membresías/alcance, catálogo, restricciones por producto, compras tipadas y auditoría tienen modelo remoto. Algunas acciones de familia, estudiante, wallet, efectivo y conciliación continúan en el adaptador demo.
 - La importación CSV es una vista previa demostrativa y aplica una fila ficticia conocida; no carga archivos reales al servidor.
 - QR sigue siendo visual; no hay lectura QR, búsqueda POS por nombre, refunds, reversos de compras completadas, pagos reales ni conciliación.
-- El sitio público puede corresponder a una versión anterior hasta que exista un despliegue 0.5.2 autorizado y verificado.
+- El sitio público puede corresponder a una versión anterior hasta que exista un despliegue 0.5.3 autorizado y verificado.

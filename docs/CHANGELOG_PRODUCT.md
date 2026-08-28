@@ -1,5 +1,17 @@
 # Registro de cambios del producto
 
+## 2026-08-27 — PIKAS 0.5.3: POS, caja y atribución
+
+- PIKAS es identificada públicamente como diseñada y desarrollada por Palmchat Innovations LLC en landing y accesos.
+- POS separa Ventas PIKAS, Cash — Student-linked y Cash — General sale.
+- Las ventas PIKAS exigen verificación y aplican saldo, límites, disponibilidad, alergias y bloqueos.
+- El efectivo asociado conserva restricciones estudiantiles sin afectar saldo ni límites; el efectivo general no crea asociación estudiantil.
+- Cada compra registra método, asociación, impacto de saldo, impacto de caja, efectivo recibido, cambio, cajero, estación y estado.
+- Cafetería recibe tarjetas operativas compactas, filtros, exportación CSV y conciliación entre cierre esperado y conteo ingresado.
+- El carrito persiste, la identidad debe verificarse otra vez tras refrescar y Nueva venta limpia rápidamente el POS.
+- El crédito efectivo-a-PIKAS permanece desactivado y separado de una venta normal.
+- Verificación final: lint, typecheck, 25 pruebas unitarias, 57 E2E responsivas, build y diff check.
+
 ## 2026-08-12 — PIKAS 0.5.2: operación compartida
 
 - Catálogo compartido con ingredientes, alérgenos, etiquetas, imágenes ficticias y fallback accesible.

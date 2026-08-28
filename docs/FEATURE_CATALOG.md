@@ -1,6 +1,6 @@
 # Catálogo de funcionalidades PIKAS
 
-Última revisión: **11 de agosto de 2026**, versión local **0.5.0** en `main`. “Functional with limitations” indica flujo demo verificado y/o producción preparada pero aún no validada contra Supabase.
+Última revisión: **27 de agosto de 2026**, versión local **0.5.3**. “Functional with limitations” indica flujo demo verificado y/o producción preparada pero aún no validada contra Supabase.
 
 ## Significado de estados
 
@@ -72,3 +72,12 @@ El despliegue público no se modificó durante 0.5.0 y puede conservar una versi
 - POS: código/NFC, efectivo, carrito durable, advertencias, disponibilidad y recibos tipados.
 - Operación: asociación visible y enforced, auditoría y restricciones por ID estable.
 - Responsive: 390×844, 768×1024 y 1440×900.
+
+## Estado 0.5.3
+
+- Ventas PIKAS con deducción y controles estudiantiles.
+- Efectivo asociado sin impacto de billetera y con restricciones.
+- Efectivo general sin identidad estudiantil.
+- Efectivo recibido, cambio, impacto de saldo/caja, cajero y estación.
+- Dashboard, filtros, CSV y conciliación demo de cafetería.
+- Atribución visible a Palmchat Innovations LLC.

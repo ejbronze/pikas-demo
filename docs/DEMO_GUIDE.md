@@ -2,11 +2,11 @@
 
 | Dato | Valor |
 | --- | --- |
-| Versión | 1.3 para PIKAS 0.5.0 |
+| Versión | 1.4 para PIKAS 0.5.3 |
 | Última verificación | 11 de agosto de 2026 |
 | Rama | `main` |
 | Fuente de capturas | Build local con demo mode, `http://localhost:3000` |
-| URL pública | Puede conservar una versión anterior; 0.5.0 no se desplegó en esta fase |
+| URL pública | Puede conservar una versión anterior hasta verificar el despliegue de 0.5.3 |
 | Duración | 12–15 minutos |
 
 PIKAS demuestra experiencias interconectadas para Familia, Estudiante, Cafetería/POS, Administración escolar y Administración de cafetería. **Todo nombre, escuela, cuenta, restricción y transacción mostrado aquí es ficticio.**
@@ -144,7 +144,7 @@ En Familia, revisa estudiantes, saldo, límites, restricciones, movimientos y pr
 
 ## 10. Limitaciones
 
-Administración 0.5.0, sesiones y datos compartidos son demo local. No hay binding administrativo Supabase, RLS organizacional, invitaciones por correo, importación CSV productiva, sincronización entre dispositivos, SIS, QR verificable, búsqueda POS por nombre, pagos reales, refunds o conciliación. La URL pública puede corresponder a una versión anterior porque esta fase no despliega.
+Administración 0.5.3, sesiones, reportes y conciliación son demo local. No hay binding administrativo Supabase completo, invitaciones por correo, importación CSV productiva, sincronización entre dispositivos, SIS, QR verificable, búsqueda POS por nombre, pagos reales ni refunds/reversos operativos. La URL pública puede corresponder a una versión anterior hasta verificarse.
 
 Mantén esta guía sincronizada cuando cambien versión, rutas, etiquetas, credenciales, códigos, permisos, persistencia o capturas.
 # Nota 0.5.1
@@ -154,3 +154,7 @@ Las cuentas existentes siguen usando la contraseña demo documentada en la inter
 ## Flujo 0.5.2
 
 Cambie un producto en Cafetería y actualice Estudiante, Familia o POS para observar la misma disponibilidad. En POS elija “Código estudiantil / NFC” para aplicar saldo, alergias y bloqueos, o “Venta en efectivo” para no afectar balances. El carrito se conserva al refrescar. Una imagen rota muestra iniciales con texto accesible.
+
+## Flujo 0.5.3
+
+PIKAS es diseñada y desarrollada por Palmchat Innovations LLC; la atribución aparece en landing y accesos. En POS elija **Ventas PIKAS**, **Venta asociada a estudiante** o **Venta general en efectivo**. La venta general no pide estudiante ni aparece en historiales familiares. En Administración de cafetería revise filtros, exporte CSV y compare el cierre esperado con un conteo manual opcional. Ninguna venta convierte efectivo en crédito PIKAS automáticamente.
