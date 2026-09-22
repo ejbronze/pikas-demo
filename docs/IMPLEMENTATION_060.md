@@ -45,7 +45,7 @@ La [guía](DEMO_GUIDE.md) describe compras PIKAS, invitado en efectivo, búsqued
 
 ## 8. Cobertura
 
-Se añadieron 17 pruebas unitarias financieras y 10 recorridos E2E nuevos por viewport. Cobertura: permisos fuera de UI, full/parcial, exceso acumulado, idempotencia, atribución, original inmutable, cash/change, límites independientes, recargas, offline, nombre/alcance, recomendaciones, persistencia, límites concurrentes entre pestañas y recuperación de checkout interrumpido. Se actualizaron los recorridos existentes para la nueva navegación y árboles ocultos de Next.js 16.3.
+Se añadieron 17 pruebas unitarias financieras y 10 recorridos E2E nuevos por viewport. Cobertura: permisos fuera de UI, full/parcial, exceso acumulado, idempotencia, atribución, original inmutable, cash/change, límites independientes, recargas, offline, nombre/alcance, recomendaciones, persistencia, límites concurrentes entre pestañas y recuperación de checkout interrumpido. Se actualizaron los recorridos existentes para la nueva navegación y árboles ocultos de Next.js 16.3. Los controles de login esperan la hidratación y la protección del último administrador activo se vuelve a comprobar dentro del bloqueo de escritura.
 
 ## 9. Resultados
 
@@ -54,8 +54,7 @@ Se añadieron 17 pruebas unitarias financieras y 10 recorridos E2E nuevos por vi
 | `npm run lint` | PASS |
 | `npm run typecheck` | PASS |
 | `npm test` | PASS, 42 pruebas |
-| `npm run test:e2e` | PASS, 84 pruebas de la suite completa en 390/768/1440 px |
-| E2E focalizadas posteriores | 12 PASS para shell/reportes/refunds; recuperación de checkout registrada en verificación final |
+| `npm run test:e2e` | PASS, 87 pruebas de la suite completa en 390/768/1440 px |
 | `npm run build` | PASS |
 | `git diff --check` | PASS |
 
@@ -74,9 +73,11 @@ Revisar/aplicar migraciones solo en desarrollo con autorización separada; recon
 **0.7.0: persistencia financiera autoritativa en Supabase de desarrollo**, incluyendo RPCs transaccionales, pruebas multirregistro/RLS, auditoría durable y conciliación por turno. Mantener demo aislado y posponer el movimiento de dinero real hasta verificar esas garantías.
 
 ## Inventario de archivos modificados o añadidos
+
 - [`README.md`](../README.md)
 - [`apps/web/app/admin/cafeteria/configuracion/page.tsx`](../apps/web/app/admin/cafeteria/configuracion/page.tsx)
 - [`apps/web/app/api/demo/session/route.ts`](../apps/web/app/api/demo/session/route.ts)
+- [`apps/web/app/login/page.tsx`](../apps/web/app/login/page.tsx)
 - [`apps/web/app/globals.css`](../apps/web/app/globals.css)
 - [`apps/web/components/admin-pages.tsx`](../apps/web/components/admin-pages.tsx)
 - [`apps/web/components/admin-shell.tsx`](../apps/web/components/admin-shell.tsx)
@@ -88,6 +89,7 @@ Revisar/aplicar migraciones solo en desarrollo con autorización separada; recon
 - [`apps/web/components/student-pages.tsx`](../apps/web/components/student-pages.tsx)
 - [`apps/web/e2e/critical-journeys.spec.ts`](../apps/web/e2e/critical-journeys.spec.ts)
 - [`apps/web/e2e/pos-v060.spec.ts`](../apps/web/e2e/pos-v060.spec.ts)
+- [`apps/web/next-env.d.ts`](../apps/web/next-env.d.ts)
 - [`apps/web/package.json`](../apps/web/package.json)
 - [`docs/ADMINISTRATION_AND_PERMISSIONS.md`](../docs/ADMINISTRATION_AND_PERMISSIONS.md)
 - [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)

@@ -13,7 +13,7 @@
 - Mutaciones demo serializadas con Web Locks, idempotencia y relectura del estado; bloqueo offline y errores de sincronización.
 - Preórdenes conservadas con validación actual y escritura serializada. Reportes/caja incluyen recargas y refunds.
 - Migración local para políticas, alcance, eventos append-only y solicitudes familiares preparadas/deshabilitadas. **No aplicada ni verificada en PostgreSQL.**
-- Validación local: lint, TypeScript, 42 unitarias, 84 E2E (390/768/1440 px), 12 comprobaciones focalizadas posteriores y build. Capturas actuales en guía demo.
+- Validación local: lint, TypeScript, 42 unitarias, 87 E2E (390/768/1440 px) y build. Capturas actuales en guía demo.
 - Sin push, PR, merge, despliegue, cambios de variables ni acceso/modificación de datos Supabase.
 
 Límites: finanzas 0.6 demo; escritor/RPC remoto, pruebas RLS/concurrencia PostgreSQL, solicitudes familiares, ajustes administrativos, refund por unidades y cierre durable de turnos siguen pendientes. [Modelo financiero](POS_FINANCIAL_MODEL.md).

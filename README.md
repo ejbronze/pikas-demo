@@ -16,7 +16,7 @@ PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**.
 - Web Locks, idempotencia, revalidación y bloqueo sin estado financiero confirmado.
 - Esquema financiero local preparado; no aplicado a Supabase ni declarado productivo.
 
-Consulta [Modelo financiero y límites](docs/POS_FINANCIAL_MODEL.md), [Permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), [Demo](docs/DEMO_GUIDE.md) y [Changelog](docs/CHANGELOG_PRODUCT.md).
+Consulta la [entrega completa 0.6.0](docs/IMPLEMENTATION_060.md), [Modelo financiero y límites](docs/POS_FINANCIAL_MODEL.md), [Permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), [Demo](docs/DEMO_GUIDE.md) y [Changelog](docs/CHANGELOG_PRODUCT.md).
 
 ## Aplicación en vivo
 
