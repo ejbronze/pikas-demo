@@ -1,12 +1,14 @@
 # Guía de demostración de PIKAS
 
+> **Milestone local 0.6.0:** POS guiado, búsqueda por nombre, recargas independientes, límites diarios por estudiante, política de caja y reembolsos vinculados. Implementación demo verificada localmente. Consulta [POS y modelo financiero](POS_FINANCIAL_MODEL.md) para comportamiento vigente, límites y pasos productivos. Las secciones 0.5.x siguientes conservan contexto histórico y no sustituyen esta actualización.
+
 | Dato | Valor |
 | --- | --- |
-| Versión | 1.4 para PIKAS 0.5.3 |
-| Última verificación | 11 de agosto de 2026 |
+| Versión | 2.0 para PIKAS 0.6.0 |
+| Última verificación | 22 de septiembre de 2026 |
 | Rama | `main` |
-| Fuente de capturas | Build local con demo mode, `http://localhost:3000` |
-| URL pública | Puede conservar una versión anterior hasta verificar el despliegue de 0.5.3 |
+| Fuente de capturas | Capturas históricas 0.5.x; pruebas 0.6 locales en 390/768/1440 px |
+| URL pública | Sin cambios; no se desplegó 0.6.0 |
 | Duración | 12–15 minutos |
 
 PIKAS demuestra experiencias interconectadas para Familia, Estudiante, Cafetería/POS, Administración escolar y Administración de cafetería. **Todo nombre, escuela, cuenta, restricción y transacción mostrado aquí es ficticio.**
@@ -28,6 +30,34 @@ Una recarga normal conserva el estado. Otro navegador, perfil, dispositivo u ori
 ![Página inicial de PIKAS](assets/demo-guide/01-landing-page.png)
 
 ![Selector de experiencias Familia, Estudiante y Cafetería](assets/demo-guide/02-role-selection.png)
+
+## Recorrido 0.6.0
+
+1. POS → Usuario PIKAS → busca `Sof` y selecciona Sofi, o verifica `PK-10982`. Desconocidos y escuelas no conectadas no aparecen.
+2. Añade Pasta con pollo → Continuar al pago → Saldo PIKAS → Confirmar venta. Ver recibo y Nueva transacción vuelven al inicio.
+3. No usuario → Pizza escolar → Buscar usuario PIKAS → Sofi. El carrito conserva Pizza y muestra bloqueo por Lactosa. Cambia a Mateo para repetir validación.
+4. No usuario → Pasta → pago → introduce 100: falta efectivo. Introduce 1000: cambio RD$820. No hay pago dividido. Calculadora en Herramientas no cambia ningún importe.
+5. Tras una compra de Sofi, otra Pasta supera su límite diario. Familia → Estudiantes → Sofi permite ajustar o apagar solo su límite. Mateo mantiene el suyo.
+6. Herramientas → Recargar saldo con usuario identificado. La recarga aparece como otro evento y no restaura capacidad diaria. Para demostrar saldo insuficiente, usa un snapshot ficticio con saldo RD$1, manteniendo el límite suficiente; el pago muestra saldo, total y faltante.
+7. Transacciones permite investigar por ID/nombre/código, fecha y cajero. Refrescar conserva ventas y eventos; el carrito requiere nueva identificación.
+8. Cafetería Admin → Configuración POS: apaga ventas del turno. POS deja de mostrarlas, pero reportes y compras las conservan.
+9. Reembolsos de caja inicialmente apagados. Actívalos y desactiva aprobación para permitir caja; habilita parcial si necesitas RD$100 de una compra RD$180. Con aprobación ON, el administrador debe procesar el reembolso desde Transacciones.
+10. Familia → Movimientos → abre Reembolso: muestra destino, compra original, motivo, procesador y aprobador cuando corresponde.
+11. Reembolso del mismo día restaura gasto diario; uno de compra anterior solo devuelve fondos. Pruebas unitarias cubren el límite de medianoche de Santo Domingo.
+12. Cafetería Admin → Configuración POS → Cargar historial de recomendaciones agrega diez productos y compras ficticias de hace 2 y 40 días, sin cambiar saldo/gasto de hoy. Identifica Sofi en POS para ver ambos grupos de cinco. Top 5 se forma solo con compras registradas. Sin historial, aparece “Sin historial suficiente”; compra productos elegibles para poblar cafetería. La ventana de 90 días del cliente puede aportar cinco distintos del top de 30 días.
+13. Desconecta red: Offline bloquea nuevas operaciones; reconectar vuelve a comprobar almacenamiento. Las solicitudes familiares permanecen desactivadas.
+
+Las capturas históricas anteriores son de 0.5.x; no representan la nueva disposición de caja.
+
+## Capturas actuales
+
+![Entrada POS 0.6.0](assets/demo-guide/30-pos-entry-v060.png)
+
+![Pago móvil y estado persistente](assets/demo-guide/31-pos-cash-v060.png)
+
+## Referencias visuales históricas (0.5.x)
+
+Las secciones siguientes preservan las capturas y el recorrido anterior. El recorrido 0.6.0 de arriba define el comportamiento vigente.
 
 ## 2. Cuentas demo
 

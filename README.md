@@ -1,29 +1,28 @@
 # PIKAS
 
-PIKAS es una aplicación escolar unificada para Familias, Estudiantes, Cafetería/POS y Administración. La versión actual es **0.5.3**, con operaciones POS compartidas, ventas PIKAS, efectivo asociado o general, reportes y conciliación demo.
+PIKAS es una aplicación escolar unificada para Familias, Estudiantes, Cafetería/POS y Administración. El milestone local **0.6.0** evoluciona la línea base 0.5.3 sin cambiar marca ni espacios de trabajo. Verificada localmente; la aplicación y su lockfile están en **0.6.0**.
 
-PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**. Esta atribución se muestra también en el footer público y en las entradas principal y administrativa.
+PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**.
 
-## Novedades de 0.5.3
+## Novedades del milestone 0.6.0
 
-- Ventas PIKAS, efectivo asociado a estudiante y venta general en efectivo con impactos de saldo/caja separados.
-- Historiales estudiantiles que excluyen ventas generales y no presentan efectivo como débito de billetera.
-- Dashboard de cafetería, filtros, CSV y conciliación de efectivo con conteo humano opcional.
-- Dos espacios administrativos separados: Escuela y Cafetería.
-- Control centralizado de permisos para `school_admin`, `cafeteria_admin` y `pos_operator`.
-- Padrón escolar con búsqueda, estados, códigos enmascarados, regeneración e importación CSV con vista previa.
-- Invitación, activación, suspensión y restablecimiento demo de administradores y personal POS; nunca se muestran contraseñas existentes.
-- Conexiones Escuela–Cafetería con estados, alcance mínimo y efecto real sobre verificación y checkout POS.
-- Menú compartido: disponibilidad y precios administrados por Cafetería se reflejan en Estudiante y POS.
-- Actividad administrativa ficticia, navegación responsiva y protección de rutas por espacio de trabajo.
+- POS guiado: Usuario PIKAS / No usuario → identidad → productos → validación/pago → recibo → nueva transacción.
+- Búsqueda por nombre/código con alcance mínimo y cambio de cliente sin perder el carrito.
+- Top 5 cafetería + Top 5 cliente con productos únicos, elegibles e historial real del demo.
+- Saldo PIKAS o efectivo completo, cambio automático, calculadora y recargas independientes; sin pagos divididos.
+- Límites diarios individuales ON/OFF; recargar no amplía capacidad y efectivo identificado también cuenta.
+- Política de pantalla/refund en `/admin/cafeteria/configuracion`. Reembolsos de caja OFF por defecto.
+- Refund completo/parcial por importe, vinculado al original, atribuido y visible para la familia.
+- Web Locks, idempotencia, revalidación y bloqueo sin estado financiero confirmado.
+- Esquema financiero local preparado; no aplicado a Supabase ni declarado productivo.
 
-Consulta [Administración y permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), la [Guía de demostración](docs/DEMO_GUIDE.md) y el [Registro de cambios](docs/CHANGELOG_PRODUCT.md).
+Consulta [Modelo financiero y límites](docs/POS_FINANCIAL_MODEL.md), [Permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), [Demo](docs/DEMO_GUIDE.md) y [Changelog](docs/CHANGELOG_PRODUCT.md).
 
 ## Aplicación en vivo
 
 **URL publicada anteriormente:** [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app)
 
-El código 0.5.3 de este repositorio se verifica localmente y se publica a `main` en este milestone. El push puede iniciar automatización externa, pero esta tarea no ejecuta un despliegue manual ni modifica Vercel o Supabase. No se afirma que la URL pública ejecute 0.5.3 hasta una verificación independiente.
+Este milestone se implementa y verifica exclusivamente en local. No se hizo push, PR, merge o despliegue, ni se modificaron Supabase o variables de entorno. La URL pública puede ejecutar otra versión.
 
 ## Cuentas de demostración
 
@@ -46,7 +45,7 @@ Estas son credenciales públicas de demostración y **nunca deben reutilizarse e
 1. Entra como Administración escolar y revisa Estudiantes, Administradores, Cafeterías conectadas y Actividad.
 2. Entra como Administración de cafetería, cambia la disponibilidad o el precio de un producto y revisa Personal de caja.
 3. Comprueba el cambio en `/estudiante/menu` y `/pos` en el mismo navegador.
-4. En POS, `PK-10982` devuelve Sofi, `PK-00000` falla y Pasta con pollo permite completar una compra.
+4. En POS, elige Usuario PIKAS. `PK-10982` devuelve Sofi, `PK-00000` falla y Pasta con pollo permite completar una compra tras Continuar al pago.
 5. Revisa la compra en POS, Estudiante y Familia. La transacción sobrevive una recarga en el mismo navegador.
 
 La conexión activa entre Instituto Nueva Generación y Cafetería PIKAS Central autoriza solo elegibilidad, saldo, restricciones, límites y transacciones. Suspenderla o revocarla bloquea la verificación/compra; no concede a Cafetería acceso al padrón o a contactos familiares.
@@ -85,7 +84,7 @@ También existen botones **Restablecer demo** en los resúmenes administrativos.
 - Estudiante: `/estudiante`, `/estudiante/menu`, `/estudiante/transacciones`, `/estudiante/preordenes`, `/estudiante/presupuesto`, `/estudiante/perfil`.
 - Cafetería/POS: `/pos`.
 - Administración escolar: `/admin/escuela`, `/estudiantes`, `/administradores`, `/cafeterias`, `/actividad` bajo ese prefijo.
-- Administración de cafetería: `/admin/cafeteria`, `/menu`, `/personal`, `/escuelas`, `/transacciones` bajo ese prefijo.
+- Administración de cafetería: `/admin/cafeteria`, `/menu`, `/personal`, `/escuelas`, `/transacciones` y `/configuracion` bajo ese prefijo.
 
 Los guards redirigen sesiones entre espacios de trabajo y las mutaciones administrativas vuelven a comprobar permisos mediante una política común. Una redirección de interfaz no reemplaza la autorización de datos de producción.
 
@@ -137,7 +136,7 @@ Playwright cubre escritorio y móvil para Familia, Estudiante, POS y Administrac
 - [MVP](docs/MVP.md)
 - [Registro de cambios](docs/CHANGELOG_PRODUCT.md)
 
-## Modos de ejecución (0.5.3)
+## Modos de ejecución
 
 `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` conserva el demo público ficticio y su persistencia en el navegador. Con `false`, URL y anon key de Supabase son obligatorias: Auth conserva la sesión mediante cookies, valida el usuario en servidor y dirige `school_admin`, `cafeteria_admin` y `pos_operator` a sus espacios. El catálogo compartido se lee de Supabase y solo una membresía activa de cafetería puede editarlo.
 
@@ -145,8 +144,12 @@ Para desarrollo: aplique las migraciones y `supabase/seed.sql` a un proyecto no 
 
 ## Limitaciones actuales
 
-- El modo demo es una simulación de un solo navegador, no autenticación ni persistencia multiusuario.
-- En modo Supabase 0.5.3 Auth, membresías/alcance, catálogo, restricciones por producto, compras tipadas y auditoría tienen modelo remoto. Algunas acciones de familia, estudiante, wallet, efectivo y conciliación continúan en el adaptador demo.
-- La importación CSV es una vista previa demostrativa y aplica una fila ficticia conocida; no carga archivos reales al servidor.
-- QR sigue siendo visual; no hay lectura QR, búsqueda POS por nombre, refunds, reversos de compras completadas, pagos reales ni conciliación.
-- El sitio público puede corresponder a una versión anterior hasta que exista un despliegue 0.5.3 autorizado y verificado.
+- Demo ficticio del mismo navegador/origen; no autentica identidades reales ni sincroniza fondos entre dispositivos.
+- Operaciones financieras 0.6 funcionan localmente. RPCs/ledger/refunds remotos, auditoría durable y concurrencia PostgreSQL requieren implementación/pruebas antes de habilitarse.
+- La migración local no fue aplicada ni ejecutada en una base de datos. Incluye un cambio de alcance que exige reconciliar compras históricas sin organización/ubicación.
+- Reembolsos parciales son por importe; asignación de artículos devueltos, cola de aprobación, correcciones administrativas y solicitudes familiares quedan pendientes.
+- QR visual, CSV escolar demostrativo, pagos reales e invitaciones/correo no completos.
+- La conciliación mantiene fondo inicial cero y conteo manual; apertura/cierre durable de turnos es posterior.
+- No se declara que la URL pública ejecute esta versión.
+
+Pasos de producción y revisión de migraciones históricas: [POS y modelo financiero](docs/POS_FINANCIAL_MODEL.md).

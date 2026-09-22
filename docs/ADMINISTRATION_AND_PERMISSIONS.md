@@ -1,87 +1,38 @@
-# Administración y permisos de PIKAS 0.5.3
+# Administración y permisos — milestone 0.6.0
 
-Última revisión: **11 de agosto de 2026**. Esta guía describe la base administrativa local en modo demo; no afirma integración productiva con Supabase.
+La autorización productiva corresponde a Auth/RLS y funciones de servidor. El demo comprueba roles y políticas, pero localStorage y las credenciales públicas no son seguridad productiva.
 
-## Matriz de permisos
+| Capacidad | Escuela Admin | Cafetería Admin | POS | Familia | Estudiante |
+| --- | --- | --- | --- | --- | --- |
+| Padrón, identidad, códigos | Su escuela | No | No | Perfiles vinculados | Su preferencia |
+| Menú/personal de caja | No | Su cafetería | No | No | No |
+| Conexiones | Aprueba/suspende | Solicita | Consulta alcance mínimo | No | No |
+| Políticas POS/refund | No | Sí | No | No | No |
+| Buscar/verificar cliente | No | No padrón | Solo elegibles | Sus vinculados | Solo propio |
+| Comprar POS/recargar en caja | No | No en ruta POS | Sí, con validación | Recarga familiar | Preorden propia |
+| Historial operativo compartido | No | Su organización | Su ubicación | Sus estudiantes | Propio |
+| Refund | No | Procesa/aprueba | Solo política habilitada | No | No |
+| Límite diario ON/OFF | No en flujo parental | No | No | Individual por estudiante | Solo lectura |
+| Preferencia de tema | Personal | Personal | Personal | No cambia política | No cambia política |
 
-| Capacidad | Admin escolar | Admin de cafetería | Personal POS | Futuro docente |
-| --- | ---: | ---: | ---: | ---: |
-| Administrar configuración escolar | Sí | No | No | No |
-| Administrar padrón estudiantil | Sí | No | No | Limitado/No |
-| Restablecer acceso estudiantil | Sí | No | No | Solicitud futura |
-| Administrar admins escolares | Sí | No | No | No |
-| Aprobar conexión con cafetería | Sí | Solicitud | No | No |
-| Administrar menú y precios | No | Sí | No | No |
-| Administrar personal POS | No | Sí | No | No |
-| Verificar estudiantes elegibles | No | Limitado | Limitado | No |
-| Completar transacciones POS | Opcional | Opcional | Sí | No |
-| Ver el padrón completo | Sí | No | No | Solo asignados, futuro |
-| Consultar actividad | Ámbito escolar | Ámbito cafetería | Actividad propia | No |
+## Visibilidad y acción son independientes
 
-La política común está en `apps/web/lib/admin-policy.ts`. Las páginas verifican el espacio de trabajo en servidor y cada mutación demo vuelve a comprobar el permiso. Producción deberá repetir estas garantías en RLS, Server Actions y RPCs; ocultar un botón o redirigir una ruta no basta.
+Configuración POS está en `/admin/cafeteria/configuracion`. Ventas, cantidad, inicio del turno y registro en la barra pueden ocultarse al cajero; datos siguen registrados y visibles en reportes autorizados. Identidad y estado del sistema siempre permanecen. Historial compartido no concede autoridad para reembolsar.
 
-Una membresía asigna usuario, rol, organización y, cuando corresponde, ubicación. Los fixtures actuales asignan una sola organización por cuenta, por lo que no aparece un selector vacío o artificial. Si una identidad futura tiene varias membresías, la selección de workspace será obligatoria antes de entrar. `teacher` queda reservado como trabajo futuro y `platform_admin` como función interna futura; ninguno está implementado en 0.5.0.
+Refund de caja comienza OFF. Parciales OFF, motivo ON y aprobación administrativa ON. Con aprobación obligatoria, el cajero puede consultar la operación y un administrador entra a su propia sesión para procesar ese ID. No hay PIN maestro ni un campo libre para fingir aprobador. Se preservan identidad del original, iniciador/ejecutor del refund y aprobador cuando corresponde.
 
-## Propiedad de datos
+Solicitudes de padres siguen OFF: modelo de estados preparado sin formulario o escritura financiera. Aprobación de una solicitud futura nunca equivale por sí sola a devolución de fondos.
 
-- La Escuela es autoridad sobre identidad, estado, grado, código estudiantil, padrón y administradores escolares.
-- La Cafetería es autoridad sobre catálogo, precios, disponibilidad, ubicaciones de caja y cuentas POS.
-- Una conexión no transfiere propiedad. Solo habilita operaciones explícitas para una escuela y cafetería concretas.
-- El POS recibe el mínimo necesario para decidir una compra: elegibilidad, saldo, restricciones, límites y registro transaccional, según el alcance activo.
-- Cafetería no recibe contactos familiares, credenciales, navegación del padrón ni edición de perfiles.
+## Fronteras existentes
 
-## Ciclo de una conexión
+Escuela es propietaria de identidad/padrón. Cafetería es propietaria de productos/personal/ubicaciones. Conexiones `pending`, `active`, `suspended`, `rejected`, `revoked` habilitan únicamente scopes explícitos: elegibilidad, saldo, restricciones, límites y transacciones. Suspender/revocar bloquea lookup y compras identificadas. No se comparten contactos familiares ni credenciales.
 
-`pending` → `active`, `rejected`, `suspended` o `revoked`.
+Búsqueda POS requiere dos caracteres y limita resultados al ámbito elegible; no presenta un padrón completo. Los candidatos muestran nombre, grado y código enmascarado. Datos reales nunca deben introducirse en demo.
 
-- Cafetería puede emitir una solicitud pendiente.
-- Escuela puede aprobar/reactivar, rechazar, suspender o revocar.
-- Solo `active` habilita una operación incluida en `scope`.
-- Suspender o revocar la conexión activa bloquea lookup y checkout en el demo interconectado.
+El último administrador escolar activo no puede suspenderse. Usuarios históricos se desactivan en vez de borrarse. Restablecimientos/invitaciones no muestran contraseñas anteriores. El CSV escolar sigue siendo vista previa y aplicación de una fila ficticia conocida.
 
-El fixture incluye una conexión activa, una pendiente y una suspendida para revisar cada estado.
+## Enforcement y producción
 
-## Privacidad y seguridad demostradas
+Las nuevas operaciones obtienen el rol de cookies HttpOnly mediante `/api/demo/session`, comprueban cuenta/alcance y serializan la mutación. Refund exige organización/ubicación, autorización, monto elegible, política y razón. La UI no es la única comprobación, pero todo saldo demo sigue siendo manipulable por el propietario del navegador.
 
-- Códigos estudiantiles enmascarados en listas; regenerarlos invalida el valor anterior en el estado compartido.
-- Los flujos de restablecimiento e invitación no muestran contraseñas anteriores ni generan secretos visibles.
-- No se puede suspender el último administrador escolar activo.
-- Las cuentas suspendidas/inactivas permanecen visibles para auditoría y no se documentan como credenciales válidas.
-- Acciones importantes crean eventos de actividad demo.
-- Las rutas de Escuela, Cafetería y POS se mantienen separadas.
-
-Cada evento demo contiene actor, acción, detalle y fecha. Sirve para mostrar trazabilidad, pero no es un registro de seguridad durable o inmutable.
-
-## Datos ficticios incluidos
-
-- Instituto Nueva Generación y Cafetería PIKAS Central.
-- Dos administradores escolares, dos administradores de cafetería y tres registros POS con estados distintos.
-- Sofi (`PK-10982`) y Mateo (`PK-11804`).
-- Catálogo, restricciones, conexiones y actividad sin información real.
-
-Las únicas credenciales que deben usarse están en [Cuentas de demostración](../README.md#cuentas-de-demostración).
-
-## Persistencia y reinicio
-
-Las acciones actualizan `pikas:unified-demo:v2` en el navegador. Los cambios sobreviven una recarga y se comparten con Familia, Estudiante y POS en el mismo origen/perfil. **Restablecer demo** o eliminar esa clave restaura los fixtures. No hay sincronización entre dispositivos ni escritura a Supabase.
-
-## Pendiente para producción
-
-- Esquema y RLS para organizaciones, membresías, invitaciones, conexiones, alcances y auditoría append-only.
-- Server Actions/RPCs validados e idempotentes para cada mutación.
-- Supabase Auth para invitaciones, sesiones, recuperación y estados de cuenta.
-- Pruebas por rol/organización, concurrencia, rate limiting, correo y Storage privado.
-- Paginación respaldada por servidor, carga CSV real con trabajos reintentables y resumen durable de errores.
-- Revisión independiente de seguridad, privacidad y accesibilidad.
-- Cuentas docentes limitadas y administración de plataforma interna, después de definir alcance y revisión de privacidad.
-# Actualización 0.5.1
-
-Los guards verifican usuario, rol y membresía activa. Escuela y cafetería no pueden abrir el espacio de la otra; POS solo llega a `/pos`. RLS evita que cafetería navegue perfiles o padrón y limita cambios del menú a su organización. Rol y organización no son mutables desde clientes.
-
-## Actualización 0.5.2
-
-Cafetería lee solo asociaciones, catálogo, ventas y auditoría de su organización; no recibe una política para recorrer el padrón. POS obtiene verificación mínima tras asociación activa. Escuela conserva estado estudiantil y restricciones, y solo ve catálogos vinculados a su escuela.
-
-## Actualización 0.5.3
-
-Cafetería puede consultar únicamente sus ventas autorizadas, filtrar y exportar snapshots, e ingresar un conteo de caja ficticio. POS solo verifica estudiantes cuando el flujo lo requiere. Las ventas generales no crean ni exponen datos estudiantiles. El crédito PIKAS futuro continúa restringido a administradores, separado de ventas y desactivado por defecto.
+La migración 0.6 prepara lectura financiera por pertenencia familiar/estudiantil o membresía operativa de organización/ubicación. No habilita escrituras de cliente. RPCs, RLS reales, invitaciones, PIN hasheado/rate limiting, auditoría durable y concurrencia multiusuario requieren implementación y pruebas en desarrollo antes de producción. Ver [Modelo financiero](POS_FINANCIAL_MODEL.md).

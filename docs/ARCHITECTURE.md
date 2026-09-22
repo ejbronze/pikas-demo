@@ -1,58 +1,29 @@
-# Arquitectura unificada
+# Arquitectura de PIKAS
 
-## Límites de la aplicación
+`apps/web` conserva la aplicación Next.js App Router para Familia, Estudiante, POS, Escuela y Cafetería. `packages/data-access` reúne contratos y reglas; `packages/shared-types` y `packages/ui` mantienen tipos/componentes existentes. Los prototipos permanecen separados. La identidad visual y los activos aprobados siguen en `public/brand`.
 
-`apps/web` es el único despliegue. App Router separa páginas públicas, Familias, Estudiante, POS, Administración escolar y Administración de cafetería. `proxy.ts` hace el primer control de rol en servidor; layouts administrativos aplican el espacio de trabajo y las mutaciones consultan la política central. RLS sigue siendo la autoridad productiva de datos. Un redirect nunca sustituye autorización en una mutación.
+## Modos y fronteras
 
-La interfaz usa Server Components como límite inicial. Los componentes cliente encapsulan formularios, diálogos y el adaptador demo. Producción debe obtener datos mediante el cliente Supabase de servidor y ejecutar mutaciones en Server Actions o RPC validados con Zod. No existe una caché duplicada por portal: ambos roles consultan estudiantes, wallets, ledger y preórdenes compartidos.
+Demo usa datos ficticios compartidos en `pikas:unified-demo:v2`. Supabase usa Auth y catálogo remoto donde ya estaban enlazados. El POS financiero remoto continúa deshabilitado: las funcionalidades financieras 0.6 son demo local y una fundación de esquema, no una declaración productiva.
 
-## Identidad y propiedad
+`proxy.ts`, `requireRole` y `requireAdminRole` conservan guards de servidor. Las nuevas mutaciones consultan `/api/demo/session` para obtener el rol de cookies HttpOnly, luego aplican autorización/política en el adaptador y reglas puras. Esto no vuelve seguro un localStorage manipulable: en producción se requieren RPC/RLS y proyecciones de datos mínimas.
 
-`profiles.id` coincide con `auth.users.id`. `family_members` concede permisos explícitos sobre una familia. Un estudiante puede tener `profile_id` al activar acceso. Las políticas comprueban pertenencia familiar, identidad estudiantil, escuela del POS o rol administrativo. Los estudiantes no tienen políticas para modificar controles, alergias, restricciones o ledger.
+Escuela conserva padrón/identidad/conexiones; Cafetería conserva catálogo/personal/política; POS obtiene candidatos elegibles y opera dentro de su ubicación. Familia controla sus estudiantes; Estudiante solo modifica preferencias permitidas. Ver una compra no concede permiso para reembolsar.
 
-Adultos y personal de cafetería usarán email/contraseña de Supabase Auth. El perfil de cafetería recibe `role = 'pos'` y queda vinculado a su escuela. Para código + PIN estudiantil, una futura función server-only debe aplicar rate limiting, comparar Argon2id/bcrypt y crear una sesión limitada. Nunca se guarda un PIN plano. Recuperación usa el email de Supabase y devuelve una respuesta no enumerable.
+## Extensiones 0.6
 
-## Integridad financiera y mutaciones
+- `pos.ts`: snapshots de compra inmutables, precios y validaciones de checkout en centavos.
+- `financial.ts`: política, eventos compensatorios, parsing monetario, zona de negocio, gasto neto y Top 5 + Top 5.
+- `demo-provider.tsx`: migración compatible, sesión demo, Web Locks, lectura del estado vigente dentro del bloqueo, persistencia antes de éxito, notificaciones entre pestañas y estados de conexión.
+- `pos-dashboard.tsx`: estados cliente → identidad → productos → validación/pago → completada.
+- `pos-tools.tsx`: investigación compartida, detalle/refund y calculadora aislada.
+- `pos-settings.tsx`: configuración exclusivamente de Cafetería Admin.
+- Familia y Estudiante siguen leyendo el mismo estado; los reembolsos compensan compras originales sin editarlas.
 
-Todo importe es entero en moneda menor. `wallet_balances` deriva el saldo de entradas completadas. Clientes no pueden actualizar un saldo ni editar/borrar ledger. Reservas de preorden son débitos; cancelación crea un crédito relacionado, nunca borra el débito. RPCs validan autorización, disponibilidad, alergias, bloqueos, límites y saldo dentro de una transacción.
+Compras, recargas, reembolsos y preórdenes validan saldo/controles en el estado actual. El gasto se calcula por fecha de Santo Domingo; efectivo identificado también cuenta desde 0.6. Las preórdenes conservan su modelo anterior de reserva/cancelación, ahora con escritura serializada y restauración diaria solo el mismo día.
 
-Cada mutación financiera requiere `idempotency_key`, actor y timestamp. Una evolución de producción añadirá doble entrada, tabla append-only de auditoría, conciliación diaria con procesador, referencias externas, trabajos de discrepancia y estados de refund. Los webhooks verificarán firma y reutilizarán claves idempotentes.
+## Persistencia futura
 
-El checkout POS utiliza `purchases` y `purchase_items` como instantánea operativa y `wallet_ledger_entries` como fuente contable. `complete_pos_purchase` vuelve a obtener precios y controles bajo una transacción, bloquea estudiante/wallet, rechaza restricciones y crea el débito, la compra y sus artículos de forma atómica. La unicidad de `idempotency_key` protege los reintentos. Triggers impiden editar o borrar compras y asientos completados; un reverso futuro deberá ser compensatorio.
+La migración local 0.6 añade alcance de compra, controles/políticas, eventos append-only y solicitudes familiares deshabilitadas. Se restringen lecturas operativas por organización y ubicación. No hay escrituras financieras directas desde cliente.
 
-## Administración y límites organizacionales
-
-PIKAS 0.5.0 define `school_admin`, `cafeteria_admin` y `pos_operator` en `admin-policy.ts`. Escuela conserva el padrón e identidades; Cafetería conserva catálogo y personal; POS solo verifica y cobra dentro de una conexión activa. Una conexión contiene estado y alcance explícito (`eligibility`, `balance`, `restrictions`, `limits`, `transactions`) y no expone el padrón ni contactos familiares. Consulta [Administración y permisos](ADMINISTRATION_AND_PERMISSIONS.md).
-
-En demo, estas reglas protegen rutas y mutaciones sobre el estado del navegador. Producción todavía requiere tablas de organización/membresía/conexión, RLS y funciones server-only equivalentes. La auditoría demo es informativa; una versión productiva debe ser append-only, durable y con retención definida.
-
-## Demo y producción
-
-El demo se activa solo con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` y persiste datos ficticios en el navegador para evaluar flujos compartidos. POS aplica una transición indivisible sobre el mismo estado usado por Familia y Estudiante. Es una garantía de demostración de un solo navegador, no una transacción multiusuario. El alias público tiene demo mode autorizado explícitamente; una futura instancia con datos reales debe desactivarlo y exige URL/anon key, perfiles Auth y acciones Supabase enlazadas.
-
-## Shell y navegación responsiva
-
-Familia y Estudiante comparten `AppShell` y una configuración tipada de destinos con coincidencia exacta o por prefijo. Desde `md`, el shell usa una columna lateral sticky y una columna de contenido `minmax(0,1fr)`; en móvil usa cinco destinos primarios, safe-area padding y logout accesible. Estudiante conserva **Mi plan** en el sidebar y dashboard, mientras **Mis compras** ocupa un destino móvil propio.
-
-## Identidad visual
-
-Los activos aprobados viven en `apps/web/public/brand/`. `BrandLogo` centraliza la selección del logo horizontal o mark en Next Image; `globals.css` define tokens semánticos para superficies, texto, foco, estados y color de marca. Las experiencias conservan sus acentos de rol: azul/teal para Familia, violeta/amarillo para Estudiante y teal/navy para POS. Consulta la [Guía de marca](BRAND_GUIDE.md).
-
-## Privacidad estudiantil
-
-Recolectar el mínimo necesario, limitar lecturas por escuela/familia, evitar IDs crudos en QR, registrar accesos administrativos y definir retención. Avatares deben vivir en buckets privados con URLs firmadas. Antes de declaraciones regulatorias se requiere revisión legal y de seguridad independiente.
-
-## Próximas capas
-
-POS todavía necesita un token QR opaco, binding de la UI con las interfaces Supabase, revalidación de vistas y pruebas reales de RLS/concurrencia. Administración necesita persistencia organizacional, Auth para invitaciones y auditoría durable. Pagos futuros se aislarán tras un proveedor tokenizado; PIKAS nunca almacenará números de tarjeta.
-# Actualización 0.5.1
-
-El modo se selecciona con `NEXT_PUBLIC_PIKAS_DEMO_MODE`. Demo conserva cookies ficticias y `localStorage`; Supabase usa `@supabase/ssr`, valida sesiones y perfiles en servidor, y limita administradores mediante `organization_memberships`. `menu_items` es la primera fuente operativa compartida. El resto del grafo continúa en el adaptador demo durante esta fase.
-
-## Actualización 0.5.2
-
-`menu_items` conserva atributos operativos y se consume por rol. `blocked_products.menu_item_id` evita depender del nombre mutable. `purchases.payment_method` separa efectivo de billetera y una restricción SQL impide asociar ventas en efectivo a estudiantes. Los eventos administrativos se limitan por organización mediante RLS. Demo conserva un grafo equivalente en `localStorage`.
-
-## Actualización 0.5.3
-
-El contrato POS añade `studentAssociation` para distinguir cuenta PIKAS, efectivo asociado y efectivo general. `studentId` solo puede ser nulo en una venta general; los impactos de billetera y caja son campos separados. El adaptador demo excluye ventas generales del ledger estudiantil. Reportes y conciliación derivan valores del mismo snapshot inmutable de compra. PIKAS es diseñada y desarrollada por Palmchat Innovations LLC.
+La implementación remota aún necesita RPCs transaccionales, locks PostgreSQL, ledger/evento atómicos, idempotencia ligada a actor/payload, auditoría durable y pruebas reales de RLS/concurrencia. No usar el antiguo RPC de compra sin actualizar su contrato/rol y reglas 0.6. La documentación detallada y las advertencias sobre migraciones históricas están en [Modelo financiero](POS_FINANCIAL_MODEL.md).

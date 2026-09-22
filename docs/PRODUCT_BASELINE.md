@@ -1,73 +1,27 @@
 # Línea base del producto PIKAS
 
-Versión local **0.5.3**, verificada el **27 de agosto de 2026**. El código se publica a `main`, pero no se ejecuta un despliegue manual: [https://pikas-demo.vercel.app](https://pikas-demo.vercel.app) puede conservar una versión anterior hasta una verificación independiente.
+El milestone local 0.6.0 evoluciona 0.5.3; mantiene aplicación, identidad, roles, menú compartido, cuentas ficticias, informes y conciliación demo. La URL pública no se modificó y puede ejecutar otra versión.
 
-El recorrido reproducible para presentar esta línea base, incluidas capturas y reinicio del estado ficticio, está en la [Guía de demostración](DEMO_GUIDE.md).
+## Comportamiento vigente
 
-## Estado general
+POS abre con Usuario PIKAS / No usuario. Nombre o código identifica clientes elegibles de conexiones activas. Cambiar identidad conserva carrito y revalida todo. Los productos se eligen antes de validar/pagar; efectivo exige recepción suficiente y calcula cambio. Nueva transacción vuelve al punto de entrada.
 
-La aplicación unificada ofrece recorridos para Familia, Estudiante, Cafetería/POS y dos espacios administrativos. En demo mode usa cookies de rol y un único estado ficticio versionado en `localStorage`; estudiantes, catálogo, conexiones, compras, balances, actividad y movimientos se comparten dentro del mismo navegador. El demo no mueve fondos reales. Familia/Estudiante/POS conservan el shell responsivo 0.4.0; Administración añade sidebar de escritorio y navegación inferior móvil.
+No hay pagos divididos. La recarga es un evento independiente y no amplía el límite diario. Desde 0.6, efectivo identificado también consume capacidad diaria. La familia puede desactivar el máximo diario por estudiante sin desactivar restricciones o saldo.
 
-Producción tiene clientes Supabase de servidor y migraciones POS. Esta tarea no aplica ni valida migraciones, no configura servicios y no toca datos live. Cuando demo mode está desactivado, las rutas administrativas muestran que la integración productiva está pendiente en vez de usar fixtures silenciosamente.
+Compras son snapshots que no se reescriben. Refund completo/parcial añade un registro vinculado; caja solo dispone de la acción cuando la política lo permite. Cuando se requiere aprobación, un administrador procesa desde su propia sesión. Familia ve monto, destino, original, motivo y atribución. Un reembolso histórico no añade capacidad al día actual.
 
-## Recorrido Cafetería/POS implementado
+Consulta [Modelo financiero](POS_FINANCIAL_MODEL.md) para tipos, reglas, recomendaciones, concurrencia y límites. El catálogo completo se resume en [Funcionalidades](FEATURE_CATALOG.md).
 
-1. `/login` selecciona el rol Cafetería; el proxy y la página `/pos` vuelven a comprobar el rol en servidor.
-2. El empleado introduce un código con formato `PK-00000`. Solo una coincidencia exacta y activa pasa; desconocidos, malformados o archivados no revelan información.
-3. El POS muestra nombre preferido/iniciales, escuela, grado, estado, saldo, disponible diario, límite por compra y alertas esenciales.
-4. El catálogo compartido permite búsqueda, filtro, agregar, cambiar cantidad, quitar y vaciar el carrito.
-5. Productos agotados, alergénicos o bloqueados muestran una explicación textual y no pueden añadirse.
-6. Una confirmación explícita precede al checkout. Los controles pendientes impiden envíos repetidos.
-7. El adaptador demo vuelve a resolver estudiante, artículos, precios, cantidades, saldo, límites y restricciones mediante reglas puras en centavos.
-8. Una actualización indivisible agrega la compra completada, el débito compartido y los nuevos balance/gasto diario. La clave idempotente devuelve la compra anterior ante un reintento.
-9. El recibo y el historial POS muestran artículo, total, fecha, estado y caja. Estudiante y Familia leen el mismo movimiento y saldo tras navegar o refrescar.
-10. Un carrito sin terminar se vacía sin registros. Reversos y refunds están marcados como no disponibles; no existe un botón ficticio.
+## Fixtures conservados
 
-## Persistencia de producción preparada
+- Sofi `PK-10982`: RD$2,450 de saldo, límite diario RD$350, gasto ficticio inicial RD$160, por compra RD$250; Maní/Lactosa y bebidas energéticas restringidas.
+- Mateo `PK-11804`: RD$1,680, límite RD$300, gasto inicial RD$105, por compra RD$200.
+- `PK-00000` se rechaza. Solo Sofi tiene login estudiantil documentado.
+- Pasta RD$180 es la compra inicial permitida. Pizza demuestra alergia; Especial del día, agotado.
+- El historial opcional de recomendaciones se carga desde Configuración POS y no altera saldos/gasto actual.
 
-`202608110003_pos_purchases.sql` incorpora:
+## Verificación y límites
 
-- `purchases` y `purchase_items` con moneda, precios históricos, actor, estado, timestamps, claves foráneas, índices e idempotencia única.
-- RLS de lectura basada en el estudiante/escuela y ausencia deliberada de escrituras directas de cliente.
-- Triggers que impiden editar o borrar registros financieros completados.
-- `complete_pos_purchase`, un RPC `security definer` disponible solo para usuarios autenticados.
-- Validación dentro de la transacción de rol POS, escuela, estudiante/wallet activos, existencia/disponibilidad, cantidad, precio vigente, alergias, bloqueos, saldo y límites.
-- Bloqueo de filas, creación atómica de ledger/compra/artículos y recuperación por clave idempotente.
+Las suites cubren reglas de compra, política, refunds, zona horaria, recomendaciones, límites independientes, dinero entero y recorridos responsivos a 390/768/1440 px. Los resultados finales se registran en el changelog del milestone.
 
-`apps/web/lib/pos/supabase.ts` define los límites server-only para lookup, checkout e historial. Falta enlazar esos métodos con la interfaz una vez que un proyecto Supabase esté provisionado y pueda verificarse con Auth/RLS reales.
-
-## Datos seguros de demostración
-
-- `PK-10982`: Sofi, activa; saldo RD$2,450, límite diario RD$350, gastado RD$160, límite por compra RD$250, alergias Maní/Lactosa y Bebidas energéticas bloqueadas. Pasta con pollo por RD$180 constituye el caso permitido.
-- `PK-11804`: Mateo, activo; saldo RD$1,680, límite diario RD$300, gastado RD$105, límite por compra RD$200 y Bebidas energéticas bloqueadas.
-- `PK-00000` y cualquier código desconocido se rechazan.
-- Pizza escolar demuestra bloqueo por alergia para Sofi; Bebidas energéticas demuestra restricción familiar; Especial del día demuestra indisponibilidad.
-
-Para reiniciar: elimina `pikas:unified-demo:v2` del almacenamiento del origen. El demo funcional requiere `NEXT_PUBLIC_PIKAS_DEMO_MODE=true`. Nunca uses nombres, alergias, contraseñas o medios de pago reales.
-
-## Límites conocidos
-
-- La atomicidad e idempotencia demo se prueban sobre una actualización pura del estado del navegador, no sobre una base multiusuario.
-- La autenticación demo sigue siendo selección de rol; no verifica la contraseña mostrada.
-- El PIN estudiantil productivo, rate limiting, correo y Storage todavía requieren Supabase real.
-- La migración/RPC no se aplicó ni probó en PostgreSQL local o remoto por falta de configuración disponible.
-- No hay QR funcional, búsqueda por nombre, conciliación, cancelación de compras completadas, reverso o refund autorizado.
-- La producción aún necesita enlazar UI y funciones server-only, revalidar cachés y ejecutar pruebas Auth/RLS con usuarios reales de desarrollo.
-
-## Evidencia de verificación
-
-- 19 pruebas unitarias de dominio/data access.
-- Seis recorridos Playwright configurados para Chromium escritorio y WebKit móvil, incluido checkout compartido POS → Estudiante → Familia.
-- TypeScript estricto, ESLint y build de producción.
-- Revisión manual en navegador de códigos válido/inválido, restricciones, compra, persistencia, sincronización, consola y overlays.
-# Línea base 0.5.1
-
-Supabase development mode respalda autenticación administrativa, alcance organizacional y menú compartido. Demo mode conserva las experiencias ficticias. Familia, wallet, controles, transacciones y preórdenes siguen fuera del alcance Supabase de esta versión.
-
-## Línea base 0.5.2
-
-Catálogo, disponibilidad, medios, restricciones por ID, forma de pago, asociación y auditoría comparten modelo operacional. Efectivo no altera balances; billetera conserva límites y controles. No se declara preparación productiva.
-
-## Línea base 0.5.3
-
-La línea base añade tres tipos operativos de venta, separación explícita entre propiedad, pago e impactos, reportes/CSV y conciliación demo. Las ventas generales nunca aparecen en historiales estudiantiles. El producto identifica a Palmchat Innovations LLC como diseñadora y desarrolladora en superficies públicas.
+El demo no es autenticación/persistencia financiera productiva. La migración 0.6 no fue aplicada ni probada en PostgreSQL; requiere revisión y pruebas de desarrollo. Las compras antiguas sin organización/ubicación requieren reconciliación explícita antes de conceder lectura operativa. No hubo push, PR, merge, despliegue o modificación de Supabase.

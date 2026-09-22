@@ -1,5 +1,24 @@
 # Registro de cambios del producto
 
+## 2026-09-22 — PIKAS 0.6.0: caja guiada y eventos financieros
+
+- POS por tipo de cliente, búsqueda mínima por nombre/código, carrito conservado al cambiar identidad y validación/pago explícitos.
+- Shell persistente con estado, ubicación, cajero, contexto y tema personal; calculadora y consulta compartida en herramientas.
+- Top 5 + Top 5 sin duplicados, ventanas 30/90 días y escenario histórico ficticio opcional.
+- Límites diarios individuales ON/OFF. Efectivo identificado también consume límite; recargas no lo amplían.
+- Recargas independientes, cambio automático, recibido obligatorio y ausencia de pagos divididos.
+- Política de visibilidad separada de autoridad. Refund de caja OFF, parcial OFF, motivo/aprobación ON por defecto.
+- Refund completo/parcial por importe, vinculado al original inmutable y atribuido a actor/aprobador; detalle familiar.
+- Devolución del mismo día restaura capacidad diaria; devolución histórica solo devuelve fondos. Zona Santo Domingo.
+- Mutaciones demo serializadas con Web Locks, idempotencia y relectura del estado; bloqueo offline y errores de sincronización.
+- Preórdenes conservadas con validación actual y escritura serializada. Reportes/caja incluyen recargas y refunds.
+- Migración local para políticas, alcance, eventos append-only y solicitudes familiares preparadas/deshabilitadas. **No aplicada ni verificada en PostgreSQL.**
+- Validación local: lint, TypeScript, 42 unitarias, 84 E2E (390/768/1440 px), 12 comprobaciones focalizadas posteriores y build. Capturas actuales en guía demo.
+- Sin push, PR, merge, despliegue, cambios de variables ni acceso/modificación de datos Supabase.
+
+Límites: finanzas 0.6 demo; escritor/RPC remoto, pruebas RLS/concurrencia PostgreSQL, solicitudes familiares, ajustes administrativos, refund por unidades y cierre durable de turnos siguen pendientes. [Modelo financiero](POS_FINANCIAL_MODEL.md).
+
+
 ## 2026-08-27 — PIKAS 0.5.3: POS, caja y atribución
 
 - PIKAS es identificada públicamente como diseñada y desarrollada por Palmchat Innovations LLC en landing y accesos.

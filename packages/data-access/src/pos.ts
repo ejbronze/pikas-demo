@@ -8,6 +8,7 @@ export type PosStudentRecord = {
   walletStatus: "active" | "blocked";
   balanceMinor: number;
   dailyLimitMinor: number;
+  dailyLimitEnabled?: boolean;
   perTransactionLimitMinor: number;
   spentTodayMinor: number;
   allergies: string[];
@@ -32,6 +33,9 @@ export type PosCartLine = { itemId: string; quantity: number };
 export type PosPaymentMethod = "student_wallet" | "cash";
 export type PosStudentAssociation = "required" | "student_linked" | "general_sale";
 export type PosPurchaseRecord = {
+  readonly organizationId?: string;
+  readonly locationId?: string;
+  readonly studentCode?: string;
   readonly id: string;
   readonly studentId: string | null;
   readonly studentName: string;
@@ -115,13 +119,14 @@ export function validatePosPurchase(
     if (allergen) return { ok: false, reason: "allergy", itemName: item.name, allergen };
     const lineTotal = item.priceMinor * line.quantity;
     if (!Number.isSafeInteger(lineTotal)) return { ok: false, reason: "invalid_quantity" };
+    if (!Number.isSafeInteger(item.priceMinor) || item.priceMinor < 0 || !Number.isSafeInteger(totalMinor + lineTotal)) return {ok:false, reason:"invalid_quantity"};
     totalMinor += lineTotal;
     lines.push({ ...line, name: item.name, unitPriceMinor: item.priceMinor });
   }
 
   if (totalMinor > student.balanceMinor) return { ok: false, reason: "balance" };
   if (totalMinor > student.perTransactionLimitMinor) return { ok: false, reason: "per_transaction_limit" };
-  if (student.spentTodayMinor + totalMinor > student.dailyLimitMinor) return { ok: false, reason: "daily_limit" };
+  if (student.dailyLimitEnabled !== false && student.spentTodayMinor + totalMinor > student.dailyLimitMinor) return { ok: false, reason: "daily_limit" };
   return { ok: true, totalMinor, lines };
 }
 
@@ -134,9 +139,7 @@ export function validateCashPurchase(
     ...student,
     walletStatus: "active",
     balanceMinor: Number.MAX_SAFE_INTEGER,
-    dailyLimitMinor: Number.MAX_SAFE_INTEGER,
-    perTransactionLimitMinor: Number.MAX_SAFE_INTEGER,
-    spentTodayMinor: 0,
+
   }, menu, cart);
 }
 
@@ -172,6 +175,8 @@ export function preparePosPurchase(input: {
   cashReceivedMinor?: number;
   cashierId?: string;
   posStationId?: string;
+  organizationId?: string;
+  locationId?: string;
   studentAssociation?: PosStudentAssociation;
 }) {
   const duplicate = input.purchases.find((purchase) => purchase.idempotencyKey === input.idempotencyKey);
@@ -187,6 +192,9 @@ export function preparePosPurchase(input: {
   }
   const purchase: PosPurchaseRecord = Object.freeze({
     id: input.purchaseId,
+    organizationId: input.organizationId,
+    locationId: input.locationId,
+    studentCode: input.student?.code,
     studentId: studentAssociation === "general_sale" ? null : input.student!.id,
     studentName: studentAssociation === "general_sale" ? "Venta general en efectivo" : input.student!.preferredName,
     items: Object.freeze(validation.lines.map((line) => Object.freeze({ itemId: line.itemId, name: line.name, quantity: line.quantity, unitPriceMinor: line.unitPriceMinor }))),
