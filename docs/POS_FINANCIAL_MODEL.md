@@ -1,5 +1,7 @@
 # POS y control financiero — milestone 0.6.1
 
+> **Futuro 0.7.0:** autoridad diaria de reembolso para cajeros. La futura política deberá permitir configurar un límite diario, exigir override de supervisor cuando se exceda, mantener el cajero autenticado y auditar tanto `processed by` como `authorized by`. La autoridad deberá imponerse server-side/authoritatively con semántica explícita de día de negocio. No está implementado en 0.6.4.
+
 ## Alcance y fuente de verdad
 
 La implementación funcional es **demo local**, sin dinero real. `apps/web/components/demo-provider.tsx` conserva el adaptador compartido existente; `packages/data-access/src/pos.ts` valida las compras y `financial.ts` define políticas, eventos compensatorios, ventanas de recomendaciones y cálculo diario. Los contratos productivos se preparan en una migración local, sin aplicarla a Supabase. El checkout remoto sigue deshabilitado en la interfaz.

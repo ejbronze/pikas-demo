@@ -38,6 +38,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
   const [step, setStep] = useState<Step>("entry"),
     [studentId, setStudentId] = useState<string | null>(null),
     [general, setGeneral] = useState(false);
+  const playSaleSound = () => { try { const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.frequency.value = 880; gain.gain.setValueAtTime(0.05, context.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.16); oscillator.connect(gain).connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + 0.16); } catch {} };
   const [code, setCode] = useState(""),
     [cart, setCart] = useState<PosCartLine[]>([]),
     [mode, setMode] = useState<"student_wallet" | "cash">("student_wallet");
@@ -294,6 +295,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
       setCart([]);
       setStep("completed");
       setNotice("");
+      playSaleSound();
     } else setNotice(result.message);
     setBusy(false);
     submitting.current = false;
@@ -543,6 +545,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                 ) : null}
                 {step === "items" || step === "payment" ? (
                   <>
+                    <div className="pos-venta-columns">
                     <div className="pos-sale-top">
                       <section className="card pos-customer-panel flex flex-wrap items-center justify-between gap-3 p-4">
                         <div>
@@ -649,8 +652,9 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                     </div>
                     {step === "items" ? (
                       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-                        <section className="card pos-catalog-panel p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
+                        <section className="card pos-catalog-panel pos-catalog-shell p-4">
+                          <div className="pos-catalog-header">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
                               <h2 className="text-2xl font-black">Productos</h2>
                               <p className="text-sm text-slate-500">
@@ -693,15 +697,15 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                                 </button>
                               </div>
                             </div>
-                          </div>
-                          <input
+                            </div>
+                            <input
                             className="field mt-3"
                             aria-label="Buscar producto"
                             placeholder="Buscar producto"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                          />
-                          <div
+                            />
+                            <div
                             className="mt-3 flex gap-2 overflow-x-auto pb-1"
                             aria-label="Categorías de productos"
                           >
@@ -719,7 +723,9 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                                 {c}
                               </button>
                             ))}
+                            </div>
                           </div>
+                          <div className="pos-catalog-results">
                           {catalogView === "gallery" ? (
                             <div className="pos-product-grid mt-4">
                               {visibleItems.map((item) => {
@@ -859,6 +865,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                               ))}
                             </div>
                           )}
+                          </div>
                         </section>
                         <aside className="card h-fit p-5 lg:sticky lg:top-24">
                           <h2
@@ -960,11 +967,13 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                         </aside>
                       </div>
                     ) : null}
+                    </div>
                     {step === "payment" ? (
-                      <section className="card mx-auto max-w-2xl space-y-4 p-6">
-                        <h1 className="text-2xl font-black">
-                          Validación y pago
+                      <section className="card pos-payment-review mx-auto max-w-2xl space-y-4 p-6">
+                        <h1 aria-label="Validación y pago" className="text-2xl font-black">
+                          Confirmar venta
                         </h1>
+                        <div className="pos-payment-summary"><p className="label">Cliente</p><p className="font-black">{student?.preferredName ?? "No usuario"}</p><p className="text-sm text-slate-500">{mode === "cash" ? "Efectivo" : "Saldo PIKAS"}</p><div className="mt-3 divide-y">{cart.map(line=>{const item=state.menuItems.find(i=>i.id===line.itemId);return item?<p className="flex justify-between gap-3 py-2 text-sm" key={line.itemId}><span>{line.quantity} × {item.name}</span><strong>{money(item.priceMinor*line.quantity)}</strong></p>:null})}</div></div>
                         <p className="text-xl font-bold">
                           Total {money(total)}
                         </p>
@@ -1058,7 +1067,8 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                           </>
                         ) : null}
                         <button
-                          className="btn w-full"
+                          className="btn pos-payment-cta w-full"
+                          aria-label="Confirmar venta"
                           disabled={
                             busy ||
                             scopeMissing ||
@@ -1069,7 +1079,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                           }
                           onClick={complete}
                         >
-                          {busy ? "Procesando…" : "Confirmar venta"}
+                            {busy ? "Procesando…" : `Cobrar ${money(total)}`}
                         </button>
                         <button
                           className="btn-secondary w-full"

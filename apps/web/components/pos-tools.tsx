@@ -375,6 +375,7 @@ export function PosHistory({ admin = false }: { admin?: boolean }) {
   const [query, setQuery] = useState(""),
     [day, setDay] = useState(""),
     [cashier, setCashier] = useState(""),
+    [kind, setKind] = useState("all"),
     [selected, setSelected] = useState<string | null>(null);
   const purchases = state.purchases.filter(
     (p) =>
@@ -382,6 +383,7 @@ export function PosHistory({ admin = false }: { admin?: boolean }) {
   );
   const rows = purchases.filter(
     (p) =>
+      (kind === "all" || (kind === "cash" && p.paymentMethod === "cash") || (kind === "wallet" && p.paymentMethod === "student_wallet") || (kind === "refund" && state.events.some(e=>e.type==='refund'&&e.originalPurchaseId===p.id))) &&
       (!day || businessDay(p.createdAt) === day) &&
       (!cashier || p.cashierId === cashier) &&
       `${p.id} ${p.studentName} ${p.studentId} ${p.studentCode ?? ""}`
@@ -424,6 +426,7 @@ export function PosHistory({ admin = false }: { admin?: boolean }) {
             </option>
           ))}
         </select>
+        <select className="field" aria-label="Tipo de transacción" value={kind} onChange={e=>setKind(e.target.value)}><option value="all">Todos</option><option value="cash">Efectivo</option><option value="wallet">Saldo PIKAS</option><option value="refund">Reembolsos</option><option value="replenishment">Recargas</option></select>
       </div>
       <div className="card divide-y p-4">
         {rows.length ? (
@@ -482,6 +485,7 @@ export function PosHistory({ admin = false }: { admin?: boolean }) {
             (e) =>
               e.organizationId === "cafeteria-demo" &&
               e.locationId === "principal" &&
+              (kind === "all" || (kind === "refund" && e.type === "refund") || (kind === "replenishment" && e.type === "replenishment")) &&
               (!day || businessDay(e.createdAt) === day) &&
               (!cashier || e.actorId === cashier) &&
               `${e.id} ${e.originalPurchaseId ?? ""} ${state.students.find((s) => s.id === e.studentId)?.preferredName ?? ""}`

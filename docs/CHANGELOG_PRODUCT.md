@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## 2026-09-24 — PIKAS 0.6.4: workspace operativo de cafetería
+
+- Workspace Venta más denso en desktop/tablet: Cliente y Productos quedan en la columna izquierda; Top 5 y Venta actual en la derecha, con carrito visible.
+- Top 5 compacto con desplazamiento horizontal acotado, controles de catálogo estables y resultados de productos con scroll independiente.
+- CTA de pago reforzado, confirmación final con resumen de compra y señal sonora sutil solo después de una venta exitosa.
+- Calculadora presentada como utilidad circular, estado de conexión al extremo derecho del footer y filtros operativos de Transacciones para efectivo, saldo PIKAS, reembolsos y recargas.
+- Se conserva el comportamiento financiero, autorización, catálogo, reembolsos, recibos, impresión y regresiones de 0.6.3.
+
 ## 2026-09-24 — PIKAS 0.6.3: flujo POS, recibos y reembolsos
 
 - Venta y Transacciones quedan como espacios de trabajo claros; el contexto de cliente, Top 5, recargas elegibles, carrito actual y calculadora permanecen accesibles sin competir con la operación.

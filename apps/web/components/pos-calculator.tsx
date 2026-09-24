@@ -48,7 +48,7 @@ export function PosCalculator(){
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   return <>
-    <button ref={trigger} className="btn-secondary" aria-haspopup="dialog" onClick={open}><CalculatorIcon size={20} aria-hidden="true"/>Calculadora</button>
+    <button ref={trigger} className="pos-calculator-launcher" aria-label="Calculadora" title="Calculadora" aria-haspopup="dialog" onClick={open}><CalculatorIcon size={22} aria-hidden="true"/></button>
     <dialog ref={dialog} className="pos-calculator" aria-labelledby="pos-calculator-title" style={{left:position.x,top:position.y}} onKeyDown={keyboard} onCancel={event=>{event.preventDefault();close()}}>
       <div className="pos-calculator-titlebar">
         <button className="pos-calculator-drag" aria-label="Mover calculadora" onPointerDown={startDrag} onPointerMove={event=>{const start=drag.current;if(start&&start.id===event.pointerId)setPosition(constrain(start.left+event.clientX-start.x,start.top+event.clientY-start.y))}} onPointerUp={()=>{drag.current=null}} onPointerCancel={()=>{drag.current=null}} onLostPointerCapture={()=>{drag.current=null}} onKeyDown={event=>{
