@@ -3,11 +3,6 @@ import {useState} from 'react';
 import {businessDay,parseMoney,refundedMinor,type PosPurchaseRecord} from '@pikas/data-access';
 import {usePosHistory as useDemo} from './demo-provider';
 export const posMoney=(minor:number)=>new Intl.NumberFormat('es-DO',{style:'currency',currency:'DOP'}).format(minor/100);
-export function Calculator(){
-  const [left,setLeft]=useState(''),[right,setRight]=useState(''),[operation,setOperation]=useState('+');
-  const a=Number(left),b=Number(right),result=operation==='+'?a+b:operation==='−'?a-b:operation==='×'?a*b:b===0?NaN:a/b;
-  return <details className="card p-4"><summary className="cursor-pointer py-2 font-bold">Calculadora</summary><div className="mt-3 grid gap-3 sm:grid-cols-3"><input className="field" aria-label="Primer número" inputMode="decimal" value={left} onChange={e=>setLeft(e.target.value)}/><select className="field" aria-label="Operación" value={operation} onChange={e=>setOperation(e.target.value)}>{['+','−','×','÷'].map(op=><option key={op}>{op}</option>)}</select><input className="field" aria-label="Segundo número" inputMode="decimal" value={right} onChange={e=>setRight(e.target.value)}/></div><output className="mt-3 block text-xl font-black">Resultado: {Number.isFinite(result)?result:'No definido'}</output><p className="text-sm">Esta herramienta no cambia el carrito ni el efectivo recibido.</p></details>;
-}
 export function PurchaseDetail({purchase,admin=false}:{purchase:PosPurchaseRecord;admin?:boolean}){
   const {state,refundPos,connection}=useDemo();
   const [amount,setAmount]=useState(''),[reason,setReason]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[key,setKey]=useState(()=>crypto.randomUUID());

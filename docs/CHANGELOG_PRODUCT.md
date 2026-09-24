@@ -1,5 +1,15 @@
 # Registro de cambios del producto
 
+## 2026-09-24 — PIKAS 0.6.2: refinamientos UX del POS
+
+- Barra de estado/footer persistente y compacta para conexión, contexto, turno, transacciones y ventas según la visibilidad configurada.
+- Indicador de conexión basado en el estado real, con pulso Online accesible y respeto por reduced motion.
+- Encabezado POS simplificado, conservando identidad, ubicación, caja y controles del cajero.
+- Calculadora flotante como utilidad independiente, con ventana arrastrable, teclado físico, foco y accesibilidad mejorados.
+- La calculadora permanece aislada del carrito, pagos, totales, saldos, cambio y demás estado transaccional.
+- Cobertura E2E del footer, estados de conexión, visibilidad, calculadora, arrastre, responsive, foco y aislamiento transaccional.
+- Estabilización determinista del recorrido E2E familiar en tablet mediante espera explícita del render de Estudiantes; no es una funcionalidad del producto ni una corrección de regresión.
+
 ## 2026-09-23 — PIKAS 0.6.1: correcciones de auditoría
 
 - Códigos únicos en creación/regeneración, selección por ID estable y lookup ambiguo rechazado.
