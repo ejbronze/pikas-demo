@@ -1,5 +1,17 @@
 # Registro de cambios del producto
 
+## 2026-09-24 — PIKAS 0.6.3: flujo POS, recibos y reembolsos
+
+- Venta y Transacciones quedan como espacios de trabajo claros; el contexto de cliente, Top 5, recargas elegibles, carrito actual y calculadora permanecen accesibles sin competir con la operación.
+- Catálogo con vistas Gallery/List, navegación List alfabética, búsqueda, categorías dinámicas, filas compactas sin imágenes y tarjetas Gallery verticales corregidas.
+- Top 5 cafetería y accesos de contexto del cliente se mantienen como atajos compactos, con restricciones, disponibilidad, cantidades y carrito persistente preservados.
+- Historial muestra estados derivados Completada, Reembolso parcial y Reembolsada sin mutar compras originales.
+- Flujo de reembolso guiado con revisión y confirmación explícita; se preservan permisos, aprobación, destinos efectivo/saldo, contabilidad, same-day spending, protección acumulada e idempotencia.
+- Recibos de venta refinados, recibos dedicados de reembolso vinculados a la venta original y datos históricos preservados.
+- Impresión y reimpresión mediante el diálogo del navegador para recibos de venta y reembolso, con estilos de impresión que aíslan únicamente el recibo.
+- Cobertura E2E de navegación, catálogo, vistas, recomendaciones, carrito, estados, recibos, reembolsos, impresión y regresiones financieras.
+- Estabilización de selectores de pruebas para el flujo de alto volumen; no representa una funcionalidad ni un cambio de reglas del producto.
+
 ## 2026-09-24 — PIKAS 0.6.2: refinamientos UX del POS
 
 - Barra de estado/footer persistente y compacta para conexión, contexto, turno, transacciones y ventas según la visibilidad configurada.

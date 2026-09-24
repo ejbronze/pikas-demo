@@ -1,6 +1,6 @@
 # PIKAS
 
-PIKAS es una aplicación escolar unificada para Familias, Estudiantes, Cafetería/POS y Administración. El milestone local **0.6.1** evoluciona la línea base 0.5.3 sin cambiar marca ni espacios de trabajo. Verificada localmente; la aplicación y su lockfile están en **0.6.1**.
+PIKAS es una aplicación escolar unificada para Familias, Estudiantes, Cafetería/POS y Administración. El milestone local **0.6.3** evoluciona la línea base 0.5.3 sin cambiar marca ni espacios de trabajo. Verificada localmente; la aplicación y su lockfile están en **0.6.3**.
 
 PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**.
 
@@ -16,9 +16,9 @@ PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**.
 - Web Locks, idempotencia, revalidación y bloqueo sin estado financiero confirmado.
 - Esquema financiero local preparado; no aplicado a Supabase ni declarado productivo.
 
-La rama predeterminada auditada es `Pikas_demo`, con 0.6.0 en `37e6c07`; `main` permanece en la línea 0.5.3 (`03b2971`). Este parche 0.6.1 es local y no implica un despliegue.
+La rama predeterminada auditada es `Pikas_demo`, con 0.6.0 en `37e6c07`; `main` permanece en la línea 0.5.3 (`03b2971`). Este refinamiento 0.6.3 es local y no implica un despliegue.
 
-0.6.1 rechaza códigos duplicados, selecciona por ID, revalida la sesión en cada escritor demo y proyecta campos POS por permiso. Corrige recuperación, controles parentales, Sync Issue, día de negocio y conciliación. Ver [informe 0.6.1](docs/IMPLEMENTATION_061.md).
+0.6.1 rechaza códigos duplicados, selecciona por ID, revalida la sesión en cada escritor demo y proyecta campos POS por permiso. 0.6.3 añade el flujo compacto de Venta/Transacciones, catálogo por categorías, carrito persistente y recibos POS legibles. Ver [informe 0.6.1](docs/IMPLEMENTATION_061.md) y [Changelog](docs/CHANGELOG_PRODUCT.md).
 
 Consulta la [entrega histórica 0.6.0](docs/IMPLEMENTATION_060.md), [Modelo financiero y límites](docs/POS_FINANCIAL_MODEL.md), [Permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), [Demo](docs/DEMO_GUIDE.md) y [Changelog](docs/CHANGELOG_PRODUCT.md).
 
