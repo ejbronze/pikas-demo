@@ -1,5 +1,16 @@
 # Registro de cambios del producto
 
+## 2026-09-23 — PIKAS 0.6.1: correcciones de auditoría
+
+- Códigos únicos en creación/regeneración, selección por ID estable y lookup ambiguo rechazado.
+- Todos los escritores demo confirman sesión y autorización vigente bajo Web Locks; admin obsoleto pierde autoridad.
+- Proyección de cliente POS por eligibility/balance/limits/restrictions/transactions, con validación independiente de checkout.
+- Recuperación por clave completada antes de límites de nueva compra; bloqueos parentales sincronizados.
+- Fallos HTTP de sesión producen Sync Issue con recuperación explícita.
+- Hoy usa fecha Santo Domingo; conciliación separa ventas, recargas, refunds y cierre; actividad muestra monto/destino de refund efectivo.
+- Regresiones de auditoría, permisos negativos, dos carritos válidos concurrentes, reintentos y refunds; waits de sesión/hidratación y descarga deterministas.
+- Corrección local sobre `Pikas_demo`; sin push, despliegue, migraciones aplicadas o trabajo 0.7.0. Resultados y archivos: [informe 0.6.1](IMPLEMENTATION_061.md).
+
 ## 2026-09-22 — PIKAS 0.6.0: caja guiada y eventos financieros
 
 - POS por tipo de cliente, búsqueda mínima por nombre/código, carrito conservado al cambiar identidad y validación/pago explícitos.

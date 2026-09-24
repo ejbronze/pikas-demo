@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useCallback, useRef, useState, type ReactNode } from "react";
 import {
-  DEFAULT_POS_POLICY, businessDay, parseMoney, prepareRefund, spendingToday,
+  DEFAULT_POS_POLICY, businessDay, parseMoney, prepareRefund, spendingToday, projectPosCustomer, type PosCustomer,
   type FinancialEvent, type PosPolicy, type FinancialActor,
   validatePosPurchase,
   lookupPosStudent,
@@ -13,7 +13,7 @@ import {
   type PosPurchaseRecord,
   type PosStudentRecord,
 } from "@pikas/data-access";
-import {activePartnershipAllows,can,type AdminRole,type PartnershipScope,type PartnershipStatus} from "@/lib/admin-policy";
+import {activePartnershipAllows,can,type AdminRole,type AdminPermission,type PartnershipScope,type PartnershipStatus} from "@/lib/admin-policy";
 
 export type DemoStudent = {schoolName?:string;familyId?:string;dailyLimitEnabled?:boolean;spendingDay?:string;id:string;firstName:string;lastName:string;preferredName:string;grade:string;code:string;status:"active"|"inactive"|"archived";balance:number;dailyLimit:number;perPurchaseLimit:number;spentToday:number;allergies:string[];blocked:string[];blockedProductIds?:string[]};
 export type DemoTx = {id:string;studentId:string;description:string;category:string;amount:number;status:"completed"|"pending"|"reversed";createdAt:string;purchaseId?:string;paymentMethod?:"student_wallet"|"cash";purchaseTotalMinor?:number;balanceImpactMinor?:number;cashRegisterImpactMinor?:number};
@@ -89,6 +89,11 @@ const initial: State = {
 type ActionResult = {ok:true}|{ok:false;message:string};
 type CheckoutResult = {ok:true;duplicate:boolean;purchase:PosPurchaseRecord}|{ok:false;message:string};
 type Context = {
+  sessionRole:string|null;
+  retryConnection:()=>Promise<void>;
+  selectPosCustomer:(id:string)=>PosCustomer|null;
+  posCustomer:(id:string)=>PosCustomer|null;
+  recoverCheckout:(key:string)=>Promise<{ok:true;purchase:PosPurchaseRecord|null}|{ok:false;message:string}>;
   connection:"Online"|"Connecting"|"Offline"|"Sync Issue";
   searchPosCustomers:(query:string)=>Array<{id:string;name:string;grade:string;code:string}>;
   savePosPolicy:(policy:PosPolicy)=>Promise<ActionResult>;
@@ -97,78 +102,122 @@ type Context = {
   refundPos:(purchaseId:string,amountMinor:number,reason:string,key:string)=>Promise<ActionResult>;
   voidPos:(reason:string,key:string)=>Promise<ActionResult>;
   state:State;
-  saveParent:(value:State["parent"])=>void;
+  saveParent:(value:State["parent"])=>Promise<ActionResult>;
   saveStudent:(value:DemoStudent)=>Promise<ActionResult>;
-  addStudent:(value:Omit<DemoStudent,"id"|"balance"|"spentToday"|"status">)=>void;
-  archive:(id:string,restore?:boolean)=>void;
+  addStudent:(value:Omit<DemoStudent,"id"|"balance"|"spentToday"|"status">)=>Promise<ActionResult>;
+  archive:(id:string,restore?:boolean)=>Promise<ActionResult>;
   topup:(id:string,amount:number,key:string)=>Promise<ActionResult>;
   preorder:(studentId:string,item:string,amount:number)=>Promise<{ok:boolean;message:string}>;
   cancelOrder:(id:string)=>Promise<ActionResult>;
-  saveBudget:(goal:string,limit:number)=>void;
-  lookupStudentForPos:(code:string)=>ReturnType<typeof lookupPosStudent>;
+  saveBudget:(goal:string,limit:number)=>Promise<ActionResult>;
+  lookupStudentForPos:(code:string)=>{ok:true;student:PosCustomer}|{ok:false;reason:string};
   checkoutPos:(studentId:string|null,cart:PosCartLine[],idempotencyKey:string,paymentMethod?:"student_wallet"|"cash",cashReceivedMinor?:number,generalSale?:boolean)=>Promise<CheckoutResult>;
-  adminUpdateStudent:(role:AdminRole,student:DemoStudent)=>boolean;
-  adminAddStudent:(role:AdminRole,student:Omit<DemoStudent,"id"|"balance"|"spentToday"|"status">)=>boolean;
-  adminUpdateMenu:(role:AdminRole,item:PosMenuItemRecord)=>boolean;
-  adminAddMenu:(role:AdminRole,item:Omit<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl"> & Partial<Pick<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl">>)=>boolean;
-  adminAddUser:(role:AdminRole,user:Omit<DemoAdminUser,"id"|"lastActivity">)=>boolean;
-  adminSetUserStatus:(role:AdminRole,id:string,status:DemoAdminUser["status"])=>boolean;
-  adminSetPartnership:(role:AdminRole,id:string,status:PartnershipStatus)=>boolean;
-  resetDemo:()=>void;
+  adminUpdateStudent:(student:DemoStudent)=>Promise<ActionResult>;
+  adminAddStudent:(student:Omit<DemoStudent,"id"|"balance"|"spentToday"|"status">)=>Promise<ActionResult>;
+  adminUpdateMenu:(item:PosMenuItemRecord)=>Promise<ActionResult>;
+  adminAddMenu:(item:Omit<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl"> & Partial<Pick<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl">>)=>Promise<ActionResult>;
+  adminAddUser:(user:Omit<DemoAdminUser,"id"|"lastActivity">)=>Promise<ActionResult>;
+  adminSetUserStatus:(id:string,status:DemoAdminUser["status"])=>Promise<ActionResult>;
+  adminSetPartnership:(id:string,status:PartnershipStatus)=>Promise<ActionResult>;
+  resetDemo:()=>Promise<ActionResult>;
 };
 
 const DemoContext = createContext<Context|null>(null);
 const storageKey = "pikas:unified-demo:v2";
 export const toPosStudent = (student:DemoStudent):PosStudentRecord => ({id:student.id,preferredName:student.preferredName,grade:student.grade,code:student.code,school:"Instituto Nueva Generación",status:student.status,walletStatus:"active",balanceMinor:parseMoney(String(student.balance))??0,dailyLimitMinor:parseMoney(String(student.dailyLimit))??0,dailyLimitEnabled:student.dailyLimitEnabled!==false,perTransactionLimitMinor:parseMoney(String(student.perPurchaseLimit))??0,spentTodayMinor:parseMoney(String(student.spentToday))??0,allergies:student.allergies,blockedProducts:student.blocked,blockedProductIds:student.blockedProductIds??[]});
 
+const normalize=(parsed:Partial<State>):State=>{
+    const now=new Date().toISOString(), day=businessDay(now);
+    const merged={...initial,...parsed,events:parsed.events??[],posPolicy:{...DEFAULT_POS_POLICY,...parsed.posPolicy},menuItems:normalizeMenu(parsed.menuItems??demoMenu),purchases:(parsed.purchases??[]).map(p=>({...p,organizationId:p.organizationId??"cafeteria-demo",locationId:p.locationId??"principal"})),administration:{...initial.administration,...parsed.administration,cafeteria:{...initial.administration.cafeteria,...parsed.administration?.cafeteria}}};
+    return {...merged,students:merged.students.map(s=>({...s,spendingDay:day,spentToday:s.spendingDay===day?s.spentToday:s.spendingDay?(spendingToday(s.id,merged.purchases,merged.events,now)+merged.orders.filter(o=>o.studentId===s.id&&o.status!=='cancelled'&&businessDay(o.createdAt)===day).reduce((n,o)=>n+(parseMoney(String(o.amount))??0),0))/100:s.spentToday}))};
+  };
+
 export function DemoProvider({children}:{children:ReactNode}) {
   const [state,setState] = useState(initial);
   const currentRef=useRef(initial);
   const [connection,setConnection]=useState<Context["connection"]>("Connecting");
   const sessionRole=useRef<string|null>(null);
-  const normalize=(parsed:Partial<State>):State=>{
-    const now=new Date().toISOString(), day=businessDay(now);
-    const merged={...initial,...parsed,events:parsed.events??[],posPolicy:{...DEFAULT_POS_POLICY,...parsed.posPolicy},menuItems:normalizeMenu(parsed.menuItems??demoMenu),purchases:(parsed.purchases??[]).map(p=>({...p,organizationId:p.organizationId??"cafeteria-demo",locationId:p.locationId??"principal"})),administration:{...initial.administration,...parsed.administration,cafeteria:{...initial.administration.cafeteria,...parsed.administration?.cafeteria}}};
-    return {...merged,students:merged.students.map(s=>({...s,spendingDay:day,spentToday:s.spendingDay===day?s.spentToday:s.spendingDay?(spendingToday(s.id,merged.purchases,merged.events,now)+merged.orders.filter(o=>o.studentId===s.id&&o.status!=='cancelled'&&businessDay(o.createdAt)===day).reduce((n,o)=>n+(parseMoney(String(o.amount))??0),0))/100:s.spentToday}))};
-  };
-  const install=(next:State)=>{currentRef.current=next;setState(next)};
+  const [confirmedRole,setConfirmedRole]=useState<string|null>(null);
+  const install=useCallback((next:State)=>{currentRef.current=next;setState(next)},[]);
+  const refreshState=useCallback(()=>{const saved=localStorage.getItem(storageKey);install(normalize(saved?JSON.parse(saved):currentRef.current))},[install]);
+  const confirmSession=useCallback(async()=>{
+    try {
+      const response=await fetch('/api/demo/session',{cache:'no-store',signal:AbortSignal.timeout(10000)});
+      if(!response.ok)throw new Error('Sesión no confirmada.');
+      const payload=await response.json();
+      const role=typeof payload.role==='string'?payload.role:null;
+      sessionRole.current=role;setConfirmedRole(role);
+      if(!role)throw new Error('Sesión no confirmada.');
+      return role;
+    } catch(error) {sessionRole.current=null;setConfirmedRole(null);setConnection(navigator.onLine?'Sync Issue':'Offline');throw error}
+  },[]);
+  const retryConnection=useCallback(async()=>{
+    if(!navigator.onLine){setConnection('Offline');return}
+    setConnection('Connecting');
+    try {await confirmSession();refreshState();setConnection('Online')}catch{setConnection(navigator.onLine?'Sync Issue':'Offline')}
+  },[confirmSession,refreshState]);
   useEffect(()=>{
-    const refresh=()=>{try{const saved=localStorage.getItem(storageKey);install(normalize(saved?JSON.parse(saved):initial));setConnection(navigator.onLine?(sessionRole.current?"Online":"Connecting"):"Offline")}catch{setConnection("Sync Issue")}};
     if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true") {
-      fetch("/api/menu").then(response=>response.ok?response.json():Promise.reject()).then((payload:{items:PosMenuItemRecord[]})=>install({...currentRef.current,menuItems:payload.items})).catch(()=>setConnection("Sync Issue"));
+      fetch('/api/menu').then(r=>r.ok?r.json():Promise.reject()).then((payload:{items:PosMenuItemRecord[]})=>install({...currentRef.current,menuItems:payload.items})).catch(()=>setConnection('Sync Issue'));
       return;
     }
-    refresh();
-    fetch('/api/demo/session').then(r=>r.json()).then(p=>{sessionRole.current=p.role;refresh()}).catch(()=>setConnection('Sync Issue'));
-    const offline=()=>setConnection("Offline"), online=()=>refresh();
-    const storage=(e:StorageEvent)=>{if(e.key===storageKey)refresh()};
-    window.addEventListener('offline',offline);window.addEventListener('online',online);window.addEventListener('storage',storage);
-    const timer=window.setInterval(()=>{const day=businessDay(new Date().toISOString());if(currentRef.current.students.some(s=>s.spendingDay!==day))refresh()},30000);
-    return ()=>{window.removeEventListener('offline',offline);window.removeEventListener('online',online);window.removeEventListener('storage',storage);clearInterval(timer)};
-  },[]);
-  const commit=(update:(current:State)=>State)=>{
-    const apply=()=>{try{const saved=process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE==="true"?localStorage.getItem(storageKey):null;const next=update(normalize(saved?JSON.parse(saved):currentRef.current));if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE==="true")localStorage.setItem(storageKey,JSON.stringify(next));install(next)}catch{setConnection('Sync Issue')}};
-    if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE==="true"&&navigator.locks)void navigator.locks.request(storageKey,apply).catch(()=>setConnection('Sync Issue'));else apply();
-  };
-  // Web Locks serializes tabs; storage is written before success is returned.
+    void retryConnection();
+    const offline=()=>setConnection('Offline'),online=()=>{void retryConnection()};
+    const storage=(e:StorageEvent)=>{if(e.key===storageKey)try{refreshState()}catch{setConnection('Sync Issue')}};
+    const focus=()=>{void retryConnection()};
+    window.addEventListener('offline',offline);window.addEventListener('online',online);window.addEventListener('storage',storage);window.addEventListener('focus',focus);
+    const timer=window.setInterval(()=>{const day=businessDay(new Date().toISOString());if(currentRef.current.students.some(s=>s.spendingDay!==day))try{refreshState()}catch{setConnection('Sync Issue')}},30000);
+    return ()=>{window.removeEventListener('offline',offline);window.removeEventListener('online',online);window.removeEventListener('storage',storage);window.removeEventListener('focus',focus);clearInterval(timer)};
+  },[refreshState,retryConnection,install]);
+  // Every writer confirms the current session while holding the shared demo lock.
   const financial=async <T extends ActionResult>(roles:string[],action:(current:State,actor:FinancialActor)=>{next:State;result:T}):Promise<T|{ok:false;message:string}>=>{
     if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true"||!navigator.onLine||!navigator.locks)return {ok:false,message:'Estado financiero no confirmado. Conéctate antes de continuar.'};
-    try{
-      const response=await fetch('/api/demo/session',{cache:'no-store'});if(!response.ok)throw new Error('Sesión no confirmada.');const {role}=await response.json();sessionRole.current=role;
-      if(!roles.includes(role))throw new Error('Operación no autorizada.');
-      return await navigator.locks.request(storageKey,()=>{
-        if(!navigator.onLine)throw new Error("Sin conexión. Operación bloqueada.");
-        const saved=localStorage.getItem(storageKey);const current=normalize(saved?JSON.parse(saved):currentRef.current);
-        const id=role==='pos_operator'?'pos-1':role==='cafeteria_admin'?'ca-1':role==='student'?'student-sofia':'parent-demo';
-        const user=current.administration.users.find(u=>u.id===id);
-        const actor:FinancialActor={id,name:user?.name??current.parent.name,role,organizationId:'cafeteria-demo',locationId:'principal',registerId:role==='parent'?'family':'caja-1',active:role==='parent'||(role==='student'&&current.students.some(s=>s.id==='sofia'&&s.status==='active'))||user?.status==='active'};
-        if(!actor.active)throw new Error('La cuenta no está activa.');
-        const {next,result}=action(current,actor);
-        localStorage.setItem(storageKey,JSON.stringify(next));install(next);setConnection('Online');return result;
-      });
-    }catch(error){if(error instanceof DOMException||error instanceof TypeError)setConnection('Sync Issue');return {ok:false,message:error instanceof Error?error.message:'No se pudo confirmar la operación.'}}
+    try{return await navigator.locks.request(storageKey,async()=>{
+      const role=await confirmSession();
+      if(!roles.includes(role))throw new Error('Operación no autorizada. La sesión ha cambiado.');
+      if(!navigator.onLine)throw new Error('Sin conexión. Operación bloqueada.');
+      const saved=localStorage.getItem(storageKey);const current=normalize(saved?JSON.parse(saved):currentRef.current);
+      const id=role==='pos_operator'?'pos-1':role==='cafeteria_admin'?'ca-1':role==='school_admin'?'sa-1':role==='student'?'student-sofia':'parent-demo';
+      const user=current.administration.users.find(u=>u.id===id);
+      if(['school_admin','cafeteria_admin','pos_operator'].includes(role)) {
+        const school=role==='school_admin';
+        const membership=current.administration.memberships.find(m=>m.userId===id&&m.role===role&&m.organizationType===(school?'school':'cafeteria')&&m.organizationName===(school?current.administration.school.name:current.administration.cafeteria.name)&&(school||m.location===current.administration.cafeteria.location));
+        if(!membership||!user||user.role!==role||user.scope!==(school?current.administration.school.name:role==='pos_operator'?current.administration.cafeteria.location:current.administration.cafeteria.name))throw new Error('Organización o ubicación no autorizada.');
+      }
+      const actor:FinancialActor={id,name:user?.name??(role==='student'?'Sofi':current.parent.name),role,organizationId:role==='school_admin'?'school-demo':'cafeteria-demo',locationId:'principal',registerId:role==='parent'?'family':'caja-1',active:role==='parent'||(role==='student'&&current.students.some(s=>s.id==='sofia'&&s.status==='active'))||user?.status==='active'};
+      if(!actor.active)throw new Error('La cuenta no está activa.');
+      const {next,result}=action(current,actor);
+      localStorage.setItem(storageKey,JSON.stringify(next));install(next);setConnection('Online');return result;
+    })}catch(error){if(error instanceof DOMException||error instanceof TypeError||error instanceof SyntaxError)setConnection(navigator.onLine?'Sync Issue':'Offline');return {ok:false,message:error instanceof Error?error.message:'No se pudo confirmar la operación.'}}
   };
+  const remoteMenu=async(method:'POST'|'PATCH',item:PosMenuItemRecord):Promise<ActionResult>=>{
+    try {
+      const response=await fetch('/api/menu',{method,headers:{'content-type':'application/json'},body:JSON.stringify({...item,dietaryTags:item.restrictionTags})});
+      if(!response.ok)return {ok:false,message:'No se pudo autorizar o guardar el producto.'};
+      const refreshed=await fetch('/api/menu',{cache:'no-store'});if(!refreshed.ok)throw new Error('Catálogo no confirmado.');
+      const payload=await refreshed.json();install({...currentRef.current,menuItems:payload.items});return {ok:true};
+    }catch{return {ok:false,message:'No se pudo confirmar el catálogo remoto.'}}
+  };
+  const adminMutation=(permission:AdminPermission,update:(current:State,actor:FinancialActor)=>State)=>financial(['school_admin','cafeteria_admin'],(current,actor)=>{
+    if(!can(actor.role as AdminRole,permission))throw new Error('Operación no autorizada.');
+    return {next:update(current,actor),result:{ok:true as const}};
+  });
+  const uniqueCode=(current:State,code:string,exceptId?:string)=>{
+    const normalized=code.trim().toUpperCase();
+    if(!/^PK-\d{5}$/.test(normalized))throw new Error('Usa un código estudiantil válido: PK-12345.');
+    if(current.students.some(s=>s.id!==exceptId&&s.code.trim().toUpperCase()===normalized))throw new Error('Código estudiantil duplicado. No se guardó el estudiante.');
+    return normalized;
+  };
+  const familyStudent=(current:State,id:string)=>{const student=current.students.find(s=>s.id===id);if(!student||(student.familyId??'family-demo')!=='family-demo')throw new Error('Cuenta no autorizada.');return student};
+  const schoolStudent=(current:State,student:DemoStudent)=>{if((student.schoolName??current.administration.school.name)!==current.administration.school.name)throw new Error('Estudiante fuera de la escuela autorizada.')};
+  const audit=(current:State,actor:FinancialActor,action:string,detail:string)=>({...current.administration,audit:[{id:crypto.randomUUID(),actor:actor.name,action,detail,createdAt:new Date().toISOString()},...current.administration.audit]});
   const eligible=(current:State,student:DemoStudent,operation:PartnershipScope)=>current.administration.partnerships.some(p=>p.schoolName===(student.schoolName??current.administration.school.name)&&p.cafeteriaName===current.administration.cafeteria.name&&p.location===current.administration.cafeteria.location&&activePartnershipAllows(p.status,p.scope,operation));
+  const posCustomer=(id:string):PosCustomer|null=>{
+    if(sessionRole.current!=='pos_operator'||connection!=='Online'||state.administration.users.find(u=>u.id==='pos-1')?.status!=='active')return null;
+    const student=state.students.find(s=>s.id===id);if(!student)return null;
+    const scopes:PartnershipScope[]=['eligibility','balance','limits','restrictions','transactions'];
+    return projectPosCustomer(toPosStudent(student),scopes.filter(scope=>eligible(state,student,scope)));
+  };
   const addEvent=(current:State,event:FinancialEvent):State=>({...current,events:[event,...current.events],students:current.students.map(s=>s.id===event.studentId?{...s,balance:(toPosStudent(s).balanceMinor+event.walletImpactMinor)/100,spentToday:event.type==='refund'&&current.purchases.some(p=>p.id===event.originalPurchaseId&&businessDay(p.createdAt)===businessDay(event.createdAt))?Math.max(0,(toPosStudent(s).spentTodayMinor-event.amountMinor)/100):s.spentToday}:s),transactions:event.studentId?[{id:event.id,studentId:event.studentId,purchaseId:event.originalPurchaseId??undefined,description:event.type==='refund'?`Reembolso · ${event.reason}`:'Recarga de saldo',category:event.type==='refund'?'Reembolso':'Recarga',amount:event.walletImpactMinor/100,status:'completed',createdAt:event.createdAt},...current.transactions]:current.transactions});
   const replenish=(studentId:string,amountMinor:number,key:string,roles:string[])=>financial(roles,(current,actor)=>{
     const student=current.students.find(s=>s.id===studentId);
@@ -181,9 +230,10 @@ export function DemoProvider({children}:{children:ReactNode}) {
     return {next:addEvent(current,event),result:{ok:true as const}};
   });
   const value:Context={
-    state,connection,
+    state,connection,sessionRole:confirmedRole,retryConnection,posCustomer,selectPosCustomer:posCustomer,
+    recoverCheckout:key=>financial(['pos_operator'],(current,actor)=>({next:current,result:{ok:true as const,purchase:current.purchases.find(p=>p.idempotencyKey===key&&p.cashierId===actor.id&&p.organizationId===actor.organizationId&&p.locationId===actor.locationId)??null}})),
     searchPosCustomers:query=>{
-      if(sessionRole.current!=='pos_operator'||query.trim().length<2||state.administration.users.find(u=>u.id==='pos-1')?.status!=='active')return [];
+      if(connection!=='Online'||sessionRole.current!=='pos_operator'||query.trim().length<2||state.administration.users.find(u=>u.id==='pos-1')?.status!=='active')return [];
       const normalizeName=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
       return state.students.filter(s=>s.status==='active'&&eligible(state,s,'eligibility')&&normalizeName(`${s.firstName} ${s.lastName} ${s.preferredName} ${s.code}`).includes(normalizeName(query.trim()))).slice(0,8).map(s=>({id:s.id,name:`${s.preferredName} ${s.lastName}`,grade:s.grade,code:s.code}));
     },
@@ -207,16 +257,16 @@ export function DemoProvider({children}:{children:ReactNode}) {
       const event:FinancialEvent={id:crypto.randomUUID(),type:'void',studentId:null,originalPurchaseId:null,amountMinor:0,walletImpactMinor:0,cashImpactMinor:0,balanceBeforeMinor:null,balanceAfterMinor:null,destination:'none',reason,actorId:actor.id,actorName:actor.name,approvedBy:null,approvedByName:null,organizationId:actor.organizationId,locationId:actor.locationId,registerId:actor.registerId,createdAt:new Date().toISOString(),idempotencyKey:key};
       return {next:addEvent(current,event),result:{ok:true as const}};
     }),
-    saveParent:parent=>commit(current=>({...current,parent})),
+    saveParent:parent=>financial(['parent'],current=>({next:{...current,parent},result:{ok:true as const}})),
     saveStudent:student=>financial(['parent','student'],(current,actor)=>{
       const existing=current.students.find(s=>s.id===student.id);
       if(!existing||(actor.role==='student'?student.id!=='sofia':(existing.familyId??'family-demo')!=='family-demo'))throw new Error('Cuenta no autorizada.');
       if(parseMoney(String(student.dailyLimit))===null||parseMoney(String(student.perPurchaseLimit))===null)throw new Error('Límite no válido.');
-      const updated=actor.role==='student'?{...existing,preferredName:student.preferredName}:{...existing,preferredName:student.preferredName,grade:student.grade,dailyLimit:student.dailyLimit,dailyLimitEnabled:student.dailyLimitEnabled,perPurchaseLimit:student.perPurchaseLimit,allergies:student.allergies,blocked:student.blocked,blockedProductIds:student.blockedProductIds};
+      const updated=actor.role==='student'?{...existing,preferredName:student.preferredName}:{...existing,preferredName:student.preferredName,grade:student.grade,dailyLimit:student.dailyLimit,dailyLimitEnabled:student.dailyLimitEnabled,perPurchaseLimit:student.perPurchaseLimit,allergies:student.allergies,blocked:student.blocked,blockedProductIds:current.menuItems.filter(item=>student.blocked.some(name=>name.trim().toLowerCase()===item.name.toLowerCase())).map(item=>item.id)};
       return {next:{...current,students:current.students.map(s=>s.id===student.id?updated:s)},result:{ok:true as const}};
     }),
-    addStudent:value=>commit(current=>({...current,students:[...current.students,{...value,id:crypto.randomUUID(),balance:0,spentToday:0,status:"active"}]})),
-    archive:(id,restore=false)=>commit(current=>({...current,students:current.students.map(item=>item.id===id?{...item,status:restore?"active":"archived"}:item)})),
+    addStudent:value=>financial(['parent'],current=>({next:{...current,students:[...current.students,{...value,code:uniqueCode(current,value.code),familyId:'family-demo',schoolName:current.administration.school.name,id:crypto.randomUUID(),balance:0,spentToday:0,status:'active'}]},result:{ok:true as const}})),
+    archive:(id,restore=false)=>financial(['parent'],current=>{familyStudent(current,id);return {next:{...current,students:current.students.map(item=>item.id===id?{...item,status:restore?'active':'archived'}:item)},result:{ok:true as const}}}),
     topup:(id,amount,key)=>replenish(id,parseMoney(String(amount))??0,key,['parent']),
     preorder:(studentId,item)=>financial(['student','parent'],(current,actor)=>{
       const student=current.students.find(s=>s.id===studentId);
@@ -235,10 +285,12 @@ export function DemoProvider({children}:{children:ReactNode}) {
       const amount=parseMoney(String(order.amount))??0,now=new Date().toISOString();
       return {result:{ok:true as const},next:{...current,orders:current.orders.map(o=>o.id===id?{...o,status:'cancelled'}:o),students:current.students.map(s=>s.id===student.id?{...s,balance:(toPosStudent(s).balanceMinor+amount)/100,spentToday:businessDay(order.createdAt)===businessDay(now)?Math.max(0,(toPosStudent(s).spentTodayMinor-amount)/100):s.spentToday}:s),transactions:[{id:`cancel-${id}`,studentId:student.id,description:`Reverso de reserva: ${order.item}`,category:'Reembolso de reserva',amount:amount/100,status:'completed',createdAt:now},...current.transactions]}};
     }),
-    saveBudget:(goal,limit)=>commit(current=>({...current,budget:{goal,limit,archived:false}})),
+    saveBudget:(goal,limit)=>financial(['student'],current=>({next:{...current,budget:{goal,limit,archived:false}},result:{ok:true as const}})),
     lookupStudentForPos:code=>{
-      if(sessionRole.current!=='pos_operator'||state.administration.users.find(u=>u.id==='pos-1')?.status!=='active')return {ok:false as const,reason:'unknown_code' as const};
-      return lookupPosStudent(state.students.filter(s=>eligible(state,s,'eligibility')).map(toPosStudent),code);
+      const result=lookupPosStudent(state.students.map(toPosStudent),code);
+      if(!result.ok)return result;
+      const student=posCustomer(result.student.id);
+      return student?{ok:true as const,student}:{ok:false as const,reason:'unknown_code'};
     },
     checkoutPos:(studentId,cart,idempotencyKey,paymentMethod="student_wallet",cashReceivedMinor,generalSale=false)=>financial<CheckoutResult>(['pos_operator'],(current,actor)=>{
       const student=current.students.find(s=>s.id===studentId);
@@ -253,14 +305,38 @@ export function DemoProvider({children}:{children:ReactNode}) {
       const p=prepared.purchase;
       return {result:prepared,next:{...current,purchases:[p,...current.purchases],students:current.students.map(s=>s.id===studentId?{...s,balance:(toPosStudent(s).balanceMinor+p.balanceImpactMinor)/100,spentToday:(toPosStudent(s).spentTodayMinor+p.totalMinor)/100}:s),transactions:generalSale?current.transactions:[{id:`ledger-${p.id}`,purchaseId:p.id,studentId:studentId!,description:p.items.map(i=>`${i.quantity}× ${i.name}`).join(', '),category:paymentMethod==='cash'?'Cash — Student-linked':'Cashless / PIKAS account',amount:p.balanceImpactMinor/100,status:'completed',createdAt:p.createdAt,paymentMethod,purchaseTotalMinor:p.totalMinor,balanceImpactMinor:p.balanceImpactMinor,cashRegisterImpactMinor:p.cashRegisterImpactMinor},...current.transactions]}};
     }),
-    adminUpdateStudent:(role,student)=>{if(!can(role,"students:manage"))return false;commit(current=>({...current,students:current.students.map(item=>item.id===student.id?{...student,balance:item.balance,spentToday:item.spentToday,spendingDay:item.spendingDay}:item),administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración escolar",action:"Estudiante actualizado",detail:student.preferredName,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminAddStudent:(role,student)=>{if(!can(role,"students:manage"))return false;commit(current=>({...current,students:[...current.students,{...student,familyId:"unlinked",id:crypto.randomUUID(),balance:0,spentToday:0,status:"active"}],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración escolar",action:"Estudiante agregado",detail:student.preferredName,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminUpdateMenu:(role,item)=>{if(!can(role,"menu:manage"))return false;if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true")void fetch("/api/menu",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({...item,ingredients:[],dietaryTags:[],imageUrl:null})});commit(current=>({...current,menuItems:current.menuItems.map(value=>value.id===item.id?item:value),administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración de cafetería",action:"Producto actualizado",detail:item.name,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminAddMenu:(role,item)=>{if(!can(role,"menu:manage"))return false;const complete={...item,ingredients:item.ingredients??[],restrictionTags:item.restrictionTags??[],imageUrl:item.imageUrl??null};if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true")void fetch("/api/menu",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...complete,dietaryTags:complete.restrictionTags})});commit(current=>({...current,menuItems:[...current.menuItems,complete],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:"Administración de cafetería",action:"Producto creado",detail:item.name,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminAddUser:(role,user)=>{const permission=user.role==="school_admin"?"school_admins:manage":"pos_users:manage";if(!can(role,permission))return false;commit(current=>({...current,administration:{...current.administration,users:[...current.administration.users,{...user,id:crypto.randomUUID(),lastActivity:"Invitación pendiente"}],audit:[{id:crypto.randomUUID(),actor:"Administración",action:"Invitación creada",detail:`${user.name} · ${user.email}`,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminSetUserStatus:(role,id,status)=>{const user=state.administration.users.find(value=>value.id===id);if(!user||!can(role,user.role==="school_admin"?"school_admins:manage":"pos_users:manage"))return false;if(user.role==="school_admin"&&status!=="active"&&state.administration.users.filter(value=>value.role==="school_admin"&&value.status==="active").length<=1)return false;commit(current=>current.administration.users.find(value=>value.id===id)?.role==="school_admin"&&status!=="active"&&current.administration.users.filter(value=>value.role==="school_admin"&&value.status==="active").length<=1?current:({...current,administration:{...current.administration,users:current.administration.users.map(value=>value.id===id?{...value,status}:value),audit:[{id:crypto.randomUUID(),actor:"Administración",action:"Estado de cuenta actualizado",detail:`${user.name}: ${status}`,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    adminSetPartnership:(role,id,status)=>{if(!can(role,role==="school_admin"?"partnerships:review":"partnerships:request")||(role==="cafeteria_admin"&&status!=="pending"))return false;commit(current=>({...current,administration:{...current.administration,partnerships:current.administration.partnerships.map(value=>value.id===id?{...value,status}:value),audit:[{id:crypto.randomUUID(),actor:role==="school_admin"?"Administración escolar":"Administración de cafetería",action:"Conexión actualizada",detail:`${id}: ${status}`,createdAt:new Date().toISOString()},...current.administration.audit]}}));return true},
-    resetDemo:()=>{install(normalize({...initial,shiftStartedAt:new Date().toISOString()}));if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE==="true")localStorage.removeItem(storageKey)},
+    adminUpdateStudent:student=>adminMutation('students:manage',(current,actor)=>{
+      const existing=current.students.find(s=>s.id===student.id);if(!existing)throw new Error('Estudiante no encontrado.');schoolStudent(current,existing);
+      const code=uniqueCode(current,student.code,student.id);
+      // School edits identity/status only; family controls and financial fields are preserved.
+      return {...current,students:current.students.map(s=>s.id===student.id?{...s,firstName:student.firstName,lastName:student.lastName,grade:student.grade,code,status:student.status}:s),administration:audit(current,actor,'Estudiante actualizado',student.preferredName)};
+    }),
+    adminAddStudent:student=>adminMutation('students:manage',(current,actor)=>({...current,students:[...current.students,{...student,code:uniqueCode(current,student.code),schoolName:current.administration.school.name,familyId:'unlinked',id:crypto.randomUUID(),balance:0,spentToday:0,status:'active'}],administration:audit(current,actor,'Estudiante agregado',student.preferredName)})),
+    adminUpdateMenu:item=>process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=='true'?remoteMenu('PATCH',item):adminMutation('menu:manage',(current,actor)=>{
+      if(!current.menuItems.some(i=>i.id===item.id))throw new Error('Producto no encontrado.');
+      return {...current,menuItems:current.menuItems.map(i=>i.id===item.id?item:i),administration:audit(current,actor,'Producto actualizado',item.name)};
+    }),
+    adminAddMenu:item=>process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=='true'?remoteMenu('POST',{...item,ingredients:item.ingredients??[],restrictionTags:item.restrictionTags??[],imageUrl:item.imageUrl??null}):adminMutation('menu:manage',(current,actor)=>{
+      if(current.menuItems.some(i=>i.id===item.id))throw new Error('El producto ya existe.');
+      return {...current,menuItems:[...current.menuItems,{...item,ingredients:item.ingredients??[],restrictionTags:item.restrictionTags??[],imageUrl:item.imageUrl??null}],administration:audit(current,actor,'Producto creado',item.name)};
+    }),
+    adminAddUser:user=>adminMutation(user.role==='school_admin'?'school_admins:manage':'pos_users:manage',(current,actor)=>{
+      if(!['school_admin','pos_operator'].includes(user.role))throw new Error('Rol no permitido.');
+      return {...current,administration:{...audit(current,actor,'Invitación creada',user.name),users:[...current.administration.users,{...user,id:crypto.randomUUID(),lastActivity:'Invitación pendiente'}]}};
+    }),
+    adminSetUserStatus:(id,status)=>financial(['school_admin','cafeteria_admin'],(current,actor)=>{
+      const user=current.administration.users.find(u=>u.id===id);
+      if(!user||!['school_admin','pos_operator'].includes(user.role)||!can(actor.role as AdminRole,user.role==='school_admin'?'school_admins:manage':'pos_users:manage'))throw new Error('Operación no autorizada.');
+      if(user.role==='school_admin'&&user.scope!==current.administration.school.name)throw new Error('Cuenta fuera de la escuela autorizada.');
+      if(user.role==='school_admin'&&status!=='active'&&current.administration.users.filter(u=>u.role==='school_admin'&&u.scope===user.scope&&u.status==='active').length<=1)throw new Error('No se puede desactivar el último administrador escolar activo.');
+      return {next:{...current,administration:{...audit(current,actor,'Estado de cuenta actualizado',`${user.name}: ${status}`),users:current.administration.users.map(u=>u.id===id?{...u,status}:u)}},result:{ok:true as const}};
+    }),
+    adminSetPartnership:(id,status)=>financial(['school_admin','cafeteria_admin'],(current,actor)=>{
+      const school=actor.role==='school_admin',partnership=current.administration.partnerships.find(p=>p.id===id);
+      if(!partnership||!can(actor.role as AdminRole,school?'partnerships:review':'partnerships:request')||(!school&&status!=='pending')||(school?partnership.schoolName!==current.administration.school.name:partnership.cafeteriaName!==current.administration.cafeteria.name||partnership.location!==current.administration.cafeteria.location))throw new Error('Conexión fuera del ámbito autorizado.');
+      return {next:{...current,administration:{...audit(current,actor,'Conexión actualizada',`${id}: ${status}`),partnerships:current.administration.partnerships.map(p=>p.id===id?{...p,status}:p)}},result:{ok:true as const}};
+    }),
+    resetDemo:()=>financial(['school_admin','cafeteria_admin'],()=>({next:normalize({...initial,shiftStartedAt:new Date().toISOString()}),result:{ok:true as const}})),
   };
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 }
@@ -270,3 +346,18 @@ export function useDemo(){const context=useContext(DemoContext);if(!context)thro
 export function useFamilyDemo(){const context=useDemo();const students=context.state.students.filter(s=>(s.familyId??'family-demo')==='family-demo');const ids=new Set(students.map(s=>s.id));return {...context,state:{...context.state,students,transactions:context.state.transactions.filter(t=>ids.has(t.studentId)),orders:context.state.orders.filter(o=>ids.has(o.studentId)),purchases:context.state.purchases.filter(p=>p.studentId&&ids.has(p.studentId)),events:context.state.events.filter(e=>e.studentId&&ids.has(e.studentId))}}}
 
 export function useCafeteriaDemo(){const context=useDemo();return {...context,state:{...context.state,purchases:context.state.purchases.filter(p=>p.organizationId==='cafeteria-demo'&&p.locationId==='principal'),events:context.state.events.filter(e=>e.organizationId==='cafeteria-demo'&&e.locationId==='principal')}}}
+
+export function usePosDemo(){
+  const c=useDemo();
+  return {connection:c.connection,retryConnection:c.retryConnection,lookupStudentForPos:c.lookupStudentForPos,searchPosCustomers:c.searchPosCustomers,selectPosCustomer:c.selectPosCustomer,posCustomer:c.posCustomer,checkoutPos:c.checkoutPos,recoverCheckout:c.recoverCheckout,replenishPos:c.replenishPos,voidPos:c.voidPos,
+    state:{posPolicy:c.state.posPolicy,shiftStartedAt:c.state.shiftStartedAt,menuItems:c.state.menuItems,purchases:c.state.purchases.filter(p=>p.organizationId==='cafeteria-demo'&&p.locationId==='principal'),administration:{cafeteria:c.state.administration.cafeteria,users:c.state.administration.users.filter(u=>u.id==='pos-1')}}};
+}
+
+export function usePosHistory(){
+  const c=useDemo();
+  const purchases=c.state.purchases.filter(p=>p.organizationId==='cafeteria-demo'&&p.locationId==='principal');
+  // Operational history does not need wallet snapshots or the student roster.
+  const events=c.state.events.filter(e=>e.organizationId==='cafeteria-demo'&&e.locationId==='principal').map(e=>({...e,balanceBeforeMinor:null,balanceAfterMinor:null}));
+  const ids=new Set(events.map(e=>e.studentId));
+  return {connection:c.connection,refundPos:c.refundPos,state:{posPolicy:c.state.posPolicy,purchases,events,students:c.state.students.filter(s=>ids.has(s.id)).map(s=>({id:s.id,preferredName:s.preferredName}))}};
+}

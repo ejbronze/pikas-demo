@@ -1,5 +1,7 @@
 # Entrega local — PIKAS 0.6.0
 
+> Registro histórico de 0.6.0. La auditoría posterior encontró excepciones a las afirmaciones de autorización, alcance, recuperación y concurrencia de esta entrega. 0.6.1 corrige los escritores legacy, la proyección POS y la recuperación con límite activo; reemplaza la prueba de competencia por dos carritos válidos y claves distintas. La auditoría completa obtuvo 84/87 inicialmente; los tres reruns aislados no equivalían a una suite limpia. Consulte [IMPLEMENTATION_061](IMPLEMENTATION_061.md) para resultados actuales. La base 0.6.0 está en la rama predeterminada `Pikas_demo`, no en `main`.
+
 Fecha: 22 de septiembre de 2026. No se hizo push, PR, merge, despliegue, migración remota ni modificación de variables/secretos/datos Supabase.
 
 ## 1. Cambios

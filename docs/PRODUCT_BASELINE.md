@@ -1,6 +1,6 @@
 # Línea base del producto PIKAS
 
-El milestone local 0.6.0 evoluciona 0.5.3; mantiene aplicación, identidad, roles, menú compartido, cuentas ficticias, informes y conciliación demo. La URL pública no se modificó y puede ejecutar otra versión.
+El milestone local 0.6.1 corrige la auditoría de 0.6.0 y mantiene aplicación, identidad, roles, menú compartido, cuentas ficticias, informes y conciliación demo. La URL pública no se modificó y puede ejecutar otra versión.
 
 ## Comportamiento vigente
 
@@ -24,4 +24,6 @@ Consulta [Modelo financiero](POS_FINANCIAL_MODEL.md) para tipos, reglas, recomen
 
 Las suites cubren reglas de compra, política, refunds, zona horaria, recomendaciones, límites independientes, dinero entero y recorridos responsivos a 390/768/1440 px. Los resultados finales se registran en el changelog del milestone.
 
-El demo no es autenticación/persistencia financiera productiva. La migración 0.6 no fue aplicada ni probada en PostgreSQL; requiere revisión y pruebas de desarrollo. Las compras antiguas sin organización/ubicación requieren reconciliación explícita antes de conceder lectura operativa. No hubo push, PR, merge, despliegue o modificación de Supabase.
+El demo no es autenticación/persistencia financiera productiva. La migración 0.6 no fue aplicada ni probada en PostgreSQL; requiere revisión y pruebas de desarrollo. Las compras antiguas sin organización/ubicación requieren reconciliación explícita antes de conceder lectura operativa. Este parche 0.6.1 no hace push, PR, merge, despliegue ni modificación de Supabase. La base 0.6.0 auditada sí está en `Pikas_demo` (rama predeterminada); `main` permanece en 0.5.3.
+
+0.6.1 corrige identidad única/ambigua, autorización vigente de escritores legacy, proyecciones por scope y recuperación idempotente antes de límites. Pruebas y estado local: [informe 0.6.1](IMPLEMENTATION_061.md).

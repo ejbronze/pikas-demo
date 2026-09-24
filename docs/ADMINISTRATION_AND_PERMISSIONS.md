@@ -1,4 +1,4 @@
-# Administración y permisos — milestone 0.6.0
+# Administración y permisos — milestone 0.6.1
 
 La autorización productiva corresponde a Auth/RLS y funciones de servidor. El demo comprueba roles y políticas, pero localStorage y las credenciales públicas no son seguridad productiva.
 
@@ -33,6 +33,22 @@ El último administrador escolar activo no puede suspenderse. Usuarios históric
 
 ## Enforcement y producción
 
-Las nuevas operaciones obtienen el rol de cookies HttpOnly mediante `/api/demo/session`, comprueban cuenta/alcance y serializan la mutación. Refund exige organización/ubicación, autorización, monto elegible, política y razón. La UI no es la única comprobación, pero todo saldo demo sigue siendo manipulable por el propietario del navegador.
+Desde 0.6.1 todos los escritores demo, incluidos los administrativos legacy, obtienen el rol de cookies HttpOnly mediante `/api/demo/session`, comprueban cuenta/alcance y serializan la mutación. Refund exige organización/ubicación, autorización, monto elegible, política y razón. La UI no es la única comprobación, pero todo saldo demo sigue siendo manipulable por el propietario del navegador.
 
 La migración 0.6 prepara lectura financiera por pertenencia familiar/estudiantil o membresía operativa de organización/ubicación. No habilita escrituras de cliente. RPCs, RLS reales, invitaciones, PIN hasheado/rate limiting, auditoría durable y concurrencia multiusuario requieren implementación y pruebas en desarrollo antes de producción. Ver [Modelo financiero](POS_FINANCIAL_MODEL.md).
+
+## Corrección 0.6.1
+
+La sesión se confirma dentro de Web Locks antes de leer el estado vigente y autorizar. Se comprueban rol, cuenta activa, membresía, organización, ubicación y permiso; no se acepta un rol enviado por la UI. Un admin abierto con cookie cambiada a POS falla sin escribir y muestra sesión cambiada. El menú remoto conserva su autorización de servidor existente.
+
+| Scope | Proyección de cliente POS |
+| --- | --- |
+| eligibility | ID estable, nombre preferido, grado, código, estado activo |
+| balance | Saldo y estado de billetera |
+| limits | Máximos diario/compra, activación y gasto diario |
+| restrictions | Alergias y productos bloqueados |
+| transactions | Uso de historia personal en recomendaciones; no concede saldo o límites |
+
+Eligibility es necesario para obtener cualquier cliente. Checkout identificado exige eligibility + limits + restrictions + transactions; pagar con billetera exige además balance. La caja recibe una proyección, no el estudiante completo ni el grafo familiar. La historia operativa propia por ubicación es independiente del acceso al padrón. localStorage conserva el grafo demo compartido: estos controles del adaptador no aíslan datos de quien controla el navegador; no introducir información real.
+
+Creación familiar/escolar y regeneración validan códigos normalizados únicos bajo bloqueo, incluyendo perfiles archivados. Búsqueda de código ambiguo no devuelve cliente. Selección por nombre usa ID estable.

@@ -14,3 +14,5 @@ export async function getMenuItems(schoolId: string) { return copy(menuItems.fil
 export async function getStudentPreorders(studentId: string) { return copy(preorders.filter((item) => item.studentId === studentId)) }
 
 export * from "./financial";
+
+export * from './pos-projection';

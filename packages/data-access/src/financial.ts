@@ -60,3 +60,15 @@ export function quickAccess(menu:PosMenuItemRecord[], purchases:readonly PosPurc
   const cafeteria=rank(POPULARITY_DAYS).slice(0,5), used=new Set(cafeteria.map(p=>p.id));
   return {cafeteria,customer:student?rank(CUSTOMER_HISTORY_DAYS,student.id).filter(p=>!used.has(p.id)).slice(0,5):[]};
 }
+
+export function reportPeriodContains(timestamp:string, period:string, now:string) {
+  const age=Date.parse(now)-Date.parse(timestamp);
+  if(age<0)return false;
+  return period==='all'||(period==='today'?businessDay(timestamp)===businessDay(now):age<(period==='week'?7:30)*86400000);
+}
+export function cashReconciliation(purchases:readonly PosPurchaseRecord[],events:readonly FinancialEvent[]) {
+  const grossCashSales=purchases.reduce((sum,p)=>sum+p.cashRegisterImpactMinor,0);
+  const cashReplenishments=events.filter(e=>e.type==='replenishment').reduce((sum,e)=>sum+e.cashImpactMinor,0);
+  const cashRefunds=-events.filter(e=>e.type==='refund').reduce((sum,e)=>sum+e.cashImpactMinor,0);
+  return {grossCashSales,cashReplenishments,cashRefunds,expectedCash:grossCashSales+events.reduce((sum,e)=>sum+e.cashImpactMinor,0)};
+}

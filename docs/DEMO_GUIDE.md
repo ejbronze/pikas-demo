@@ -1,14 +1,14 @@
 # Guía de demostración de PIKAS
 
-> **Milestone local 0.6.0:** POS guiado, búsqueda por nombre, recargas independientes, límites diarios por estudiante, política de caja y reembolsos vinculados. Implementación demo verificada localmente. Consulta [POS y modelo financiero](POS_FINANCIAL_MODEL.md) para comportamiento vigente, límites y pasos productivos. Las secciones 0.5.x siguientes conservan contexto histórico y no sustituyen esta actualización.
+> **Milestone local 0.6.1:** POS guiado, búsqueda por nombre, recargas independientes, límites diarios por estudiante, política de caja y reembolsos vinculados. Implementación demo verificada localmente. Consulta [POS y modelo financiero](POS_FINANCIAL_MODEL.md) para comportamiento vigente, límites y pasos productivos. Las secciones 0.5.x siguientes conservan contexto histórico y no sustituyen esta actualización.
 
 | Dato | Valor |
 | --- | --- |
-| Versión | 2.0 para PIKAS 0.6.0 |
+| Versión | 2.1 para PIKAS 0.6.1 |
 | Última verificación | 22 de septiembre de 2026 |
-| Rama | `main` |
+| Rama | `Pikas_demo` (predeterminada auditada; `main` permanece en 0.5.3) |
 | Fuente de capturas | Capturas históricas 0.5.x; pruebas 0.6 locales en 390/768/1440 px |
-| URL pública | Sin cambios; no se desplegó 0.6.0 |
+| URL pública | Sin cambios; este parche 0.6.1 no se desplegó |
 | Duración | 12–15 minutos |
 
 PIKAS demuestra experiencias interconectadas para Familia, Estudiante, Cafetería/POS, Administración escolar y Administración de cafetería. **Todo nombre, escuela, cuenta, restricción y transacción mostrado aquí es ficticio.**
@@ -188,3 +188,15 @@ Cambie un producto en Cafetería y actualice Estudiante, Familia o POS para obse
 ## Flujo 0.5.3
 
 PIKAS es diseñada y desarrollada por Palmchat Innovations LLC; la atribución aparece en landing y accesos. En POS elija **Ventas PIKAS**, **Venta asociada a estudiante** o **Venta general en efectivo**. La venta general no pide estudiante ni aparece en historiales familiares. En Administración de cafetería revise filtros, exporte CSV y compare el cierre esperado con un conteo manual opcional. Ninguna venta convierte efectivo en crédito PIKAS automáticamente.
+
+## Comprobaciones correctivas 0.6.1
+
+- Intentar otro PK-10982: creación rechazada; una búsqueda de nombre selecciona el ID exacto. Fixture ambiguo no devuelve saldo ni cliente.
+- Abrir menú admin, cambiar sesión a caja en otra pestaña y volver a editar: rechazo y pantalla de sesión cambiada.
+- Reducir scopes en un fixture: solo los campos autorizados aparecen; checkout conserva validaciones independientes.
+- Quitar/agregar Bebidas energéticas en controles familiares: POS lo permite/bloquea respectivamente.
+- Fallar `/api/demo/session`: Sync Issue, cobro bloqueado, botón Reintentar conexión.
+- Restaurar carrito con clave ya registrada y límite diario ON: compra completada, sin otro débito.
+- Venta efectivo 180 + recarga 500 − refund 100: cierre 580; actividad familiar muestra 100 devuelto en efectivo.
+
+Estos fixtures se automatizan en `patch-v061.spec.ts`; no modificar servicios o datos productivos para reproducirlos. Ver [informe de implementación](IMPLEMENTATION_061.md).

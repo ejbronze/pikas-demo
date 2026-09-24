@@ -1,4 +1,4 @@
-# POS y control financiero — milestone 0.6.0
+# POS y control financiero — milestone 0.6.1
 
 ## Alcance y fuente de verdad
 
@@ -8,7 +8,7 @@ La implementación funcional es **demo local**, sin dinero real. `apps/web/compo
 
 `entry → identity (Usuario PIKAS) → items → payment → completed → entry`.
 
-No usuario omite identidad y usa efectivo. Buscar usuario PIKAS y Cambiar cliente conservan cada línea del carrito y repiten restricciones, disponibilidad, límites y saldo. El carrito persiste tras refrescar, pero siempre se verifica nuevamente la identidad. Un producto que deja de ser elegible permanece visible hasta que el cajero lo quite; el cobro se bloquea.
+No usuario omite identidad y usa efectivo. Buscar usuario PIKAS y Cambiar cliente conservan cada línea del carrito y repiten restricciones, disponibilidad, límites y saldo. El carrito persiste tras refrescar. Para una venta pendiente nueva se verifica nuevamente la identidad; una clave ya completada restaura su resultado después de autorizar la sesión, antes de validar límites como si fuera otra compra. Un producto que deja de ser elegible permanece visible hasta que el cajero lo quite; el cobro se bloquea.
 
 La pantalla de pago repite validación y la mutación vuelve a consultar estado/precios/controles. No existen pagos divididos. Un usuario PIKAS puede pagar todo con saldo o todo en efectivo. Desde 0.6, efectivo identificado también consume capacidad diaria y respeta el límite por compra; no debita la billetera. No usuario no tiene billetera, restricciones personales ni recomendaciones de cliente.
 
@@ -54,13 +54,13 @@ Cafetería Top 5: unidades compradas durante los últimos **30 días**, organiza
 
 Ocultar cifras no detiene contabilidad, historial, exportación o conciliación. Identidad y estado no son configurables. Reembolsos de caja apagados no ocultan el historial. Si se requiere aprobación, el administrador inicia sesión en su espacio y procesa el ID original desde Transacciones. No hay PIN maestro ni impersonación mediante un nombre de aprobador enviado por el cliente. La atribución corresponde al administrador que ejecuta el evento; una cola separada de solicitudes de caja queda pendiente.
 
-Las operaciones nuevas consultan `/api/demo/session`, que lee las cookies HttpOnly existentes. El adaptador verifica cuenta activa, rol, organización/ubicación, alcance de conexión y política; `prepareRefund` también exige rol/alcance. El demo sigue siendo manipulable desde herramientas del navegador y **no es una frontera de seguridad productiva**. La búsqueda POS exige dos caracteres, limita a ocho candidatos de conexiones activas y devuelve únicamente nombre, grado e identificador operativo; no contactos familiares ni padrón navegable.
+Todos los escritores demo consultan `/api/demo/session`, que lee las cookies HttpOnly existentes. El adaptador verifica cuenta activa, rol, organización/ubicación, alcance de conexión y política; `prepareRefund` también exige rol/alcance. El demo sigue siendo manipulable desde herramientas del navegador y **no es una frontera de seguridad productiva**. La búsqueda POS exige dos caracteres, limita a ocho candidatos de conexiones activas y devuelve únicamente nombre, grado e identificador operativo; no contactos familiares ni padrón navegable.
 
 ## Integridad y estado de conexión
 
-Web Locks serializa operaciones financieras entre pestañas del mismo origen; cada operación relee el snapshot bajo bloqueo, valida, persiste y solo entonces devuelve éxito. La clave de checkout persiste con el carrito y se renueva al completar/nueva venta; un reintento tras interrupción recupera la compra existente. Las claves idempotentes estables y bloqueo de doble envío evitan repetir checkout/recargas/reembolsos. Se rechazan montos no enteros, negativos, excesos y reembolsos acumulados mayores que la compra. Cada pestaña recibe cambios de `storage`.
+Web Locks serializa todos los escritores demo entre pestañas del mismo origen; cada operación relee el snapshot bajo bloqueo, valida, persiste y solo entonces devuelve éxito. La clave de checkout persiste con el carrito y se renueva al completar/nueva venta; un reintento tras interrupción recupera la compra existente. Las claves idempotentes estables y bloqueo de doble envío evitan repetir checkout/recargas/reembolsos. Se rechazan montos no enteros, negativos, excesos y reembolsos acumulados mayores que la compra. Cada pestaña recibe cambios de `storage`.
 
-Online refleja conectividad del navegador y disponibilidad del almacenamiento demo, no salud de Supabase. Connecting indica inicialización, Offline proviene de eventos de red y Sync Issue de fallos de lectura/escritura o sesión. Sin conexión, Web Locks o sesión confirmada, no se ejecutan operaciones financieras nuevas. No se encolan cobros para sincronización posterior. El almacenamiento local no aporta durabilidad, protección contra manipulación ni coordinación entre dispositivos.
+Online refleja una sesión confirmada, conectividad del navegador y disponibilidad del almacenamiento demo, no salud de Supabase. Connecting indica inicialización, Offline proviene de eventos de red y Sync Issue de fallos de lectura/escritura o sesión. Sin conexión, Web Locks o sesión confirmada, no se ejecutan operaciones financieras nuevas. No se encolan cobros para sincronización posterior. El almacenamiento local no aporta durabilidad, protección contra manipulación ni coordinación entre dispositivos.
 
 ## Conciliación
 
@@ -80,3 +80,13 @@ Antes de producción:
 6. Provisionar desarrollo con autorización independiente; después planificar despliegue y migraciones productivas revisadas.
 
 No se aplicó ninguna migración ni se modificaron variables, secretos, datos o servicios remotos.
+
+## Correcciones de presentación 0.6.1
+
+HTTP fallido, timeout o respuesta de sesión inválida producen Sync Issue (Offline si no hay red). Reintentar conexión vuelve a confirmar sesión y almacenamiento; no hay éxito financiero mientras falle. Recuperar una compra completada no vuelve a debitar ni consumir allowance, incluso si su compra agotó el límite diario. Las pruebas mantienen el límite activado.
+
+Los controles parentales guardan nombres de bloqueos y recalculan sus IDs desde el catálogo vigente en la misma escritura: quitar un nombre elimina su ID anterior. Los nombres no reconocidos se conservan para validación por nombre.
+
+Hoy usa el helper `businessDay` en America/Santo_Domingo, no las últimas 24 horas; excluye fechas futuras. Semana/mes conservan ventanas móviles. Reportes recalculan la referencia temporal mientras permanecen abiertos.
+
+Conciliación muestra por separado ventas brutas en efectivo, recargas recibidas en efectivo, reembolsos en efectivo y cierre esperado. Ejemplo: 180 + 500 − 100 = 580. Los filtros de ventas no modifican los totales completos de conciliación. Resúmenes de reembolso muestran monto real y destino (efectivo/saldo), aunque walletImpactMinor sea cero.

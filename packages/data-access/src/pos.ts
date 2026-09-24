@@ -76,7 +76,9 @@ const normalized = (value: string) => value.trim().toLocaleLowerCase("es");
 export function lookupPosStudent(students: PosStudentRecord[], rawCode: string) {
   const code = rawCode.trim().toUpperCase();
   if (!codePattern.test(code)) return { ok: false as const, reason: "invalid_code" as const };
-  const student = students.find((candidate) => candidate.code === code);
+  const matches = students.filter((candidate) => candidate.code.trim().toUpperCase() === code);
+  if (matches.length > 1) return {ok:false as const, reason:"ambiguous_code" as const};
+  const student = matches[0];
   if (!student) return { ok: false as const, reason: "unknown_code" as const };
   if (student.status !== "active") return { ok: false as const, reason: "student_inactive" as const };
   return { ok: true as const, student };

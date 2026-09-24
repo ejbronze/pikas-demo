@@ -1,7 +1,7 @@
 "use client";
 import {useState} from 'react';
 import {businessDay,parseMoney,refundedMinor,type PosPurchaseRecord} from '@pikas/data-access';
-import {useDemo} from './demo-provider';
+import {usePosHistory as useDemo} from './demo-provider';
 export const posMoney=(minor:number)=>new Intl.NumberFormat('es-DO',{style:'currency',currency:'DOP'}).format(minor/100);
 export function Calculator(){
   const [left,setLeft]=useState(''),[right,setRight]=useState(''),[operation,setOperation]=useState('+');
