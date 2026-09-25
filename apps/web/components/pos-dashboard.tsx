@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Grid2X2, List } from "lucide-react";
+import { Grid2X2, List, Search } from "lucide-react";
 import {
   CASH_DENOMINATIONS_MINOR,
   parseMoney,
@@ -428,7 +428,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                   Transacciones
                 </button>
               </div>
-              <PosCalculator />
+              <div className="pos-tool-actions"><button className="btn pos-customer-search-action" aria-label="Buscar usuario PIKAS" onClick={()=>{setCode("");setLookupError("");setNotice("");setStep("identity")}}><Search size={18} aria-hidden="true" />Buscar usuario PIKAS</button><PosCalculator /></div>
             </nav>
             {connection !== "Online" ? (
               <p
@@ -590,34 +590,13 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                               Recargar saldo
                             </button>
                           ) : null}
-                          <button
-                            className="btn-secondary pos-change-action"
-                            onClick={
-                              general
-                                ? () => {
-                                    setCode("");
-                                    setStep("identity");
-                                  }
-                                : changeCustomer
-                            }
-                          >
-                            {general
-                              ? "Buscar usuario PIKAS"
-                              : "Cambiar cliente"}
-                          </button>
+                          <button className="btn-secondary pos-change-action" onClick={changeCustomer}>Cambiar cliente</button>
                         </div>
                       </section>
                       {step === "items" && quickItems.length ? (
                         <section className="card pos-popular-panel p-4">
                           <section>
-                            <p className="label">Acceso rápido</p>
-                            <h2
-                              aria-label="Top 5 cafetería"
-                              className="text-lg font-black"
-                            >
-                              Popular
-                            </h2>
-                            <span className="chip">Top 5</span>
+                            <div className="pos-popular-heading"><h2 aria-label="Top 5 cafetería" className="text-lg font-black">Popular · Top 5</h2><span aria-hidden="true">→</span></div>
                             <div className="pos-popular-list mt-3">
                               {quickItems.map((i) => (
                                 <button
@@ -651,7 +630,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                       ) : null}
                     </div>
                     {step === "items" ? (
-                      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+                      <div className="pos-catalog-and-cart">
                         <section className="card pos-catalog-panel pos-catalog-shell p-4">
                           <div className="pos-catalog-header">
                             <div className="flex flex-wrap items-center justify-between gap-2">

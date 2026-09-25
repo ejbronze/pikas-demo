@@ -40,7 +40,7 @@ test('parent daily-limit switch persists independently per student',async({page}
 
 test('recommendation scenario fills ten distinct products and retains restrictions',async({page})=>{
   await admin(page);await page.goto('/admin/cafeteria/configuracion');await page.getByRole('button',{name:'Cargar historial de recomendaciones'}).click();await expect(page.getByRole('status')).toHaveText('Historial ficticio cargado.');await page.context().clearCookies();await pos(page);await identify(page);
-  const cafeteria=page.getByRole('heading',{name:'Top 5 cafetería'}).locator('..');await expect(cafeteria.getByRole('button')).toHaveCount(5);await page.getByRole('button',{name:'Frecuentes',exact:true}).click();const customer=page.locator('.pos-product-tile');await expect(customer).toHaveCount(5);const names=[...await cafeteria.getByRole('button').allTextContents(),...await customer.allTextContents()];expect(new Set(names).size).toBe(10);
+  const cafeteria=page.getByRole('heading',{name:'Top 5 cafetería'}).locator('../..');await expect(cafeteria.getByRole('button')).toHaveCount(5);await page.getByRole('button',{name:'Frecuentes',exact:true}).click();const customer=page.locator('.pos-product-tile');await expect(customer).toHaveCount(5);const names=[...await cafeteria.getByRole('button').allTextContents(),...await customer.allTextContents()];expect(new Set(names).size).toBe(10);
 });
 
 test('two tabs cannot overspend the same daily allowance',async({page,context})=>{

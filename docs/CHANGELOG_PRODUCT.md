@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## 2026-09-24 — PIKAS 0.6.5: selección de productos en POS
+
+- Reorganización espacial del desktop POS: Cliente, Top 5 y Productos forman una columna de selección; Venta actual permanece como columna de transacción dedicada.
+- Top 5 conservado como tira horizontal acotada y Productos mantiene controles estables, resultados con scroll independiente y continuidad de catálogo.
+- Sin cambios a lógica de recomendaciones, catálogo, checkout, pagos, límites, reembolsos, permisos o contabilidad.
+
 ## 2026-09-24 — PIKAS 0.6.4: workspace operativo de cafetería
 
 - Workspace Venta más denso en desktop/tablet: Cliente y Productos quedan en la columna izquierda; Top 5 y Venta actual en la derecha, con carrito visible.
