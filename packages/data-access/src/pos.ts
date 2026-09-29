@@ -26,6 +26,9 @@ export type PosMenuItemRecord = {
   ingredients: string[];
   restrictionTags: string[];
   imageUrl: string | null;
+  imageAssetId?: string | null;
+  /** Missing on legacy/demo-remote records means active; availability is independent. */
+  active?: boolean;
   available: boolean;
 };
 
@@ -33,6 +36,7 @@ export type PosCartLine = { itemId: string; quantity: number };
 export type PosPaymentMethod = "student_wallet" | "cash";
 export type PosStudentAssociation = "required" | "student_linked" | "general_sale";
 export type PosPurchaseRecord = {
+  readonly registerSessionId?: string;
   readonly organizationId?: string;
   readonly locationId?: string;
   readonly studentCode?: string;
@@ -115,7 +119,7 @@ export function validatePosPurchase(
     }
     const item = byId.get(line.itemId);
     if (!item) return { ok: false, reason: "item_not_found" };
-    if (!item.available) return { ok: false, reason: "item_unavailable", itemName: item.name };
+    if (item.active === false || !item.available) return { ok: false, reason: "item_unavailable", itemName: item.name };
     if (blockedIds.has(item.id)||blocked.has(normalized(item.name))) return { ok: false, reason: "blocked_product", itemName: item.name };
     const allergen = item.allergens.find((value) => studentAllergies.has(normalized(value)));
     if (allergen) return { ok: false, reason: "allergy", itemName: item.name, allergen };

@@ -1,8 +1,9 @@
+import { openDemoRegister } from './helpers';
 import {test,expect,type Page} from '@playwright/test';
 import {confirmSale,invoke,snapshot} from './helpers';
 async function pos(page:Page){
   await page.context().request.post('/api/auth/login',{form:{role:'pos',identifier:'cafeteria@demo.pikas.do',password:'pikas-demo'}});
-  await page.goto('/pos');await expect(page.getByLabel('Estado de caja').filter({visible:true})).toContainText('Online');
+  await page.goto('/pos');await expect(page.getByLabel('Estado de caja').filter({visible:true})).toContainText('Online');await openDemoRegister(page);
 }
 async function footer(page:Page){
   const bar=page.locator('footer[aria-label="Estado de caja"]:visible');await expect(bar).toBeVisible();
@@ -19,7 +20,7 @@ test('compact footer persists across entry, lookup, products, payment, receipt a
 
 test('cashier workspace keeps catalog, cart and utilities distinct',async({page})=>{
   await pos(page);await expect(page.getByRole('button',{name:'Herramientas',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Venta',exact:true})).toHaveAttribute('aria-current','page');await page.getByRole('button',{name:'No usuario',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Productos',exact:true})).toBeVisible();await expect(page.locator('.pos-product-tile')).toHaveCount(5);await page.getByRole('button',{name:'Almuerzo',exact:true}).click();await expect(page.locator('.pos-product-tile')).toHaveCount(3);await page.getByRole('button',{name:'Añadir al carrito'}).first().click();await expect(page.getByRole('heading',{name:'Carrito persistente'}).locator('..')).toContainText('Total');await page.getByRole('button',{name:'Transacciones',exact:true}).click();await expect(page.getByRole('button',{name:'Transacciones',exact:true})).toHaveAttribute('aria-current','page');await expect(page.getByRole('heading',{name:'Historial POS'})).toBeVisible();await page.getByRole('button',{name:'Venta',exact:true}).click();await expect(page.getByRole('heading',{name:'Carrito persistente'})).toHaveCount(1);await page.getByRole('button',{name:'Calculadora',exact:true}).click();await expect(page.getByRole('dialog',{name:'Calculadora',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Productos',exact:true})).toBeVisible();await expect(page.locator('.pos-product-tile')).toHaveCount(4);await page.getByRole('button',{name:'Almuerzo',exact:true}).click();await expect(page.locator('.pos-product-tile')).toHaveCount(2);await page.getByRole('button',{name:'Añadir al carrito'}).first().click();await expect(page.getByRole('heading',{name:'Carrito persistente'}).locator('..')).toContainText('Total');await page.getByRole('button',{name:'Transacciones',exact:true}).click();await expect(page.getByRole('button',{name:'Transacciones',exact:true})).toHaveAttribute('aria-current','page');await expect(page.getByRole('heading',{name:'Historial POS'})).toBeVisible();await page.getByRole('button',{name:'Venta',exact:true}).click();await expect(page.getByRole('heading',{name:'Carrito persistente'})).toHaveCount(1);await page.getByRole('button',{name:'Calculadora',exact:true}).click();await expect(page.getByRole('dialog',{name:'Calculadora',exact:true})).toBeVisible();
 });
 
 test('catalog gallery and list views preserve browsing and sale state',async({page})=>{

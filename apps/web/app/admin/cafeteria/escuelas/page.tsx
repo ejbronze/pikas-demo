@@ -1,1 +1,2 @@
-import {Partnerships} from "@/components/admin-pages";export default function Page(){return <Partnerships kind="cafeteria"/>}
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/admin/cafeteria"); }

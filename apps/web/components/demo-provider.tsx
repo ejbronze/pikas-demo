@@ -2,6 +2,12 @@
 
 import { createContext, useContext, useEffect, useCallback, useRef, useState, type ReactNode } from "react";
 import {
+  savePosEmployee, employeeInScope, employeeSnapshot, hasScopedPermission, sameAuthorityScope, type AuthorityScope, type DemoEmployeeUser, type PosEmployeeInput,
+  resolveRegisterGate, resolvePosCatalog, ineligibleCartItems, cartEligibilityMessage,
+  openRegisterSession, closeRegisterSession, activeRegisterSessionId, assertSessionAttribution, receiptReprintAudit, type RegisterSessionSummary,
+  resolveProductImageUrl, createCatalogProduct, editCatalogProduct, saveCafeteriaMenu, saveServiceShift, changeServiceScheduling,
+  type CafeteriaMenu, type ServiceShift, type MenuEditSnapshot,
+  migrateCafeteriaDemoState, type CafeteriaDemoFoundation,
   DEFAULT_POS_POLICY, businessDay, parseMoney, prepareRefund, spendingToday, projectPosCustomer, type PosCustomer,
   type FinancialEvent, type PosPolicy, type FinancialActor,
   validatePosPurchase,
@@ -18,12 +24,12 @@ import {activePartnershipAllows,can,type AdminRole,type AdminPermission,type Par
 export type DemoStudent = {schoolName?:string;familyId?:string;dailyLimitEnabled?:boolean;spendingDay?:string;id:string;firstName:string;lastName:string;preferredName:string;grade:string;code:string;status:"active"|"inactive"|"archived";balance:number;dailyLimit:number;perPurchaseLimit:number;spentToday:number;allergies:string[];blocked:string[];blockedProductIds?:string[]};
 export type DemoTx = {id:string;studentId:string;description:string;category:string;amount:number;status:"completed"|"pending"|"reversed";createdAt:string;purchaseId?:string;paymentMethod?:"student_wallet"|"cash";purchaseTotalMinor?:number;balanceImpactMinor?:number;cashRegisterImpactMinor?:number};
 export type DemoOrder = {id:string;studentId:string;item:string;amount:number;status:"submitted"|"confirmed"|"cancelled";createdAt:string};
-export type DemoAdminUser={id:string;name:string;email:string;role:AdminRole;status:"active"|"suspended"|"inactive";scope:string;lastActivity:string};
-export type DemoMembership={id:string;userId:string;organizationType:"school"|"cafeteria";organizationName:string;location?:string;role:AdminRole};
+export type DemoAdminUser=DemoEmployeeUser;
+export type DemoMembership={authorityScope?:AuthorityScope;id:string;userId:string;organizationType:"school"|"cafeteria";organizationName:string;location?:string;role:AdminRole};
 export type DemoPartnership={id:string;schoolName:string;cafeteriaName:string;location:string;status:PartnershipStatus;scope:PartnershipScope[];requestedBy:"school"|"cafeteria"};
-export type DemoAudit={id:string;actor:string;action:string;detail:string;createdAt:string};
+export type DemoAudit={targetId?:string;actorId?:string;transactionId?:string;registerId?:string;registerSessionId?:string;id:string;actor:string;action:string;detail:string;createdAt:string};
 export type DemoAdministration={school:{name:string;status:"active"};cafeteria:{name:string;status:"active";location:string;cashCreditConversionEnabled:boolean};users:DemoAdminUser[];memberships:DemoMembership[];partnerships:DemoPartnership[];audit:DemoAudit[]};
-type State = {events:FinancialEvent[];posPolicy:PosPolicy;shiftStartedAt:string;parent:{name:string;email:string;phone:string};students:DemoStudent[];transactions:DemoTx[];orders:DemoOrder[];budget:{goal:string;limit:number;archived:boolean};menuItems:PosMenuItemRecord[];purchases:PosPurchaseRecord[];administration:DemoAdministration};
+type State = CafeteriaDemoFoundation & {events:FinancialEvent[];posPolicy:PosPolicy;shiftStartedAt:string;parent:{name:string;email:string;phone:string};students:DemoStudent[];transactions:DemoTx[];orders:DemoOrder[];budget:{goal:string;limit:number;archived:boolean};menuItems:PosMenuItemRecord[];purchases:PosPurchaseRecord[];administration:DemoAdministration};
 
 const demoMenu: PosMenuItemRecord[] = [
   {id:"menu-pasta",name:"Pasta con pollo",description:"Almuerzo completo",category:"Almuerzo",priceMinor:18000,allergens:[],ingredients:["Pasta","Pollo","Tomate"],restrictionTags:["Alto en proteína"],imageUrl:"/menu/pasta.svg",available:true},
@@ -35,17 +41,18 @@ const demoMenu: PosMenuItemRecord[] = [
 
 const normalizeMenu=(items:PosMenuItemRecord[])=>items.map(item=>{
   const fallback=demoMenu.find(seed=>seed.id===item.id);
+  const imageUrl=resolveProductImageUrl(item);
   return {
     ...fallback,
     ...item,
     ingredients:Array.isArray(item.ingredients)?item.ingredients:fallback?.ingredients??[],
     allergens:Array.isArray(item.allergens)?item.allergens:fallback?.allergens??[],
     restrictionTags:Array.isArray(item.restrictionTags)?item.restrictionTags:fallback?.restrictionTags??[],
-    imageUrl:item.imageUrl??fallback?.imageUrl??null,
+    imageUrl:imageUrl===undefined?fallback?.imageUrl??null:imageUrl,
   };
 });
 
-const initial: State = {
+const initial: State = migrateCafeteriaDemoState<Omit<State, keyof CafeteriaDemoFoundation>>({
   events:[],posPolicy:DEFAULT_POS_POLICY,shiftStartedAt:new Date().toISOString(),
   parent:{name:"Oscar Rosa",email:"familia@demo.pikas.do",phone:"809-555-0142"},
   students:[
@@ -84,7 +91,7 @@ const initial: State = {
     ],
     audit:[{id:"audit-1",actor:"Elena Méndez",action:"Conexión aprobada",detail:"Cafetería PIKAS Central · alcance limitado",createdAt:"2026-08-11T09:15:00-04:00"},{id:"audit-2",actor:"María Castillo",action:"Producto actualizado",detail:"Especial del día marcado como no disponible",createdAt:"2026-08-11T09:42:00-04:00"}],
   },
-};
+});
 
 type ActionResult = {ok:true}|{ok:false;message:string};
 type CheckoutResult = {ok:true;duplicate:boolean;purchase:PosPurchaseRecord}|{ok:false;message:string};
@@ -96,6 +103,9 @@ type Context = {
   recoverCheckout:(key:string)=>Promise<{ok:true;purchase:PosPurchaseRecord|null}|{ok:false;message:string}>;
   connection:"Online"|"Connecting"|"Offline"|"Sync Issue";
   searchPosCustomers:(query:string)=>Array<{id:string;name:string;grade:string;code:string}>;
+  openRegister:(openingCashMinor:number,key:string)=>Promise<ActionResult>;
+  closeRegister:(sessionId:string,countedCashMinor:number,note:string,expectedSummary:RegisterSessionSummary,key:string)=>Promise<ActionResult>;
+  reprintReceipt:(purchaseId:string,key:string)=>Promise<ActionResult>;
   savePosPolicy:(policy:PosPolicy)=>Promise<ActionResult>;
   loadRecommendationScenario:()=>Promise<ActionResult>;
   replenishPos:(studentId:string,amountMinor:number,key:string)=>Promise<ActionResult>;
@@ -114,8 +124,12 @@ type Context = {
   checkoutPos:(studentId:string|null,cart:PosCartLine[],idempotencyKey:string,paymentMethod?:"student_wallet"|"cash",cashReceivedMinor?:number,generalSale?:boolean)=>Promise<CheckoutResult>;
   adminUpdateStudent:(student:DemoStudent)=>Promise<ActionResult>;
   adminAddStudent:(student:Omit<DemoStudent,"id"|"balance"|"spentToday"|"status">)=>Promise<ActionResult>;
-  adminUpdateMenu:(item:PosMenuItemRecord)=>Promise<ActionResult>;
+  adminUpdateMenu:(item:PosMenuItemRecord,expected?:PosMenuItemRecord)=>Promise<ActionResult>;
   adminAddMenu:(item:Omit<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl"> & Partial<Pick<PosMenuItemRecord,"ingredients"|"restrictionTags"|"imageUrl">>)=>Promise<ActionResult>;
+  adminSaveCafeteriaMenu:(menu:CafeteriaMenu,productIds:string[],expected?:MenuEditSnapshot)=>Promise<ActionResult>;
+  adminSaveServiceShift:(shift:ServiceShift,expected?:ServiceShift)=>Promise<ActionResult>;
+  adminSetServiceScheduling:(enabled:boolean,expected:boolean)=>Promise<ActionResult>;
+  adminSavePosEmployee:(employee:PosEmployeeInput,expected?:PosEmployeeInput)=>Promise<ActionResult>;
   adminAddUser:(user:Omit<DemoAdminUser,"id"|"lastActivity">)=>Promise<ActionResult>;
   adminSetUserStatus:(id:string,status:DemoAdminUser["status"])=>Promise<ActionResult>;
   adminSetPartnership:(id:string,status:PartnershipStatus)=>Promise<ActionResult>;
@@ -128,7 +142,8 @@ export const toPosStudent = (student:DemoStudent):PosStudentRecord => ({id:stude
 
 const normalize=(parsed:Partial<State>):State=>{
     const now=new Date().toISOString(), day=businessDay(now);
-    const merged={...initial,...parsed,events:parsed.events??[],posPolicy:{...DEFAULT_POS_POLICY,...parsed.posPolicy},menuItems:normalizeMenu(parsed.menuItems??demoMenu),purchases:(parsed.purchases??[]).map(p=>({...p,organizationId:p.organizationId??"cafeteria-demo",locationId:p.locationId??"principal"})),administration:{...initial.administration,...parsed.administration,cafeteria:{...initial.administration.cafeteria,...parsed.administration?.cafeteria}}};
+    const migrated=migrateCafeteriaDemoState({...initial,...parsed,schemaRevision:parsed.schemaRevision??0,menuItems:parsed.menuItems??demoMenu,administration:{...initial.administration,...parsed.administration}});
+    const merged={...initial,...migrated,events:parsed.events??[],posPolicy:{...DEFAULT_POS_POLICY,...parsed.posPolicy},menuItems:normalizeMenu(migrated.menuItems),purchases:(parsed.purchases??[]).map(p=>({...p,organizationId:p.organizationId??"cafeteria-demo",locationId:p.locationId??"principal"})),administration:{...initial.administration,...migrated.administration,cafeteria:{...initial.administration.cafeteria,...parsed.administration?.cafeteria}}};
     return {...merged,students:merged.students.map(s=>({...s,spendingDay:day,spentToday:s.spendingDay===day?s.spentToday:s.spendingDay?(spendingToday(s.id,merged.purchases,merged.events,now)+merged.orders.filter(o=>o.studentId===s.id&&o.status!=='cancelled'&&businessDay(o.createdAt)===day).reduce((n,o)=>n+(parseMoney(String(o.amount))??0),0))/100:s.spentToday}))};
   };
 
@@ -154,7 +169,7 @@ export function DemoProvider({children}:{children:ReactNode}) {
   const retryConnection=useCallback(async()=>{
     if(!navigator.onLine){setConnection('Offline');return}
     setConnection('Connecting');
-    try {await confirmSession();refreshState();setConnection('Online')}catch{setConnection(navigator.onLine?'Sync Issue':'Offline')}
+    try {await confirmSession();if(!navigator.onLine){setConnection('Offline');return}refreshState();setConnection('Online')}catch{setConnection(navigator.onLine?'Sync Issue':'Offline')}
   },[confirmSession,refreshState]);
   useEffect(()=>{
     if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true") {
@@ -170,7 +185,7 @@ export function DemoProvider({children}:{children:ReactNode}) {
     return ()=>{window.removeEventListener('offline',offline);window.removeEventListener('online',online);window.removeEventListener('storage',storage);window.removeEventListener('focus',focus);clearInterval(timer)};
   },[refreshState,retryConnection,install]);
   // Every writer confirms the current session while holding the shared demo lock.
-  const financial=async <T extends ActionResult>(roles:string[],action:(current:State,actor:FinancialActor)=>{next:State;result:T}):Promise<T|{ok:false;message:string}>=>{
+  const financial=async <T extends ActionResult>(roles:string[],action:(current:State,actor:FinancialActor)=>{next:State;result:T},closureSessionId?:string):Promise<T|{ok:false;message:string}>=>{
     if(process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=="true"||!navigator.onLine||!navigator.locks)return {ok:false,message:'Estado financiero no confirmado. Conéctate antes de continuar.'};
     try{return await navigator.locks.request(storageKey,async()=>{
       const role=await confirmSession();
@@ -180,12 +195,13 @@ export function DemoProvider({children}:{children:ReactNode}) {
       const id=role==='pos_operator'?'pos-1':role==='cafeteria_admin'?'ca-1':role==='school_admin'?'sa-1':role==='student'?'student-sofia':'parent-demo';
       const user=current.administration.users.find(u=>u.id===id);
       if(['school_admin','cafeteria_admin','pos_operator'].includes(role)) {
-        const school=role==='school_admin';
-        const membership=current.administration.memberships.find(m=>m.userId===id&&m.role===role&&m.organizationType===(school?'school':'cafeteria')&&m.organizationName===(school?current.administration.school.name:current.administration.cafeteria.name)&&(school||m.location===current.administration.cafeteria.location));
-        if(!membership||!user||user.role!==role||user.scope!==(school?current.administration.school.name:role==='pos_operator'?current.administration.cafeteria.location:current.administration.cafeteria.name))throw new Error('Organización o ubicación no autorizada.');
+        const scope:AuthorityScope=role==='school_admin'?{kind:'school',schoolId:'school-demo'}:{kind:'cafeteria',organizationId:'cafeteria-demo',locationId:'principal'};
+        const membership=current.administration.memberships.find(m=>m.userId===id&&m.role===role&&sameAuthorityScope(m.authorityScope,scope));
+        if(!membership||!user||user.role!==role||(role==='pos_operator'&&!employeeInScope(user,{organizationId:'cafeteria-demo',locationId:'principal'})))throw new Error('Organización o ubicación no autorizada.');
       }
       const actor:FinancialActor={id,name:user?.name??(role==='student'?'Sofi':current.parent.name),role,organizationId:role==='school_admin'?'school-demo':'cafeteria-demo',locationId:'principal',registerId:role==='parent'?'family':'caja-1',active:role==='parent'||(role==='student'&&current.students.some(s=>s.id==='sofia'&&s.status==='active'))||user?.status==='active'};
-      if(!actor.active)throw new Error('La cuenta no está activa.');
+      const ownedClosure=role==='pos_operator'&&closureSessionId&&current.registerSessions.some(s=>s.id===closureSessionId&&s.cashierId===actor.id&&s.organizationId===actor.organizationId&&s.locationId===actor.locationId&&s.registerId===actor.registerId);
+      if(!actor.active&&!ownedClosure)throw new Error('La cuenta no está activa.');
       const {next,result}=action(current,actor);
       localStorage.setItem(storageKey,JSON.stringify(next));install(next);setConnection('Online');return result;
     })}catch(error){if(error instanceof DOMException||error instanceof TypeError||error instanceof SyntaxError)setConnection(navigator.onLine?'Sync Issue':'Offline');return {ok:false,message:error instanceof Error?error.message:'No se pudo confirmar la operación.'}}
@@ -199,7 +215,7 @@ export function DemoProvider({children}:{children:ReactNode}) {
     }catch{return {ok:false,message:'No se pudo confirmar el catálogo remoto.'}}
   };
   const adminMutation=(permission:AdminPermission,update:(current:State,actor:FinancialActor)=>State)=>financial(['school_admin','cafeteria_admin'],(current,actor)=>{
-    if(!can(actor.role as AdminRole,permission))throw new Error('Operación no autorizada.');
+    if(!hasScopedPermission({id:actor.id,status:actor.active?'active':'inactive'},current.administration.memberships,actor.role==='school_admin'?{kind:'school',schoolId:'school-demo'}:{kind:'cafeteria',organizationId:actor.organizationId,locationId:actor.locationId},permission))throw new Error('Operación no autorizada.');
     return {next:update(current,actor),result:{ok:true as const}};
   });
   const uniqueCode=(current:State,code:string,exceptId?:string)=>{
@@ -210,13 +226,33 @@ export function DemoProvider({children}:{children:ReactNode}) {
   };
   const familyStudent=(current:State,id:string)=>{const student=current.students.find(s=>s.id===id);if(!student||(student.familyId??'family-demo')!=='family-demo')throw new Error('Cuenta no autorizada.');return student};
   const schoolStudent=(current:State,student:DemoStudent)=>{if((student.schoolName??current.administration.school.name)!==current.administration.school.name)throw new Error('Estudiante fuera de la escuela autorizada.')};
-  const audit=(current:State,actor:FinancialActor,action:string,detail:string)=>({...current.administration,audit:[{id:crypto.randomUUID(),actor:actor.name,action,detail,createdAt:new Date().toISOString()},...current.administration.audit]});
+  const saveEmployee=(current:State,actor:FinancialActor,employee:PosEmployeeInput,expected?:PosEmployeeInput):State=>{
+    const saved=savePosEmployee({actor:{id:actor.id,status:actor.active?'active':'inactive'},users:current.administration.users,memberships:current.administration.memberships,scope:{organizationId:actor.organizationId,locationId:actor.locationId},registers:current.cafeteriaOperations.registers,employee,expected});
+    const exists=current.administration.users.some(u=>u.id===employee.id);
+    const memberships=current.administration.memberships.some(m=>m.userId===employee.id)?current.administration.memberships:[...current.administration.memberships,{id:crypto.randomUUID(),userId:employee.id,organizationType:'cafeteria' as const,organizationName:current.administration.cafeteria.name,location:current.administration.cafeteria.location,role:'pos_operator' as const,authorityScope:saved.authorityScope}];
+    return {...current,administration:{...current.administration,users:exists?current.administration.users.map(u=>u.id===employee.id?saved.employee:u):[...current.administration.users,saved.employee],memberships,audit:[...saved.changes.map(action=>({id:crypto.randomUUID(),actorId:actor.id,actor:actor.name,targetId:employee.id,action,detail:`${saved.employee.name} · ${saved.employee.posRole} · ${saved.employee.status} · cajas: ${saved.employee.allowedRegisterIds?.join(', ')||'ninguna'}`,createdAt:new Date().toISOString()})),...current.administration.audit]}};
+  };
+  const audit=(current:State,actor:FinancialActor,action:string,detail:string)=>({...current.administration,audit:[{id:crypto.randomUUID(),actor:actor.name,actorId:actor.id,action,detail,createdAt:new Date().toISOString()},...current.administration.audit]});
   const eligible=(current:State,student:DemoStudent,operation:PartnershipScope)=>current.administration.partnerships.some(p=>p.schoolName===(student.schoolName??current.administration.school.name)&&p.cafeteriaName===current.administration.cafeteria.name&&p.location===current.administration.cafeteria.location&&activePartnershipAllows(p.status,p.scope,operation));
   const posCustomer=(id:string):PosCustomer|null=>{
     if(sessionRole.current!=='pos_operator'||connection!=='Online'||state.administration.users.find(u=>u.id==='pos-1')?.status!=='active')return null;
     const student=state.students.find(s=>s.id===id);if(!student)return null;
     const scopes:PartnershipScope[]=['eligibility','balance','limits','restrictions','transactions'];
     return projectPosCustomer(toPosStudent(student),scopes.filter(scope=>eligible(state,student,scope)));
+  };
+  const requireOperatingSession=(current:State,actor:FinancialActor)=>{
+    // Admin refunds use the session handling the refund; admin authority never opens or owns a drawer.
+    const owner=actor.role==='cafeteria_admin'?current.registerSessions.find(s=>s.status==='open'&&s.registerId===actor.registerId&&s.organizationId===actor.organizationId&&s.locationId===actor.locationId)?.cashierId:actor.id;
+    const user=current.administration.users.find(u=>u.id===owner);
+    const cashier=user?{...actor,id:user.id,name:user.name,role:user.role,active:user.status==='active'}:undefined;
+    const gate=resolveRegisterGate({actor:cashier,allowedRegisterIds:user?.allowedRegisterIds??[],registers:current.cafeteriaOperations.registers,sessions:current.registerSessions});
+    if(gate.status!=='ready')throw new Error(actor.role==='cafeteria_admin'&&!owner?'No hay una sesión de caja abierta para procesar el reembolso.':gate.message);
+    return gate.session.id;
+  };
+  const sessionAttribution=(current:State,actor:FinancialActor,now:string)=>{
+    const id=actor.role==='parent'?undefined:requireOperatingSession(current,actor);
+    if(id)assertSessionAttribution(current.registerSessions,id,actor,actor.registerId,now);
+    return id?{registerSessionId:id}:{};
   };
   const addEvent=(current:State,event:FinancialEvent):State=>({...current,events:[event,...current.events],students:current.students.map(s=>s.id===event.studentId?{...s,balance:(toPosStudent(s).balanceMinor+event.walletImpactMinor)/100,spentToday:event.type==='refund'&&current.purchases.some(p=>p.id===event.originalPurchaseId&&businessDay(p.createdAt)===businessDay(event.createdAt))?Math.max(0,(toPosStudent(s).spentTodayMinor-event.amountMinor)/100):s.spentToday}:s),transactions:event.studentId?[{id:event.id,studentId:event.studentId,purchaseId:event.originalPurchaseId??undefined,description:event.type==='refund'?`Reembolso · ${event.reason}`:'Recarga de saldo',category:event.type==='refund'?'Reembolso':'Recarga',amount:event.walletImpactMinor/100,status:'completed',createdAt:event.createdAt},...current.transactions]:current.transactions});
   const replenish=(studentId:string,amountMinor:number,key:string,roles:string[])=>financial(roles,(current,actor)=>{
@@ -227,7 +263,7 @@ export function DemoProvider({children}:{children:ReactNode}) {
     const before=toPosStudent(student).balanceMinor;
     if(!Number.isSafeInteger(amountMinor)||amountMinor<=0||!Number.isSafeInteger(before+amountMinor))throw new Error('Monto no válido.');
     const event:FinancialEvent={id:crypto.randomUUID(),type:'replenishment',studentId,originalPurchaseId:null,amountMinor,walletImpactMinor:amountMinor,cashImpactMinor:actor.role==='parent'?0:amountMinor,balanceBeforeMinor:before,balanceAfterMinor:before+amountMinor,destination:'wallet',reason:'Recarga de saldo demo',actorId:actor.id,actorName:actor.name,approvedBy:null,approvedByName:null,organizationId:actor.organizationId,locationId:actor.locationId,registerId:actor.registerId,createdAt:new Date().toISOString(),idempotencyKey:key};
-    return {next:addEvent(current,event),result:{ok:true as const}};
+    return {next:addEvent(current,{...event,...sessionAttribution(current,actor,event.createdAt)}),result:{ok:true as const}};
   });
   const value:Context={
     state,connection,sessionRole:confirmedRole,retryConnection,posCustomer,selectPosCustomer:posCustomer,
@@ -245,17 +281,39 @@ export function DemoProvider({children}:{children:ReactNode}) {
       const purchases:PosPurchaseRecord[]=items.map((item,i)=>({id:`history-demo-${i}`,studentId:'sofia',studentName:'Sofi',studentCode:'PK-10982',items:[{itemId:item.id,name:item.name,quantity:1,unitPriceMinor:item.priceMinor}],totalMinor:item.priceMinor,status:'completed',paymentMethod:'cash',studentAssociation:'student_linked',balanceImpactMinor:0,cashRegisterImpactMinor:item.priceMinor,cashReceivedMinor:item.priceMinor,changeProvidedMinor:0,cashierId:'pos-1',posStationId:'caja-1',employeeLabel:'Caja Demo',organizationId:'cafeteria-demo',locationId:'principal',idempotencyKey:`history-demo-${i}`,createdAt:new Date(Date.now()-(i<5?2:40)*86400000).toISOString()}));
       return {next:{...current,menuItems:[...current.menuItems,...items],purchases:[...current.purchases,...purchases],transactions:[...current.transactions,...purchases.map(p=>({id:`ledger-${p.id}`,studentId:'sofia',purchaseId:p.id,description:p.items[0]!.name,category:'Compra histórica ficticia',amount:0,status:'completed' as const,createdAt:p.createdAt,paymentMethod:'cash' as const,purchaseTotalMinor:p.totalMinor,balanceImpactMinor:0,cashRegisterImpactMinor:p.totalMinor}))],administration:{...current.administration,audit:[{id:crypto.randomUUID(),actor:actor.name,action:'Escenario de historial cargado',detail:'10 compras históricas ficticias; sin cambio al saldo o gasto de hoy.',createdAt:new Date().toISOString()},...current.administration.audit]}},result:{ok:true as const}};
     }),
+    openRegister:(openingCashMinor,key)=>financial(['pos_operator'],(current,actor)=>{
+      const register=current.cafeteriaOperations.registers.find(r=>r.id===actor.registerId);
+      if(!register)throw new Error('Caja no encontrada.');
+      const session=openRegisterSession({sessions:current.registerSessions,register,actor,allowedRegisterIds:current.administration.users.find(u=>u.id===actor.id)?.allowedRegisterIds??[],id:key,now:new Date().toISOString(),openingCashMinor});
+      if(current.registerSessions.some(s=>s.id===session.id))return {next:current,result:{ok:true as const}};
+      return {next:{...current,registerSessions:[session,...current.registerSessions],administration:audit(current,actor,'Caja abierta',`${register.name} · sesión ${session.id}`)},result:{ok:true as const}};
+    }),
+    closeRegister:(sessionId,countedCashMinor,note,expectedSummary,key)=>financial(['pos_operator'],(current,actor)=>{
+      const session=current.registerSessions.find(s=>s.id===sessionId),register=current.cafeteriaOperations.registers.find(r=>r.id===actor.registerId);
+      if(!session||!register)throw new Error('Sesión o caja no encontrada.');
+      const closed=closeRegisterSession({session,register,actor,allowedRegisterIds:current.administration.users.find(u=>u.id===actor.id)?.allowedRegisterIds??[],purchases:current.purchases,events:current.events,expectedSummary,countedCashMinor,note,now:new Date().toISOString(),key});
+      if(closed===session)return {next:current,result:{ok:true as const}};
+      return {next:{...current,registerSessions:current.registerSessions.map(s=>s.id===sessionId?closed:s),administration:audit(current,actor,'Caja cerrada',`${register.name} · sesión ${sessionId}`)},result:{ok:true as const}};
+    },sessionId),
+    reprintReceipt:(purchaseId,key)=>financial(['pos_operator','cafeteria_admin'],(current,actor)=>{
+      const purchase=current.purchases.find(p=>p.id===purchaseId);
+      if(!purchase)throw new Error('Compra no encontrada.');
+      const event=receiptReprintAudit(purchase,actor,key,new Date().toISOString(),activeRegisterSessionId(current.registerSessions,actor));
+      const previous=current.administration.audit.find(a=>a.id===key);
+      if(previous){if(previous.transactionId!==purchaseId||previous.actorId!==actor.id||previous.action!==event.action)throw new Error('Clave reutilizada.');return {next:current,result:{ok:true as const}};}
+      return {next:{...current,administration:{...current.administration,audit:[event,...current.administration.audit]}},result:{ok:true as const}};
+    }),
     replenishPos:(studentId,amount,key)=>replenish(studentId,amount,key,['pos_operator']),
     refundPos:(purchaseId,amountMinor,reason,key)=>financial(['pos_operator','cafeteria_admin'],(current,actor)=>{
       const purchase=current.purchases.find(p=>p.id===purchaseId);if(!purchase)throw new Error('Compra no encontrada.');
       const student=current.students.find(s=>s.id===purchase.studentId);
       const event=prepareRefund({purchase,events:current.events,policy:current.posPolicy,actor,amountMinor,reason,balanceMinor:student?toPosStudent(student).balanceMinor:null,id:crypto.randomUUID(),key,now:new Date().toISOString()});
-      return {next:current.events.some(e=>e.id===event.id)?current:addEvent(current,event),result:{ok:true as const}};
+      return {next:current.events.some(e=>e.id===event.id)?current:addEvent(current,{...event,...sessionAttribution(current,actor,event.createdAt)}),result:{ok:true as const}};
     }),
     voidPos:(reason,key)=>financial(['pos_operator'],(current,actor)=>{
       if(current.events.some(e=>e.idempotencyKey===key))return {next:current,result:{ok:true as const}};
       const event:FinancialEvent={id:crypto.randomUUID(),type:'void',studentId:null,originalPurchaseId:null,amountMinor:0,walletImpactMinor:0,cashImpactMinor:0,balanceBeforeMinor:null,balanceAfterMinor:null,destination:'none',reason,actorId:actor.id,actorName:actor.name,approvedBy:null,approvedByName:null,organizationId:actor.organizationId,locationId:actor.locationId,registerId:actor.registerId,createdAt:new Date().toISOString(),idempotencyKey:key};
-      return {next:addEvent(current,event),result:{ok:true as const}};
+      return {next:addEvent(current,{...event,...(activeRegisterSessionId(current.registerSessions,actor)?{registerSessionId:activeRegisterSessionId(current.registerSessions,actor)}:{})}),result:{ok:true as const}};
     }),
     saveParent:parent=>financial(['parent'],current=>({next:{...current,parent},result:{ok:true as const}})),
     saveStudent:student=>financial(['parent','student'],(current,actor)=>{
@@ -293,17 +351,24 @@ export function DemoProvider({children}:{children:ReactNode}) {
       return student?{ok:true as const,student}:{ok:false as const,reason:'unknown_code'};
     },
     checkoutPos:(studentId,cart,idempotencyKey,paymentMethod="student_wallet",cashReceivedMinor,generalSale=false)=>financial<CheckoutResult>(['pos_operator'],(current,actor)=>{
+      const previous=current.purchases.find(p=>p.idempotencyKey===idempotencyKey);
+      if(previous&&(previous.studentId!==studentId||previous.paymentMethod!==paymentMethod||previous.cashierId!==actor.id||JSON.stringify(previous.items.map(i=>[i.itemId,i.quantity]).sort())!==JSON.stringify(cart.map(i=>[i.itemId,i.quantity]).sort())))throw new Error('Clave de operación reutilizada.');
+      if(previous)return {next:current,result:{ok:true as const,duplicate:true,purchase:previous}};
+      requireOperatingSession(current,actor);
+      const saleTime=new Date().toISOString();
+      const catalog=resolvePosCatalog({operations:current.cafeteriaOperations,products:current.menuItems,scope:actor,now:saleTime});
+      const invalid=ineligibleCartItems(cart,catalog.products,current.menuItems);
+      if(invalid.length)throw new Error(cartEligibilityMessage(invalid));
+      if(!catalog.products.length)throw new Error(catalog.message);
       const student=current.students.find(s=>s.id===studentId);
       if(!generalSale&&(!student||!['eligibility','restrictions','limits','transactions',...(paymentMethod==='student_wallet'?['balance']:[])].every(scope=>eligible(current,student,scope as PartnershipScope))))throw new Error('La conexión escuela–cafetería o la cuenta no está activa.');
       if(generalSale&&(paymentMethod!=='cash'||studentId!==null))throw new Error('Selecciona efectivo para No usuario.');
       if(paymentMethod==='cash'&&cashReceivedMinor===undefined)throw new Error('Indica el efectivo recibido.');
-      const previous=current.purchases.find(p=>p.idempotencyKey===idempotencyKey);
-      if(previous&&(previous.studentId!==studentId||previous.paymentMethod!==paymentMethod||previous.cashierId!==actor.id||JSON.stringify(previous.items.map(i=>[i.itemId,i.quantity]).sort())!==JSON.stringify(cart.map(i=>[i.itemId,i.quantity]).sort())))throw new Error('Clave de operación reutilizada.');
-      const prepared=preparePosPurchase({student:student?toPosStudent(student):undefined,menu:current.menuItems,cart,idempotencyKey,purchases:current.purchases,employeeLabel:actor.name,cashierId:actor.id,posStationId:actor.registerId,organizationId:actor.organizationId,locationId:actor.locationId,now:new Date().toISOString(),purchaseId:crypto.randomUUID(),paymentMethod,cashReceivedMinor,studentAssociation:generalSale?'general_sale':paymentMethod==='cash'?'student_linked':'required'});
+      const prepared=preparePosPurchase({student:student?toPosStudent(student):undefined,menu:catalog.products,cart,idempotencyKey,purchases:current.purchases,employeeLabel:actor.name,cashierId:actor.id,posStationId:actor.registerId,organizationId:actor.organizationId,locationId:actor.locationId,now:saleTime,purchaseId:crypto.randomUUID(),paymentMethod,cashReceivedMinor,studentAssociation:generalSale?'general_sale':paymentMethod==='cash'?'student_linked':'required'});
       if(!prepared.ok)throw new Error(posValidationMessage(prepared));
       if(prepared.duplicate)return {next:current,result:prepared};
-      const p=prepared.purchase;
-      return {result:prepared,next:{...current,purchases:[p,...current.purchases],students:current.students.map(s=>s.id===studentId?{...s,balance:(toPosStudent(s).balanceMinor+p.balanceImpactMinor)/100,spentToday:(toPosStudent(s).spentTodayMinor+p.totalMinor)/100}:s),transactions:generalSale?current.transactions:[{id:`ledger-${p.id}`,purchaseId:p.id,studentId:studentId!,description:p.items.map(i=>`${i.quantity}× ${i.name}`).join(', '),category:paymentMethod==='cash'?'Cash — Student-linked':'Cashless / PIKAS account',amount:p.balanceImpactMinor/100,status:'completed',createdAt:p.createdAt,paymentMethod,purchaseTotalMinor:p.totalMinor,balanceImpactMinor:p.balanceImpactMinor,cashRegisterImpactMinor:p.cashRegisterImpactMinor},...current.transactions]}};
+      const p=Object.freeze({...prepared.purchase,...sessionAttribution(current,actor,prepared.purchase.createdAt)});
+      return {result:{...prepared,purchase:p},next:{...current,purchases:[p,...current.purchases],students:current.students.map(s=>s.id===studentId?{...s,balance:(toPosStudent(s).balanceMinor+p.balanceImpactMinor)/100,spentToday:(toPosStudent(s).spentTodayMinor+p.totalMinor)/100}:s),transactions:generalSale?current.transactions:[{id:`ledger-${p.id}`,purchaseId:p.id,studentId:studentId!,description:p.items.map(i=>`${i.quantity}× ${i.name}`).join(', '),category:paymentMethod==='cash'?'Cash — Student-linked':'Cashless / PIKAS account',amount:p.balanceImpactMinor/100,status:'completed',createdAt:p.createdAt,paymentMethod,purchaseTotalMinor:p.totalMinor,balanceImpactMinor:p.balanceImpactMinor,cashRegisterImpactMinor:p.cashRegisterImpactMinor},...current.transactions]}};
     }),
     adminUpdateStudent:student=>adminMutation('students:manage',(current,actor)=>{
       const existing=current.students.find(s=>s.id===student.id);if(!existing)throw new Error('Estudiante no encontrado.');schoolStudent(current,existing);
@@ -312,21 +377,30 @@ export function DemoProvider({children}:{children:ReactNode}) {
       return {...current,students:current.students.map(s=>s.id===student.id?{...s,firstName:student.firstName,lastName:student.lastName,grade:student.grade,code,status:student.status}:s),administration:audit(current,actor,'Estudiante actualizado',student.preferredName)};
     }),
     adminAddStudent:student=>adminMutation('students:manage',(current,actor)=>({...current,students:[...current.students,{...student,code:uniqueCode(current,student.code),schoolName:current.administration.school.name,familyId:'unlinked',id:crypto.randomUUID(),balance:0,spentToday:0,status:'active'}],administration:audit(current,actor,'Estudiante agregado',student.preferredName)})),
-    adminUpdateMenu:item=>process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=='true'?remoteMenu('PATCH',item):adminMutation('menu:manage',(current,actor)=>{
-      if(!current.menuItems.some(i=>i.id===item.id))throw new Error('Producto no encontrado.');
-      return {...current,menuItems:current.menuItems.map(i=>i.id===item.id?item:i),administration:audit(current,actor,'Producto actualizado',item.name)};
+    adminUpdateMenu:(item,expected)=>process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=='true'?remoteMenu('PATCH',item):adminMutation('menu:manage',(current,actor)=>{
+      return {...current,menuItems:editCatalogProduct(current.menuItems,item,expected),administration:audit(current,actor,'Producto actualizado',item.name)};
     }),
     adminAddMenu:item=>process.env.NEXT_PUBLIC_PIKAS_DEMO_MODE!=='true'?remoteMenu('POST',{...item,ingredients:item.ingredients??[],restrictionTags:item.restrictionTags??[],imageUrl:item.imageUrl??null}):adminMutation('menu:manage',(current,actor)=>{
-      if(current.menuItems.some(i=>i.id===item.id))throw new Error('El producto ya existe.');
-      return {...current,menuItems:[...current.menuItems,{...item,ingredients:item.ingredients??[],restrictionTags:item.restrictionTags??[],imageUrl:item.imageUrl??null}],administration:audit(current,actor,'Producto creado',item.name)};
+      return {...current,menuItems:createCatalogProduct(current.menuItems,{...item,ingredients:item.ingredients??[],restrictionTags:item.restrictionTags??[],imageUrl:item.imageUrl??null}),administration:audit(current,actor,'Producto creado',item.name)};
     }),
+    adminSaveCafeteriaMenu:(menu,productIds,expected)=>adminMutation('menu:manage',(current,actor)=>({
+      ...current,cafeteriaOperations:saveCafeteriaMenu(current.cafeteriaOperations,current.menuItems,menu,productIds,actor,expected),administration:audit(current,actor,'Menú guardado',menu.name),
+    })),
+    adminSaveServiceShift:(shift,expected)=>adminMutation('menu:manage',(current,actor)=>({
+      ...current,cafeteriaOperations:saveServiceShift(current.cafeteriaOperations,shift,actor,expected),administration:audit(current,actor,'Turno de servicio guardado',shift.name),
+    })),
+    adminSetServiceScheduling:(enabled,expected)=>adminMutation('menu:manage',(current,actor)=>({
+      ...current,cafeteriaOperations:changeServiceScheduling(current.cafeteriaOperations,enabled,expected),administration:audit(current,actor,'Programación de servicio actualizada',enabled?'Activada':'Modo manual'),
+    })),
+    adminSavePosEmployee:(employee,expected)=>adminMutation('pos_users:manage',(current,actor)=>saveEmployee(current,actor,employee,expected)),
     adminAddUser:user=>adminMutation(user.role==='school_admin'?'school_admins:manage':'pos_users:manage',(current,actor)=>{
-      if(!['school_admin','pos_operator'].includes(user.role))throw new Error('Rol no permitido.');
+      if(user.role!=='school_admin')throw new Error('Usa Personal POS para crear empleados.');
       return {...current,administration:{...audit(current,actor,'Invitación creada',user.name),users:[...current.administration.users,{...user,id:crypto.randomUUID(),lastActivity:'Invitación pendiente'}]}};
     }),
     adminSetUserStatus:(id,status)=>financial(['school_admin','cafeteria_admin'],(current,actor)=>{
       const user=current.administration.users.find(u=>u.id===id);
       if(!user||!['school_admin','pos_operator'].includes(user.role)||!can(actor.role as AdminRole,user.role==='school_admin'?'school_admins:manage':'pos_users:manage'))throw new Error('Operación no autorizada.');
+      if(user.role==='pos_operator')return {next:saveEmployee(current,actor,{...employeeSnapshot(user),status},employeeSnapshot(user)),result:{ok:true as const}};
       if(user.role==='school_admin'&&user.scope!==current.administration.school.name)throw new Error('Cuenta fuera de la escuela autorizada.');
       if(user.role==='school_admin'&&status!=='active'&&current.administration.users.filter(u=>u.role==='school_admin'&&u.scope===user.scope&&u.status==='active').length<=1)throw new Error('No se puede desactivar el último administrador escolar activo.');
       return {next:{...current,administration:{...audit(current,actor,'Estado de cuenta actualizado',`${user.name}: ${status}`),users:current.administration.users.map(u=>u.id===id?{...u,status}:u)}},result:{ok:true as const}};
@@ -349,8 +423,8 @@ export function useCafeteriaDemo(){const context=useDemo();return {...context,st
 
 export function usePosDemo(){
   const c=useDemo();
-  return {connection:c.connection,retryConnection:c.retryConnection,lookupStudentForPos:c.lookupStudentForPos,searchPosCustomers:c.searchPosCustomers,selectPosCustomer:c.selectPosCustomer,posCustomer:c.posCustomer,checkoutPos:c.checkoutPos,recoverCheckout:c.recoverCheckout,replenishPos:c.replenishPos,voidPos:c.voidPos,
-    state:{posPolicy:c.state.posPolicy,shiftStartedAt:c.state.shiftStartedAt,menuItems:c.state.menuItems,purchases:c.state.purchases.filter(p=>p.organizationId==='cafeteria-demo'&&p.locationId==='principal'),administration:{cafeteria:c.state.administration.cafeteria,users:c.state.administration.users.filter(u=>u.id==='pos-1')}}};
+  return {sessionRole:c.sessionRole,connection:c.connection,retryConnection:c.retryConnection,lookupStudentForPos:c.lookupStudentForPos,searchPosCustomers:c.searchPosCustomers,selectPosCustomer:c.selectPosCustomer,posCustomer:c.posCustomer,checkoutPos:c.checkoutPos,recoverCheckout:c.recoverCheckout,replenishPos:c.replenishPos,voidPos:c.voidPos,
+    state:{cafeteriaOperations:c.state.cafeteriaOperations,registerSessions:c.state.registerSessions,posPolicy:c.state.posPolicy,shiftStartedAt:c.state.shiftStartedAt,menuItems:c.state.menuItems,purchases:c.state.purchases.filter(p=>p.organizationId==='cafeteria-demo'&&p.locationId==='principal'),administration:{cafeteria:c.state.administration.cafeteria,users:c.state.administration.users.filter(u=>u.id==='pos-1')}}};
 }
 
 export function usePosHistory(){
@@ -359,5 +433,5 @@ export function usePosHistory(){
   // Operational history does not need wallet snapshots or the student roster.
   const events=c.state.events.filter(e=>e.organizationId==='cafeteria-demo'&&e.locationId==='principal').map(e=>({...e,balanceBeforeMinor:null,balanceAfterMinor:null}));
   const ids=new Set(events.map(e=>e.studentId));
-  return {connection:c.connection,refundPos:c.refundPos,state:{posPolicy:c.state.posPolicy,purchases,events,students:c.state.students.filter(s=>ids.has(s.id)).map(s=>({id:s.id,preferredName:s.preferredName}))}};
+  return {connection:c.connection,refundPos:c.refundPos,reprintReceipt:c.reprintReceipt,state:{posPolicy:c.state.posPolicy,purchases,events,students:c.state.students.filter(s=>ids.has(s.id)).map(s=>({id:s.id,preferredName:s.preferredName}))}};
 }

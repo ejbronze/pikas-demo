@@ -1,1 +1,2 @@
-import {AdminUsers} from "@/components/admin-pages";export default function Page(){return <AdminUsers kind="pos"/>}
+import { CafeteriaEmployees } from "@/components/cafeteria-employees";
+export default function Page() { return <CafeteriaEmployees />; }

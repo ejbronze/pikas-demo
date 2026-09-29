@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Grid2X2, List, Search } from "lucide-react";
 import {
+  resolveRegisterGate, resolvePosCatalog, ineligibleCartItems, cartEligibilityMessage,
   CASH_DENOMINATIONS_MINOR,
   parseMoney,
   quickAccess,
@@ -24,6 +25,7 @@ type CatalogView = "gallery" | "list";
 export function PosDashboard({ demo }: { demo: boolean }) {
   const {
     state,
+    sessionRole,
     connection,
     retryConnection,
     lookupStudentForPos,
@@ -113,7 +115,23 @@ export function PosDashboard({ demo }: { demo: boolean }) {
         );
       } catch {}
   }, [cart, mode, ready]);
+  const [clock, setClock] = useState(() => new Date().toISOString());
+  useEffect(() => {
+    const tick = () => setClock(new Date().toISOString());
+    const timer = window.setInterval(tick, 1000);
+    window.addEventListener('focus', tick);
+    return () => { clearInterval(timer); window.removeEventListener('focus', tick); };
+  }, []);
   const operator = state.administration.users.find((u) => u.id === "pos-1");
+  const registerGate = resolveRegisterGate({
+    actor: operator && sessionRole === 'pos_operator' ? { id: operator.id, name: operator.name, role: operator.role, active: operator.status === 'active', organizationId: 'cafeteria-demo', locationId: 'principal', registerId: 'caja-1' } : undefined,
+    allowedRegisterIds: operator?.allowedRegisterIds ?? [], registers: state.cafeteriaOperations.registers, sessions: state.registerSessions,
+  });
+  const catalog = resolvePosCatalog({ operations: state.cafeteriaOperations, products: state.menuItems, scope: { organizationId: 'cafeteria-demo', locationId: 'principal' }, now: clock });
+  const saleableItems = catalog.products;
+  const cartIssues = ineligibleCartItems(cart, saleableItems, state.menuItems);
+  const canOperate = registerGate.status === 'ready' && connection === 'Online';
+
   const student = studentId ? posCustomer(studentId) : null,
     posStudent = student ? checkoutCustomer(student, mode) : null;
   const total = cart.reduce(
@@ -129,14 +147,14 @@ export function PosDashboard({ demo }: { demo: boolean }) {
   const validation = posStudent
     ? (mode === "cash" ? validateCashPurchase : validatePosPurchase)(
         posStudent,
-        state.menuItems,
+        saleableItems,
         cart,
       )
-    : validateGeneralCashPurchase(state.menuItems, cart);
+    : validateGeneralCashPurchase(saleableItems, cart);
   const recommendations = studentId
     ? student?.scopes.includes("restrictions")
       ? quickAccess(
-          state.menuItems,
+          saleableItems,
           student.scopes.includes("transactions")
             ? state.purchases
             : state.purchases.map((p) => ({ ...p, studentId: null })),
@@ -162,7 +180,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
         )
       : { cafeteria: [], customer: [] }
     : quickAccess(
-        state.menuItems,
+        saleableItems,
         state.purchases,
         undefined,
         "cafeteria-demo",
@@ -172,11 +190,11 @@ export function PosDashboard({ demo }: { demo: boolean }) {
   const categories = [
     "Todos",
     ...(student ? ["Frecuentes"] : []),
-    ...new Set(state.menuItems.map((i) => i.category)),
+    ...new Set(saleableItems.map((i) => i.category)),
   ];
   const quickItems = recommendations.cafeteria;
   const frequentIds = new Set(recommendations.customer.map((i) => i.id));
-  const visibleItems = state.menuItems.filter(
+  const visibleItems = saleableItems.filter(
     (item) =>
       (category === "Todos" ||
         (category === "Frecuentes" && frequentIds.has(item.id)) ||
@@ -195,11 +213,12 @@ export function PosDashboard({ demo }: { demo: boolean }) {
     else groups.push({ letter, items: [item] });
     return groups;
   }, []);
+  const currentSession = state.registerSessions.find(s => s.status === 'open' && s.cashierId === operator?.id && s.registerId === 'caja-1' && s.organizationId === 'cafeteria-demo' && s.locationId === 'principal');
   const shift = state.purchases.filter(
     (p) =>
       p.cashierId === "pos-1" &&
       p.posStationId === "caja-1" &&
-      p.createdAt >= state.shiftStartedAt,
+      Boolean(currentSession) && p.registerSessionId === currentSession?.id,
   );
   const reset = () => {
     setStep("entry");
@@ -252,6 +271,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
     setNotice("");
   };
   const add = (id: string) => {
+    if (!canOperate || !saleableItems.some(item => item.id === id)) { setNotice(registerGate.message || 'Este producto ya no es elegible para el servicio actual.'); return; }
     setCart((current) => {
       const line = current.find((l) => l.itemId === id);
       return line
@@ -296,14 +316,16 @@ export function PosDashboard({ demo }: { demo: boolean }) {
       setStep("completed");
       setNotice("");
       playSaleSound();
-    } else setNotice(result.message);
+    } else { setNotice(result.message); await retryConnection(); setClock(new Date().toISOString()); }
     setBusy(false);
     submitting.current = false;
   };
   const restriction = (id: string) => {
     if (studentId && !student?.scopes.includes("restrictions"))
       return "Sin permiso para verificar restricciones. No se puede añadir este producto.";
-    const item = state.menuItems.find((i) => i.id === id)!;
+    if (!canOperate) return registerGate.message || 'Conecta la caja para operar.';
+    const item = saleableItems.find((i) => i.id === id);
+    if (!item) return 'Producto fuera del catálogo elegible actual.';
     const v = student
       ? validateCashPurchase(
           {
@@ -395,9 +417,10 @@ export function PosDashboard({ demo }: { demo: boolean }) {
         ) : !ready ? (
           <p>Preparando caja…</p>
         ) : operator?.status !== "active" ? (
-          <h1 className="card p-6 text-2xl font-black">
-            Acceso de caja suspendido
-          </h1>
+          <section className="card p-6">
+            <h1 className="text-2xl font-black">Acceso de caja suspendido</h1>
+            {currentSession ? <><p className="mt-3">Solo puedes conciliar y cerrar tu sesión existente.</p><a className="btn mt-3" href="/pos/caja">Conciliar y cerrar mi caja</a></> : null}
+          </section>
         ) : (
           <>
             <nav
@@ -427,9 +450,13 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                 >
                   Transacciones
                 </button>
+                <a className="pos-workspace-tab" href="/pos/caja">Caja</a>
               </div>
               <div className="pos-tool-actions"><button className="btn pos-customer-search-action" aria-label="Buscar usuario PIKAS" onClick={()=>{setCode("");setLookupError("");setNotice("");setStep("identity")}}><Search size={18} aria-hidden="true" />Buscar usuario PIKAS</button><PosCalculator /></div>
             </nav>
+            {registerGate.status !== 'ready' && !history && step !== 'completed' ? <div role="status" className="rounded-xl bg-amber-50 p-4"><p className="font-bold">{registerGate.message}</p>{registerGate.status === 'no_open_session' ? <a className="btn mt-3" href="/pos/caja">Abrir caja</a> : null}</div> : null}
+            {!history && step !== 'completed' ? <p role="status" className="rounded-xl bg-white p-3 text-sm">{catalog.message}</p> : null}
+            {!history && cartIssues.length > 0 && step !== 'completed' ? <p role="alert" className="rounded-xl bg-amber-100 p-4">{cartEligibilityMessage(cartIssues)}</p> : null}
             {connection !== "Online" ? (
               <p
                 role="alert"
@@ -601,6 +628,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                               {quickItems.map((i) => (
                                 <button
                                   className="pos-popular-item"
+                                  disabled={!canOperate}
                                   key={i.id}
                                   onClick={() => add(i.id)}
                                 >
@@ -888,6 +916,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                                   <button
                                     className="btn-secondary"
                                     aria-label="Aumentar cantidad"
+                                    disabled={!canOperate || cartIssues.some(item => item.id === line.itemId)}
                                     onClick={() => add(line.itemId)}
                                   >
                                     +
@@ -915,8 +944,10 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                           ) : null}
                           <button
                             className="btn w-full"
-                            disabled={!cart.length}
-                            onClick={() => {
+                            disabled={!cart.length || !canOperate || cartIssues.length > 0}
+                            onClick={async () => {
+                              await retryConnection();
+                              setClock(new Date().toISOString());
                               setStep("payment");
                               setNotice("");
                             }}
@@ -1049,7 +1080,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                           className="btn pos-payment-cta w-full"
                           aria-label="Confirmar venta"
                           disabled={
-                            busy ||
+                            !canOperate || cartIssues.length > 0 || busy ||
                             scopeMissing ||
                             !validation.ok ||
                             connection !== "Online" ||
@@ -1149,7 +1180,7 @@ export function PosDashboard({ demo }: { demo: boolean }) {
                 </p>
                 <button
                   className="btn"
-                  disabled={busy || connection !== "Online"}
+                  disabled={busy || !canOperate}
                 >
                   Confirmar recarga
                 </button>
@@ -1182,11 +1213,11 @@ export function PosDashboard({ demo }: { demo: boolean }) {
         <span>· {demo ? "Demo local" : "POS"}</span>
         {ready && policy.showShiftStart ? (
           <span data-testid="shift-start">
-            · Turno{" "}
-            {new Date(state.shiftStartedAt).toLocaleTimeString("es-DO", {
+            · Sesión{" "}
+            {currentSession ? new Date(currentSession.openedAt).toLocaleTimeString("es-DO", {
               hour: "2-digit",
               minute: "2-digit",
-            })}
+            }) : 'Sin sesión'}
           </span>
         ) : null}
         {policy.showCount ? (

@@ -1,10 +1,11 @@
+import { openDemoRegister } from './helpers';
 import {test,expect,type Page,type BrowserContext} from '@playwright/test';
 import {confirmSale,demoKey,invoke,snapshot} from './helpers';
 async function login(context:BrowserContext,role='parent'){
   const admin=role.endsWith('_admin');
   await context.request.post(admin?'/api/auth/admin-login':'/api/auth/login',{form:admin?{identifier:role==='school_admin'?'admin.escuela@demo.pikas.do':'admin.cafeteria@demo.pikas.do',password:'pikas-demo'}:{role,identifier:role==='student'?'PK-10982':'familia@demo.pikas.do',password:'pikas-demo'}});
 }
-async function pos(page:Page,context:BrowserContext){await login(context,'pos');await page.goto('/pos');await expect(page.getByLabel('Estado de caja').filter({visible:true})).toContainText('Online')}
+async function pos(page:Page,context:BrowserContext){await login(context,'pos');await page.goto('/pos');await expect(page.getByLabel('Estado de caja').filter({visible:true})).toContainText('Online');await openDemoRegister(page)}
 async function identify(page:Page){await page.getByRole('button',{name:'Usuario PIKAS',exact:true}).click();await page.getByLabel('Código estudiantil / NFC').fill('PK-10982');await page.getByRole('button',{name:'Comprobar estudiante'}).click();await expect(page.getByRole('heading',{name:'Sofi',exact:true})).toBeVisible()}
 async function add(page:Page){await page.getByRole('article').filter({hasText:'Pasta con pollo'}).getByRole('button',{name:'Añadir al carrito'}).click()}
 async function seed(page:Page,change:(state:any)=>void){const state=await snapshot(page);change(state);await page.evaluate(({key,state})=>localStorage.setItem(key,JSON.stringify(state)),{key:demoKey,state});await page.reload()}
@@ -43,8 +44,8 @@ test('legacy mutation boundary rejects wrong roles, inactive account, and member
   for(const [name,args] of [['adminUpdateMenu',[{...menu,priceMinor:18500}]],['adminAddMenu',[{...menu,id:'forbidden'}]],['adminUpdateStudent',[{...student,dailyLimit:9999}]],['adminAddStudent',[{...student,code:'PK-99999'}]],['adminAddUser',[before.administration.users[0]]],['adminSetUserStatus',['pos-1','suspended']],['adminSetPartnership',['partner-active','revoked']],['archive',['sofia']],['saveParent',[{name:'bad'}]],['saveBudget',['bad',10]],['resetDemo',[]],['savePosPolicy',[{...before.posPolicy,allowCashierRefunds:true}]]] as Array<[string,unknown[]]>)expect((await invoke(page,name,args)).ok,name).toBe(false);
   expect(await snapshot(page)).toEqual(before);
   await login(context,'cafeteria_admin');await page.goto('/admin/cafeteria/menu');
-  await seed(page,s=>s.administration.memberships.find((m:any)=>m.userId==='ca-1').location='outside');expect((await invoke(page,'adminUpdateMenu',[{...menu,priceMinor:18500}])).ok).toBe(false);
-  await seed(page,s=>{s.administration.memberships.find((m:any)=>m.userId==='ca-1').location='Caja principal';s.administration.users.find((u:any)=>u.id==='ca-1').status='suspended'});expect((await invoke(page,'adminUpdateMenu',[{...menu,priceMinor:18500}])).ok).toBe(false);
+  await seed(page,s=>s.administration.memberships.find((m:any)=>m.userId==='ca-1').authorityScope.locationId='outside');expect((await invoke(page,'adminUpdateMenu',[{...menu,priceMinor:18500}])).ok).toBe(false);
+  await seed(page,s=>{s.administration.memberships.find((m:any)=>m.userId==='ca-1').authorityScope.locationId='principal';s.administration.users.find((u:any)=>u.id==='ca-1').status='suspended'});expect((await invoke(page,'adminUpdateMenu',[{...menu,priceMinor:18500}])).ok).toBe(false);
 });
 
 for(const scopes of [['eligibility'],['eligibility','transactions'],['eligibility','balance'],['eligibility','limits'],['eligibility','restrictions'],['eligibility','balance','limits','restrictions','transactions']])test(`scope projection and checkout boundary: ${scopes.join('+')}`,async({page,context})=>{

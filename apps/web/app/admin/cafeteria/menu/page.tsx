@@ -1,1 +1,2 @@
-import {MenuAdmin} from "@/components/admin-pages";export default function Page(){return <MenuAdmin/>}
+import { redirect } from 'next/navigation';
+export default function Page() { redirect('/admin/cafeteria/productos'); }

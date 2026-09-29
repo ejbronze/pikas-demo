@@ -19,6 +19,7 @@ export type PosPolicy = {
 export const DEFAULT_POS_POLICY: PosPolicy = {showSales:true, showCount:true, showShiftStart:true, showRegister:true, allowCashierRefunds:false, partialRefunds:false, requireReason:true, requireApproval:true, allowParentRefundRequests:false};
 export type FinancialActor = {id:string; name:string; role:'parent'|'student'|'pos_operator'|'cafeteria_admin'|'school_admin'; organizationId:string; locationId:string; registerId:string; active:boolean};
 export type FinancialEvent = {
+  readonly registerSessionId?: string;
   readonly id:string; readonly type:'replenishment'|'refund'|'correction'|'void'; readonly studentId:string|null;
   readonly originalPurchaseId:string|null; readonly amountMinor:number; readonly walletImpactMinor:number; readonly cashImpactMinor:number;
   readonly balanceBeforeMinor:number|null; readonly balanceAfterMinor:number|null;
@@ -50,7 +51,7 @@ export function prepareRefund(input:{purchase:PosPurchaseRecord; events:readonly
   return Object.freeze({id:input.id,type:'refund' as const,studentId:purchase.studentId,originalPurchaseId:purchase.id,amountMinor,walletImpactMinor:wallet?amountMinor:0,cashImpactMinor:wallet?0:-amountMinor,balanceBeforeMinor:input.balanceMinor,balanceAfterMinor:input.balanceMinor===null?null:input.balanceMinor+(wallet?amountMinor:0),destination:wallet?'wallet' as const:'cash' as const,reason:input.reason.trim(),actorId:actor.id,actorName:actor.name,approvedBy:actor.role==='cafeteria_admin'?actor.id:null,approvedByName:actor.role==='cafeteria_admin'?actor.name:null,organizationId:actor.organizationId,locationId:actor.locationId,registerId:actor.registerId,createdAt:input.now,idempotencyKey:input.key});
 }
 export function quickAccess(menu:PosMenuItemRecord[], purchases:readonly PosPurchaseRecord[], student:PosStudentRecord|undefined, organizationId:string, locationId:string, now:string) {
-  const eligible=menu.filter(item=>item.available&&(!student||validateCashPurchase({...student,dailyLimitMinor:Number.MAX_SAFE_INTEGER,perTransactionLimitMinor:Number.MAX_SAFE_INTEGER,spentTodayMinor:0},[item],[{itemId:item.id,quantity:1}]).ok));
+  const eligible=menu.filter(item=>item.active!==false&&item.available&&(!student||validateCashPurchase({...student,dailyLimitMinor:Number.MAX_SAFE_INTEGER,perTransactionLimitMinor:Number.MAX_SAFE_INTEGER,spentTodayMinor:0},[item],[{itemId:item.id,quantity:1}]).ok));
   const eligibleIds=new Set(eligible.map(p=>p.id));
   const rank=(days:number,customer?:string)=>{
     const counts=new Map<string,number>();

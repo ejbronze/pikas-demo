@@ -29,3 +29,10 @@ export async function invoke(page:Page,name:string,args:unknown[]=[]){
     throw new Error('Mounted demo adapter not found');
   },{name,args});
 }
+
+// Sale journeys explicitly open the drawer through its authorized mutation; no gate bypass or seeded session.
+export async function openDemoRegister(page:Page){
+  const state=await snapshot(page);
+  if(!state.registerSessions?.some((s:{status:string;cashierId:string})=>s.status==='open'&&s.cashierId==='pos-1'))
+    expect((await invoke(page,'openRegister',[0,`test-opening-${Date.now()}`])).ok).toBe(true);
+}

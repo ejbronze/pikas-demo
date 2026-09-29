@@ -1,4 +1,5 @@
 "use client";
+import { flushSync } from "react-dom";
 import { useState } from "react";
 import {
   businessDay,
@@ -18,7 +19,7 @@ export const purchaseStatus = (
   events: readonly FinancialEvent[],
 ): PurchaseStatus => {
   const refunded = refundedMinor(purchase.id, events);
-  return refunded >= purchase.totalMinor
+  return refunded > 0 && refunded >= purchase.totalMinor
     ? "Reembolsada"
     : refunded > 0
       ? "Reembolso parcial"
@@ -97,7 +98,8 @@ export function PurchaseDetail({
   purchase: PosPurchaseRecord;
   admin?: boolean;
 }) {
-  const { state, refundPos, connection } = useDemo();
+  const { state, refundPos, reprintReceipt, connection } = useDemo();
+  const [copy, setCopy] = useState(false);
   const [amount, setAmount] = useState(""),
     [reason, setReason] = useState(""),
     [notice, setNotice] = useState(""),
@@ -122,6 +124,7 @@ export function PurchaseDetail({
       <div className="border-b pb-3">
         <p className="label">PIKAS · Cafetería PIKAS Central</p>
         <h2 className="mt-1 text-2xl font-black">Venta completada</h2>
+        {copy ? <p className="mt-2 font-black">COPIA / REIMPRESIÓN</p> : null}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span
             className={`pos-receipt-status pos-receipt-status-${status === "Completada" ? "complete" : status === "Reembolso parcial" ? "partial" : "refunded"}`}
@@ -234,9 +237,13 @@ export function PurchaseDetail({
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2 pos-receipt-actions">
-        <button className="btn" onClick={() => printReceipt("sale")}>
-          {status === "Completada" ? "Imprimir recibo" : "Reimprimir recibo"}
-        </button>
+        <button className="btn" disabled={busy || connection !== 'Online'} onClick={async () => {
+          setBusy(true); setNotice('');
+          const result = await reprintReceipt(purchase.id, crypto.randomUUID());
+          if (result.ok) { flushSync(() => setCopy(true)); printReceipt('sale'); }
+          else setNotice(result.message);
+          setBusy(false);
+        }}>Reimprimir recibo</button>
         {!allowed && remaining > 0 ? (
           <p className="pos-policy-notice">
             {state.posPolicy.requireApproval
