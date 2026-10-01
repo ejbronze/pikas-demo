@@ -150,7 +150,7 @@ La base local aprobada comienza en `supabase/migrations/202609300001_foundation.
 
 - Demo ficticio del mismo navegador/origen; no autentica identidades reales ni sincroniza fondos entre dispositivos.
 - Operaciones financieras 0.6 funcionan localmente. RPCs/ledger/refunds remotos, auditoría durable y concurrencia PostgreSQL requieren implementación/pruebas antes de habilitarse.
-- La migración local no fue aplicada ni ejecutada en una base de datos. Incluye un cambio de alcance que exige reconciliar compras históricas sin organización/ubicación.
+- Las migraciones locales de fundación y Fase 2 se aplicaron y verificaron en el entorno local. La reconciliación de compras históricas sin organización/ubicación y el backend financiero siguen pendientes.
 - Reembolsos parciales son por importe; asignación de artículos devueltos, cola de aprobación, correcciones administrativas y solicitudes familiares quedan pendientes.
 - QR visual, CSV escolar demostrativo, pagos reales e invitaciones/correo no completos.
 - La conciliación mantiene fondo inicial cero y conteo manual; apertura/cierre durable de turnos es posterior.

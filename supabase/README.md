@@ -1,12 +1,12 @@
 # PIKAS local database foundation
 
-Phase 1 implements the approved tenant, identity, membership and administrative audit foundation only. It does not connect the application or modify a remote Supabase project.
+Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2 adds school-owned student/family/staff identities and a privacy-filtered cafeteria customer projection. Neither phase connects the application or modifies a remote Supabase project.
 
 ## Baseline and legacy isolation
 
-`migrations/202609300001_foundation.sql` is baseline 001. It is the **only active migration** in this phase.
+`migrations/202609300001_foundation.sql` is baseline 001. `migrations/202610010001_people_families_customers.sql` is the additive Phase 2 migration. These are the only active migrations.
 
-All eight former migrations, from `202608110001_unified_pikas.sql` through `202609210001_pos_financial_foundation.sql`, and the former `seed.sql` are preserved byte-for-byte under `legacy/`. They model the previous architecture and must not be applied before, after, or together with baseline 001. They were moved because the CLI automatically scans `supabase/migrations/`; leaving them there would silently build an incompatible schema. Git history also retains their original locations.
+All eight former migrations, from `202608110001_unified_pikas.sql` through `202609210001_pos_financial_foundation.sql`, and the former `seed.sql` are preserved byte-for-byte under `legacy/`. They model the previous architecture and must not be applied before, after, or together with either active migration. They were moved because the CLI automatically scans `supabase/migrations/`; leaving them there would silently build an incompatible schema. Git history also retains their original locations.
 
 The CLI scans only the active migrations directory. `config.toml` selects only `fixtures/foundation.sql` for local seeding; it cannot pick up the archived seed. Existing historical docs and `scripts/seed-supabase-auth.mjs` describe the legacy architecture, not this foundation. Do not run that auth seeder against the foundation.
 
@@ -27,7 +27,7 @@ scripts/db-foundation.sh lint
 
 `start` initializes the isolated `pikas-foundation` database on port 55432. Only the database is started; Auth/API/Studio/Storage and other application services are intentionally excluded. Supabase's local database image supplies the managed `auth` schema and database roles needed by the tests. This phase tests database identity/authorization, not HTTP sign-in.
 
-`reset` destroys and rebuilds **this local database**, applying only the new baseline and synthetic fixtures. `test` runs the focused pgTAP suite transactionally and rolls its adversarial mutations back. `lint` checks both foundation schemas and fails on warnings. `stop` stops this local project; no delete-all option is used.
+`reset` destroys and rebuilds **this local database**, applying the Phase 1 baseline, Phase 2 migration and synthetic fixtures in order. `test` runs both pgTAP suites transactionally and rolls their adversarial mutations back. `lint` checks both application schemas and fails on warnings. `stop` stops this local project; no delete-all option is used.
 
 The wrapper accepts one allowlisted action and rejects extra flags. It never accepts `--linked`, `--db-url`, `push`, or `link`. No application environment file is changed. The local configuration does not identify a remote project. Ordinary Supabase commands remain powerful: do not independently link/push/reset a remote project as part of this phase.
 
@@ -44,15 +44,30 @@ The main CLI is required for `start`; the packaged `supabase-go` compatibility e
 - `invitations` has exactly one effective scope with matching ancestry and role, normalized intended email, inviter, expiry, lifecycle and accepted-person evidence. Store only the SHA-256 hash of a high-entropy random token, never the original token. Expired pending rows grant no rights; a future acceptance writer must check current time and verified identity, not status alone.
 - Private, fixed role/capability tables are seeded by migration. There is no editable RBAC API or platform-staff role.
 
+## Phase 2 people and cafeteria identity
+
+- `students` are school-scoped identity records linked to `persons`; they have no wallet or financial fields. Student codes are normalized and unique within a school.
+- `student_enrollments` preserve enrollment episodes. `student_campus_placements` preserve effective-dated campus/grade/class placement; campus transfer closes one placement and opens another without changing student identity. Enrollment and placement periods cannot overlap.
+- `families` are school-scoped, campus-independent household groupings. `family_student_relationships` allow multiple active families per student and enforce at most one active primary family. Primary is not custody or authority.
+- Family and student guardian links point to `persons` and store relationship labels and lifecycle only. They do not grant login or application authority. School contact methods are stored separately and scoped to a school/person.
+- `school_staff_affiliations` and `staff_campus_affiliations` are not authorization memberships. Staff status grants no PIKAS access.
+- Dietary restrictions are minimal, school-owned student records. They are never stored on persons, families, or cafeteria customers.
+- `school_cafeteria_shares` and category rows are exact-cafeteria, school-controlled and deny by default. Categories are basic identification, student code, placement, and dietary restrictions.
+- `cafeteria_customers` are explicit cafeteria-scoped links to one student or staff affiliation. They do not copy names, family data, or balances. General/unidentified sales need no customer row.
+- School Admin capabilities permit scoped school reads and writes through narrow security-definer RPCs. Direct authenticated table writes remain revoked and there are no write RLS policies.
+- `create_school_person` permits a school-authorized student/guardian/staff workflow to establish a business identity without Auth; the identity must still be linked through the corresponding domain relationship. Lifecycle RPCs close relationships and affiliations rather than deleting history.
+- Cafeteria roles receive no broad student/family/guardian/contact table access. `cafeteria_customer_projection(cafeteria_id, query)` derives the caller's current cafeteria authority and returns only explicitly shared categories for that exact cafeteria. The reserved POS role gains only this lookup capability.
+- Phase 2 mutation triggers add scoped administrative audit in the same transaction. Audit metadata excludes names, contact values, and restriction payloads. School-initiated changes remain school-scoped even when they configure a cafeteria.
+
 ## Authorization boundary
 
 Verified `auth.uid()` maps to an active person. Helpers query **current** active membership and active account/school/campus/cafeteria ancestry. User metadata, email, caller-selected role labels and invitations grant no authority.
 
 Account Admin can read its account and descendant **structural metadata**, account memberships, account invitations and account-level audit. It does not inherit school/cafeteria membership administration, their audit feeds, or future student/POS access.
 
-School Admin can read structural metadata across all campuses and cafeterias of its own school, plus school memberships, invitations and school-level audit. Cafeteria Admin can read its explicitly assigned cafeteria and that cafeteria's parent campus metadata, memberships and cafeteria-level invitations/audit. Parent-campus visibility never grants school authority or sibling-cafeteria access, even on the same campus. Independent assignments to multiple cafeterias are supported; no campus-admin role exists. Neither peer role becomes the other. The reserved `pos_operator` membership grants no capabilities yet.
+School Admin can read structural metadata across all campuses and cafeterias of its own school, plus school memberships, invitations and school-level audit. Cafeteria Admin can read its explicitly assigned cafeteria and that cafeteria's parent campus metadata, memberships and cafeteria-level invitations/audit. Parent-campus visibility never grants school authority or sibling-cafeteria access, even on the same campus. Independent assignments to multiple cafeterias are supported; no campus-admin role exists. Neither peer role becomes the other. The reserved `pos_operator` membership grants only `cafeteria:customer:lookup`, not base-table or write access.
 
-People can read only their own active person record. Membership holders can see their own membership state within active tenant ancestry, including a suspended membership; this is not operational authority. Suspended/inactive persons cannot use any membership. Tenant deactivation makes its operational reads fail closed without editing descendants. Controlled historical access and exceptional operational reconciliation are later domain work.
+People can read their own person record. School Admins can also read person identity only when linked to a record in their authorized school; unrelated schools remain isolated. Membership holders can see their own membership state within active tenant ancestry, including a suspended membership; this is not operational authority. Suspended/inactive persons cannot use any membership. Tenant deactivation makes its operational reads fail closed without editing descendants. Guardian relationships and staff affiliations do not grant authority.
 
 RLS is enabled on every foundation table, including the private role catalog. Client grants are explicit; private authorization helpers have an empty search path and only required execution grants. Invitation column grants exclude the token hash. The private schema is not exposed by the Data API.
 
@@ -73,11 +88,12 @@ Automatic metadata deliberately excludes names, email addresses, Auth linkage va
 - Account A: school A1 has campuses A1-L1/A1-L2 with cafeterias A1-C1/A1-C2; school A2 has its own campus/cafeteria.
 - Account B: school B1 with its own campus/cafeteria.
 - Account administrator, separate school/cafeteria administrators, a multi-school person, a separate person explicitly assigned to both A1 cafeterias, a reserved POS membership, an existing identity with only a pending invitation, a suspended person, and an identity used for Auth-deletion tests.
+- Phase 2 students with campus placement/transfer history, siblings at different campuses, multiple family links, guardians, a staff affiliation, a restriction, student and staff cafeteria customers, and sharing enabled only for one cafeteria.
 
-Auth fixture rows have no usable password and exist to simulate verified database subjects in tests. The pending invitation does not create an Auth identity or membership as a side effect. No real records, secrets, students, balances or financial history are seeded.
+Auth fixture rows have no usable password and exist to simulate verified database subjects in tests. The pending invitation does not create an Auth identity or membership as a side effect. No real records, secrets, balances or financial history are seeded.
 
 Tests switch into actual `authenticated` and `anon` database roles and assert both allowed reads and denied operations. They cover isolation, lifecycle revocation, role escalation, immutable scope, FK forgery, invitation secrecy, Auth removal/unlinking, audit separation/immutability, and RLS denial even when mutation grants are temporarily broadened inside the rolled-back test transaction.
 
-Campus review also tests mismatched campus ancestry, immutable cafeteria campus assignment, normalized campus/cafeteria codes, cross-campus isolation, explicit multi-cafeteria assignments, and campus deactivation. Campus changes produce school-scoped audit evidence; cafeteria audit remains cafeteria-scoped.
+Campus and Phase 2 tests cover ancestry, immutable tenant identity, enrollment/placement periods, transfers, family and guardian relationships, staff affiliation, privacy, sharing categories, customer resolution, and audit. Explicit cafeteria memberships remain independent; sharing one cafeteria never implies access to its sibling.
 
-No later domain or application cutover is included. Local reset/testing success is not remote deployment or production-readiness certification.
+Financial accounts, purchases, the POS/catalog domains, guardian authority, and application cutover remain out of scope. Local reset/testing success is not remote deployment or production-readiness certification.
