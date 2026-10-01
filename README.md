@@ -144,7 +144,7 @@ Playwright cubre escritorio y móvil para Familia, Estudiante, POS y Administrac
 
 `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` conserva el demo público ficticio y su persistencia en el navegador. Con `false`, URL y anon key de Supabase son obligatorias: Auth conserva la sesión mediante cookies, valida el usuario en servidor y dirige `school_admin`, `cafeteria_admin` y `pos_operator` a sus espacios. El catálogo compartido se lee de Supabase y solo una membresía activa de cafetería puede editarlo.
 
-Para desarrollo: aplique las migraciones y `supabase/seed.sql` a un proyecto no productivo, configure `PIKAS_DEMO_PASSWORD` localmente y ejecute `npm run seed:supabase-auth`. La service-role key es exclusivamente de servidor. No se cambió producción ni se afirma preparación productiva.
+La base local aprobada comienza en `supabase/migrations/202609300001_foundation.sql`. Consulte [la guía de la fundación Supabase](supabase/README.md) para inicializar, reconstruir y verificar la base local. Las migraciones y semillas anteriores están archivadas en `supabase/legacy/` y no deben combinarse con la nueva base. El comando histórico `seed:supabase-auth` no corresponde a esta fundación. La aplicación demo permanece sin conectar a ella; no se cambió el proyecto remoto ni se afirma preparación productiva.
 
 ## Limitaciones actuales
 
