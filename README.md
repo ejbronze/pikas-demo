@@ -14,7 +14,7 @@ PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**.
 - Política de pantalla/refund en `/admin/cafeteria/configuracion`. Reembolsos de caja OFF por defecto.
 - Refund completo/parcial por importe, vinculado al original, atribuido y visible para la familia.
 - Web Locks, idempotencia, revalidación y bloqueo sin estado financiero confirmado.
-- Esquema financiero local preparado; no aplicado a Supabase ni declarado productivo.
+- Fase 3A añade wallets DOP, recargas manuales verificadas y ajustes auditables solo en la base local; no incluye compras, reembolsos, POS financiero ni integracion productiva.
 
 La rama predeterminada auditada es `Pikas_demo`, con 0.6.0 en `37e6c07`; `main` permanece en la línea 0.5.3 (`03b2971`). Este refinamiento 0.6.5 es local y no implica un despliegue.
 
@@ -149,8 +149,8 @@ La base local aprobada comienza en `supabase/migrations/202609300001_foundation.
 ## Limitaciones actuales
 
 - Demo ficticio del mismo navegador/origen; no autentica identidades reales ni sincroniza fondos entre dispositivos.
-- Operaciones financieras 0.6 funcionan localmente. RPCs/ledger/refunds remotos, auditoría durable y concurrencia PostgreSQL requieren implementación/pruebas antes de habilitarse.
-- Las migraciones locales de fundación y Fase 2 se aplicaron y verificaron en el entorno local. La reconciliación de compras históricas sin organización/ubicación y el backend financiero siguen pendientes.
+- Operaciones financieras del demo 0.6 siguen en localStorage. Fase 3A añade wallets/ledger y RPCs solo a la base local; POS, compras, reembolsos, auditoría productiva y conexión de la aplicación siguen pendientes.
+- Las migraciones locales de fundación, Fase 2 y Fase 3A se aplicaron y verificaron en el entorno local. La reconciliación de compras históricas sin organización/ubicación y el backend de compras/reembolsos siguen pendientes.
 - Reembolsos parciales son por importe; asignación de artículos devueltos, cola de aprobación, correcciones administrativas y solicitudes familiares quedan pendientes.
 - QR visual, CSV escolar demostrativo, pagos reales e invitaciones/correo no completos.
 - La conciliación mantiene fondo inicial cero y conteo manual; apertura/cierre durable de turnos es posterior.
