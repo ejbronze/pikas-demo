@@ -15,6 +15,7 @@ PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**.
 - Refund completo/parcial por importe, vinculado al original, atribuido y visible para la familia.
 - Web Locks, idempotencia, revalidación y bloqueo sin estado financiero confirmado.
 - Fase 3A añade wallets DOP, recargas manuales verificadas y ajustes auditables solo en la base local; no incluye compras, reembolsos, POS financiero ni integracion productiva.
+- Fase 4A añade configuración, categorías y productos de catálogo con autorización/auditoría solo en la base local; no incluye menús, turnos, caja, compras ni conexión de la aplicación.
 
 La rama predeterminada auditada es `Pikas_demo`, con 0.6.0 en `37e6c07`; `main` permanece en la línea 0.5.3 (`03b2971`). Este refinamiento 0.6.5 es local y no implica un despliegue.
 
@@ -144,13 +145,13 @@ Playwright cubre escritorio y móvil para Familia, Estudiante, POS y Administrac
 
 `NEXT_PUBLIC_PIKAS_DEMO_MODE=true` conserva el demo público ficticio y su persistencia en el navegador. Con `false`, URL y anon key de Supabase son obligatorias: Auth conserva la sesión mediante cookies, valida el usuario en servidor y dirige `school_admin`, `cafeteria_admin` y `pos_operator` a sus espacios. El catálogo compartido se lee de Supabase y solo una membresía activa de cafetería puede editarlo.
 
-La base local aprobada comienza en `supabase/migrations/202609300001_foundation.sql`. Consulte [la guía de la fundación Supabase](supabase/README.md) para inicializar, reconstruir y verificar la base local. Las migraciones y semillas anteriores están archivadas en `supabase/legacy/` y no deben combinarse con la nueva base. El comando histórico `seed:supabase-auth` no corresponde a esta fundación. La aplicación demo permanece sin conectar a ella; no se cambió el proyecto remoto ni se afirma preparación productiva.
+La base local aprobada incluye las fases 1, 2, 3A y 4A, y comienza en `supabase/migrations/202609300001_foundation.sql`. Consulte [la guía de la fundación Supabase](supabase/README.md) para inicializar, reconstruir y verificar la base local. Las migraciones y semillas anteriores están archivadas en `supabase/legacy/` y no deben combinarse con la nueva base. El comando histórico `seed:supabase-auth` no corresponde a esta fundación. La aplicación demo permanece sin conectar a ella; no se cambió el proyecto remoto ni se afirma preparación productiva.
 
 ## Limitaciones actuales
 
 - Demo ficticio del mismo navegador/origen; no autentica identidades reales ni sincroniza fondos entre dispositivos.
 - Operaciones financieras del demo 0.6 siguen en localStorage. Fase 3A añade wallets/ledger y RPCs solo a la base local; POS, compras, reembolsos, auditoría productiva y conexión de la aplicación siguen pendientes.
-- Las migraciones locales de fundación, Fase 2 y Fase 3A se aplicaron y verificaron en el entorno local. La reconciliación de compras históricas sin organización/ubicación y el backend de compras/reembolsos siguen pendientes.
+- Las migraciones locales de fundación, Fase 2, Fase 3A y Fase 4A se aplican y verifican en el entorno local. La reconciliación de compras históricas sin organización/ubicación y el backend de compras/reembolsos siguen pendientes.
 - Reembolsos parciales son por importe; asignación de artículos devueltos, cola de aprobación, correcciones administrativas y solicitudes familiares quedan pendientes.
 - QR visual, CSV escolar demostrativo, pagos reales e invitaciones/correo no completos.
 - La conciliación mantiene fondo inicial cero y conteo manual; apertura/cierre durable de turnos es posterior.

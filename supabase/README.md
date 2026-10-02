@@ -1,10 +1,10 @@
 # PIKAS local database foundation
 
-Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2 adds school-owned student/family/staff identities and a privacy-filtered cafeteria customer projection. Phase 3A adds DOP student wallets, immutable wallet ledger entries, manually verified replenishments and explicit adjustments. These phases do not connect the application or modify a remote Supabase project.
+Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2 adds school-owned student/family/staff identities and a privacy-filtered cafeteria customer projection. Phase 3A adds DOP student wallets, immutable wallet ledger entries, manually verified replenishments and explicit adjustments. Phase 4A adds cafeteria catalog settings, categories and products. These phases do not connect the application or modify a remote Supabase project.
 
 ## Baseline and legacy isolation
 
-`migrations/202609300001_foundation.sql` is baseline 001. `migrations/202610010001_people_families_customers.sql` adds Phase 2. `migrations/202610010002_student_wallet_ledger.sql` adds Phase 3A. These are the only active migrations.
+`migrations/202609300001_foundation.sql` is baseline 001. `migrations/202610010001_people_families_customers.sql` adds Phase 2. `migrations/202610010002_student_wallet_ledger.sql` adds Phase 3A. `migrations/202610010003_cafeteria_catalog_foundation.sql` adds Phase 4A. These are the only active migrations.
 
 All eight former migrations, from `202608110001_unified_pikas.sql` through `202609210001_pos_financial_foundation.sql`, and the former `seed.sql` are preserved byte-for-byte under `legacy/`. They model the previous architecture and must not be applied before, after, or together with either active migration. They were moved because the CLI automatically scans `supabase/migrations/`; leaving them there would silently build an incompatible schema. Git history also retains their original locations.
 
@@ -27,7 +27,7 @@ scripts/db-foundation.sh lint
 
 `start` initializes the isolated `pikas-foundation` database on port 55432. Only the database is started; Auth/API/Studio/Storage and other application services are intentionally excluded. Supabase's local database image supplies the managed `auth` schema and database roles needed by the tests. This phase tests database identity/authorization, not HTTP sign-in.
 
-`reset` destroys and rebuilds **this local database**, applying Phase 1, Phase 2, Phase 3A and synthetic fixtures in order. `test` runs all three pgTAP suites transactionally and rolls their adversarial mutations back. `lint` checks both application schemas and fails on warnings. `stop` stops this local project; no delete-all option is used.
+`reset` destroys and rebuilds **this local database**, applying Phase 1, Phase 2, Phase 3A, Phase 4A and synthetic fixtures in order. `test` runs all four pgTAP suites transactionally and rolls their adversarial mutations back. `lint` checks both application schemas and fails on warnings. `stop` stops this local project; no delete-all option is used.
 
 The wrapper accepts one allowlisted action and rejects extra flags. It never accepts `--linked`, `--db-url`, `push`, or `link`. No application environment file is changed. The local configuration does not identify a remote project. Ordinary Supabase commands remain powerful: do not independently link/push/reset a remote project as part of this phase.
 
@@ -71,6 +71,14 @@ The main CLI is required for `start`; the packaged `supabase-go` compatibility e
 - Wallets, replenishments, adjustments, and ledger have RLS. School Admins receive school-scoped reads; Cafeteria Admins receive only the narrow replenishment RPC; account admins, POS, staff, guardians, and service_role receive no financial access by implication.
 - Purchases, wallet debits, refunds, daily limits, providers/webhooks, cash tender, staff credit, registers/sessions, fulfillment, and application cutover are not part of Phase 3A.
 
+## Phase 4A cafeteria catalog
+
+- `cafeteria_operation_settings` creates exactly one row per cafeteria, defaults to enabled DOP and manual operation, and keeps currency immutable in this phase. Product prices are integer minor units interpreted through the cafeteria's catalog currency.
+- Cafeteria-scoped categories have normalized unique labels, ordering, active/archive lifecycle and optimistic versions. Products have optional same-cafeteria categories, integer nonnegative prices, bounded ingredient/allergen metadata, optimistic versions, and distinct `active` and `available` states. Zero-price and uncategorized products are valid.
+- Cafeteria Admin catalog capabilities are explicit; scoped read RLS is paired with narrow SECURITY DEFINER mutation RPCs, immutable tenant identity, stale-version checks and same-transaction audit. Direct authenticated mutations remain revoked with no write policies. Account Admin, School Admin, POS, anonymous and service roles receive no catalog authority by implication.
+- Synthetic fixtures cover same-name categories in separate cafeterias, active/available and unavailable products, an inactive product, and zero-price/uncategorized cases. Tests include cross-cafeteria access, authorization denial, direct-write denial despite broadened grants, lifecycle/version behavior and audit.
+- Scheduling is a configuration flag only. Menus, schedules, stock, employees, shifts, registers/sessions, purchases, fulfillment, POS integration and application cutover are not part of Phase 4A.
+
 ## Authorization boundary
 
 Verified `auth.uid()` maps to an active person. Helpers query **current** active membership and active account/school/campus/cafeteria ancestry. User metadata, email, caller-selected role labels and invitations grant no authority.
@@ -102,10 +110,10 @@ Automatic metadata deliberately excludes names, email addresses, Auth linkage va
 - Account administrator, separate school/cafeteria administrators, a multi-school person, a separate person explicitly assigned to both A1 cafeterias, a reserved POS membership, an existing identity with only a pending invitation, a suspended person, and an identity used for Auth-deletion tests.
 - Phase 2 students with campus placement/transfer history, siblings at different campuses, multiple family links, guardians, a staff affiliation, a restriction, student and staff cafeteria customers, and sharing enabled only for one cafeteria.
 
-Auth fixture rows have no usable password and exist to simulate verified database subjects in tests. The pending invitation does not create an Auth identity or membership as a side effect. Phase 3A adds only zero-balance synthetic student wallets; no real records, secrets, funded balances or financial history are seeded.
+Auth fixture rows have no usable password and exist to simulate verified database subjects in tests. The pending invitation does not create an Auth identity or membership as a side effect. Phase 3A adds only zero-balance synthetic student wallets; Phase 4A adds only synthetic catalog rows. No real records, secrets, funded balances or financial history are seeded.
 
 Tests switch into actual `authenticated` and `anon` database roles and assert both allowed reads and denied operations. They cover isolation, lifecycle revocation, role escalation, immutable scope, FK forgery, invitation secrecy, Auth removal/unlinking, audit separation/immutability, and RLS denial even when mutation grants are temporarily broadened inside the rolled-back test transaction.
 
-Campus, Phase 2, and Phase 3A tests cover ancestry, lifecycle, enrollment/placement history, family/guardian/staff relationships, exact cafeteria privacy, DOP wallet constraints, manual funding, adjustment authorization, idempotency, immutable ledger entries, reconciliation, Auth unlinking, and audit. pgTAP exercises transactions sequentially; independent-session concurrency stress remains required before financial production cutover. Explicit cafeteria memberships remain independent; sharing one cafeteria never implies access to its sibling.
+Campus, Phase 2, Phase 3A and Phase 4A tests cover ancestry, lifecycle, enrollment/placement history, family/guardian/staff relationships, exact cafeteria privacy, DOP wallet constraints, manual funding, adjustment authorization, idempotency, immutable ledger entries, reconciliation, catalog lifecycle, authorization, Auth unlinking and audit. pgTAP exercises transactions sequentially; independent-session concurrency stress remains required before financial production cutover. Explicit cafeteria memberships remain independent; sharing one cafeteria never implies access to its sibling.
 
-Student prepaid wallets and their Phase 3A ledger are implemented locally. Purchases/debits, refunds, daily spending limits, payment providers, staff receivables, POS/catalog domains, guardian financial authority, and application cutover remain out of scope. Local reset/testing success is not remote deployment or production-readiness certification.
+Student prepaid wallets and their Phase 3A ledger, plus the Phase 4A catalog foundation, are implemented locally. Purchases/debits, refunds, daily spending limits, payment providers, staff receivables, menus/schedules, registers/sessions, guardian financial authority, and application cutover remain out of scope. Local reset/testing success is not remote deployment or production-readiness certification.
