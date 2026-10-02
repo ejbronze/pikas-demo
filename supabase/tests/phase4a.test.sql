@@ -4,8 +4,8 @@ set search_path=public,extensions;
 select no_plan();
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),32::bigint,
-  'RLS remains enabled on all Phase 1 through Phase 4A public tables');
+  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),36::bigint,
+  'RLS remains enabled on all Phase 1 through Phase 4B public tables');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'No Phase 4A write RLS policies exist');
 select is((select data_type from information_schema.columns where table_schema='public'
