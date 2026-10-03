@@ -4,8 +4,8 @@ set search_path = public, extensions;
 select no_plan();
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),36::bigint,
-  'RLS is enabled on all Phase 1 through Phase 4B public tables');
+  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),39::bigint,
+  'RLS is enabled on all Phase 1 through Phase 4C public tables');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'No direct table mutation policies are defined');
 select ok(not has_table_privilege('authenticated','public.students','INSERT') and
@@ -16,8 +16,8 @@ select ok(not has_table_privilege('anon','public.students','SELECT') and
   not has_table_privilege('service_role','public.students','SELECT') and
   not has_table_privilege('service_role','public.school_person_contacts','SELECT'),
   'Anonymous and service roles have no Phase 2 base-table read grants');
-select ok((select count(*)=2 from pikas_private.role_capabilities where capability='cafeteria:customer:lookup'),
-  'Only cafeteria admin and POS roles receive customer lookup capability');
+select ok((select count(*)=4 from pikas_private.role_capabilities where capability='cafeteria:customer:lookup'),
+  'Only cafeteria admin and authorized POS roles receive customer lookup capability');
 select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname in ('public','pikas_private') and p.prosecdef
     and not ('search_path=""'=any(p.proconfig))),0::bigint,

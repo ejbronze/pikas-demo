@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 select no_plan();
-select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relrowsecurity), 36::bigint, 'RLS enabled on all Phase 1 through Phase 4B public tables');
+select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relrowsecurity), 39::bigint, 'RLS enabled on all Phase 1 through Phase 4C public tables');
 select is((select count(*) from pg_policies where schemaname='public' and cmd <> 'SELECT'), 0::bigint, 'No application write policies exist');
 select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pikas_private' and p.prosecdef and not ('search_path=""'=any(p.proconfig))), 0::bigint, 'Definer helpers pin an empty search path');
 select is((select count(*) from pikas_private.role_capabilities where role_code='pos_operator'), 1::bigint, 'POS role has only the narrowly scoped customer lookup capability');
