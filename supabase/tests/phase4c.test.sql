@@ -7,7 +7,7 @@ create temp table phase4c_state(test_key text primary key,test_value text not nu
 grant select,insert,update,delete on phase4c_state to authenticated;
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),53::bigint,
+  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),54::bigint,
   'RLS is enabled on all Phase 1 through Phase 4C public tables');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'Phase 4C adds no direct-write RLS policy');

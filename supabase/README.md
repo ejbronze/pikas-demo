@@ -1,10 +1,10 @@
 # PIKAS local database foundation
 
-Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2 adds school-owned student/family/staff identities and a privacy-filtered cafeteria customer projection. Phase 3A adds DOP student wallets, immutable wallet ledger entries, manually verified replenishments and explicit adjustments. Phase 4A adds cafeteria catalog settings, categories and products. Phase 4B adds cafeteria menus, service scheduling and authoritative catalog saleability. These phases do not connect the application or modify a remote Supabase project.
+Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2 adds school-owned student/family/staff identities and a privacy-filtered cafeteria customer projection. Phase 3A adds DOP student wallets, immutable wallet ledger entries, manually verified replenishments and explicit adjustments. Phase 4A adds cafeteria catalog settings, categories and products. Phase 4B adds cafeteria menus, service scheduling and authoritative catalog saleability. Phase 3B adds authoritative purchase checkout, Phase 3C adds refunds, Phase 4C adds durable register sessions, and Phase 5B adds authoritative receipt-print jobs. These phases do not connect the application or modify a remote Supabase project.
 
 ## Baseline and legacy isolation
 
-`migrations/202609300001_foundation.sql` is baseline 001. `migrations/202610010001_people_families_customers.sql` adds Phase 2. `migrations/202610010002_student_wallet_ledger.sql` adds Phase 3A. `migrations/202610010003_cafeteria_catalog_foundation.sql` adds Phase 4A. `migrations/202610010004_cafeteria_menus_scheduling_saleability.sql` adds Phase 4B. `migrations/202610030001_pos_register_sessions.sql` adds Phase 4C. `migrations/202610040001_purchase_checkout_foundation.sql` adds Phase 3B. These seven are the only active migrations.
+`migrations/202609300001_foundation.sql` is baseline 001. `migrations/202610010001_people_families_customers.sql` adds Phase 2. `migrations/202610010002_student_wallet_ledger.sql` adds Phase 3A. `migrations/202610010003_cafeteria_catalog_foundation.sql` adds Phase 4A. `migrations/202610010004_cafeteria_menus_scheduling_saleability.sql` adds Phase 4B. `migrations/202610030001_pos_register_sessions.sql` adds Phase 4C. `migrations/202610040001_purchase_checkout_foundation.sql` adds Phase 3B. `migrations/202610050001_purchase_refunds.sql` adds Phase 3C. `migrations/202610060001_receipt_printing.sql` adds Phase 5B. These nine are the only active migrations.
 
 All eight former migrations, from `202608110001_unified_pikas.sql` through `202609210001_pos_financial_foundation.sql`, and the former `seed.sql` are preserved byte-for-byte under `legacy/`. They model the previous architecture and must not be applied before, after, or together with either active migration. They were moved because the CLI automatically scans `supabase/migrations/`; leaving them there would silently build an incompatible schema. Git history also retains their original locations.
 
@@ -27,7 +27,7 @@ scripts/db-foundation.sh lint
 
 `start` initializes the isolated `pikas-foundation` database on port 55432. Only the database is started; Auth/API/Studio/Storage and other application services are intentionally excluded. Supabase's local database image supplies the managed `auth` schema and database roles needed by the tests. This phase tests database identity/authorization, not HTTP sign-in.
 
-`reset` destroys and rebuilds **this local database**, applying Phase 1, Phase 2, Phase 3A, Phase 4A, Phase 4B, Phase 4C, Phase 3B and synthetic fixtures in order. `test` runs all seven pgTAP suites transactionally and rolls their adversarial mutations back. `lint` checks both application schemas and fails on warnings. `stop` stops this local project; no delete-all option is used.
+`reset` destroys and rebuilds **this local database**, applying active migrations and synthetic fixtures in order. `test` runs all ten pgTAP suites transactionally and rolls their adversarial mutations back. `lint` checks both application schemas and fails on warnings. `stop` stops this local project; no delete-all option is used.
 
 The wrapper accepts one allowlisted action and rejects extra flags. It never accepts `--linked`, `--db-url`, `push`, or `link`. No application environment file is changed. The local configuration does not identify a remote project. Ordinary Supabase commands remain powerful: do not independently link/push/reset a remote project as part of this phase.
 
@@ -272,3 +272,38 @@ stale after the matching refund commits. A fresh approval issued afterward can
 authorize a later identical partial refund. This reference is financial history,
 not a transport request key, reservation, or mutable counter. The extra race
 category checks this cross-Supervisor case.
+
+## Phase 5B receipt printing
+
+`receipt_print_jobs` stores exactly one immutable versioned snapshot for each
+committed purchase, created in the checkout transaction by triggers on both
+terminal tender-child tables. The snapshot contains authoritative purchase
+number/time, business date/timezone, currency and decimal-string amounts, item
+names/quantities/prices, cash received/change when applicable, and minimal
+school/campus/cafeteria/register labels. It excludes customer, student, staff,
+operator and wallet-balance data. A replayed checkout does not create a second
+original job.
+
+An original or intentional reprint follows `pending -> dispatching ->
+submitted|failed|uncertain`. Claims carry random tokens and a two-minute lease;
+only the current claiming actor with an active membership and exact register
+assignment can report a result. A stale lease becomes `uncertain`, never
+automatically printable again. Definitive failures can return to `pending`;
+an uncertain result requires explicit acknowledgement that duplicate output is
+possible. `submitted` means only that the local bridge accepted the job, not
+that paper was physically printed.
+
+Reprints are separate jobs referencing the original snapshot. They require an
+active assigned POS operator, an allowlisted reason, and an account/actor-scoped
+idempotency key. A changed payload under the same key conflicts. Claims and
+result RPCs do not require an open financial session, so closed sessions do not
+strand recovery. Printer hardware identifiers, bridge state, spooler evidence,
+and physical print verification remain outside PostgreSQL; fulfillment and
+inventory are not part of this phase.
+
+Run `python3 scripts/test-pos-receipt-races.py` after a clean local reset. The
+ten-iteration matrix uses independent PostgreSQL sessions to prove claim
+exclusion, single-result token consumption, identical-key reprint idempotency,
+independence of distinct reprints, and register-authority lock contention.
+It leaves local synthetic receipt/purchase artifacts and requires a reset
+afterward; no remote database connection is supported.
