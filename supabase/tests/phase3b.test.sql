@@ -19,8 +19,8 @@ begin
 end $$;
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),48::bigint,
-  'RLS is enabled on all public tables through Phase 3B');
+  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),53::bigint,
+  'RLS is enabled on all public tables through Phase 3C');
 select is((select count(*) from public.purchases),0::bigint,'No purchase history is fabricated by fixtures');
 select is((select count(*) from public.purchase_items),0::bigint,'No purchase items are fabricated');
 select is((select count(*) from public.purchase_tenders),0::bigint,'No tenders are fabricated');

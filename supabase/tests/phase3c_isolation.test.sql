@@ -1,0 +1,15 @@
+begin isolation level repeatable read;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select no_plan();
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002008',true);
+set local role authenticated;
+select throws_ok($$select public.create_purchase_refund(null,'1','error',null,'phase3c-isolation-refund-01',null)$$,'25000','UNSUPPORTED_TRANSACTION_ISOLATION','Refund rejects stale-snapshot isolation before any write');
+select throws_ok($$select public.create_purchase_refund_approval(null,'1','error',null,'phase3c-isolation-approve-01',null,null)$$,'25000','UNSUPPORTED_TRANSACTION_ISOLATION','Approval issuance rejects unsupported isolation');
+select throws_ok($$select public.configure_cafeteria_refund_policy(null,1,false,0)$$,'25000','UNSUPPORTED_TRANSACTION_ISOLATION','Policy mutation rejects unsupported isolation');
+select throws_ok($$select public.revoke_financial_approval(null)$$,'25000','UNSUPPORTED_TRANSACTION_ISOLATION','Revocation rejects unsupported isolation');
+reset role;
+select is((select count(*) from public.refunds),0::bigint,'Unsupported isolation leaves no refunds');
+select is((select count(*) from public.financial_approvals),0::bigint,'Unsupported isolation leaves no approvals');
+select * from finish();
+rollback;

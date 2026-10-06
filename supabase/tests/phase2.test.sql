@@ -4,7 +4,7 @@ set search_path = public, extensions;
 select no_plan();
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),48::bigint,
+  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),53::bigint,
   'RLS is enabled on all Phase 1 through Phase 4C public tables');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'No direct table mutation policies are defined');

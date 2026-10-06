@@ -162,3 +162,113 @@ Phase 3B implements only positive `purchase` daily events. It has no refund even
 The prior scheduled test used UTC weekday for a Santo Domingo school. Production already derives timezone/local weekday from the school in the frozen Phase 4B resolver. The review test configures all seven weekdays with the maximum same-day end time, and adds deterministic UTC/local rollover coverage; it no longer depends on the host's weekday. The last representable microsecond of a day remains outside the end-exclusive test window.
 
 All race workers use actual authenticated RPCs in distinct local PostgreSQL connections. The first successful RPC retains its transaction locks while the contender starts; the harness requires PostgreSQL to report that contender blocked by that backend before committing the first. Both transaction orders are exercised per category. This proves contention and both serialized outcomes; it is not a random high-load or three-way deadlock stress test. The local-only container label, latest migration and clean synthetic fixture checks precede mutation. Reset after the harness before running all seven pgTAP suites and lint.
+
+## Phase 3C — local authoritative refunds
+
+Phase 3C adds `refunds`, `refund_cash_outflows`, `wallet_refund_credits`,
+`financial_approvals`, and `cafeteria_refund_policies` in one additive migration.
+Frozen migrations and archived SQL remain unchanged. Application integration,
+printing, inventory, staff credit, provider refunds, and drawer reconciliation
+remain outside this phase.
+
+Refund identity is a UUID. Its human reference is the original purchase number
+plus a purchase-scoped `refund_ordinal`. The original purchase row is locked
+`FOR NO KEY UPDATE`; a fresh subsequent statement derives both cumulative
+refundable value and `MAX(refund_ordinal)+1`. There is no cafeteria refund counter.
+`remaining_after_minor` is immutable response evidence only: later authorization
+always derives remaining value from original total minus committed refunds.
+
+The four mutation RPCs are `configure_cafeteria_refund_policy`,
+`create_purchase_refund_approval`, `revoke_financial_approval`, and
+`create_purchase_refund`. `get_purchase_refundability` returns a minimal authorized
+projection; table SELECT policies provide scoped refund/child history.
+Mutation RPCs require READ COMMITTED and reject other isolation levels with
+`UNSUPPORTED_TRANSACTION_ISOLATION` before financial mutation. Decimal minor-unit
+strings avoid client floating-point authority. The client never selects a wallet,
+currency, customer, tenant, business date, or refund tender destination.
+
+Cash goes back as cash, under the actor's current owned open session in the
+original cafeteria. An outflow records an authorized operational attestation;
+it cannot prove physical cash handover. RPC replay must never cause another
+handover. Wallet refunds need no session and append a positive typed credit and
+ledger movement to the original wallet's current balance/version. Frozen wallets
+accept historical refund credits and stay frozen. Withdrawal, campus movement,
+inactive customer status, revoked sharing, and customer Auth unlinking do not
+change the original destination or confer new purchase/funding authority.
+
+Only refunds on the original stored business date append negative
+`refund_compensation` spending events. Later-date refunds append no spending event
+and never increase today's capacity. Original positive purchase events and all
+original sale/tender/debit evidence remain immutable. School-wide student advisory
+coordination uses the frozen seed `0` before wallet row locking.
+
+Policies initialize automatically from existing and future catalog settings.
+Defaults are override ON and independent Cashier allowance zero. Policy updates
+require exact Cafeteria Admin authority, expected version, locking, and audit.
+Independent usage is derived by cafeteria, person, business date, and currency;
+it includes independent Cashier refunds made while override is OFF. Approved and
+Supervisor-direct refunds do not consume that allowance. Policy rows survive
+removal of unused catalog settings, preserving frozen orphan-catalog safeguards;
+refund execution requires matching current settings and policy currency.
+
+Operational capabilities use the existing `cafeteria:pos:` prefix:
+`refund:create`, `refunds:read_own`, `refunds:read`, `refund:approve`, and
+`refund:direct`. Configuration uses `cafeteria:refund_policy:configure`.
+Cashier receives create/own-read; Supervisor receives all operational refund
+capabilities; Cafeteria Admin receives cafeteria-read/configure only. Exact
+selected membership governs execution, including a person holding both roles.
+School/Account Admin, guardians, students, staff, and Backoffice gain no default
+refund authority. Existing School Admin wallet-ledger visibility is preserved.
+
+Approval binds the purchase, cafeteria, requester person and exact membership,
+amount, derived currency/tender, reason, normalized notes hash, and cash session.
+It **does not bind the refund request key**. Issuance has its own actor-scoped key;
+refund execution has a separate actor-scoped key and fingerprints a supplied
+approval ID. Approval lasts ten minutes, requires a different currently linked
+active Supervisor, reserves no refund capacity, and is consumed only within the
+successful refund transaction. Failed transactions preserve unused approval.
+Issuer-only revocation is retry-safe. Pending approval loses usability if its
+exact approver authority disappears. Authorized committed replay ignores expired
+approval, closed sessions, changed policy, and customer/wallet lifecycle changes.
+
+Notes are immutable, at most 500 characters, with outer ASCII whitespace trimmed
+and internal text preserved. `other` requires at least three trimmed characters.
+Only own or exact-cafeteria authorized refund readers may read notes. Approval
+stores a hash; general audit stores identifiers, policy settings, and safe
+lifecycle evidence without notes, customer profiles, carts, or wallet balances.
+
+Lock order for new execution: active tenant hierarchy; refund idempotency advisory
+(`account:person:key`, seed `20261007`); frozen actor-owner advisory (`20261005`);
+exact actor membership; cash register/assignment/session when needed; catalog
+settings/policy/currency SHARE; original purchase NO KEY UPDATE; approver authority
+and approval UPDATE when supplied; student advisory `0`; original wallet UPDATE;
+authoritative clock capture and fresh aggregate decisions; atomic evidence writes.
+No approver-owner advisory is taken. No current student/enrollment eligibility
+rows are locked after the student advisory. Approval issuance uses seed
+`20261008`, does not reserve capacity, and requires no register session.
+
+Run `python3 scripts/test-pos-refund-races.py` after a clean local reset. The
+checkpoint matrix targets 31 categories × 10 independent iterations. Backend
+blocking is checked through `pg_blocking_pids`; deliberately independent cases
+must finish while the leader transaction remains open. The harness validates the
+allowlisted local Docker Unix socket, project label, migration, and empty history.
+It leaves synthetic artifacts and requires a reset afterward. Expiry/midnight
+boundary scenarios temporarily replace the private fixed DB clock with a
+DB-owned synthetic fixture clock, restore it in `finally`, and exercise actual
+RPCs and locks. No production caller clock override exists.
+
+`--category N --iterations 1` is diagnostic only; it cannot satisfy the checkpoint
+matrix. `--frozen3b` runs the unchanged frozen Phase 3B harness with its expected
+migration marker adjusted in memory to Phase 3C; clean-reset before that mode.
+After final races: reset, verify empty financial artifacts, run the entire pgTAP
+suite, lint, syntax/static checks, frozen-file integrity, and Git checks. Keep all
+Phase 3C work unstaged and uncommitted until independent adversarial review.
+
+Duplicate approvals from different Supervisors bind an immutable
+`prior_matching_refund_id`, derived from committed refunds with the same semantic
+fingerprint. Execution re-derives that reference under the purchase lock. Only
+one pending approval can authorize that proposal; its unused sibling becomes
+stale after the matching refund commits. A fresh approval issued afterward can
+authorize a later identical partial refund. This reference is financial history,
+not a transport request key, reservation, or mutable counter. The extra race
+category checks this cross-Supervisor case.
