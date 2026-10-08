@@ -13,7 +13,7 @@ export async function GET() {
   if (identity.status === "unlinked") {
     return NextResponse.json({ error: "person_link_required" }, { status: 409 });
   }
-  if (identity.memberships.length === 0) {
+  if (identity.memberships.length === 0 && identity.platform === null) {
     return NextResponse.json({ error: "active_membership_required" }, { status: 403 });
   }
 
@@ -24,5 +24,6 @@ export async function GET() {
       role: roleCode,
       scope: scopeKind,
     })),
+    platform: identity.platform,
   });
 }

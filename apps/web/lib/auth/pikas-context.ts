@@ -18,14 +18,32 @@ export type PikasMembership = {
   scopeKind: "account" | "school" | "cafeteria";
 };
 
+export type PikasPlatformContext = {
+  role: "platform_admin";
+  capabilities: string[];
+};
+
 export type PikasIdentity =
-  | { status: "unauthenticated"; user: null; person: null; memberships: [] }
-  | { status: "unlinked"; user: User; person: null; memberships: [] }
+  | {
+      status: "unauthenticated";
+      user: null;
+      person: null;
+      memberships: [];
+      platform: null;
+    }
+  | {
+      status: "unlinked";
+      user: User;
+      person: null;
+      memberships: [];
+      platform: null;
+    }
   | {
       status: "ready";
       user: User;
       person: { id: string; displayName: string };
       memberships: PikasMembership[];
+      platform: PikasPlatformContext | null;
     };
 
 const roleCodes = new Set<PikasRole>([
@@ -54,13 +72,20 @@ export async function resolvePikasIdentity(
         user: null,
         person: null,
         memberships: [],
+        platform: null,
       };
     }
     throw error;
   }
 
   if (!user) {
-    return { status: "unauthenticated", user: null, person: null, memberships: [] };
+    return {
+      status: "unauthenticated",
+      user: null,
+      person: null,
+      memberships: [],
+      platform: null,
+    };
   }
 
   const { data: person, error: personError } = await supabase
@@ -71,7 +96,15 @@ export async function resolvePikasIdentity(
     .maybeSingle();
 
   if (personError) throw personError;
-  if (!person) return { status: "unlinked", user, person: null, memberships: [] };
+  if (!person) {
+    return {
+      status: "unlinked",
+      user,
+      person: null,
+      memberships: [],
+      platform: null,
+    };
+  }
 
   const [accountResult, schoolResult, cafeteriaResult] = await Promise.all([
     supabase
@@ -171,11 +204,42 @@ export async function resolvePikasIdentity(
     });
   }
 
+  const { data: platformData, error: platformError } =
+    await supabase.rpc("platform_get_context");
+  if (platformError) throw platformError;
+
+  let platform: PikasPlatformContext | null = null;
+  if (platformData !== null) {
+    const response: unknown = platformData;
+    if (
+      typeof response !== "object" ||
+      response === null ||
+      !("role" in response) ||
+      response.role !== "platform_admin" ||
+      !("capabilities" in response) ||
+      !Array.isArray(response.capabilities)
+    ) {
+      throw new Error("Invalid platform context response");
+    }
+    const capabilities = response.capabilities.filter(
+      (capability: unknown): capability is string =>
+        typeof capability === "string",
+    );
+    if (capabilities.length !== response.capabilities.length) {
+      throw new Error("Invalid platform context response");
+    }
+    platform = {
+      role: response.role,
+      capabilities,
+    };
+  }
+
   return {
     status: "ready",
     user,
     person: { id: person.id, displayName: person.display_name },
     memberships,
+    platform,
   };
 }
 
