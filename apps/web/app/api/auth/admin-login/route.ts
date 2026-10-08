@@ -27,6 +27,10 @@ const fail = (request: NextRequest, code: string) =>
   );
 
 export async function POST(request: NextRequest) {
+  if (!isDemoMode()) {
+    return NextResponse.redirect(new URL("/login", request.url), 303);
+  }
+
   const parsed = schema.safeParse(
     Object.fromEntries(await request.formData()),
   );

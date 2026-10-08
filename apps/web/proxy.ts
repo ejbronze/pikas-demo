@@ -23,10 +23,9 @@ const demoRole = (request: NextRequest) => {
   return base === "admin" ? admin : base === "pos" ? "pos_operator" : base;
 };
 
-function loginRedirect(request: NextRequest, role: string) {
-  const target = role.endsWith("_admin") ? "/admin/login" : "/login";
+function loginRedirect(request: NextRequest) {
   return NextResponse.redirect(
-    new URL(`${target}?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url),
+    new URL(`/login?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url),
   );
 }
 
@@ -39,7 +38,7 @@ export async function proxy(request: NextRequest) {
     if (connectionPage) return NextResponse.redirect(new URL("/", request.url));
     if (!needed) return NextResponse.next();
     const role = demoRole(request);
-    if (!role) return loginRedirect(request, needed);
+    if (!role) return loginRedirect(request);
     if (role !== needed) {
       const target =
         role === "parent"
@@ -81,24 +80,23 @@ export async function proxy(request: NextRequest) {
 
   if (identity.status === "unauthenticated") {
     if (connectionPage) return redirectWithCookies(new URL("/login", request.url));
-    const loginTarget = needed?.endsWith("_admin") ? "/admin/login" : "/login";
     return redirectWithCookies(
       new URL(
-        `${loginTarget}?next=${encodeURIComponent(request.nextUrl.pathname)}`,
+        `/login?next=${encodeURIComponent(request.nextUrl.pathname)}`,
         request.url,
       ),
     );
   }
   if (identity.status !== "ready") {
     return redirectWithCookies(
-      new URL("/admin/login?error=identity", request.url),
+      new URL("/login?error=identity", request.url),
     );
   }
 
   if (connectionPage) {
     if (identity.memberships.length === 0) {
       return redirectWithCookies(
-        new URL("/admin/login?error=membership", request.url),
+        new URL("/login?error=membership", request.url),
       );
     }
     return response;

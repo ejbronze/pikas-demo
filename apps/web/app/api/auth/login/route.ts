@@ -6,7 +6,7 @@ import { resolvePikasIdentity, pilotHome } from "@/lib/auth/pikas-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const schema = z.object({
-  role: z.enum(["parent", "student", "pos_operator"]),
+  role: z.enum(["parent", "student", "pos_operator"]).optional(),
   identifier: z.string().trim().min(3).max(254),
   password: z.string().min(4).max(128),
 });
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
   const { role, identifier, password } = parsed.data;
   if (isDemoMode()) {
+    if (!role) return fail(request, "invalid");
     const response = NextResponse.redirect(
       new URL(demoHome(role), request.url),
       303,
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  if (role === "student" || !z.email().safeParse(identifier).success) {
+  if (!z.email().safeParse(identifier).success) {
     return fail(request, "pilot_email_required");
   }
 

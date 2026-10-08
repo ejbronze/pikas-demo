@@ -295,3 +295,13 @@ export function pilotHome(identity: PikasIdentity): string | null {
   }
   return null;
 }
+
+export function backofficeHome(identity: PikasIdentity): string | null {
+  if (
+    identity.status !== "ready" ||
+    identity.platform?.role !== "platform_admin"
+  ) {
+    return null;
+  }
+  return "/platform";
+}
