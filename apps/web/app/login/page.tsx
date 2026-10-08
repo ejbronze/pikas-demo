@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {useState, useSyncExternalStore} from "react";
+import {useEffect, useState, useSyncExternalStore} from "react";
 import {BrandLogo} from "@/components/brand-logo";
 import {Eye, EyeOff} from "@/components/icons";
+import {getLoginErrorMessage} from "./login-error";
 
 type LoginRole = "parent" | "student" | "pos";
 const accounts = {parent:{label:"Familia",identifier:"familia@demo.pikas.do",credential:"Contraseña"},student:{label:"Estudiante",identifier:"PK-10982",credential:"PIN"},pos:{label:"Cafetería",identifier:"cafeteria@demo.pikas.do",credential:"Contraseña"}} as const;
@@ -19,8 +20,16 @@ export default function Login() {
   const [role, setRole] = useState<LoginRole>(demoMode ? "parent" : "pos");
   const [show, setShow] = useState(false);
   const [pending, setPending] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const account = accounts[role];
   const student = demoMode && role === "student";
+
+  useEffect(() => {
+    setLoginError(new URLSearchParams(window.location.search).get("error"));
+  }, []);
+
+  const errorMessage = getLoginErrorMessage(loginError);
+
   return <main className="grid min-h-screen bg-pikas-navy lg:grid-cols-2">
     <section className="hidden items-end bg-[radial-gradient(circle_at_top_left,#04c7c5,#03234b_62%)] p-12 text-white lg:flex">
       <div><span className="inline-flex rounded-2xl bg-white p-2"><BrandLogo compact className="size-14"/></span><h1 className="mt-8 max-w-lg text-5xl font-black">Una entrada para toda tu comunidad escolar.</h1><p className="mt-5 max-w-md text-blue-100">Familias, estudiantes y personal de cafetería llegan al espacio correcto según su rol.</p></div>
@@ -28,6 +37,7 @@ export default function Login() {
     <section className="grid place-items-center bg-slate-50 p-4"><div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl sm:p-8">
       <Link href="/" className="inline-flex min-h-11 items-center" aria-label="Volver al inicio"><BrandLogo className="h-auto w-32"/></Link>
       <h1 className="mt-6 text-3xl font-black">Iniciar sesión</h1><p className="mt-2 text-slate-600">{demoMode?"Elige una experiencia ficticia para explorar la demostración.":"Ingresa con tu cuenta PIKAS. Tu acceso se determina por tus membresías autorizadas."}</p>
+      {errorMessage&&<p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-900"><strong className="block">{errorMessage.title}</strong><span className="mt-1 block">{errorMessage.body}</span></p>}
       {availableRoles.length > 1&&<div className="mt-6 grid grid-cols-3 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Tipo de usuario">{availableRoles.map(value=><button type="button" disabled={!ready} role="tab" aria-selected={role===value} onClick={()=>setRole(value)} className={`min-h-11 rounded-lg text-sm font-bold ${role===value?"bg-white shadow":""}`} key={value}>{accounts[value].label}</button>)}</div>}
       <form action="/api/auth/login" method="post" onSubmit={()=>setPending(true)} className="mt-6 space-y-4">{demoMode&&<input type="hidden" name="role" value={role}/>}<label className="block"><span className="font-bold">{student?"Código estudiantil":"Correo electrónico"}</span><input key={role} className="field mt-2" name="identifier" autoComplete={student?"username":"email"} type={student?"text":"email"} defaultValue={demoMode?account.identifier:""} required/></label><label className="block"><span className="font-bold">{demoMode?account.credential:"Contraseña"}</span><span className="relative mt-2 block"><input className="field pr-12" name="password" type={show?"text":"password"} autoComplete="current-password" defaultValue={demoMode?"pikas-demo":""} required minLength={4}/><button type="button" disabled={!ready} onClick={()=>setShow(!show)} className="absolute inset-y-0 right-0 grid w-12 place-items-center" aria-label={show?"Ocultar contraseña":"Mostrar contraseña"}>{show?<EyeOff size={20}/>:<Eye size={20}/>}</button></span></label><button disabled={!ready || pending} className="btn w-full">{pending?"Entrando…":demoMode?`Entrar como ${account.label.toLowerCase()}`:"Iniciar sesión"}</button></form>
       {!student&&<Link href="/forgot-password" className="mt-5 block text-center font-bold text-blue-700">¿Olvidaste tu contraseña?</Link>}<p className="mt-6 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">{demoMode?"Acceso de demostración con datos ficticios. No se mueve dinero real.":"No hay registro público. El acceso requiere una cuenta invitada y autorizada por PIKAS."}</p><p className="mt-5 text-center text-xs font-semibold text-slate-500">PIKAS es diseñada y desarrollada por Palmchat Innovations LLC.</p>

@@ -102,4 +102,26 @@ describe("public tenant login route", () => {
     );
     expect(signOut).toHaveBeenCalledOnce();
   });
+
+  it("returns a credentials error for invalid passwords", async () => {
+    signInWithPassword.mockResolvedValue({
+      data: { user: null },
+      error: new Error("invalid credentials"),
+    });
+    const form = new FormData();
+    form.set("identifier", "tenant@example.com");
+    form.set("password", "incorrect");
+
+    const response = await POST(
+      new NextRequest("https://pikas-pikas.app/api/auth/login", {
+        method: "POST",
+        body: form,
+      }),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://pikas-pikas.app/login?error=credentials",
+    );
+    expect(resolvePikasIdentity).not.toHaveBeenCalled();
+  });
 });
