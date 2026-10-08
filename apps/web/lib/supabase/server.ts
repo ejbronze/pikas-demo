@@ -1,2 +1,29 @@
-import {createServerClient} from "@supabase/ssr";import {cookies} from "next/headers";
-export async function createSupabaseServerClient(){const store=await cookies(),url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key)throw new Error("Supabase no está configurado. Activa NEXT_PUBLIC_PIKAS_DEMO_MODE=true solo para desarrollo.");return createServerClient(url,key,{cookies:{getAll:()=>store.getAll(),setAll(values){try{values.forEach(({name,value,options})=>store.set(name,value,options))}catch{/* Server Components cannot set cookies. Proxy refreshes sessions. */}}}})}
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
+
+export async function createSupabaseServerClient() {
+  const cookieStore = await cookies();
+  const { url, anonKey } = getSupabasePublicConfig();
+
+  return createServerClient(url, anonKey, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll(values) {
+        try {
+          values.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            error.message.includes("Cookies can only be modified")
+          ) {
+            return;
+          }
+          throw error;
+        }
+      },
+    },
+  });
+}

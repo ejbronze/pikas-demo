@@ -11,8 +11,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @pikas/web",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "seed:supabase-auth": "node scripts/seed-supabase-auth.mjs"
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "engines": {
     "node": ">=20"

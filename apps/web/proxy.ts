@@ -1,30 +1,132 @@
-import {NextRequest,NextResponse} from "next/server";
-import {createServerClient} from "@supabase/ssr";
-import {isDemoMode} from "@/lib/env";
+import { createServerClient } from "@supabase/ssr";
+import { NextRequest, NextResponse } from "next/server";
+import { isDemoMode } from "@/lib/env";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import { hasAppRole, resolvePikasIdentity } from "@/lib/auth/pikas-context";
 
-const requiredRole=(path:string)=>path.startsWith("/familias")?"parent":path.startsWith("/estudiante")?"student":path.startsWith("/pos")?"pos_operator":path.startsWith("/admin/escuela")?"school_admin":path.startsWith("/admin/cafeteria")?"cafeteria_admin":undefined;
-const home=(role:string)=>role==="parent"?"/familias":role==="student"?"/estudiante":role==="pos_operator"||role==="pos"?"/pos":role==="school_admin"?"/admin/escuela":"/admin/cafeteria";
+const requiredRole = (path: string) =>
+  path.startsWith("/familias")
+    ? "parent"
+    : path.startsWith("/estudiante")
+      ? "student"
+      : path.startsWith("/pos")
+        ? "pos_operator"
+        : path.startsWith("/admin/escuela")
+          ? "school_admin"
+          : path.startsWith("/admin/cafeteria")
+            ? "cafeteria_admin"
+            : undefined;
 
-export async function proxy(req:NextRequest){
-  const needed=requiredRole(req.nextUrl.pathname);
-  if(!needed)return NextResponse.next();
-  let role:string|undefined;
-  if(isDemoMode()){
-    const base=req.cookies.get("pikas_demo_role")?.value;
-    const admin=req.cookies.get("pikas_demo_admin_role")?.value;
-    role=base==="admin"?admin:base==="pos"?"pos_operator":base;
-  }else{
-    const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if(url&&key){
-      const response=NextResponse.next({request:req});
-      const supabase=createServerClient(url,key,{cookies:{getAll:()=>req.cookies.getAll(),setAll:values=>values.forEach(({name,value,options})=>response.cookies.set(name,value,options))}});
-      const {data:{user}}=await supabase.auth.getUser();
-      if(user){const {data:profile}=await supabase.from("profiles").select("role").eq("id",user.id).single();role=profile?.role}
-      if(role===needed)return response;
-    }
-  }
-  if(!role)return NextResponse.redirect(new URL(`${needed.endsWith("_admin")?"/admin/login":"/login"}?next=${encodeURIComponent(req.nextUrl.pathname)}`,req.url));
-  if(role!==needed)return NextResponse.redirect(new URL(`${home(role)}?aviso=sin-permiso`,req.url));
-  return NextResponse.next();
+const demoRole = (request: NextRequest) => {
+  const base = request.cookies.get("pikas_demo_role")?.value;
+  const admin = request.cookies.get("pikas_demo_admin_role")?.value;
+  return base === "admin" ? admin : base === "pos" ? "pos_operator" : base;
+};
+
+function loginRedirect(request: NextRequest, role: string) {
+  const target = role.endsWith("_admin") ? "/admin/login" : "/login";
+  return NextResponse.redirect(
+    new URL(`${target}?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url),
+  );
 }
-export const config={matcher:["/familias/:path*","/estudiante/:path*","/pos/:path*","/admin/escuela/:path*","/admin/cafeteria/:path*"]};
+
+export async function proxy(request: NextRequest) {
+  const needed = requiredRole(request.nextUrl.pathname);
+  const connectionPage = request.nextUrl.pathname === "/pilot/connected";
+  if (!needed && !connectionPage) return NextResponse.next();
+
+  if (isDemoMode()) {
+    if (connectionPage) return NextResponse.redirect(new URL("/", request.url));
+    if (!needed) return NextResponse.next();
+    const role = demoRole(request);
+    if (!role) return loginRedirect(request, needed);
+    if (role !== needed) {
+      const target =
+        role === "parent"
+          ? "/familias"
+          : role === "student"
+            ? "/estudiante"
+            : role === "pos_operator" || role === "pos"
+              ? "/pos"
+              : role === "school_admin"
+                ? "/admin/escuela"
+                : "/admin/cafeteria";
+      return NextResponse.redirect(
+        new URL(`${target}?aviso=sin-permiso`, request.url),
+      );
+    }
+    return NextResponse.next();
+  }
+
+  const { url, anonKey } = getSupabasePublicConfig();
+  let response = NextResponse.next({ request });
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll(values) {
+        values.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        values.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+  const identity = await resolvePikasIdentity(supabase);
+  const redirectWithCookies = (target: URL) => {
+    const redirected = NextResponse.redirect(target);
+    response.cookies.getAll().forEach((cookie) => redirected.cookies.set(cookie));
+    return redirected;
+  };
+
+  if (identity.status === "unauthenticated") {
+    if (connectionPage) return redirectWithCookies(new URL("/login", request.url));
+    const loginTarget = needed?.endsWith("_admin") ? "/admin/login" : "/login";
+    return redirectWithCookies(
+      new URL(
+        `${loginTarget}?next=${encodeURIComponent(request.nextUrl.pathname)}`,
+        request.url,
+      ),
+    );
+  }
+  if (identity.status !== "ready") {
+    return redirectWithCookies(
+      new URL("/admin/login?error=identity", request.url),
+    );
+  }
+
+  if (connectionPage) {
+    if (identity.memberships.length === 0) {
+      return redirectWithCookies(
+        new URL("/admin/login?error=membership", request.url),
+      );
+    }
+    return response;
+  }
+
+  if (!needed) return response;
+
+  const authorized =
+    needed === "school_admin" || needed === "cafeteria_admin" || needed === "pos_operator"
+      ? hasAppRole(identity, needed)
+      : false;
+
+  if (!authorized) {
+    return redirectWithCookies(
+      new URL("/pilot/connected?aviso=sin-permiso", request.url),
+    );
+  }
+
+  return redirectWithCookies(new URL("/pilot/connected", request.url));
+}
+
+export const config = {
+  matcher: [
+    "/familias/:path*",
+    "/estudiante/:path*",
+    "/pos/:path*",
+    "/admin/escuela/:path*",
+    "/admin/cafeteria/:path*",
+    "/pilot/connected",
+  ],
+};

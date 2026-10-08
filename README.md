@@ -143,9 +143,9 @@ Playwright cubre escritorio y móvil para Familia, Estudiante, POS y Administrac
 
 ## Modos de ejecución
 
-`NEXT_PUBLIC_PIKAS_DEMO_MODE=true` conserva el demo público ficticio y su persistencia en el navegador. Con `false`, URL y anon key de Supabase son obligatorias: Auth conserva la sesión mediante cookies, valida el usuario en servidor y dirige `school_admin`, `cafeteria_admin` y `pos_operator` a sus espacios. El catálogo compartido se lee de Supabase y solo una membresía activa de cafetería puede editarlo.
+`NEXT_PUBLIC_PIKAS_DEMO_MODE=true` conserva el demo público ficticio y su persistencia en el navegador. Con `false`, la URL, la clave publicable y `NEXT_PUBLIC_SUPABASE_PROJECT_REF` deben identificar explícitamente `pikas-pilot`. Auth conserva la sesión mediante cookies y el servidor resuelve Auth → Person → membresías; RLS o RPCs autorizadas verifican el alcance. El modo piloto aún no habilita el Admin ni el POS completos.
 
-La base local aprobada incluye las fases 1, 2, 3A y 4A, y comienza en `supabase/migrations/202609300001_foundation.sql`. Consulte [la guía de la fundación Supabase](supabase/README.md) para inicializar, reconstruir y verificar la base local. Las migraciones y semillas anteriores están archivadas en `supabase/legacy/` y no deben combinarse con la nueva base. El comando histórico `seed:supabase-auth` no corresponde a esta fundación. La aplicación demo permanece sin conectar a ella; no se cambió el proyecto remoto ni se afirma preparación productiva.
+La cadena activa de diez migraciones comienza en `supabase/migrations/202609300001_foundation.sql`; el despliegue aprobado a `pikas-pilot` está verificado por el propietario. Consulte [la guía de la fundación Supabase](supabase/README.md) y [la guía de bootstrap Auth](docs/PHASE_6A_BOOTSTRAP.md). Las migraciones y semillas anteriores están archivadas en `supabase/legacy/` y no deben combinarse con la nueva base. No hay signup público ni se incluye una credencial service-role en el runtime web.
 
 ## Limitaciones actuales
 

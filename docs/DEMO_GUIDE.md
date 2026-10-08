@@ -179,7 +179,7 @@ Administración 0.5.3, sesiones, reportes y conciliación son demo local. No hay
 Mantén esta guía sincronizada cuando cambien versión, rutas, etiquetas, credenciales, códigos, permisos, persistencia o capturas.
 # Nota 0.5.1
 
-Las cuentas existentes siguen usando la contraseña demo documentada en la interfaz. En Supabase, créelas solo en desarrollo con `PIKAS_DEMO_PASSWORD` y `npm run seed:supabase-auth`: `admin.escuela@demo.pikas.do` → `/admin/escuela`, `admin.cafeteria@demo.pikas.do` → `/admin/cafeteria`, y `cafeteria@demo.pikas.do` → `/pos`. Logout elimina la sesión; las cookies permiten conservarla tras refrescar.
+Las credenciales ficticias solo funcionan con `NEXT_PUBLIC_PIKAS_DEMO_MODE=true`. El antiguo `seed:supabase-auth` fue retirado porque escribía en el esquema legacy (`profiles` y `organization_memberships`). El piloto usa invitaciones Auth controladas y memberships del modelo actual; consulta [el procedimiento de bootstrap](./PHASE_6A_BOOTSTRAP.md). Logout termina la sesión Auth o elimina las cookies locales de demo, según el modo activo.
 
 ## Flujo 0.5.2
 

@@ -8,7 +8,7 @@ Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2
 
 All eight former migrations, from `202608110001_unified_pikas.sql` through `202609210001_pos_financial_foundation.sql`, and the former `seed.sql` are preserved byte-for-byte under `legacy/`. They model the previous architecture and must not be applied before, after, or together with either active migration. They were moved because the CLI automatically scans `supabase/migrations/`; leaving them there would silently build an incompatible schema. Git history also retains their original locations.
 
-The CLI scans only the active migrations directory. `config.toml` selects only `fixtures/foundation.sql` for local seeding; it cannot pick up the archived seed. Existing historical docs and `scripts/seed-supabase-auth.mjs` describe the legacy architecture, not this foundation. Do not run that auth seeder against the foundation.
+The CLI scans only the active migrations directory. `config.toml` selects only `fixtures/foundation.sql` for local seeding; it cannot pick up the archived seed. Historical docs and the removed Auth seeder describe the legacy architecture, not this foundation. Pilot Auth access is invitation-only and requires a separately reviewed bootstrap of a Person and scoped membership; see [the Phase 6A bootstrap guide](../docs/PHASE_6A_BOOTSTRAP.md).
 
 This baseline is for a clean database. An environment that already applied the legacy chain requires its own reviewed forward migration; do not reset such an environment or rewrite its migration history.
 
