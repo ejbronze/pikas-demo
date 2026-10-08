@@ -1,10 +1,10 @@
 # PIKAS local database foundation
 
-Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2 adds school-owned student/family/staff identities and a privacy-filtered cafeteria customer projection. Phase 3A adds DOP student wallets, immutable wallet ledger entries, manually verified replenishments and explicit adjustments. Phase 4A adds cafeteria catalog settings, categories and products. Phase 4B adds cafeteria menus, service scheduling and authoritative catalog saleability. Phase 3B adds authoritative purchase checkout, Phase 3C adds refunds, Phase 4C adds durable register sessions, and Phase 5B adds authoritative receipt-print jobs. These phases do not connect the application or modify a remote Supabase project.
+Phase 1 establishes the tenant, person, membership and audit foundation. Phase 2 adds school-owned student/family/staff identities and a privacy-filtered cafeteria customer projection. Phase 3A adds DOP student wallets, immutable wallet ledger entries, manually verified replenishments and explicit adjustments. Phase 4A adds cafeteria catalog settings, categories and products. Phase 4B adds cafeteria menus, service scheduling and authoritative catalog saleability. Phase 3B adds authoritative purchase checkout, Phase 3C adds refunds, Phase 4C adds durable register sessions, Phase 5B adds authoritative receipt-print jobs, and Phase 3D adds staff receivables, staff-credit checkout, settlements and eligible refunds. These phases do not connect the application or modify a remote Supabase project.
 
 ## Baseline and legacy isolation
 
-`migrations/202609300001_foundation.sql` is baseline 001. `migrations/202610010001_people_families_customers.sql` adds Phase 2. `migrations/202610010002_student_wallet_ledger.sql` adds Phase 3A. `migrations/202610010003_cafeteria_catalog_foundation.sql` adds Phase 4A. `migrations/202610010004_cafeteria_menus_scheduling_saleability.sql` adds Phase 4B. `migrations/202610030001_pos_register_sessions.sql` adds Phase 4C. `migrations/202610040001_purchase_checkout_foundation.sql` adds Phase 3B. `migrations/202610050001_purchase_refunds.sql` adds Phase 3C. `migrations/202610060001_receipt_printing.sql` adds Phase 5B. These nine are the only active migrations.
+`migrations/202609300001_foundation.sql` is baseline 001. `migrations/202610010001_people_families_customers.sql` adds Phase 2. `migrations/202610010002_student_wallet_ledger.sql` adds Phase 3A. `migrations/202610010003_cafeteria_catalog_foundation.sql` adds Phase 4A. `migrations/202610010004_cafeteria_menus_scheduling_saleability.sql` adds Phase 4B. `migrations/202610030001_pos_register_sessions.sql` adds Phase 4C. `migrations/202610040001_purchase_checkout_foundation.sql` adds Phase 3B. `migrations/202610050001_purchase_refunds.sql` adds Phase 3C. `migrations/202610060001_receipt_printing.sql` adds Phase 5B. `migrations/202610070001_staff_receivables.sql` adds Phase 3D. These ten are the only active migrations.
 
 All eight former migrations, from `202608110001_unified_pikas.sql` through `202609210001_pos_financial_foundation.sql`, and the former `seed.sql` are preserved byte-for-byte under `legacy/`. They model the previous architecture and must not be applied before, after, or together with either active migration. They were moved because the CLI automatically scans `supabase/migrations/`; leaving them there would silently build an incompatible schema. Git history also retains their original locations.
 
@@ -75,12 +75,12 @@ The main CLI is required for `start`; the packaged `supabase-go` compatibility e
 
 - `purchases` are committed immutable sale records; they are not carts, wallet-ledger rows, register sessions, refunds or fulfillment orders. Each requires one open owner session and stores exact tenant/register/session/operator attribution, optional active exact-cafeteria customer identity, minimal customer snapshot, school-timezone/business-date snapshot, DOP currency, total, optional current service/menu attribution, idempotency key/fingerprint, and a cafeteria-scoped `purchase_number`.
 - `purchase_items` preserve product UUID, name/version, unit price, positive integer quantity and checked line total. The server revalidates current product version, displayed price, active/available status and saleability. It never silently charges a changed price. Identical duplicate product lines are canonicalized and merged.
-- `purchase_tenders` allows exactly one tender, with typed cash or student-wallet evidence. Cash records received/change, including zero/zero for a free sale. Wallet requires an eligible student cafeteria customer and derives the wallet; zero-total wallet tender is rejected. Cash never debits a wallet.
+- `purchase_tenders` allows exactly one typed cash, student-wallet or staff-credit tender. Cash records received/change, including zero/zero for a free sale. Wallet requires an eligible student cafeteria customer and derives the wallet; zero-total wallet tender is rejected. Staff credit requires an explicitly eligible staff customer and enabled receivable account. Cash never debits a wallet.
 - Wallet purchases add a positive `wallet_purchase_debits` source operation and a negative Phase 3A `wallet_ledger_entries` movement. Purchase, items, tender, wallet mutation/ledger if any, daily spend if any and audit commit atomically. Reconciliation continues to sum the same immutable ledger chain.
 - `student_spending_controls` is school/student/currency-scoped and School Admin-managed. No row means unlimited. Enabled per-transaction and daily limits apply to both identified student cash and wallet purchases. `student_daily_spend_events` is append-only and school-wide per student/business date/currency; anonymous cash and identified staff cash do not consume student capacity. Phase 3B does not grant family/guardian authority.
-- `checkout_purchase(jsonb)` is the only financial writer. It accepts a request key, session UUID, nullable exact cafeteria-customer UUID, canonical product IDs/quantities/version/displayed-price evidence, optional expected total, and either cash received or wallet tender. The database derives the actor, scope, currency, business time/date, active service, prices, customer/student/wallet, limits, totals, change and purchase number. JSON money inputs are decimal integer strings.
+- `checkout_purchase(jsonb)` is the only purchase financial writer. It accepts a request key, session UUID, nullable exact cafeteria-customer UUID, canonical product IDs/quantities/version/displayed-price evidence, optional expected total, and cash, student-wallet or staff-credit tender. The database derives the actor, scope, currency, business time/date, active service, prices, customer/student/wallet/receivable, limits, totals, change and purchase number. JSON money inputs are decimal integer strings.
 - Phase 4B saleability is revalidated under a shared cafeteria schedule advisory lock. Schedule writers take the matching exclusive lock through additive triggers; independent checkouts can share the read lock. Product rows are share-locked, student/wallet operations follow Phase 2/3A locking, and register/session operations follow Phase 4C lock order.
-- Purchase history, tenders, debits and usage have RLS and no direct application writes. Cashiers read their own purchases; Supervisor and Cafeteria Admin purchase reporting is explicit and exact-cafeteria. School Admin manages spending controls but does not gain purchase/student history. Refunds, staff credit, fulfillment, printing, inventory, external payment, offline sales, tax/discounts and application integration remain out of scope.
+- Purchase history, tenders, debits and usage have RLS and no direct application writes. Cashiers read their own purchases; Supervisor and Cafeteria Admin purchase reporting is explicit and exact-cafeteria. School Admin manages spending controls but does not gain purchase/student history. At the original Phase 3B checkpoint, refunds, staff credit, fulfillment, printing, inventory, external payment, offline sales, tax/discounts and application integration were out of scope; later additive phases implement refunds, receipt intent and staff credit without rewriting that checkpoint.
 - `scripts/test-pos-purchase-races.py` is a local-only independent-connection harness. It requires the `pikas-foundation` project label, Phase 3B migration and empty purchase history. It runs 10 iterations of each of fifteen financial races (150 total), alternating which real RPC remains uncommitted first and requiring an observed `pg_blocking_pids` edge from the contender to that independent backend; it leaves synthetic history, so reset local DB afterward.
 
 ## Phase 4A cafeteria catalog
@@ -149,7 +149,7 @@ Tests switch into actual `authenticated` and `anon` database roles and assert bo
 
 Campus, Phase 2, Phase 3A, Phase 4A, Phase 4B, Phase 4C and Phase 3B tests cover ancestry, lifecycle, enrollment/placement history, family/guardian/staff relationships, exact cafeteria privacy, DOP wallet constraints, manual funding, adjustment authorization, immutable ledger entries, catalog/menu/schedule lifecycle, timezone boundaries, overlap rules, saleability, POS role separation, assignment lifecycle, session recovery, purchase/tender snapshots, spending controls, wallet debits, purchase idempotency, cash change, financial atomicity, direct-write denial and audit. pgTAP exercises transactions sequentially; independent-session schedule, register-session and Phase 3B financial race stress are separate checks. Explicit cafeteria memberships remain independent; sharing one cafeteria never implies access to its sibling.
 
-Student prepaid wallets and their Phase 3A ledger, the Phase 4A catalog, Phase 4B menus/scheduling/saleability, Phase 4C POS role/register/session foundations, and Phase 3B purchases are implemented locally. Refunds, daily-spend refunds, staff receivables, payment providers, reconciliation, fulfillment, printing, inventory and application cutover remain out of scope. Local reset/testing success is not remote deployment or production-readiness certification.
+Student prepaid wallets and their Phase 3A ledger, the Phase 4A catalog, Phase 4B menus/scheduling/saleability, Phase 4C POS role/register/session foundations, Phase 3B purchases, Phase 3C refunds, Phase 5B receipt intent, and Phase 3D staff receivables are implemented locally. Payment providers, reconciliation, fulfillment, inventory and application cutover remain out of scope. Local reset/testing success is not remote deployment or production-readiness certification.
 
 ### Phase 3B independent review notes
 
@@ -307,3 +307,37 @@ exclusion, single-result token consumption, identical-key reprint idempotency,
 independence of distinct reprints, and register-authority lock contention.
 It leaves local synthetic receipt/purchase artifacts and requires a reset
 afterward; no remote database connection is supported.
+
+## Phase 3D staff receivables
+
+`staff_receivable_accounts` holds one DOP account per school staff affiliation.
+Only a School Admin can create the account and explicitly enable credit or
+change its nullable limit. A zero limit blocks purchases; `NULL` is unlimited.
+An active staff affiliation, current campus affiliation, active staff customer
+relationship in the exact cafeteria, enabled credit, and a POS Supervisor
+session are all required for the `staff_credit` tender. Staff identity or a
+cafeteria-customer relationship alone grants no credit.
+
+Staff-credit purchases atomically write the tender, positive immutable charge,
+versioned account balance, and the Phase 5B original receipt job. The account
+row is the serialization anchor for purchases, settlements, configuration
+and refunds. Partial cash settlements require the assigned Supervisor's exact
+open session; `bank_transfer` and `other` settlements require an authorized
+Supervisor or Cafeteria Admin and retain cafeteria attribution. Every
+settlement is a negative immutable ledger entry; no direct balance-edit or
+general adjustment path exists.
+
+Staff-credit refunds reduce the same receivable account and obey the
+purchase-wide refund ceiling. They never issue cash or wallet value, and they
+are rejected if the refund would exceed the currently outstanding amount due.
+Thus settled debt is not automatically paid out; an out-of-scope manual payout
+process would be needed. Account and ledger history survive staff departure,
+campus moves, customer deactivation and login changes, while those changes
+prevent new credit purchases. Fulfillment, payroll, collection automation,
+payment providers, accounting exports and application integration remain
+deferred; application integration is the next step.
+
+`python3 scripts/test-pos-staff-credit-races.py` exercises independent-connection
+serialization on the local `pikas-foundation` database after a clean reset.
+It leaves synthetic financial rows and requires another local reset; it has no
+remote database mode.
