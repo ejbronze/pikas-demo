@@ -26,7 +26,7 @@ beforeEach(() => {
   mocks.access.mockResolvedValue({ demo: false, context: posContext() });
 });
 
-describe("connected POS presentation without operations", () => {
+describe("connected POS access boundary", () => {
   it("renders the authoritative sandbox identity and persistent banner", async () => {
     const html = renderToStaticMarkup(await PosPage());
     expect(html).toContain("Modo demostración · Sandbox");
@@ -37,12 +37,12 @@ describe("connected POS presentation without operations", () => {
     expect(html).toContain("¿A quién atendemos?");
     expect(mocks.demoHook).not.toHaveBeenCalled();
   });
-  it("disables every operational button and offers no operational links/forms", async () => {
+  it("blocks sales until readiness is loaded and never mounts demo financial actions", async () => {
     const html = renderToStaticMarkup(await PosPage());
     const buttons = [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)];
-    expect(buttons.length).toBe(7);
+    expect(buttons.length).toBe(8);
     for (const [, attributes, label] of buttons) {
-      if (label !== "Salir") expect(attributes).toContain("disabled");
+      if (label !== "Salir" && label !== "Verificar caja y catálogo") expect(attributes).toContain("disabled");
     }
     expect(html).not.toContain('href="/pos/caja"');
     expect(html).not.toContain('action="/api/pos');
