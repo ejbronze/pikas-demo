@@ -1,0 +1,16 @@
+"use client";
+
+import { lazy, Suspense, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { isDemoMode } from "@/lib/env";
+
+// Import only when rendered: importing DemoProvider eagerly initializes its demo state.
+const DemoProvider = lazy(() => import("./demo-provider").then((module) => ({ default: module.DemoProvider })));
+
+export function RouteDemoProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  if (!isDemoMode() && (pathname === null || pathname === "/pos" || pathname.startsWith("/pos/"))) {
+    return children;
+  }
+  return <Suspense fallback={null}><DemoProvider>{children}</DemoProvider></Suspense>;
+}

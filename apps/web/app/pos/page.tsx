@@ -1,7 +1,7 @@
 import { PosDashboard } from "@/components/pos-dashboard";
-import { requireRole } from "@/lib/auth/require-role";
+import { requirePosAccess } from "@/lib/auth/pos-access";
 
 export default async function Page(){
-  const session=await requireRole("pos_operator");
-  return <PosDashboard demo={session.demo}/>;
+  const session=await requirePosAccess();
+  return <PosDashboard access={session}/>;
 }

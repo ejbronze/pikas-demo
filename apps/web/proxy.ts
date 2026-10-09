@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isDemoMode } from "@/lib/env";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { hasAppRole, resolvePikasIdentity } from "@/lib/auth/pikas-context";
+import { resolvePosAccess } from "@/lib/auth/pos-access";
 
 const requiredRole = (path: string) =>
   path.startsWith("/familias")
@@ -71,12 +72,25 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const identity = await resolvePikasIdentity(supabase);
   const redirectWithCookies = (target: URL) => {
     const redirected = NextResponse.redirect(target);
     response.cookies.getAll().forEach((cookie) => redirected.cookies.set(cookie));
     return redirected;
   };
+
+  if (needed === "pos_operator") {
+    const access = await resolvePosAccess(supabase);
+    if (access.status === "authorized") return response;
+    if (access.status === "unauthenticated") {
+      return redirectWithCookies(new URL(`/login?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url));
+    }
+    return redirectWithCookies(new URL(
+      access.status === "forbidden" ? "/login?error=pos_authority" : "/login?error=pos_unavailable",
+      request.url,
+    ));
+  }
+
+  const identity = await resolvePikasIdentity(supabase);
 
   if (identity.status === "unauthenticated") {
     if (connectionPage) return redirectWithCookies(new URL("/login", request.url));
@@ -105,7 +119,7 @@ export async function proxy(request: NextRequest) {
   if (!needed) return response;
 
   const authorized =
-    needed === "school_admin" || needed === "cafeteria_admin" || needed === "pos_operator"
+    needed === "school_admin" || needed === "cafeteria_admin"
       ? hasAppRole(identity, needed)
       : false;
 
