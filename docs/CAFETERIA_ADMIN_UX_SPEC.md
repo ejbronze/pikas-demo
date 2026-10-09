@@ -453,10 +453,209 @@ Do not add student-spending rankings or “highest spending students” analytic
 to V1 Reportes. Individual student purchase history belongs in the student’s
 operational profile; aggregate cafeteria performance belongs in Reportes.
 
+## Personal — approved direction
+
+Personal is the cafeteria administrator’s operational access-management
+workspace. It should answer:
+
+- Who currently has access to this cafeteria?
+- What operational role does each person have?
+- Can this person currently use their authorized PIKAS functions?
+
+Personal manages PIKAS access and cafeteria operational responsibility, not
+employment records. It is not an HR system, employee directory, scheduling or
+payroll system, or employee-performance leaderboard.
+
+### Human-facing access concepts
+
+Do not expose internal authorization architecture in the normal UI. Users
+should not need to understand or see Auth Identity, Person or Membership
+records, membership scopes, capability codes, UUIDs, provisioning intents, or
+internal role codes such as `pos_cashier` or `pos_supervisor`.
+
+Use human-facing language such as Cajero/Cajera, Supervisor/Supervisora, and
+Administrador/Administradora de cafetería. The authoritative Auth Identity →
+Person → Membership architecture remains important internally but should not
+create unnecessary UI complexity.
+
+### Main roster and status
+
+Keep the main screen simple and operational. Suggested direction:
+
+- Personal
+- “Administra quién puede trabajar en esta cafetería.”
+- Buscar personal
+- Agregar personal
+
+Compact filters may include Todos, Cajeros, Supervisores, and Inactivos. These
+are examples, not locked labels or layout.
+
+Roster entries should prioritize the person’s name, human-facing role,
+operational access status, and recent activity context where reliable and
+useful. Do not make email a primary field unless needed to disambiguate. Do
+not foreground transaction counts in a way that turns Personal into employee
+performance monitoring.
+
+Prefer precise access language such as Acceso activo and Acceso desactivado.
+Use Invitación pendiente only if an authoritative invitation workflow exists.
+A status must reflect actual authoritative access state, not inferred
+employee presence. Do not imply En turno, currently working, or currently at
+a register without authoritative shift/session semantics.
+
+### Person detail
+
+Keep the detail view focused and conceptually organize it into:
+
+1. **Acceso:** human-facing role, cafeteria, access status, and email/account
+   identifier where useful.
+2. **Actividad en PIKAS:** recent/last activity where reliably supported,
+   relevant transactions processed by the person, and other operational
+   activity only where authoritative data supports it.
+3. **Historial de acceso:** access granted, activated/deactivated, role
+   changed, and who performed access-management actions where supported.
+
+Keep operational transaction activity separate from access/security history.
+Do not expose internal audit implementation details unnecessarily.
+
+### Role hierarchy and responsibilities
+
+Use this conceptual hierarchy:
+
+- **Cajero/Cajera:** transaction execution.
+- **Supervisor/Supervisora:** transaction execution plus explicitly
+  authorized shift-level interventions.
+- **Administrador/Administradora de cafetería:** management of the cafeteria
+  operation and personnel access.
+
+Do not turn Supervisor into a second Cafeteria Admin.
+
+A Cajero is primarily responsible for selling quickly and safely. Potential
+functions, subject to authoritative capability/model review, include using
+POS; searching/selecting students; seeing information required for permitted
+sales, including relevant balance, available-today, and restriction
+information; managing the active cart; processing supported wallet purchases
+and cash sales; handling cash tender/change; completing supported non-user
+cash sales; viewing a just-processed receipt; reprinting where permitted; and
+accessing limited recent transaction context needed for immediate POS
+recovery.
+
+A Cajero should not automatically receive authority to change prices or
+administer the catalog, change student limits/restrictions, manage personnel,
+access broad cafeteria reporting, change cafeteria configuration, edit
+completed historical financial transactions, or perform broad refund or
+financial corrective actions. Do not imply any cashier action exists until
+authoritative backend and permission support is verified.
+
+A Supervisor is a POS operator with elevated shift-level authority. Potential
+interventions, subject to backend/financial/permission review, may include
+authorized refund workflows, transaction review for active operational
+issues, additional receipt-history/reprint authority, explicitly supported
+POS exceptions, and temporary product availability changes where authorized.
+Do not treat these as implemented capabilities until the authoritative model
+is reviewed. Temporary product sellability/availability is distinct from
+editing catalog data such as product name or price.
+
+A Supervisor should not automatically receive product/catalog administration,
+price management, personnel management, cafeteria configuration, broad
+administrative reporting, or unrestricted historical financial authority.
+
+### Student safeguards and override boundary
+
+Supervisor status does not inherently override student daily spending
+limits, purchase restrictions, allergy/safety restrictions, or other enforced
+student safeguards and financial controls. Do not create a generic
+“Supervisor override” that bypasses a transaction control.
+
+If PIKAS later supports a specific override, its type and authorization must
+be explicit; capture a reason where appropriate; make the action auditable;
+and require backend/policy support. Do not infer override authority from the
+Supervisor role.
+
+### Cafeteria Admin
+
+The Cafeteria Admin owns management of the cafeteria operation. Conceptually,
+where supported, this includes personnel access; assigning Cajero/Supervisor
+roles; activating/deactivating operational access; product/catalog and price
+management; cafeteria-specific student operational controls where policy
+permits; authorized transaction/refund workflows; reporting; and cafeteria
+configuration. The exact capability set remains subject to authoritative
+backend/model review.
+
+### Adding personnel and assigning roles
+
+Make the desired UX simpler than the underlying identity architecture:
+
+1. Ask for email first.
+2. Resolve whether the person already exists in PIKAS.
+3. If an existing identity/person is found, show that person and allow
+   assignment of the appropriate cafeteria role.
+4. Collect additional identity/onboarding information only when the person
+   is genuinely new and the authoritative workflow requires it.
+
+Do not ask an administrator to re-enter a name unnecessarily when an existing
+authoritative Person can be resolved. This helps prevent duplicate
+identities/Person records.
+
+The eventual UX may explain that an existing person already has a PIKAS
+account and allow cafeteria access assignment. For a new person, explain the
+onboarding state in human language and collect only required information,
+using an authoritative invitation/onboarding flow if one exists. Do not imply
+email invitation or account provisioning is currently supported. Inspect
+existing identity-provisioning, identity-linking, and membership-management
+architecture before implementation; do not create a parallel identity
+system.
+
+When assigning or changing a role, show a concise human-facing permission
+preview. For elevated roles such as Supervisor, explain the additional
+authority and show only verified supported capabilities. Do not expose raw
+capability codes or promise refund authority, availability controls, or other
+elevated actions before backend/model review.
+
+Changing Cajero ↔ Supervisor should be a deliberate access-management action.
+Preserve an audit trail where supported and do not assume exact session
+refresh behavior until authentication/session behavior is reviewed.
+
+### Deactivation, self-access, and historical integrity
+
+Prefer deactivation over deletion. Explain in confirmation that the person
+will lose the relevant operational access while historical transactions and
+audit history remain intact. Do not delete a Person because cafeteria access
+is removed.
+
+Changing current access must never rewrite historical financial attribution.
+A transaction processed by María Santos must remain attributed to María
+Santos after deactivation, role change, or removal of current cafeteria
+access. Preserve relevant audit history as well.
+
+Cafeteria administrators may appear in Personal so the roster accurately
+shows who has access, for example:
+
+```text
+Edwin Jaquez
+Administrador de cafetería · Acceso activo
+Tú
+```
+
+Do not apply Cajero/Supervisor editing controls to the current cafeteria
+administrator or allow accidental self-demotion through normal staff-role
+controls. Do not assume all administrator memberships can be freely disabled.
+If policy requires retained administrative access, prevent changes that
+would leave the cafeteria in an invalid administrative state. Full
+administrator succession is outside this direction.
+
+### iPad and responsive behavior
+
+Keep Personal easy to operate on iPad. Prefer compact touch-friendly roster
+rows over giant cards. A portrait row may show name, role, access status,
+useful recent activity context, and a row-navigation affordance. Use
+whole-row tap targets where appropriate, avoid desktop tables that require
+awkward horizontal scrolling, and preserve useful information density without
+making controls too small for touch.
+
 ## Screens deferred
 
-This specification records no screen-level design for Personal or
-Configuración beyond their presence in the navigation direction.
+This specification records no screen-level design for Configuración beyond
+its presence in the navigation direction.
 
 ## Decisions requiring backend/model review
 
@@ -478,9 +677,29 @@ Before implementing affected behavior, check the authoritative contracts for:
 - Structured refund-reason analytics.
 - Existing CSV/export capabilities before designing export behavior.
 - Reconciliation/discrepancy reporting before exposing it.
+- Current authoritative behavior and authorized callers of
+  `set_cafeteria_pos_membership`; supported role codes and scope behavior; and
+  whether Cafeteria Admin can manage POS roles through existing authorized
+  wiring.
+- Existing-person lookup/resolution, Auth Identity → Person linking rules,
+  and duplicate identity/Person protections.
+- New-user invitation/onboarding support, if any; activation/deactivation
+  and role-change semantics; and session/cache behavior after access changes.
+- Cashier and Supervisor capabilities actually enforced, including refund
+  authorization by role, receipt/reprint authorization, temporary product
+  availability authorization, and transaction-history visibility.
+- Student-limit/restriction enforcement and any explicit override mechanism.
+- Audit support for access creation, deactivation, reactivation, and role
+  changes; and preservation of historical cashier/operator attribution.
+- Self-demotion and final Cafeteria Admin constraints, and the reliable
+  definition of “last activity” before exposing it.
 
 Do not imply support in the UI for a concept the authoritative backend does
 not represent.
+
+Classify future implementation needs as already supported, requiring UI/API
+wiring, or requiring backend/model work. Do not silently broaden existing
+permissions to make the desired UX work.
 
 ## Design fidelity and exclusions
 
