@@ -103,6 +103,7 @@ describe("authenticated customer-admin routes", () => {
       memberships: [],
       platform: {
         role: "platform_admin",
+    roles: ["platform_admin"],
         capabilities: platformCapabilities,
       },
     });
@@ -161,7 +162,8 @@ describe("authenticated customer-admin routes", () => {
       user: { id: "platform-auth-user" },
       person: { id: "platform-person", displayName: "Platform Operator" },
       memberships: [],
-      platform: { role: "platform_admin", capabilities: [otherCapability] },
+      platform: { role: "platform_admin",
+    roles: ["platform_admin"], capabilities: [otherCapability] },
     });
 
     const response = await post(endpoint, body);

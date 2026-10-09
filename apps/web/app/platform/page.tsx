@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { resolvePikasIdentity } from "@/lib/auth/pikas-context";
+import {
+  hasPlatformAuthority,
+  resolvePikasIdentity,
+} from "@/lib/auth/pikas-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PlatformHomePage() {
@@ -9,7 +12,7 @@ export default async function PlatformHomePage() {
 
   if (identity.status === "unauthenticated") redirect("/backoffice/login");
   if (identity.status !== "ready") redirect("/backoffice/login?error=identity");
-  if (identity.platform?.role !== "platform_admin") {
+  if (!hasPlatformAuthority(identity) || !identity.platform) {
     redirect("/backoffice/login?error=platform");
   }
 
@@ -20,8 +23,8 @@ export default async function PlatformHomePage() {
       </p>
       <h1 className="mt-2 text-3xl font-bold">PIKAS Platform</h1>
       <p className="mt-3">
-        Hola, {identity.person.displayName}. Tu identidad está autorizada como
-        administradora de plataforma.
+        Hola, {identity.person.displayName}. Tu identidad cuenta con autoridad de
+        plataforma.
       </p>
       <p className="mt-3 text-slate-700">
         Esta sesión no incluye membresías ni acceso a datos de clientes.

@@ -86,8 +86,7 @@ export async function POST(request: NextRequest) {
 
   if (
     identity.status !== "ready" ||
-    identity.platform?.role !== "platform_admin" ||
-    !identity.platform.capabilities.includes(requiredCapability)
+    !identity.platform?.capabilities.includes(requiredCapability)
   ) {
     return NextResponse.json({ error: "platform_authorization_required" }, { status: 403 });
   }

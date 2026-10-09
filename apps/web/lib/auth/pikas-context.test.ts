@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 import {
   backofficeHome,
   hasAppRole,
+  hasPlatformAuthority,
   pilotHome,
   resolvePikasIdentity,
   type PikasIdentity,
@@ -48,6 +49,7 @@ describe("authenticated login destination", () => {
   it("does not route a platform-only administrator through public tenant login", () => {
     const identity = readyIdentity([], {
       role: "platform_admin",
+ roles: ["platform_admin"],
       capabilities: ["platform:audit:read"],
     });
 
@@ -70,6 +72,7 @@ describe("authenticated login destination", () => {
       pilotHome(
         readyIdentity([tenantMembership], {
           role: "platform_admin",
+ roles: ["platform_admin"],
           capabilities: ["platform:audit:read"],
         }),
       ),
@@ -78,6 +81,7 @@ describe("authenticated login destination", () => {
       backofficeHome(
         readyIdentity([tenantMembership], {
           role: "platform_admin",
+ roles: ["platform_admin"],
           capabilities: ["platform:audit:read"],
         }),
       ),
@@ -146,5 +150,134 @@ describe("authenticated login destination", () => {
     expect(identity.status).toBe("unlinked");
     expect(pilotHome(identity)).toBeNull();
     expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+});
+
+const adminCaps = [
+  "platform:tenant:provision",
+  "platform:identity:link",
+  "platform:customer_admin:provision",
+  "platform:tenant:lifecycle:read",
+  "platform:audit:read",
+];
+const sandboxCap = "platform:sandbox:pov:enter";
+
+function supabaseWithPlatform(platformData: unknown): SupabaseClient {
+  const personQuery = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    maybeSingle: vi.fn().mockResolvedValue({
+      data: { id: "person-id", display_name: "Operator" },
+      error: null,
+    }),
+  };
+  personQuery.select.mockReturnValue(personQuery);
+  personQuery.eq.mockReturnValue(personQuery);
+  const membershipQuery = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    then: (resolve: (value: unknown) => unknown) =>
+      resolve({ data: [], error: null }),
+  };
+  membershipQuery.select.mockReturnValue(membershipQuery);
+  membershipQuery.eq.mockReturnValue(membershipQuery);
+  return {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: { id: "auth-user-id" } },
+        error: null,
+      }),
+    },
+    from: vi.fn((table: string) =>
+      table === "persons" ? personQuery : membershipQuery,
+    ),
+    rpc: vi.fn().mockResolvedValue({ data: platformData, error: null }),
+  } as unknown as SupabaseClient;
+}
+
+describe("multi-role platform context", () => {
+  it.each([
+    [
+      "platform_admin",
+      { role: "platform_admin", roles: ["platform_admin"], capabilities: adminCaps },
+    ],
+    [
+      "platform_sandbox_operator",
+      {
+        role: "platform_sandbox_operator",
+        roles: ["platform_sandbox_operator"],
+        capabilities: [sandboxCap],
+      },
+    ],
+    [
+      "dual role",
+      {
+        role: "platform_admin",
+        roles: ["platform_admin", "platform_sandbox_operator"],
+        capabilities: [...adminCaps, sandboxCap],
+      },
+    ],
+  ])("parses %s and grants Backoffice access", async (_n, data) => {
+    const identity = await resolvePikasIdentity(supabaseWithPlatform(data));
+    expect(identity.status).toBe("ready");
+    expect(identity.platform).toEqual(data);
+    expect(hasPlatformAuthority(identity)).toBe(true);
+    expect(backofficeHome(identity)).toBe("/platform");
+    expect(pilotHome(identity)).toBeNull();
+  });
+
+  it("does not add sandbox authority to platform_admin or admin authority to the sandbox operator", async () => {
+    const admin = await resolvePikasIdentity(
+      supabaseWithPlatform({
+        role: "platform_admin",
+        roles: ["platform_admin"],
+        capabilities: adminCaps,
+      }),
+    );
+    const sandbox = await resolvePikasIdentity(
+      supabaseWithPlatform({
+        role: "platform_sandbox_operator",
+        roles: ["platform_sandbox_operator"],
+        capabilities: [sandboxCap],
+      }),
+    );
+    expect(admin.platform?.capabilities).not.toContain(sandboxCap);
+    expect(sandbox.platform?.capabilities).toEqual([sandboxCap]);
+  });
+
+  it.each([
+    ["unknown role", { role: "root", roles: ["root"], capabilities: ["x"] }],
+    ["missing roles", { role: "platform_admin", capabilities: ["x"] }],
+    ["empty roles", { role: "platform_admin", roles: [], capabilities: ["x"] }],
+    [
+      "role not in roles",
+      { role: "platform_admin", roles: ["platform_sandbox_operator"], capabilities: ["x"] },
+    ],
+    [
+      "unknown listed role",
+      { role: "platform_admin", roles: ["platform_admin", "root"], capabilities: ["x"] },
+    ],
+    ["missing capabilities", { role: "platform_admin", roles: ["platform_admin"] }],
+    [
+      "non-string capability",
+      { role: "platform_admin", roles: ["platform_admin"], capabilities: [1] },
+    ],
+    ["non-object", "platform_admin"],
+  ])("fails closed on malformed context: %s", async (_n, data) => {
+    await expect(
+      resolvePikasIdentity(supabaseWithPlatform(data)),
+    ).rejects.toThrow("Invalid platform context response");
+  });
+
+  it("denies Backoffice to a Person with no platform context or no capabilities", async () => {
+    const none = await resolvePikasIdentity(supabaseWithPlatform(null));
+    expect(backofficeHome(none)).toBeNull();
+    expect(hasPlatformAuthority(none)).toBe(false);
+    const empty = readyIdentity([], {
+      role: "platform_admin",
+      roles: ["platform_admin"],
+      capabilities: [],
+    });
+    expect(backofficeHome(empty)).toBeNull();
   });
 });

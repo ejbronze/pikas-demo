@@ -96,8 +96,7 @@ export function createPlatformRpcPostHandler<TPayload, TResult>({
 
     if (
       identity.status !== "ready" ||
-      identity.platform?.role !== "platform_admin" ||
-      !identity.platform.capabilities.includes(capability)
+      !identity.platform?.capabilities.includes(capability)
     ) {
       return NextResponse.json(
         { error: "platform_authorization_required" },

@@ -24,6 +24,7 @@ const authorizedIdentity = {
   memberships: [],
   platform: {
     role: "platform_admin",
+    roles: ["platform_admin"],
     capabilities: [
       "platform:tenant:provision",
       "platform:identity:link",
@@ -181,6 +182,7 @@ describe("authenticated platform tenant provisioning route", () => {
       ...authorizedIdentity,
       platform: {
         role: "platform_admin",
+    roles: ["platform_admin"],
         capabilities: ["platform:audit:read"],
       },
     });
@@ -332,5 +334,33 @@ describe("authenticated platform tenant provisioning route", () => {
     expect(createSupabaseServerClient).toHaveBeenCalledOnce();
     expect(supabaseClient.from).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a sandbox-only operator through the capability check", async () => {
+    resolvePikasIdentity.mockResolvedValue({
+      ...authorizedIdentity,
+      platform: {
+        role: "platform_sandbox_operator",
+        roles: ["platform_sandbox_operator"],
+        capabilities: ["platform:sandbox:pov:enter"],
+      },
+    });
+    const response = await post(validPayload);
+    expect(response.status).toBe(403);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("does not let a dual-role Person bypass the required capability", async () => {
+    resolvePikasIdentity.mockResolvedValue({
+      ...authorizedIdentity,
+      platform: {
+        role: "platform_admin",
+        roles: ["platform_admin", "platform_sandbox_operator"],
+        capabilities: ["platform:sandbox:pov:enter", "platform:audit:read"],
+      },
+    });
+    const response = await post(validPayload);
+    expect(response.status).toBe(403);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

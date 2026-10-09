@@ -18,10 +18,22 @@ export type PikasMembership = {
   scopeKind: "account" | "school" | "cafeteria";
 };
 
+export type PikasPlatformRole = "platform_admin" | "platform_sandbox_operator";
+
 export type PikasPlatformContext = {
-  role: "platform_admin";
+  role: PikasPlatformRole;
+  roles: PikasPlatformRole[];
   capabilities: string[];
 };
+
+const platformRoleCodes = new Set<string>([
+  "platform_admin",
+  "platform_sandbox_operator",
+]);
+
+function isPlatformRole(value: unknown): value is PikasPlatformRole {
+  return typeof value === "string" && platformRoleCodes.has(value);
+}
 
 export type PikasIdentity =
   | {
@@ -215,22 +227,25 @@ export async function resolvePikasIdentity(
       typeof response !== "object" ||
       response === null ||
       !("role" in response) ||
-      response.role !== "platform_admin" ||
+      !isPlatformRole(response.role) ||
+      !("roles" in response) ||
+      !Array.isArray(response.roles) ||
+      response.roles.length === 0 ||
+      !response.roles.every(isPlatformRole) ||
+      !response.roles.includes(response.role) ||
       !("capabilities" in response) ||
-      !Array.isArray(response.capabilities)
+      !Array.isArray(response.capabilities) ||
+      !response.capabilities.every(
+        (capability: unknown) =>
+          typeof capability === "string" && capability.length > 0,
+      )
     ) {
-      throw new Error("Invalid platform context response");
-    }
-    const capabilities = response.capabilities.filter(
-      (capability: unknown): capability is string =>
-        typeof capability === "string",
-    );
-    if (capabilities.length !== response.capabilities.length) {
       throw new Error("Invalid platform context response");
     }
     platform = {
       role: response.role,
-      capabilities,
+      roles: [...new Set<PikasPlatformRole>(response.roles)],
+      capabilities: response.capabilities as string[],
     };
   }
 
@@ -297,11 +312,27 @@ export function pilotHome(identity: PikasIdentity): string | null {
 }
 
 export function backofficeHome(identity: PikasIdentity): string | null {
-  if (
-    identity.status !== "ready" ||
-    identity.platform?.role !== "platform_admin"
-  ) {
+  if (identity.status !== "ready" || !hasPlatformAuthority(identity)) {
     return null;
   }
   return "/platform";
+}
+
+export function hasPlatformAuthority(identity: PikasIdentity): boolean {
+  return (
+    identity.status === "ready" &&
+    identity.platform !== null &&
+    identity.platform.capabilities.length > 0
+  );
+}
+
+export function hasPlatformCapability(
+  identity: PikasIdentity,
+  capability: string,
+): boolean {
+  return (
+    identity.status === "ready" &&
+    identity.platform !== null &&
+    identity.platform.capabilities.includes(capability)
+  );
 }

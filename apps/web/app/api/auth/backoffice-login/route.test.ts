@@ -56,6 +56,7 @@ describe("private backoffice login route", () => {
       memberships: [],
       platform: {
         role: "platform_admin",
+    roles: ["platform_admin"],
         capabilities: ["platform:audit:read"],
       },
     });
