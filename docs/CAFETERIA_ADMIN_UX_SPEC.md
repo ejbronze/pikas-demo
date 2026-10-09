@@ -275,9 +275,187 @@ On iPad, use compact transaction rows rather than large individual cards.
 Keep search/filter controls easily accessible, ideally sticky where supported,
 and make each row an appropriate touch target.
 
+## Reportes — approved direction
+
+Reportes is the cafeteria administrator’s analysis workspace. It should answer:
+
+- What happened?
+- When did it happen?
+- What contributed to it?
+- Where can I inspect the underlying activity?
+
+Show the answer first, let interaction reveal the explanation, and keep the
+underlying data one tap away. Make Reportes understandable to a non-technical
+cafeteria manager while keeping detailed operational data accessible. Do not
+equate making all data accessible with showing all data at once.
+
+### Relationship to other screens
+
+- **Inicio:** What is happening now, and does anything require action?
+- **Reportes:** What happened over time, and what does it tell me?
+- **Transacciones:** The actual financial events behind the numbers.
+
+Where useful, Reportes should drill into appropriately filtered Transacciones
+rather than duplicate the full transaction ledger.
+
+### Global reporting context
+
+Use one clear reporting context across Reportes sections. Initial period
+options:
+
+- Hoy
+- 7 días
+- 30 días
+- Personalizado
+
+Display a custom period’s selected date range clearly. Relevant optional
+filters may include payment method, transaction type, cashier,
+register/terminal, and product/category where useful and supported. Avoid a
+large BI-style filter panel; use a compact “Más filtros” interaction where
+appropriate and show active filters as removable chips.
+
+Preserve the selected period and filters when moving among Reportes sections.
+When drilling into Transacciones, carry relevant filters with the user.
+Returning to Reportes should preserve the reporting context where practical.
+
+An optional “Comparar con período anterior” may be offered without
+overwhelming the default experience. Comparisons must use a clearly defined
+equivalent previous period and must not be misleading.
+
+### Primary summary and trend
+
+The default Reportes experience should provide compact analytical summaries
+such as Ventas, Compras, Ticket promedio, Recargas, and Reembolsos. Unlike
+Inicio, Ticket promedio is appropriate here. These should not be oversized
+dashboard cards. Make metrics interactive when meaningful and useful, such as
+linking Compras to purchase transactions or Reembolsos to refunds for the
+selected period. Do not calculate or display metrics unless authoritative
+data supports them.
+
+Provide a primary sales/activity-over-time visualization. Adapt granularity
+sensibly to the period: hours for a single day where appropriate, days for
+short or mid-range reporting, and sensible aggregation for longer ranges.
+Charts must support tap on iPad, not depend on hover, and reveal persistent
+contextual detail when a time point or period is selected rather than relying
+only on a disappearing tooltip. Detail may include sales amount, purchase
+count, average ticket, payment-method breakdown, and a link to underlying
+filtered transactions when supported.
+
+### Analytical areas
+
+Provide a simple breakdown/navigation model within Reportes for Ventas,
+Productos, Pagos y recargas, and Operación. These should feel like related
+areas of one workspace and preserve the reporting context while switching
+between them.
+
+#### Ventas
+
+Help answer how much was sold, how many purchases occurred, and when activity
+was highest. Useful views may include sales over time, purchase count,
+average ticket, and busiest periods. Busiest-period rows may show time period,
+purchases, and sales. Selecting a period should provide access to the
+underlying filtered transactions.
+
+#### Productos
+
+Help answer which products sell most by units, which generate the most sales
+value, and which have little or no activity. Support the conceptual switch
+“Por unidades” / “Por ventas” and make product rows interactive where useful.
+Selecting a product may show a compact insight for the selected period,
+including units sold, sales value, activity timing, percentage of purchases
+containing the product only if reliably calculable from authoritative data,
+and access to relevant underlying transactions.
+
+“Productos con menor actividad” is acceptable; do not imply low activity
+means a product is bad. Do not introduce inventory, stock, cost, margin,
+reorder, or profitability analytics unless those capabilities and
+authoritative data are explicitly supported in the future.
+
+#### Pagos y recargas
+
+Keep purchase payment analysis and wallet replenishment analysis clearly
+separate. Purchase payment analysis may show values or shares for Saldo PIKAS,
+Efectivo, and future supported payment methods; these describe how purchases
+were paid. Present Recargas separately, with potential summaries such as
+total value, count, average, and trend where supported.
+
+Never add wallet replenishments to cafeteria sales. Explain the distinction:
+a recarga adds value to a PIKAS wallet; a sale occurs when value is used to
+purchase cafeteria products. A small explanatory affordance may help users
+understand why these figures are separate.
+
+#### Operación
+
+Help administrators understand operational activity, potentially including
+activity by cashier/staff, purchase count and sales processed, refunds, and
+register/terminal activity where reliable data exists.
+
+Do not turn staff reporting into an employee leaderboard or label a cashier
+“best” or “top” based merely on transaction volume. Higher volume may reflect
+shift assignment or lunch-rush coverage. Cashier/staff rows may drill into
+corresponding filtered transactions.
+
+### Refund analysis
+
+Reportes may summarize refund count and value, and partial versus full refunds
+where supported. If the authoritative backend eventually supports structured
+refund reasons, Reportes may break refunds down by reason. Selecting a refund
+metric or reason should lead to corresponding filtered transactions.
+
+Do not imply structured reason analytics exist until the backend/model
+supports them. Do not invent reconciliation/discrepancy analytics before
+reviewing the authoritative financial/reconciliation model.
+
+### Progressive disclosure and states
+
+Preserve the interaction pattern:
+
+**Overview → breakdown → detail → source transaction(s)**
+
+Basic reporting information should not require navigating through many
+screens, but the initial screen should not contain every possible field,
+chart, and table. Make meaningful numbers, rows, chart selections, products,
+payment methods, cashiers, and refund summaries interactive where that helps
+users understand the source data.
+
+Distinguish zero from unavailable data. Examples:
+
+- No refunds: “Sin reembolsos” / “No se registraron reembolsos durante este
+  período.”
+- No product sales: “Sin ventas en este período.”
+- No activity: “Todavía no hay actividad para mostrar.” / “Intenta seleccionar
+  otro período.”
+
+If a value cannot be calculated reliably because required data is
+unavailable, do not silently display zero.
+
+### Export
+
+Reserve a simple “Exportar” interaction for potential concepts such as
+Resumen del reporte, Transacciones, and Productos. Exports should respect the
+selected period and relevant filters. Before implementation, inspect existing
+PIKAS CSV/reporting functionality and reuse existing authoritative
+functionality rather than creating a second export/reporting architecture.
+Do not lock CSV versus Excel details beyond what current supported
+functionality justifies.
+
+### iPad and responsive behavior
+
+Keep Reportes useful on iPad: charts must support tap rather than hover-only
+interaction; use compact responsive data presentation and practical row touch
+targets; avoid giant cards and enormous desktop tables that require horizontal
+scrolling; and keep filters accessible while navigating or scrolling where
+practical. Preserve useful information density without clutter.
+
+### Student analytics boundary
+
+Do not add student-spending rankings or “highest spending students” analytics
+to V1 Reportes. Individual student purchase history belongs in the student’s
+operational profile; aggregate cafeteria performance belongs in Reportes.
+
 ## Screens deferred
 
-This specification records no screen-level design for Reportes, Personal, or
+This specification records no screen-level design for Personal or
 Configuración beyond their presence in the navigation direction.
 
 ## Decisions requiring backend/model review
@@ -293,6 +471,13 @@ Before implementing affected behavior, check the authoritative contracts for:
 - Structured refund reasons and the required note for “Otro”.
 - Exact refund destination and lineage information exposed to the UI.
 - Non-user cash-sale representation without a fake student.
+- Reportes sales/reporting metric definitions and average-ticket calculation.
+- Period-comparison semantics and time-based aggregation.
+- Payment-method, recharge, and product-level reporting.
+- Cashier/register attribution and partial/full refund reporting.
+- Structured refund-reason analytics.
+- Existing CSV/export capabilities before designing export behavior.
+- Reconciliation/discrepancy reporting before exposing it.
 
 Do not imply support in the UI for a concept the authoritative backend does
 not represent.
@@ -305,6 +490,7 @@ specifications. Do not lock arbitrary colors, dimensions, component
 libraries, or styling that has not been approved. Preserve room for visual
 design refinement.
 
-This document does not authorize implementation of UI, APIs, schema changes,
-demo students/products/transactions, POS changes, reporting, Google OAuth, or
-Oscar onboarding.
+This document records product direction only and does not authorize
+implementation. It does not authorize UI or API changes, schema changes,
+demo students/products/transactions, POS changes, Google OAuth, or Oscar
+onboarding.
