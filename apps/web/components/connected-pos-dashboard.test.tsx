@@ -42,7 +42,7 @@ describe("connected POS access boundary", () => {
     const buttons = [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)];
     expect(buttons.length).toBe(8);
     for (const [, attributes, label] of buttons) {
-      if (label !== "Salir" && label !== "Verificar caja y catálogo") expect(attributes).toContain("disabled");
+      if (!["Salir", "Verificar caja y catálogo", "Venta", "Caja"].includes(label)) expect(attributes).toContain("disabled");
     }
     expect(html).not.toContain('href="/pos/caja"');
     expect(html).not.toContain('action="/api/pos');
@@ -69,7 +69,7 @@ describe("connected POS access boundary", () => {
   it("does not mount demo register actions on a connected caja page", async () => {
     const html = renderToStaticMarkup(await CajaPage());
     expect(html).toContain("José Ramírez · Cajero");
-    expect(html).toContain("Las operaciones de caja todavía no están disponibles.");
+    expect(html).toContain("Estado de caja sin confirmar.");
     expect(mocks.registers).not.toHaveBeenCalled();
   });
   it("still selects the existing demo presentation for explicit demo mode", async () => {

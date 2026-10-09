@@ -8,7 +8,7 @@ const uuid = z.uuid();
 export const registerSchema = z.object({ cafeteria_id: uuid, register_id: uuid, assignment_id: uuid,
   register_code: z.string(), display_name: z.string(), register_version: z.number().int(), assignment_version: z.number().int() });
 export const sessionSchema = z.object({ session_id: uuid, cafeteria_id: uuid, register_id: uuid, assignment_id: uuid,
-  register_code_snapshot: z.string(), register_name_snapshot: z.string(), currency_code: z.string().length(3), status: z.literal("open") });
+  register_code_snapshot: z.string(), register_name_snapshot: z.string(), currency_code: z.string().length(3), status: z.literal("open"), version: z.number().int().positive(), opening_cash_minor: catalogMinor });
 export const productSchema = z.object({ product_id: uuid, name: z.string(), description: z.string().nullable(),
   category_id: uuid.nullable(), category_name: z.string().nullable(), price_minor: catalogMinor,
   currency_code: z.string().length(3), version: z.number().int().positive() });
@@ -42,7 +42,14 @@ export const receiptSchema = z.object({ purchase_id: uuid, purchase_number: mino
 });
 export const bootstrapSchema = z.object({ context: posAccessContextSchema, registers: z.array(registerSchema), session: sessionSchema.nullable(),
   catalog: catalogSchema.nullable(), blocked: z.string().nullable() });
+export const registerOperationSchema = z.discriminatedUnion("operation", [
+  z.object({ operation: z.literal("open_register"), register_id: uuid, opening_cash_minor: minorSchema, request_key: uuid }).strict(),
+  z.object({ operation: z.literal("close_register"), session_id: uuid, expected_version: z.number().int().positive(), counted_cash_minor: minorSchema, request_key: uuid }).strict(),
+]);
+export const registerResultSchema = z.array(z.object({ session_id: uuid, status: z.enum(["open", "closed"]), version: z.number().int().positive() })).length(1);
+export type RegisterOperation = z.infer<typeof registerOperationSchema>;
 export const operationSchema = z.discriminatedUnion("operation", [
+  ...registerOperationSchema.options,
   z.object({ operation: z.literal("bootstrap") }).strict(),
   z.object({ operation: z.literal("search"), query: z.string().trim().min(2).max(80).regex(/^[^%_\\]+$/) }).strict(),
   z.object({ operation: z.literal("customer"), customer_id: uuid }).strict(),

@@ -1,3 +1,4 @@
+import { posAccessContextSchema } from "../pos/access-context";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PikasIdentity } from "@/lib/auth/pikas-context";
@@ -21,7 +22,7 @@ const activeSchema = z.object({
   cafeteria_name: z.string(),
   pov_code: z.literal("cashier"),
   persona_display_name: z.string(),
-  expires_at: z.string(),
+  expires_at: z.iso.datetime({ offset: true }),
 });
 
 export type SandboxTarget = {
@@ -32,7 +33,7 @@ export type SandboxTarget = {
   personaName: string;
 };
 
-export type ActiveSandboxPov = SandboxTarget & { expiresAt: string };
+export type ActiveSandboxPov = SandboxTarget & { expiresAt: string; canOpenPos: boolean };
 
 export type SandboxLauncherState =
   | { kind: "hidden" }
@@ -62,6 +63,13 @@ export async function loadSandboxLauncherState(
       const active = activeSchema.safeParse(activeResponse.data);
       if (!active.success) return { kind: "unavailable" };
       const a = active.data;
+      if (Date.parse(a.expires_at) <= Date.now()) return { kind: "unavailable" };
+      const pos = await supabase.rpc("get_pos_access_context");
+      const context = posAccessContextSchema.safeParse(pos.data);
+      const canOpenPos = !pos.error && context.success && context.data.pov?.session_id === a.session_id &&
+        Date.parse(context.data.pov!.expires_at) > Date.now() && context.data.memberships.length === 1 && context.data.memberships[0].account_id === a.account_id &&
+        context.data.memberships[0].cafeteria_id === a.cafeteria_id;
+
       return {
         kind: "active",
         active: {
@@ -71,6 +79,7 @@ export async function loadSandboxLauncherState(
           cafeteriaName: a.cafeteria_name,
           personaName: a.persona_display_name,
           expiresAt: a.expires_at,
+          canOpenPos,
         },
       };
     }

@@ -1,3 +1,4 @@
+import { posContext } from "../pos/access-context.test-fixtures";
 import { describe, expect, it, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -13,7 +14,7 @@ import { loadSandboxLauncherState } from "./sandbox-launcher";
 
 const A = "03e71159-69e9-4387-9b3b-65799d49faf0";
 const C = "b9496342-5079-46ae-83b8-05c39bcbd7fe";
-const S = "11111111-1111-4111-8111-111111111111";
+const S = posContext().pov!.session_id;
 
 function identity(role: string, capabilities: string[]) {
   return {
@@ -43,7 +44,7 @@ const activeRow = {
   cafeteria_name: "Cafetería Y",
   pov_code: "cashier",
   persona_display_name: "Persona Z",
-  expires_at: "2026-10-09T20:00:00Z",
+  expires_at: "2099-01-01T00:00:00Z",
 };
 
 function client(map: Record<string, { data: unknown; error: unknown }>) {
@@ -82,6 +83,7 @@ describe("sandbox launcher state", () => {
   it("gives active POV precedence over the target list", async () => {
     const c = client({
       platform_get_active_sandbox_pov: ok(activeRow),
+      get_pos_access_context: ok(posContext()),
       platform_list_sandbox_pov_targets: ok([targetRow]),
     });
     const state = await loadSandboxLauncherState(c, sandbox);
@@ -93,8 +95,8 @@ describe("sandbox launcher state", () => {
     expect(html).toContain("Persona Z · Cajero");
     expect(html).toContain("Salir de demostración");
     expect(html).not.toContain("Entrar como Cajero");
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>Abrir POS/);
-    expect(html).toContain("Conexión POS pendiente");
+    expect(html).toMatch(/<a[^>]*href="\/pos"[^>]*>Abrir POS/);
+    expect(html).not.toContain("Acceso POS sin confirmar");
     expect(html).not.toContain(S);
   });
 
@@ -143,4 +145,13 @@ describe("sandbox launcher state", () => {
     });
     expect((await loadSandboxLauncherState(c, dual)).kind).toBe("targets");
   });
+});
+
+it.each([null, { ...posContext(), pov: null }, { ...posContext(), pov: { ...posContext().pov!, session_id: "99999999-9999-4999-8999-999999999999" } }])("keeps POS disabled without matching authoritative cashier access", async (data) => {
+ const state = await loadSandboxLauncherState(client({ platform_get_active_sandbox_pov: ok(activeRow), get_pos_access_context: ok(data) }), sandbox);
+ const html = renderToStaticMarkup(<SandboxLauncher state={state} />);
+ expect(html).toMatch(/<button[^>]*disabled[^>]*>Abrir POS/); expect(html).not.toContain('href="/pos"');
+});
+it("rejects expired POV before enabling navigation", async () => {
+ expect(await loadSandboxLauncherState(client({ platform_get_active_sandbox_pov: ok({ ...activeRow, expires_at: "2000-01-01T00:00:00Z" }) }), sandbox)).toEqual({ kind: "unavailable" });
 });

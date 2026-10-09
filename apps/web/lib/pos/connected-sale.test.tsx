@@ -10,7 +10,7 @@ import { CommittedReceipt, ConnectedPosView } from "../../components/connected-p
 const context = posContext();
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const session = { session_id: id(1), cafeteria_id: context.memberships[0].cafeteria_id, register_id: id(2), assignment_id: id(3),
-  register_code_snapshot: "R1", register_name_snapshot: "Caja escolar", status: "open", currency_code: "DOP" };
+  register_code_snapshot: "R1", register_name_snapshot: "Caja escolar", status: "open", version: 1, opening_cash_minor: "10000", currency_code: "DOP" };
 const product = { product_id: id(4), name: "Producto real", description: null, category_id: null, category_name: "Comida", price_minor: 12550,
   version: 7, currency_code: "DOP" };
 const bootstrap = () => bootstrapSchema.parse({ context, registers: [], session, catalog: {
@@ -37,7 +37,7 @@ let sale: ConnectedSale;
 beforeEach(() => {
   data = new Map(); storage = { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => { data.set(key, value); }, removeItem: (key) => { data.delete(key); } };
   send = vi.fn(async (op: PosOperation) => op.operation === "bootstrap" ? bootstrap() : op.operation === "search" ? [customer] :
-    op.operation === "customer" ? purchaseContext() : receipt(op.request));
+    op.operation === "customer" ? purchaseContext() : op.operation === "checkout" ? receipt(op.request) : []);
   sale = new ConnectedSale(context, send, () => id(7));
 });
 async function prepare() { await sale.start(storage); sale.identify(); await sale.search("Estudiante"); await sale.select(customer); sale.quantity(product.product_id, 1); await sale.review(); }
@@ -207,3 +207,50 @@ describe("connected contract and transport safeguards", () => {
   });
 });
 function studentContext() { return { ...purchaseContext(), customer_type: "student" as const, wallet: { status: "active" as const, balance_minor: "50000" } }; }
+
+describe("pilot register and complete sale journey", () => {
+ const register = { cafeteria_id: session.cafeteria_id, register_id: session.register_id, assignment_id: session.assignment_id, register_code: "R1", display_name: "Caja escolar", register_version: 1, assignment_version: 1 };
+ it("opens, recovers readiness, sells wallet then cash, resets, counts cash and closes", async () => {
+  let open = false; let nextKey = 20;
+  send.mockImplementation(async (op) => {
+   if (op.operation === "bootstrap") return { ...bootstrap(), registers: [register], session: open ? session : null, catalog: open ? bootstrap().catalog : null, blocked: open ? null : "Abre caja" };
+   if (op.operation === "open_register") { open = true; return [{ session_id: session.session_id, status: "open", version: 1 }]; }
+   if (op.operation === "close_register") { open = false; return [{ session_id: session.session_id, status: "closed", version: 2 }]; }
+   if (op.operation === "search") return [customer]; if (op.operation === "customer") return purchaseContext();
+   if (op.operation === "checkout") return receipt(op.request);
+  });
+  sale = new ConnectedSale(context, send, () => id(nextKey++)); await sale.start(storage);
+  sale.identify(); expect(sale.getSnapshot().phase).toBe("entry");
+  await sale.openRegister(register.register_id, "100"); expect(sale.getSnapshot().bootstrap!.session).not.toBeNull();
+  await prepare(); await sale.checkout(); await sale.reset();
+  await sale.select(customer); sale.quantity(product.product_id, 1); await sale.review(); sale.setTender("cash"); sale.setCash("200"); await sale.checkout();
+  expect(sale.getSnapshot().receipt!.change_due_minor).toBe("7450"); await sale.reset();
+  await sale.closeRegister("225.50"); expect(sale.getSnapshot().bootstrap!.session).toBeNull(); expect(data.size).toBe(0);
+  expect(send.mock.calls.map(([op]) => op).filter((op) => "request_key" in op || op.operation === "checkout")).toHaveLength(4);
+ });
+ it("journals uncertain register writes and retries the exact request after reload", async () => {
+  send.mockResolvedValue({ ...bootstrap(), registers: [register], session: null, catalog: null, blocked: "Abre caja" }); await sale.start(storage);
+  send.mockRejectedValueOnce(new Error("lost response")); await sale.openRegister(register.register_id, "100");
+  const pending = sale.getSnapshot().registerPending!; expect(pending.request.operation).toBe("open_register");
+  await sale.openRegister(register.register_id, "200"); expect(sale.getSnapshot().registerPending).toEqual(pending);
+  const recovered = new ConnectedSale(context, send, () => id(99)); await recovered.start(storage);
+  send.mockResolvedValueOnce([{ session_id: session.session_id, status: "open", version: 1 }]); await recovered.retryRegister();
+  expect(send.mock.calls.filter(([op]) => op.operation === "open_register").map(([op]) => op)).toEqual([pending.request, pending.request]);
+ });
+ it("prevents register changes during a sale and a different actor recovering register writes", async () => {
+  await prepare(); await sale.closeRegister("100"); expect(send.mock.calls.some(([op]) => op.operation === "close_register")).toBe(false);
+  data.set("pikas:connected-pos:register:v1", JSON.stringify({ actor: id(99), pov: context.pov!.session_id, request: { operation: "open_register", register_id: register.register_id, opening_cash_minor: "0", request_key: id(50) } }));
+  const recovered = new ConnectedSale(context, send); await recovered.start(storage); await recovered.retryRegister(); expect(recovered.getSnapshot().recoveryBlocked).toBe(true);
+ });
+});
+
+it("clears only a definite rejected register operation and refreshes readiness", async () => {
+ const current = bootstrap(); send.mockResolvedValue(current); await sale.start(storage);
+ send.mockRejectedValueOnce(new PosRequestError("El estado cambió", true)); await sale.closeRegister("100");
+ expect(sale.getSnapshot().registerPending).toBeNull(); expect(data.size).toBe(0); expect(sale.getSnapshot().notice).toBe("El estado cambió");
+});
+it("does not invent readiness if an open succeeds but the subsequent read fails", async () => {
+ send.mockResolvedValue({ ...bootstrap(), registers: [{ cafeteria_id: session.cafeteria_id, register_id: session.register_id, assignment_id: session.assignment_id, register_code: "R1", display_name: "Caja", register_version: 1, assignment_version: 1 }], session: null, catalog: null, blocked: "Abre caja" }); await sale.start(storage);
+ send.mockResolvedValueOnce([{ session_id: session.session_id, status: "open", version: 1 }]).mockRejectedValueOnce(new Error("read unavailable"));
+ await sale.openRegister(session.register_id, "100"); expect(sale.getSnapshot().bootstrap).toBeNull(); sale.identify(); expect(sale.getSnapshot().phase).toBe("entry");
+});

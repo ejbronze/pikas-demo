@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { SandboxLauncherState } from "@/lib/platform/sandbox-launcher";
 import {
   EnterCashierButton,
@@ -25,16 +26,7 @@ export function SandboxLauncher({ state }: { state: SandboxLauncherState }) {
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
           <div>
-            <button
-              className="btn w-full sm:w-auto"
-              disabled
-              aria-describedby="pos-pending"
-            >
-              Abrir POS
-            </button>
-            <p id="pos-pending" className="mt-1 text-xs text-slate-600">
-              Conexión POS pendiente
-            </p>
+            {active.canOpenPos ? <Link className="btn w-full sm:w-auto" href="/pos">Abrir POS</Link> : <><button className="btn w-full sm:w-auto" disabled>Abrir POS</button><p className="mt-1 text-xs text-slate-600">Acceso POS sin confirmar. Actualiza la página.</p></>}
           </div>
           <ExitDemoButton />
         </div>

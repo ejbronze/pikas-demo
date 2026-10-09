@@ -10,7 +10,7 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 const context = posContext();
 const cafe = context.memberships[0].cafeteria_id;
 const register = { cafeteria_id: cafe, register_id: id(1), assignment_id: id(2), register_code: "R1", display_name: "Caja", register_version: 1, assignment_version: 1 };
-const session = { ...register, session_id: id(3), status: "open", currency_code: "DOP", register_code_snapshot: "R1", register_name_snapshot: "Caja" };
+const session = { ...register, session_id: id(3), status: "open", version: 1, opening_cash_minor: "10000", currency_code: "DOP", register_code_snapshot: "R1", register_name_snapshot: "Caja" };
 const catalog = { cafeteria_id: cafe, status: "manual", currency_code: "DOP", service_shift: null, menu: null,
   products: [{ product_id: id(4), name: "Producto", description: null, category_id: null, category_name: null, price_minor: 10000, version: 1, currency_code: "DOP" }] };
 const customer = { customer_id: id(5), customer_type: "student", display_name: "Estudiante", student_code: null, grade_label: null, class_label: null, restrictions: [] };
@@ -121,4 +121,27 @@ describe("authenticated POS adapter", () => {
     mocks.rpc.mockResolvedValue({ data: { ...receipt, total_minor: "1" }, error: null });
     expect((await call({ operation: "checkout", request: checkout })).status).toBe(502);
   });
+});
+
+describe("connected register lifecycle", () => {
+ it("opens only a register in authoritative scope and derives assignment", async () => {
+  mocks.rpc.mockImplementation(async (name: string) => ({ data: name === "open_register_session" ? [{ session_id: session.session_id, status: "open", version: 1 }] : responses[name], error: null }));
+  expect((await call({ operation: "open_register", register_id: register.register_id, opening_cash_minor: "10000", request_key: checkout.request_key })).status).toBe(200);
+  expect(mocks.rpc).toHaveBeenCalledWith("open_register_session", { p_register_id: register.register_id, p_assignment_id: register.assignment_id, p_opening_cash_minor: "10000", p_open_request_key: checkout.request_key });
+  expect((await call({ operation: "open_register", register_id: id(99), opening_cash_minor: "10000", request_key: checkout.request_key })).status).toBe(403);
+ });
+ it("guards close and closed-session replay using effective scope", async () => {
+  mocks.rpc.mockImplementation(async (name: string) => ({ data: name === "get_pos_register_session" ? { session_id: session.session_id } : name === "close_my_register_session" ? [{ session_id: session.session_id, status: "closed", version: 2 }] : responses[name], error: null }));
+  const op = { operation: "close_register", session_id: session.session_id, expected_version: 1, counted_cash_minor: "15000", request_key: checkout.request_key };
+  expect((await call(op)).status).toBe(200);
+  expect(mocks.rpc).toHaveBeenCalledWith("get_pos_register_session", { p_session_id: session.session_id });
+  expect(mocks.rpc).toHaveBeenCalledWith("close_my_register_session", { p_session_id: session.session_id, p_expected_version: 1, p_counted_cash_minor: "15000", p_close_request_key: checkout.request_key });
+  mocks.rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
+  expect((await call(op)).status).toBe(403);
+ });
+ it("rejects supplied register authority and missing idempotency header", async () => {
+  const op = { operation: "open_register", register_id: register.register_id, opening_cash_minor: "0", request_key: checkout.request_key };
+  expect((await call({ ...op, assignment_id: register.assignment_id })).status).toBe(400);
+  expect((await call(op, "https://pikas-pikas.app", id(99))).status).toBe(400);
+ });
 });
