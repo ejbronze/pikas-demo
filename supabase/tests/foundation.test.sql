@@ -202,8 +202,9 @@ select throws_ok($test$select pikas_private.has_capability('school:read','000000
 reset role;
 select set_config('request.jwt.claim.sub', '', true);
 -- Additional boundary and lifecycle evidence under the database owner.
+-- Count history: 2 (Phase 1) + 7 platform tables (6A1, stale at HEAD: produced 9) + 3 sandbox POV tables (6B) = 12.
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='pikas_private' and c.relkind='r' and c.relrowsecurity), 2::bigint,
+  where n.nspname='pikas_private' and c.relkind='r' and c.relrowsecurity), 12::bigint,
   'Private role catalog also has RLS enabled');
 select throws_ok($test$update schools set business_timezone='Not/A_Timezone'
   where id='00000000-0000-0000-0000-000000000011'$test$, '23514', null, 'Invalid business timezone rejected');

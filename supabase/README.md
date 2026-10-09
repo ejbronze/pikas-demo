@@ -341,3 +341,19 @@ deferred; application integration is the next step.
 serialization on the local `pikas-foundation` database after a clean reset.
 It leaves synthetic financial rows and requires another local reset; it has no
 remote database mode.
+
+## Phase 6B sandbox cashier POV (local backend foundation)
+
+Migration `202610090001_sandbox_pov_pos_actor.sql` adds:
+
+- `accounts.tenant_kind` (`customer` | `sandbox`, default `customer`), immutable after creation; never tenant-writable.
+- Platform role `platform_sandbox_operator` (capability `platform:sandbox:pov:enter`, not part of `platform_admin`).
+- Private `sandbox_pov_personas`, `sandbox_pov_sessions`, `sandbox_pov_operation_links` (RLS forced, no API grants). Only the `cashier` POV exists.
+- `platform_enter_sandbox_pov` / `platform_exit_sandbox_pov` (idempotent, 4-hour TTL, fail closed).
+- `pikas_private.pos_actor_person_id()` / `pos_has_capability()`: POS-only actor resolution that returns the sandbox persona while a valid POV is active, otherwise the normal authenticated actor. `current_person_id()` is unchanged. Wired only into register, checkout, catalog, customer lookup and receipt contracts.
+- `audit_events.sandbox_pov_session_id` plus operation links preserve persona, real operator (`authenticated_user_id`) and POV session.
+- `get_pos_customer_purchase_context(cafeteria, customer)`: cashier-safe pre-sale wallet/limit/spent-today/available-today read; `checkout_purchase` remains the financial authority.
+
+Tests: `supabase/tests/phase6b_sandbox_pov.test.sql`.
+
+Platform roles are independent: a Person may hold several live platform memberships (one per role; partial unique index on `(person_id, role_code)` where status is not `inactive`). `platform_has_capability` / `require_platform_capability` succeed when ANY active membership grants the capability; `platform_get_context` returns the union of capabilities, a `roles` list, and `role` (`platform_admin` when held, otherwise the first role alphabetically). Revoking one membership does not affect the others.

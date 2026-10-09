@@ -22,8 +22,8 @@ values
   ('00000000-0000-0000-0000-000000001098','platform_admin','suspended'),
   ('00000000-0000-0000-0000-000000001009','platform_admin','active');
 
-select is((select count(*) from pikas_private.platform_capabilities),5::bigint,
-  'Only the five approved platform capabilities are seeded');
+select is((select count(*) from pikas_private.platform_capabilities),6::bigint,
+  'Only the five approved platform capabilities plus the sandbox POV capability are seeded');
 select is((select count(*) from pikas_private.platform_role_capabilities
   where role_code='platform_admin'),5::bigint,'Platform admin receives only the approved capabilities');
 select ok(not has_table_privilege('authenticated','pikas_private.platform_memberships','SELECT')
