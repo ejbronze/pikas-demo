@@ -361,3 +361,9 @@ Platform roles are independent: a Person may hold several live platform membersh
 ### Sandbox POV read contracts (Phase 6B step 2)
 
 `platform_get_active_sandbox_pov()` returns the caller's own active sandbox demonstration (or null) and `platform_list_sandbox_pov_targets()` lists the active sandbox cashier targets the caller may start. Both require `platform:sandbox:pov:enter`, take no identifiers, are read-only and grant no authority.
+
+### Colegio Horizonte sandbox bootstrap (Phase 6B step 3)
+
+Colegio Horizonte (account `03e71159-69e9-4387-9b3b-65799d49faf0`) is the dedicated fictional PIKAS demonstration sandbox. The proposed one-time `customer → sandbox` classification uses the reviewed legacy bootstrap migration `202610090003_colegio_horizonte_sandbox_bootstrap.sql`, which also provisions the Auth-less cashier persona José Ramírez (active `pos_cashier` membership plus active `cashier` sandbox persona registration). The migration is atomic and fails with `sandbox_bootstrap_account_missing` when the legacy account is absent from an initialized database. Only a pristine database with no accounts, persons or platform memberships skips the bootstrap: local `db reset --local` applies migrations before loading `fixtures/foundation.sql`, whose synthetic tenants do not include Horizonte. This skip creates no sandbox or persona. The migration never disables the `accounts_tenant_kind_immutable` trigger (its function is swapped for an exact-account exception in-transaction and restored byte-for-byte), and creates no registers, sessions, transactions or other POS data and no platform memberships.
+
+Tests: `supabase/tests/phase6b3_sandbox_bootstrap.test.sql` (its DO block is a verbatim copy of the migration's).
