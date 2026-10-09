@@ -357,3 +357,7 @@ Migration `202610090001_sandbox_pov_pos_actor.sql` adds:
 Tests: `supabase/tests/phase6b_sandbox_pov.test.sql`.
 
 Platform roles are independent: a Person may hold several live platform memberships (one per role; partial unique index on `(person_id, role_code)` where status is not `inactive`). `platform_has_capability` / `require_platform_capability` succeed when ANY active membership grants the capability; `platform_get_context` returns the union of capabilities, a `roles` list, and `role` (`platform_admin` when held, otherwise the first role alphabetically). Revoking one membership does not affect the others.
+
+### Sandbox POV read contracts (Phase 6B step 2)
+
+`platform_get_active_sandbox_pov()` returns the caller's own active sandbox demonstration (or null) and `platform_list_sandbox_pov_targets()` lists the active sandbox cashier targets the caller may start. Both require `platform:sandbox:pov:enter`, take no identifiers, are read-only and grant no authority.
