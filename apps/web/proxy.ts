@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isDemoMode } from "@/lib/env";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { hasAppRole, resolvePikasIdentity } from "@/lib/auth/pikas-context";
+import { resolveSchoolAccess } from "@/lib/auth/school-access";
 import { resolvePosAccess } from "@/lib/auth/pos-access";
 
 const requiredRole = (path: string) =>
@@ -90,6 +91,12 @@ export async function proxy(request: NextRequest) {
     ));
   }
 
+  if (needed === "school_admin") {
+    const access = await resolveSchoolAccess(supabase);
+    if (access.status === "authorized") return response;
+    return redirectWithCookies(new URL(access.status === "unauthenticated" ? "/login?next=%2Fadmin%2Fescuela" : "/login?error=school_authority", request.url));
+  }
+
   const identity = await resolvePikasIdentity(supabase);
 
   if (identity.status === "unauthenticated") {
@@ -119,7 +126,7 @@ export async function proxy(request: NextRequest) {
   if (!needed) return response;
 
   const authorized =
-    needed === "school_admin" || needed === "cafeteria_admin"
+    needed === "cafeteria_admin"
       ? hasAppRole(identity, needed)
       : false;
 

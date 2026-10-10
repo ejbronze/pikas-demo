@@ -40,9 +40,9 @@ function readyIdentity(
 }
 
 describe("authenticated login destination", () => {
-  it("keeps an active tenant-only user on the existing pilot destination", () => {
+  it("routes an active account administrator to the school workspace", () => {
     expect(pilotHome(readyIdentity([tenantMembership], null))).toBe(
-      "/pilot/connected",
+      "/admin/escuela",
     );
   });
 
@@ -76,7 +76,7 @@ describe("authenticated login destination", () => {
           capabilities: ["platform:audit:read"],
         }),
       ),
-    ).toBe("/pilot/connected");
+    ).toBe("/admin/escuela");
     expect(
       backofficeHome(
         readyIdentity([tenantMembership], {

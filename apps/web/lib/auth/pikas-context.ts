@@ -280,7 +280,7 @@ export function hasAppRole(
   return (
     identity.status === "ready" &&
     identity.memberships.some((membership) => {
-      if (role === "school_admin") return membership.roleCode === role;
+      if (role === "school_admin") return membership.roleCode === role || membership.roleCode === "account_admin";
       if (role === "cafeteria_admin") return membership.roleCode === role;
       return (
         membership.roleCode === "pos_cashier" ||
@@ -292,8 +292,8 @@ export function hasAppRole(
 
 export function pilotHome(identity: PikasIdentity): string | null {
   if (identity.status !== "ready") return null;
-  if (identity.memberships.some(({ roleCode }) => roleCode === "school_admin")) {
-    return "/pilot/connected";
+  if (identity.memberships.some(({ roleCode }) => roleCode === "school_admin" || roleCode === "account_admin")) {
+    return "/admin/escuela";
   }
   if (
     identity.memberships.some(
@@ -303,9 +303,6 @@ export function pilotHome(identity: PikasIdentity): string | null {
         roleCode === "pos_supervisor",
     )
   ) {
-    return "/pilot/connected";
-  }
-  if (identity.memberships.some(({ roleCode }) => roleCode === "account_admin")) {
     return "/pilot/connected";
   }
   return null;
