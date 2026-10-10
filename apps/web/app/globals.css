@@ -69,6 +69,13 @@
 .pos-list-hit [role="img"] { display:none; }
 .pos-list-price { min-width:5.5rem; text-align:right; font-variant-numeric:tabular-nums; }
 .pos-list-add { display:grid; width:2rem; height:2rem; place-items:center; border-radius:.5rem; background:var(--primary); color:var(--primary-foreground); font-size:1.25rem; font-weight:900; }
+/* Connected catalog: flexible information, fixed price and add-action columns. */
+.pos-connected-list-hit { display:grid; grid-template-columns:minmax(0,1fr) 7.5rem 2rem; gap:.65rem; }
+.pos-connected-list-info { display:flex; min-width:0; align-items:center; gap:.5rem; }
+.pos-connected-list-info > strong { min-width:0; overflow-wrap:anywhere; }
+.pos-connected-list-info > .pos-product-quantity { flex:none; }
+.pos-connected-list-hit > .pos-list-price { min-width:0; white-space:nowrap; }
+@media(max-width:479px) { .pos-connected-list-hit { grid-template-columns:minmax(0,1fr) 6.5rem 2rem; gap:.4rem; } }
 .pos-product-tile { min-width:0; overflow:hidden; border:1px solid var(--border); border-radius:.8rem; background:var(--surface); }
 .pos-product-tile-disabled { opacity:.68; }
 .pos-product-hit { display:flex; min-height:5.25rem; width:100%; align-items:center; gap:.7rem; padding:.7rem; border:0; background:transparent; color:var(--foreground); text-align:left; }
