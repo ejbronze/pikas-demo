@@ -1,3 +1,6 @@
-import { RegisterSessions } from '@/components/register-sessions';
-import { isDemoMode } from '@/lib/env';
-export default function Page() { return isDemoMode() ? <RegisterSessions admin /> : <p>Cajas disponibles en el entorno de demostración.</p>; }
+import { isDemoMode } from "@/lib/env";
+import { CafeteriaScreen, type CafeteriaSearchParams } from "@/components/cafeteria-screen";
+export default async function Page({searchParams}:{searchParams:CafeteriaSearchParams}) {
+ if(isDemoMode()){const { RegisterSessions } = await import("@/components/register-sessions"); return <RegisterSessions admin/>;}
+ return <CafeteriaScreen section="registers" searchParams={searchParams}/>;
+}

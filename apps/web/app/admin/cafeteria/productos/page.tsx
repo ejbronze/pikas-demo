@@ -1,7 +1,6 @@
-import { CafeteriaProducts } from '@/components/cafeteria-products';
-import { MenuAdmin } from '@/components/admin-pages';
-import { isDemoMode } from '@/lib/env';
-
-export default function Page() {
-  return isDemoMode() ? <CafeteriaProducts /> : <MenuAdmin />;
+import { isDemoMode } from "@/lib/env";
+import { CafeteriaScreen, type CafeteriaSearchParams } from "@/components/cafeteria-screen";
+export default async function Page({searchParams}:{searchParams:CafeteriaSearchParams}) {
+ if(isDemoMode()){const { CafeteriaProducts } = await import("@/components/cafeteria-products"); return <CafeteriaProducts/>;}
+ return <CafeteriaScreen section="products" searchParams={searchParams}/>;
 }

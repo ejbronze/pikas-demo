@@ -1,0 +1,16 @@
+import { describe,it,expect,vi } from 'vitest';
+import { commandSchema,contextSchema } from './contracts';
+import { prepare,load,send,mustPreserve,recoveryKey } from './command';
+import { id } from './test-fixtures';
+const command={cafeteriaId:id,operation:'staff_prepare' as const,payload:{email:'staff@example.invalid',role:'pos_cashier'}};
+describe('cafeteria command journal',()=>{
+ it('persists the original exact payload, operation and key',()=>{const values=new Map<string,string>();const storage={getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>{values.set(k,v);}};const key=recoveryKey(id,id);const first=prepare(storage,key,command);expect(prepare(storage,key,{...command,payload:{email:'edited@example.invalid',role:'pos_supervisor'}})).toEqual(first);expect(load(storage,key)).toEqual(first);});
+ it.each([400,401,403,422,409,500,503])('unsuccessful recovery %s cannot prove original failure',async status=>{const pending={key:id,command:commandSchema.parse(command)};const fetcher=vi.fn().mockResolvedValue({ok:false,status,json:async()=>({error:'rejected'})});const outcome=await send(pending,fetcher);expect(mustPreserve(true,outcome)).toBe(true);});
+ it.each([400,401,403,422])('first attempt %s may clear definitive rejection',async status=>{const outcome=await send({key:id,command:commandSchema.parse(command)},vi.fn().mockResolvedValue({ok:false,status,json:async()=>({})}));expect(mustPreserve(false,outcome)).toBe(false);});
+ it('lost response remains uncertain',async()=>{expect(await send({key:id,command:commandSchema.parse(command)},vi.fn().mockRejectedValue(Error('lost')))).toBe('uncertain');});
+ it('matches authoritative key and operation before clearing',async()=>{const pending={key:id,command:commandSchema.parse(command)};const fetcher=vi.fn().mockResolvedValue({ok:true,json:async()=>({result:{request_id:id,operation:'register_save',target_id:id}})});expect(await send(pending,fetcher)).toBe('uncertain');fetcher.mockResolvedValue({ok:true,json:async()=>({result:{request_id:id,operation:'staff_prepare',target_id:id}})});expect(await send(pending,fetcher)).toBe('success');expect(mustPreserve(true,'success')).toBe(false);expect(fetcher.mock.calls[0][1].headers['Idempotency-Key']).toBe(id);});
+ it.each(['auth_id','person_id','actor_id','account_id','school_id'])('cannot supply authority %s',key=>{expect(commandSchema.safeParse({...command,payload:{...command.payload,[key]:id}}).success).toBe(false);});
+ it.each([-1,0.5,Number.MAX_SAFE_INTEGER+1])('rejects invalid minor-unit price %s',price_minor=>{expect(commandSchema.safeParse({cafeteriaId:id,operation:'product_save',payload:{id,version:null,name:'Food',description:'',category:'Lunch',price_minor,active:true,available:true,ingredients:[],allergens:[]}}).success).toBe(false);});
+});
+
+it("accepts PostgreSQL legacy entity GUIDs while request keys remain UUIDs",()=>{const legacy="00000000-0000-0000-0000-000000000111";expect(contextSchema.safeParse({person_id:legacy,display_name:"Local actor",cafeterias:[{cafeteria_id:legacy,cafeteria_name:"Local cafeteria",account_name:"Account",school_name:"School",location_name:"Campus",tenant_kind:"customer"}]}).success).toBe(true);expect(commandSchema.safeParse({...command,cafeteriaId:legacy}).success).toBe(true);});

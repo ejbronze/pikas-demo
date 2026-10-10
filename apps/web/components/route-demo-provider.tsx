@@ -10,7 +10,7 @@ const DemoProvider = lazy(() => import("./demo-provider").then((module) => ({ de
 export function RouteDemoProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   if (pathname === "/platform" || pathname?.startsWith("/platform/")) return children;
-  if (!isDemoMode() && (pathname === null || pathname === "/pos" || pathname.startsWith("/pos/") || pathname === "/admin/escuela" || pathname.startsWith("/admin/escuela/"))) {
+  if (!isDemoMode() && (pathname === null || pathname === "/pos" || pathname.startsWith("/pos/") || pathname === "/admin/escuela" || pathname.startsWith("/admin/escuela/") || pathname === "/admin/cafeteria" || pathname.startsWith("/admin/cafeteria/"))) {
     return children;
   }
   return <Suspense fallback={null}><DemoProvider>{children}</DemoProvider></Suspense>;

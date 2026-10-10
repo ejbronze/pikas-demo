@@ -2,7 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { isDemoMode } from "@/lib/env";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
-import { hasAppRole, resolvePikasIdentity } from "@/lib/auth/pikas-context";
+import { resolvePikasIdentity } from "@/lib/auth/pikas-context";
+import { resolveCafeteriaAccess } from "@/lib/auth/cafeteria-access";
 import { resolveSchoolAccess } from "@/lib/auth/school-access";
 import { resolvePosAccess } from "@/lib/auth/pos-access";
 
@@ -97,6 +98,12 @@ export async function proxy(request: NextRequest) {
     return redirectWithCookies(new URL(access.status === "unauthenticated" ? "/login?next=%2Fadmin%2Fescuela" : "/login?error=school_authority", request.url));
   }
 
+  if (needed === "cafeteria_admin") {
+    const access = await resolveCafeteriaAccess(supabase);
+    if (access.status === "authorized") return response;
+    return redirectWithCookies(new URL(access.status === "unauthenticated" ? "/login?next=%2Fadmin%2Fcafeteria" : "/login?error=cafeteria_authority", request.url));
+  }
+
   const identity = await resolvePikasIdentity(supabase);
 
   if (identity.status === "unauthenticated") {
@@ -125,18 +132,9 @@ export async function proxy(request: NextRequest) {
 
   if (!needed) return response;
 
-  const authorized =
-    needed === "cafeteria_admin"
-      ? hasAppRole(identity, needed)
-      : false;
-
-  if (!authorized) {
-    return redirectWithCookies(
-      new URL("/pilot/connected?aviso=sin-permiso", request.url),
-    );
-  }
-
-  return redirectWithCookies(new URL("/pilot/connected", request.url));
+  return redirectWithCookies(
+    new URL("/pilot/connected?aviso=sin-permiso", request.url),
+  );
 }
 
 export const config = {

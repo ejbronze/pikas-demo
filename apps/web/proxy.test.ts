@@ -3,9 +3,10 @@ import { NextRequest } from "next/server";
 import { posContext } from "./lib/pos/access-context.test-fixtures";
 
 const mocks = vi.hoisted(() => ({
-  demo: vi.fn(), school: vi.fn(), access: vi.fn(), identity: vi.fn(), appRole: vi.fn(), createClient: vi.fn(),
+  demo: vi.fn(), school: vi.fn(), cafeteria:vi.fn(), access: vi.fn(), identity: vi.fn(), appRole: vi.fn(), createClient: vi.fn(),
 }));
 vi.mock("@/lib/env", () => ({ isDemoMode: mocks.demo }));
+vi.mock("@/lib/auth/cafeteria-access",()=>({resolveCafeteriaAccess:mocks.cafeteria}));
 vi.mock("@/lib/auth/school-access", () => ({ resolveSchoolAccess: mocks.school }));
 vi.mock("@/lib/auth/pos-access", () => ({ resolvePosAccess: mocks.access }));
 vi.mock("@/lib/auth/pikas-context", () => ({ resolvePikasIdentity: mocks.identity, hasAppRole: mocks.appRole }));
@@ -52,12 +53,6 @@ describe("POS proxy gate", () => {
     mocks.access.mockResolvedValue({ status: "forbidden" });
     expect((await proxy(request("/pos"))).cookies.get("refreshed-auth")?.value).toBe("session");
   });
-  it("leaves the unrelated cafeteria redirect unchanged", async () => {
-    mocks.identity.mockResolvedValue({ status: "ready", memberships: [{ roleCode: "school_admin" }] });
-    mocks.appRole.mockReturnValue(true);
-    expect((await proxy(request("/admin/cafeteria"))).headers.get("location")).toBe("http://localhost/pilot/connected");
-    expect(mocks.access).not.toHaveBeenCalled();
-  });
   it("preserves the demo POS cookie gate without calling the DB", async () => {
     mocks.demo.mockReturnValue(true);
     expect((await proxy(request("/pos", "pikas_demo_role=pos"))).headers.get("location")).toBeNull();
@@ -76,4 +71,9 @@ describe("school proxy gate", () => {
     mocks.school.mockResolvedValue({ status });
     expect((await proxy(request("/admin/escuela/administradores"))).headers.get("location")).toContain("/login?");
   });
+});
+
+describe("cafeteria proxy gate",()=>{
+ it.each(["/admin/cafeteria","/admin/cafeteria/productos","/admin/cafeteria/menus/turnos","/admin/cafeteria/personal","/admin/cafeteria/cajas","/admin/cafeteria/configuracion"])("allows DB-authorized %s",async path=>{mocks.cafeteria.mockResolvedValue({status:"authorized"});expect((await proxy(request(path))).headers.get("x-middleware-next")).toBe("1");expect(mocks.identity).not.toHaveBeenCalled();});
+ it.each(["forbidden","unavailable","unauthenticated"])("fails closed for %s",async status=>{mocks.cafeteria.mockResolvedValue({status});expect((await proxy(request("/admin/cafeteria"))).headers.get("location")).toContain("/login?");});
 });

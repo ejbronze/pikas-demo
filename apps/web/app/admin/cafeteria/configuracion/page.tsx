@@ -1,3 +1,6 @@
-import {isDemoMode} from '@/lib/env';
-import {PosSettings} from '@/components/pos-settings';
-export default function Page(){return isDemoMode()?<PosSettings/>:<p>Configuración financiera remota pendiente de integración.</p>}
+import { isDemoMode } from "@/lib/env";
+import { CafeteriaScreen, type CafeteriaSearchParams } from "@/components/cafeteria-screen";
+export default async function Page({searchParams}:{searchParams:CafeteriaSearchParams}) {
+ if(isDemoMode()){const { PosSettings } = await import("@/components/pos-settings"); return <PosSettings/>;}
+ return <CafeteriaScreen section="settings" searchParams={searchParams}/>;
+}

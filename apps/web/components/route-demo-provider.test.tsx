@@ -44,7 +44,7 @@ describe("root route demo boundary", () => {
     expect(mocks.load).not.toHaveBeenCalled();
     expect(mocks.initialize).not.toHaveBeenCalled();
   });
-  it.each(["/admin/escuela", "/admin/escuela/estudiantes", "/admin/escuela/administradores", "/admin/escuela/cafeterias", "/admin/escuela/actividad"])("excludes demo initialization for connected school %s", async pathname => {
+  it.each(["/admin/escuela", "/admin/escuela/estudiantes", "/admin/escuela/administradores", "/admin/escuela/cafeterias", "/admin/escuela/actividad", "/admin/cafeteria", "/admin/cafeteria/productos", "/admin/cafeteria/menus", "/admin/cafeteria/personal", "/admin/cafeteria/cajas", "/admin/cafeteria/configuracion"])("excludes demo initialization for connected school %s", async pathname => {
     vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "false"); mocks.pathname = pathname;
     expect(await render()).not.toContain("data-demo-provider");
     expect(mocks.load).not.toHaveBeenCalled(); expect(mocks.initialize).not.toHaveBeenCalled();
@@ -55,13 +55,13 @@ describe("root route demo boundary", () => {
     expect(await render()).not.toContain("data-demo-provider");
     expect(mocks.initialize).not.toHaveBeenCalled();
   });
-  it.each(["/familias", "/estudiante", "/admin/cafeteria", "/pos-other"])("preserves the provider for existing %s routes", async (pathname) => {
+  it.each(["/familias", "/estudiante", "/pos-other"])("preserves the provider for existing %s routes", async (pathname) => {
     vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "false");
     mocks.pathname = pathname;
     expect(await render()).toContain("data-demo-provider");
     expect(mocks.initialize).toHaveBeenCalledOnce();
   });
-  it.each(["/pos", "/pos/caja", "/admin/escuela", "/admin/escuela/estudiantes"])("preserves the provider for demo-mode %s", async (pathname) => {
+  it.each(["/pos", "/pos/caja", "/admin/escuela", "/admin/escuela/estudiantes", "/admin/cafeteria"])("preserves the provider for demo-mode %s", async (pathname) => {
     vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "true");
     mocks.pathname = pathname;
     expect(await render()).toContain("data-demo-provider");

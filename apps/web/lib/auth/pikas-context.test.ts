@@ -281,3 +281,5 @@ describe("multi-role platform context", () => {
     expect(backofficeHome(empty)).toBeNull();
   });
 });
+
+it("routes explicit cafeteria administrators to their connected workspace",()=>{expect(pilotHome(readyIdentity([{...tenantMembership,scopeKind:"cafeteria",roleCode:"cafeteria_admin",cafeteriaId:"cafeteria-id"}],null))).toBe("/admin/cafeteria");});

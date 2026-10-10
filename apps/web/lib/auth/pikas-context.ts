@@ -295,6 +295,7 @@ export function pilotHome(identity: PikasIdentity): string | null {
   if (identity.memberships.some(({ roleCode }) => roleCode === "school_admin" || roleCode === "account_admin")) {
     return "/admin/escuela";
   }
+  if (identity.memberships.some(({ roleCode }) => roleCode === "cafeteria_admin")) return "/admin/cafeteria";
   if (
     identity.memberships.some(
       ({ roleCode }) =>
