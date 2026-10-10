@@ -44,6 +44,12 @@ describe("root route demo boundary", () => {
     expect(mocks.load).not.toHaveBeenCalled();
     expect(mocks.initialize).not.toHaveBeenCalled();
   });
+  it.each(["/platform", "/platform/clientes", "/platform/clientes/nuevo", "/platform/demostracion"])("does not initialize demo state for authoritative %s", async (pathname) => {
+    vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "false");
+    mocks.pathname = pathname;
+    expect(await render()).not.toContain("data-demo-provider");
+    expect(mocks.initialize).not.toHaveBeenCalled();
+  });
   it.each(["/familias", "/estudiante", "/admin/cafeteria", "/admin/escuela", "/pos-other"])("preserves the provider for existing %s routes", async (pathname) => {
     vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "false");
     mocks.pathname = pathname;

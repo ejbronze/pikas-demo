@@ -5,6 +5,7 @@ import { isDemoMode } from "@/lib/env";
 
 const messages: Record<string, string> = {
   unavailable: "El acceso al backoffice no está disponible en modo demo.",
+  platform_unavailable: "No pudimos verificar el acceso a la plataforma. Vuelve a intentarlo.",
   credentials: "No se pudo validar el correo y la contraseña.",
   identity: "La cuenta Auth no está vinculada a una Persona activa.",
   platform: "La cuenta no tiene autorización activa de plataforma.",
