@@ -40,7 +40,7 @@ export function AdministratorAction({ accountId, intentId, actor }: { accountId:
   return <form className="mt-4 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
     <label className="block">{intentId ? "Nombre del administrador" : "Correo del primer administrador"}<input className="field mt-1 w-full" required={!locked} disabled={locked || done} maxLength={intentId ? 200 : 254} type={intentId ? "text" : "email"} value={value} onChange={(event) => setValue(event.target.value)} /></label>
     <button className="btn" disabled={busy || done}>{busy ? "Procesando…" : locked ? "Reintentar la misma solicitud" : intentId ? "Verificar identidad y completar acceso" : "Preparar administrador"}</button>
-    {!locked && !done && <button type="button" className="btn-outline ml-3" disabled={busy} onClick={() => void submit(true)}>Recuperar solicitud pendiente</button>}
+    {!locked && !done && <button type="button" className="btn-secondary ml-3" disabled={busy} onClick={() => void submit(true)}>Recuperar solicitud pendiente</button>}
     {message && <p role={done ? "status" : "alert"}>{message}</p>}
   </form>;
 }

@@ -4,11 +4,11 @@ import { requirePlatform } from "@/lib/platform/customer-console";
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { identity, capabilities } = await requirePlatform();
-  return <div className="min-h-screen bg-slate-50 text-slate-900">
+  return <div className="admin-ux min-h-screen bg-slate-50 text-slate-900">
     <header className="border-b bg-white px-5 py-4"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
       <Link href="/platform" aria-label="PIKAS Platform, inicio"><BrandLogo /></Link>
       <div className="flex items-center gap-4"><span className="text-sm">{identity.person.displayName} · Plataforma</span>
-        <form action="/api/auth/logout" method="post"><button className="btn-outline">Cerrar sesión</button></form></div>
+        <form action="/api/auth/logout" method="post"><button className="btn-secondary">Cerrar sesión</button></form></div>
     </div></header>
     <nav aria-label="Plataforma" className="border-b bg-white"><div className="mx-auto flex max-w-6xl flex-wrap gap-5 px-5 py-3">
       <Link href="/platform">Inicio</Link>

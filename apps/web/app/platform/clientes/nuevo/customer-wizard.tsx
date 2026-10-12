@@ -47,7 +47,7 @@ export function CustomerWizard({ actor }: { actor: string }) {
   }
   return <section className="card space-y-5 p-5">
     <p className="text-sm text-slate-600">{steps.join(" → ")}</p>
-    {!locked && <button type="button" className="btn-outline" onClick={recover}>Recuperar solicitud pendiente</button>}
+    {!locked && <button type="button" className="btn-secondary" onClick={recover}>Recuperar solicitud pendiente</button>}
     <h2 className="text-xl font-bold">{steps[step]}</h2>
     {error && <p role="alert" className="rounded-lg bg-amber-50 p-3">{error}</p>}
     {state?.tenant && <p role="status" className="rounded-lg bg-emerald-50 p-3">Cliente y estructura inicial creados.</p>}
@@ -60,12 +60,12 @@ export function CustomerWizard({ actor }: { actor: string }) {
           maxLength={field.endsWith("Code") ? 64 : field === "administratorEmail" ? 254 : field === "businessTimezone" ? 100 : 200} value={draft[field]}
           onChange={(event) => setDraft({ ...draft, [field]: event.target.value })} /></label>)}
         {step === 4 && <p className="text-sm text-slate-600">Se preparará acceso de administrador del cliente. El correo por sí solo no concede acceso; el registro y la confirmación todavía requieren configuración de invitaciones.</p>}
-        <div className="flex gap-3">{step > 0 && <button type="button" className="btn-outline" onClick={() => setStep(step - 1)}>Anterior</button>}<button className="btn">Continuar</button></div>
+        <div className="flex gap-3">{step > 0 && <button type="button" className="btn-secondary" onClick={() => setStep(step - 1)}>Anterior</button>}<button className="btn">Continuar</button></div>
       </form> : <><dl className="grid gap-3 sm:grid-cols-2">{Object.entries(labels).map(([field, label]) => <div key={field}><dt className="text-sm text-slate-600">{label}</dt><dd className="font-semibold">{draft[field as keyof CustomerDraft]}</dd></div>)}</dl>
         {state?.tenant && <p>El cliente ya existe. El siguiente intento solo recupera o prepara su administrador.</p>}
-        <div className="flex flex-wrap gap-3">{!locked && <button className="btn-outline" onClick={() => setStep(4)}>Editar</button>}
+        <div className="flex flex-wrap gap-3">{!locked && <button className="btn-secondary" onClick={() => setStep(4)}>Editar</button>}
           <button className="btn" disabled={busy} onClick={create}>{busy ? "Procesando…" : locked ? "Reintentar solicitud" : "Crear cliente"}</button>
-          {state?.tenant && <Link className="btn-outline" href={`/platform/clientes/${state.tenant.account_id}`}>Consultar cliente</Link>}
+          {state?.tenant && <Link className="btn-secondary" href={`/platform/clientes/${state.tenant.account_id}`}>Consultar cliente</Link>}
         </div>
         {locked && <p className="text-sm text-slate-600">Los datos y la solicitud permanecen fijos para evitar duplicados.</p>}
       </>}

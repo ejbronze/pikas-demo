@@ -15,6 +15,6 @@ export function InvitationButton({handle}:{handle:string}) {
   }catch{setMessage('No se pudo confirmar la creación del enlace. No se envió correo. Puedes crear otro para el mismo acceso preparado.');}
   finally{inFlight.current=false;setBusy(false);}
  }
- return <div className="space-y-3"><button className="btn-outline" disabled={busy} onClick={()=>void prepare()}>{busy?'Preparando…':'Crear enlace de invitación'}</button>
+ return <div className="space-y-3"><button className="btn-secondary" disabled={busy} onClick={()=>void prepare()}>{busy?'Preparando…':'Crear enlace de invitación'}</button>
  {message&&<p role="status">{message}</p>}{link&&<label className="block">Enlace privado de activación<input className="field mt-1 w-full" readOnly value={link} onFocus={event=>event.currentTarget.select()}/></label>}</div>;
 }

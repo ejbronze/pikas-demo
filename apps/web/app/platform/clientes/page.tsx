@@ -24,6 +24,6 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <div><CustomerLink id={customer.id} name={customer.name} /><p className="text-sm text-slate-600">{customer.code} · {statusLabel[customer.status]}</p><span className={`chip mt-2 ${customer.tenant_kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{customer.tenant_kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></div>
       <p className="text-sm text-slate-600">{customer.school_count} escuelas · {customer.location_count} ubicaciones · {customer.cafeteria_count} cafeterías</p>
     </li>)}</ul>}
-    {result.kind === "ready" && result.value.next_cursor && <Link className="btn-outline" href={`/platform/clientes?${new URLSearchParams({ q, status, kind, after: result.value.next_cursor })}`}>Siguiente página</Link>}
+    {result.kind === "ready" && result.value.next_cursor && <Link className="btn-secondary" href={`/platform/clientes?${new URLSearchParams({ q, status, kind, after: result.value.next_cursor })}`}>Siguiente página</Link>}
   </>;
 }
