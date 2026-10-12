@@ -11,6 +11,6 @@ export const teamResultSchema = z.object({request_id:z.uuid(),operation:z.enum([
 const status = z.enum(['active','suspended','inactive']);
 export const teamReadSchema = z.object({actor_handle:handle,
  operators:z.array(z.object({handle,name:z.string(),email:z.string().nullable(),person_status:status,admin_status:z.enum(['active','suspended','inactive','none']),demo:z.boolean()}).strict()),
- prepared:z.array(z.object({handle,name:z.string(),email:z.string(),demo:z.boolean(),status:z.enum(['pending','completed','expired'])}).strict()),
+ prepared:z.array(z.object({handle,name:z.string(),email:z.string(),demo:z.boolean(),status:z.enum(['pending','completed','expired']),identity_ready:z.boolean().optional()}).strict()),
 }).strict();
 export type TeamRead = z.infer<typeof teamReadSchema>;

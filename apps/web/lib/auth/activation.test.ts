@@ -1,0 +1,8 @@
+import {afterEach,expect,it,vi} from 'vitest';
+vi.mock('server-only',()=>({}));
+import {activationOrigin,activationToken,digestActivation,newActivationToken,passwordFingerprint} from './activation';
+afterEach(()=>vi.unstubAllEnvs());
+it('requires an exact HTTPS origin and never accepts callback destinations from the browser',()=>{for(const value of ['', 'http://example.com','https://example.com/path','https://example.com/']){vi.stubEnv('PIKAS_APP_ORIGIN',value);expect(()=>activationOrigin()).toThrow();}vi.stubEnv('PIKAS_APP_ORIGIN','https://example.com');expect(activationOrigin()).toBe('https://example.com');});
+it('validates bearer tokens and hashes them without retaining plaintext',()=>{expect(activationToken.safeParse('a'.repeat(64)).success).toBe(true);expect(activationToken.safeParse('bad/token').success).toBe(false);expect(digestActivation('a'.repeat(64))).toMatch(/^[a-f0-9]{64}$/);expect(digestActivation('a'.repeat(64))).not.toBe('a'.repeat(64));});
+it('uses 32 independent CSPRNG bytes, not email/native OTP/public identifiers',()=>{const tokens=Array.from({length:32},newActivationToken);expect(new Set(tokens).size).toBe(32);for(const token of tokens)expect(token).toMatch(/^[0-9a-f]{64}$/);expect(activationToken.safeParse('f'.repeat(56)).success).toBe(false);});
+it('binds uncertain password retries to the same value without storing plaintext',()=>{expect(passwordFingerprint('password-one','a'.repeat(64))).toBe(passwordFingerprint('password-one','a'.repeat(64)));expect(passwordFingerprint('password-two','a'.repeat(64))).not.toBe(passwordFingerprint('password-one','a'.repeat(64)));});
