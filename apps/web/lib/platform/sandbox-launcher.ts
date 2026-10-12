@@ -1,3 +1,6 @@
+import { sandboxPovCodeSchema, sandboxDestination, type SandboxPovCode } from "./sandbox-pov";
+import { schoolContextSchema } from "../school/contracts";
+import { contextSchema as cafeteriaContextSchema } from "../cafeteria/contracts";
 import { posAccessContextSchema } from "../pos/access-context";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -6,26 +9,31 @@ import type { PikasIdentity } from "@/lib/auth/pikas-context";
 export const SANDBOX_POV_CAPABILITY = "platform:sandbox:pov:enter";
 
 const targetSchema = z.object({
+  school_id: z.uuid().optional(),
   account_id: z.uuid(),
   account_name: z.string(),
   cafeteria_id: z.uuid(),
   cafeteria_name: z.string(),
-  pov_code: z.literal("cashier"),
+  pov_code: sandboxPovCodeSchema,
   persona_display_name: z.string(),
 });
 
 const activeSchema = z.object({
   session_id: z.uuid(),
+  school_id: z.uuid().optional(),
   account_id: z.uuid(),
   account_name: z.string(),
   cafeteria_id: z.uuid(),
   cafeteria_name: z.string(),
-  pov_code: z.literal("cashier"),
+  pov_code: sandboxPovCodeSchema,
   persona_display_name: z.string(),
+  operator_name: z.string().optional(),
   expires_at: z.iso.datetime({ offset: true }),
 });
 
 export type SandboxTarget = {
+  povCode: SandboxPovCode;
+  schoolId: string;
   accountId: string;
   accountName: string;
   cafeteriaId: string;
@@ -33,7 +41,7 @@ export type SandboxTarget = {
   personaName: string;
 };
 
-export type ActiveSandboxPov = SandboxTarget & { expiresAt: string; canOpenPos: boolean };
+export type ActiveSandboxPov = SandboxTarget & { expiresAt: string; canOpenPos: boolean; canOpenExperience: boolean; destination: string; operatorName: string };
 
 export type SandboxLauncherState =
   | { kind: "hidden" }
@@ -64,22 +72,43 @@ export async function loadSandboxLauncherState(
       if (!active.success) return { kind: "unavailable" };
       const a = active.data;
       if (Date.parse(a.expires_at) <= Date.now()) return { kind: "unavailable" };
-      const pos = await supabase.rpc("get_pos_access_context");
-      const context = posAccessContextSchema.safeParse(pos.data);
-      const canOpenPos = !pos.error && context.success && context.data.pov?.session_id === a.session_id &&
-        Date.parse(context.data.pov!.expires_at) > Date.now() && context.data.memberships.length === 1 && context.data.memberships[0].account_id === a.account_id &&
-        context.data.memberships[0].cafeteria_id === a.cafeteria_id;
+      let canOpenExperience = false;
+      if (a.pov_code === "cashier") {
+        const pos = await supabase.rpc("get_pos_access_context");
+        const context = posAccessContextSchema.safeParse(pos.data);
+        canOpenExperience = !pos.error && context.success && context.data.pov?.session_id === a.session_id &&
+          Date.parse(context.data.pov!.expires_at) > Date.now() && context.data.memberships.length === 1 &&
+          context.data.memberships[0].account_id === a.account_id && context.data.memberships[0].cafeteria_id === a.cafeteria_id;
+      } else if (a.pov_code === "school_admin") {
+        const response = await supabase.rpc("get_school_admin_context");
+        const context = schoolContextSchema.safeParse(response.data);
+        canOpenExperience = !response.error && context.success && context.data.pov?.session_id === a.session_id &&
+          context.data.pov.pov_code === a.pov_code && Date.parse(context.data.pov.expires_at) > Date.now() &&
+          context.data.schools.length === 1 && context.data.schools[0].school_id === a.school_id &&
+          context.data.schools[0].account_id === a.account_id;
+      } else {
+        const response = await supabase.rpc("get_cafeteria_admin_context");
+        const context = cafeteriaContextSchema.safeParse(response.data);
+        canOpenExperience = !response.error && context.success && context.data.pov?.session_id === a.session_id &&
+          context.data.pov.pov_code === a.pov_code && Date.parse(context.data.pov.expires_at) > Date.now() &&
+          context.data.cafeterias.length === 1 && context.data.cafeterias[0].cafeteria_id === a.cafeteria_id;
+      }
 
       return {
         kind: "active",
         active: {
+          povCode: a.pov_code,
+          schoolId: a.school_id ?? "",
           accountId: a.account_id,
           accountName: a.account_name,
           cafeteriaId: a.cafeteria_id,
           cafeteriaName: a.cafeteria_name,
           personaName: a.persona_display_name,
           expiresAt: a.expires_at,
-          canOpenPos,
+          canOpenPos: a.pov_code === "cashier" && canOpenExperience,
+          canOpenExperience,
+          destination: sandboxDestination(a.pov_code, a.school_id ?? "", a.cafeteria_id),
+          operatorName: a.operator_name ?? (identity.status === "ready" ? identity.person.displayName : ""),
         },
       };
     }
@@ -91,6 +120,8 @@ export async function loadSandboxLauncherState(
     return {
       kind: "targets",
       targets: targets.data.map((t) => ({
+        povCode: t.pov_code,
+        schoolId: t.school_id ?? "",
         accountId: t.account_id,
         accountName: t.account_name,
         cafeteriaId: t.cafeteria_id,

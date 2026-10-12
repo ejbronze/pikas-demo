@@ -155,3 +155,20 @@ it.each([null, { ...posContext(), pov: null }, { ...posContext(), pov: { ...posC
 it("rejects expired POV before enabling navigation", async () => {
  expect(await loadSandboxLauncherState(client({ platform_get_active_sandbox_pov: ok({ ...activeRow, expires_at: "2000-01-01T00:00:00Z" }) }), sandbox)).toEqual({ kind: "unavailable" });
 });
+
+it.each(["school_admin", "cafeteria_admin"] as const)("confirms %s context and routes to the existing admin workspace", async code => {
+  const schoolId = "df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488";
+  const pov = { session_id: S, pov_code: code, operator_person_id: A, operator_name: "Edwin", expires_at: activeRow.expires_at };
+  const context = { person_id: A, display_name: "Demo administrador", pov,
+    ...(code === "school_admin" ? { schools: [{ school_id: schoolId, school_name: "Colegio X", account_id: A, account_name: "Colegio X", tenant_kind: "sandbox" }] }
+    : { cafeterias: [{ cafeteria_id: C, cafeteria_name: "Cafetería Y", account_name: "Colegio X", school_name: "Colegio X", location_name: "Principal", tenant_kind: "sandbox" }] }) };
+  const rpcName = code === "school_admin" ? "get_school_admin_context" : "get_cafeteria_admin_context";
+  const db = client({ platform_get_active_sandbox_pov: ok({ ...activeRow, school_id: schoolId, pov_code: code }), [rpcName]: ok(context) });
+  const state = await loadSandboxLauncherState(db, sandbox);
+  const html = renderToStaticMarkup(<SandboxLauncher state={state} />);
+  expect(html).toContain(code === "school_admin" ? `/admin/escuela?school=${schoolId}` : `/admin/cafeteria?cafeteria=${C}`);
+  expect(html).toContain("Operador:");
+  expect(db.rpc).not.toHaveBeenCalledWith("get_pos_access_context");
+  const mismatch = client({ platform_get_active_sandbox_pov: ok({ ...activeRow, school_id: schoolId, pov_code: code }), [rpcName]: ok({ ...context, pov: { ...pov, session_id: A } }) });
+  expect(renderToStaticMarkup(<SandboxLauncher state={await loadSandboxLauncherState(mismatch, sandbox)} />)).not.toContain("href=\"/admin/");
+});

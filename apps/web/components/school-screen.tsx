@@ -28,5 +28,5 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     const result = readSchema.safeParse(roster.data);
     if (!roster.error && result.success && result.data.scope.school_id === schoolId && result.data.scope.actor_id === access.context.person_id) students = (result.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row);
   }
-  return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ConnectedSchoolPages key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}`} section={section} data={parsed.data} students={students} query={query.data} status={status.data} /></ConnectedSchoolShell>;
+  return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ConnectedSchoolPages key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} data={parsed.data} students={students} query={query.data} status={status.data} /></ConnectedSchoolShell>;
 }

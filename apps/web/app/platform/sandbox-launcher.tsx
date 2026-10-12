@@ -1,7 +1,8 @@
+import { experienceLabel } from "../../lib/platform/sandbox-pov";
 import Link from "next/link";
 import type { SandboxLauncherState } from "@/lib/platform/sandbox-launcher";
 import {
-  EnterCashierButton,
+  EnterExperienceButton,
   ExitDemoButton,
 } from "./sandbox-launcher-actions";
 
@@ -20,13 +21,14 @@ export function SandboxLauncher({ state }: { state: SandboxLauncherState }) {
           Demostración activa
         </h2>
         <p className="mt-2 text-slate-700">Estás demostrando PIKAS como</p>
-        <p className="text-2xl font-bold">{active.personaName} · Cajero</p>
+        <p className="text-2xl font-bold">{active.personaName} · {experienceLabel[active.povCode]}</p>
         <p className="mt-1 text-slate-700">
           {active.accountName} · {active.cafeteriaName}
         </p>
+        <p className="mt-2 text-sm">Operador: {active.operatorName} · Vence: {new Date(active.expiresAt).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" })}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
           <div>
-            {active.canOpenPos ? <Link className="btn w-full sm:w-auto" href="/pos">Abrir POS</Link> : <><button className="btn w-full sm:w-auto" disabled>Abrir POS</button><p className="mt-1 text-xs text-slate-600">Acceso POS sin confirmar. Actualiza la página.</p></>}
+            {active.canOpenExperience ? <Link className="btn w-full sm:w-auto" href={active.destination}>{active.povCode === "cashier" ? "Abrir POS" : "Abrir administración"}</Link> : <><button className="btn w-full sm:w-auto" disabled>{active.povCode === "cashier" ? "Abrir POS" : "Abrir administración"}</button><p className="mt-1 text-xs text-slate-600">Acceso sin confirmar. Actualiza la página.</p></>}
           </div>
           <ExitDemoButton />
         </div>
@@ -53,13 +55,14 @@ export function SandboxLauncher({ state }: { state: SandboxLauncherState }) {
           {state.targets.map((target) => (
             <li
               className="card p-5"
-              key={target.accountId + ":" + target.cafeteriaId}
+              key={target.accountId + ":" + target.cafeteriaId + ":" + target.povCode}
             >
               <p className="text-lg font-bold">{target.accountName}</p>
               <p className="text-slate-700">{target.cafeteriaName}</p>
-              <p className="mt-1 text-slate-700">{target.personaName} · Cajero</p>
+              <p className="mt-1 text-slate-700">{target.personaName} · {experienceLabel[target.povCode]}</p>
               <div className="mt-4">
-                <EnterCashierButton
+                <EnterExperienceButton
+                  povCode={target.povCode}
                   accountId={target.accountId}
                   cafeteriaId={target.cafeteriaId}
                 />

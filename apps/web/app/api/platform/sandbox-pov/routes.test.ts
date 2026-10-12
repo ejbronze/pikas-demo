@@ -94,6 +94,12 @@ describe("sandbox POV routes", () => {
     });
   });
 
+  it.each(["school_admin", "cafeteria_admin"])("allows explicit %s experience with database-resolved persona", async povCode => {
+    rpc.mockResolvedValue({ data: { session_id: sessionId, expires_at: "2099-01-01T00:00:00Z" }, error: null });
+    expect((await doEnter({ ...target, povCode })).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("platform_enter_sandbox_pov", expect.objectContaining({ p_pov_code: povCode, p_request_id: key }));
+  });
+
   it.each([
     ["pov code", { ...target, povCode: "admin" }],
     ["pov_code", { ...target, pov_code: "admin" }],

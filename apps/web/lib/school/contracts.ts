@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { sandboxPovSchema } from "../platform/sandbox-pov";
 const id = z.uuid();
 const name = z.string().trim().min(1).max(80);
 const optionalLabel = z.string().trim().max(80).nullable();
 const placement = { location_id: id.nullable(), starts_on: z.iso.date(), grade: optionalLabel, class: optionalLabel, homeroom: optionalLabel };
 const studentNames = { first_name: name, last_name: name, student_code: z.string().trim().min(1).max(64) };
-export const schoolContextSchema = z.object({ person_id: id, display_name: z.string(), schools: z.array(z.object({ school_id: id, school_name: z.string(), account_id: id, account_name: z.string(), tenant_kind: z.enum(["customer", "sandbox"]) }).strict()) }).strict();
+export const schoolContextSchema = z.object({ pov: sandboxPovSchema.optional(), person_id: id, display_name: z.string(), schools: z.array(z.object({ school_id: id, school_name: z.string(), account_id: id, account_name: z.string(), tenant_kind: z.enum(["customer", "sandbox"]) }).strict()) }).strict();
 export type SchoolContext = z.infer<typeof schoolContextSchema>;
 export const sectionSchema = z.enum(["summary", "students", "administrators", "cafeterias", "activity"]);
 export type SchoolSection = z.infer<typeof sectionSchema>;

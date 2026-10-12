@@ -12,6 +12,7 @@ export async function resolveSchoolAccess(client: Pick<SupabaseClient, "auth" | 
     if (response.data === null) return { status: "forbidden" };
     const parsed = schoolContextSchema.safeParse(response.data);
     if (!parsed.success) return { status: "unavailable" };
+    if (parsed.data.pov && (parsed.data.pov.pov_code !== "school_admin" || Date.parse(parsed.data.pov.expires_at) <= Date.now() || parsed.data.schools.length !== 1 || parsed.data.schools[0].tenant_kind !== "sandbox")) return { status: "forbidden" };
     return parsed.data.schools.length ? { status: "authorized", context: parsed.data } : { status: "forbidden" };
   } catch { return { status: "unavailable" }; }
 }

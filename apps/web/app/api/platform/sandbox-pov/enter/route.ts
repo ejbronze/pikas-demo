@@ -1,10 +1,10 @@
+import { sandboxPovCodeSchema } from "../../../../../lib/platform/sandbox-pov";
 import { z } from "zod";
 import { createPlatformRpcPostHandler } from "../../../../../lib/auth/platform-rpc-route";
 
-// Only the target is caller-supplied; the POV code is fixed server-side and the
-// persona is resolved by the database.
+// Only target and an allowlisted experience are supplied; the database resolves the persona.
 const enterSchema = z
-  .object({ accountId: z.uuid(), cafeteriaId: z.uuid() })
+  .object({ accountId: z.uuid(), cafeteriaId: z.uuid(), povCode: sandboxPovCodeSchema.default("cashier") })
   .strict();
 
 const resultSchema = z.object({
@@ -21,6 +21,6 @@ export const POST = createPlatformRpcPostHandler({
       p_request_id: requestId,
       p_account_id: payload.accountId,
       p_cafeteria_id: payload.cafeteriaId,
-      p_pov_code: "cashier",
+      p_pov_code: payload.povCode,
     }),
 });

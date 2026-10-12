@@ -1,3 +1,4 @@
+import { sandboxPovSchema } from "../platform/sandbox-pov";
 import { z } from 'zod';
 // PostgreSQL UUID entity columns also accept legacy deterministic GUIDs.
 const id = z.guid();
@@ -36,7 +37,7 @@ export type Operation = keyof typeof payloads;
 export type CafeteriaCommand = { cafeteriaId: string; operation: Operation; payload: unknown };
 export const commandResultSchema = z.object({ request_id: z.uuid(), operation: z.enum(Object.keys(payloads) as [Operation,...Operation[]]), target_id: id.nullable() }).strict();
 const cafeteria = { cafeteria_id: id, cafeteria_name: z.string(), account_name: z.string(), school_name: z.string(), location_name: z.string(), tenant_kind: z.enum(['customer','sandbox']) };
-export const contextSchema = z.object({ person_id: id, display_name: z.string(), cafeterias: z.array(z.object(cafeteria).strict()) }).strict();
+export const contextSchema = z.object({ pov: sandboxPovSchema.optional(), person_id: id, display_name: z.string(), cafeterias: z.array(z.object(cafeteria).strict()) }).strict();
 export type CafeteriaContext = z.infer<typeof contextSchema>;
 export const readSchema = z.object({
  scope: z.object({ ...cafeteria, actor_id: id, membership_id: id, account_id: id, capabilities: z.array(z.string()) }).strict(),

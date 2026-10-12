@@ -12,6 +12,7 @@ export async function resolveCafeteriaAccess(client: Pick<SupabaseClient,'auth'|
   if (response.data === null) return {status:'forbidden'};
   const parsed = contextSchema.safeParse(response.data);
   if (!parsed.success) return {status:'unavailable'};
+  if (parsed.data.pov && (parsed.data.pov.pov_code !== 'cafeteria_admin' || Date.parse(parsed.data.pov.expires_at) <= Date.now() || parsed.data.cafeterias.length !== 1 || parsed.data.cafeterias[0].tenant_kind !== 'sandbox')) return {status:'forbidden'};
   return parsed.data.cafeterias.length ? {status:'authorized',context:parsed.data}:{status:'forbidden'};
  } catch { return {status:'unavailable'}; }
 }

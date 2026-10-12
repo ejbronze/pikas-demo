@@ -13,6 +13,11 @@ vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
   return {
     ...actual,
+    useRef: (initial: unknown) => {
+      const index = cursor.i++;
+      if (!(index in slots)) slots[index] = { current: initial };
+      return slots[index];
+    },
     useState: (initial: unknown) => {
       const index = cursor.i++;
       if (!(index in slots)) slots[index] = initial;

@@ -9,8 +9,8 @@ type Result = { ok:true } | { ok:false; message:string };
 type Execute = (operation:Operation,payload:unknown)=>Promise<Result>;
 const MutationContext = createContext<Execute|null>(null);
 export function useCafeteriaMutation() { const execute=useContext(MutationContext); if (!execute) throw new Error('Missing cafeteria mutation context'); return execute; }
-export function ConnectedCafeteriaProvider({data,children}:{data:CafeteriaRead;children:React.ReactNode}) {
- const router=useRouter(); const storageKey=recoveryKey(data.scope.actor_id,data.scope.cafeteria_id);
+export function ConnectedCafeteriaProvider({data,children,recoveryActorId}:{data:CafeteriaRead;children:React.ReactNode;recoveryActorId?:string}) {
+ const router=useRouter(); const storageKey=recoveryKey(recoveryActorId ?? data.scope.actor_id,data.scope.cafeteria_id);
  const [ready,setReady]=useState(false),[pending,setPending]=useState<Pending|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  const inFlight=useRef(false);
  useEffect(()=>{let alive=true; queueMicrotask(()=>{if(!alive)return; try { const stored=load(sessionStorage,storageKey); if(stored && stored.command.cafeteriaId!==data.scope.cafeteria_id) throw new Error('Scope mismatch'); setPending(stored);setReady(true);if(stored)setMessage('Solicitud pendiente de confirmar. Recupera la misma solicitud antes de editar.'); } catch {setMessage('No se puede recuperar la solicitud. Las operaciones están bloqueadas.');}}); return ()=>{alive=false;};},[storageKey,data.scope.cafeteria_id]);
