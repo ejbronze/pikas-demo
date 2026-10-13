@@ -26,7 +26,7 @@ export async function resolvePosAccess(supabase: Pick<SupabaseClient, "auth" | "
     if (!parsed.success || (parsed.data.pov && Date.parse(parsed.data.pov.expires_at) <= Date.now())) {
       return { status: "unavailable" };
     }
-    return { status: "authorized", context: parsed.data };
+    return { status: "authorized", context: { ...parsed.data, authenticated_user_id: user.id } };
   } catch {
     return { status: "unavailable" };
   }

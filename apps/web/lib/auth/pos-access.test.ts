@@ -17,7 +17,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.demo.mockReturnValue(false);
   mocks.client.mockResolvedValue(client);
-  mocks.getUser.mockResolvedValue({ data: { user: { id: "initiator-auth" } }, error: null });
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "00000000-0000-4000-8000-000000000099" } }, error: null });
   mocks.rpc.mockResolvedValue({ data: posContext(), error: null });
 });
 
@@ -25,7 +25,7 @@ describe("authoritative POS access", () => {
   it.each([true, false])("resolves sandbox=%s without sending authority arguments", async (sandbox) => {
     const context = posContext(sandbox);
     mocks.rpc.mockResolvedValue({ data: context, error: null });
-    expect(await resolvePosAccess(client)).toEqual({ status: "authorized", context });
+    expect(await resolvePosAccess(client)).toEqual({ status: "authorized", context: { ...context, authenticated_user_id: "00000000-0000-4000-8000-000000000099" } });
     expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("get_pos_access_context");
   });
   it("does not query context without an Auth session", async () => {
@@ -75,7 +75,7 @@ describe("authoritative POS access", () => {
 
 describe("server page gate", () => {
   it("passes authoritative connected context to the page", async () => {
-    expect(await requirePosAccess()).toEqual({ demo: false, context: posContext() });
+    expect(await requirePosAccess()).toEqual({ demo: false, context: { ...posContext(), authenticated_user_id: "00000000-0000-4000-8000-000000000099" } });
   });
   it("preserves the existing demo-role gate", async () => {
     mocks.demo.mockReturnValue(true);

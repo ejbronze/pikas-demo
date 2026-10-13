@@ -1,3 +1,4 @@
+import { sessionFetch } from "../auth/session-fetch";
 import { z } from "zod";
 import { customerDraftSchema, provisionResultSchema, prepareResultSchema, type CustomerDraft } from "./customer-contracts";
 
@@ -11,7 +12,7 @@ type Send = (path: string, key: string, body: unknown) => Promise<unknown>;
 export const journeyStorageKey = (actor: string) => `pikas:customer-provisioning:v1:${actor}`;
 
 export async function postPlatform(path: string, key: string, body: unknown): Promise<unknown> {
-  const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(body) });
+  const response = await sessionFetch(path, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(body) });
   if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "authorization" : response.status === 409 ? "conflict" : "unavailable");
   return response.json();
 }

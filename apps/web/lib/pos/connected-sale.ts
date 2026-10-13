@@ -1,3 +1,4 @@
+import { sessionFetch } from "../auth/session-fetch";
 import { z } from "zod";
 import type { PosAccessContext } from "./access-context";
 import { bootstrapSchema, checkoutSchema, customerSchema, parseCash, paymentIssue, purchaseContextSchema, receiptSchema,
@@ -21,15 +22,15 @@ const messages: Record<string, string> = {
 };
 export async function requestPos(operation: PosOperation): Promise<unknown> {
   if (!navigator.onLine) throw new PosRequestError("Conéctate para continuar. No se permiten ventas sin conexión.");
-  const response = await fetch("/api/pos", { method: "POST", credentials: "same-origin", cache: "no-store",
+  const response = await sessionFetch("/api/pos", { method: "POST", credentials: "same-origin", cache: "no-store",
     headers: { "Content-Type": "application/json", ...(operation.operation === "checkout" ? { "Idempotency-Key": operation.request.request_key } : "request_key" in operation ? { "Idempotency-Key": operation.request_key } : {}) },
     body: JSON.stringify(operation), signal: AbortSignal.timeout(15000) });
   const body = await response.json();
   if (!response.ok) throw new PosRequestError(messages[body.error] ?? "No se pudo confirmar la operación.", body.definite === true);
   return body.result;
 }
-const pendingSchema = z.object({ actor: z.uuid(), pov: z.uuid().nullable(), request: checkoutSchema }).strict();
-const registerPendingSchema = z.object({ actor: z.uuid(), pov: z.uuid().nullable(), request: registerOperationSchema }).strict();
+const pendingSchema = z.object({ actor: z.uuid(), auth_user: z.uuid().optional(), pov: z.uuid().nullable(), request: checkoutSchema }).strict();
+const registerPendingSchema = z.object({ actor: z.uuid(), auth_user: z.uuid().optional(), pov: z.uuid().nullable(), request: registerOperationSchema }).strict();
 type RegisterPending = z.infer<typeof registerPendingSchema>;
 const registerStorageKey = "pikas:connected-pos:register:v1";
 type Pending = z.infer<typeof pendingSchema>;
@@ -56,9 +57,12 @@ export class ConnectedSale {
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private update(value: Partial<SaleState>) { this.state = { ...this.state, ...value }; this.listeners.forEach((fn) => fn()); }
-  private sameOwner(pending: Pick<Pending, "actor" | "pov">) {
+  private sameOwner(pending: Pick<Pending, "actor" | "pov" | "auth_user">) {
     // A renewed POV for the same effective cashier may recover an old sale. The DB still verifies
     // the original register session's scope; a different actor or ordinary/POV mode cannot retry it.
+    const realUser = this.state.context.authenticated_user_id;
+    // Legacy POV journals lack a real operator binding: retain them, but do not execute them.
+    if (realUser && (pending.auth_user ? pending.auth_user !== realUser : Boolean(pending.pov))) return false;
     return pending.actor === this.state.context.actor.person_id && Boolean(pending.pov) === Boolean(this.state.context.pov);
   }
   async start(storage: Storage) {
@@ -147,7 +151,7 @@ export class ConnectedSale {
       items: this.state.cart.map((line) => { const p = this.state.bootstrap!.catalog!.products.find((p) => p.product_id === line.product_id)!;
         return { ...line, expected_product_version: p.version, expected_unit_price_minor: p.price_minor }; }),
       tender: this.state.tender === "cash" ? { type: "cash", cash_received_minor: parseCash(this.state.cash)! } : { type: "student_wallet" } });
-    const pending: Pending = { actor: this.state.context.actor.person_id, pov: this.state.context.pov?.session_id ?? null, request };
+    const pending: Pending = { actor: this.state.context.actor.person_id, auth_user: this.state.context.authenticated_user_id, pov: this.state.context.pov?.session_id ?? null, request };
     try { if (!this.storage) throw new Error("journal_missing"); this.storage.setItem(storageKey, JSON.stringify(pending)); }
     catch { this.update({ notice: "No se pudo guardar la clave de recuperación. No se realizó el cobro." }); return; }
     this.update({ pending });
@@ -198,7 +202,7 @@ export class ConnectedSale {
   }
   private async beginRegister(request: RegisterOperation) {
     if (this.state.busy || this.state.pending || this.state.registerPending || this.state.recoveryBlocked || this.state.cart.length || this.state.receipt) return;
-    const registerPending = { actor: this.state.context.actor.person_id, pov: this.state.context.pov?.session_id ?? null, request };
+    const registerPending = { actor: this.state.context.actor.person_id, auth_user: this.state.context.authenticated_user_id, pov: this.state.context.pov?.session_id ?? null, request };
     try { if (!this.storage) throw new Error("journal_missing"); this.storage.setItem(registerStorageKey, JSON.stringify(registerPending)); }
     catch { this.update({ notice: "No se pudo guardar la clave de recuperación. La caja no se modificó." }); return; }
     this.update({ registerPending }); await this.retryRegister();

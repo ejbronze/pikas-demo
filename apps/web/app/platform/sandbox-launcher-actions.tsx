@@ -1,4 +1,5 @@
 "use client";
+import { sessionFetch } from "../../lib/auth/session-fetch";
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -6,7 +7,7 @@ import { experienceLabel, type SandboxPovCode } from "../../lib/platform/sandbox
 
 async function post(url: string, body: unknown, key: string): Promise<boolean> {
   try {
-    const response = await fetch(url, {
+    const response = await sessionFetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", "Idempotency-Key": key },
       body: JSON.stringify(body),

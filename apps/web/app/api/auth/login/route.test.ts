@@ -1,13 +1,14 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { isDemoMode, pilotHome, resolvePikasIdentity, signInWithPassword, signOut } =
+const { isDemoMode, pilotHome, resolvePikasIdentity, signInWithPassword, signOut, rpc } =
   vi.hoisted(() => ({
     isDemoMode: vi.fn(),
     pilotHome: vi.fn(),
     resolvePikasIdentity: vi.fn(),
     signInWithPassword: vi.fn(),
     signOut: vi.fn(),
+    rpc: vi.fn(),
   }));
 
 vi.mock("@/lib/env", () => ({ isDemoMode }));
@@ -17,7 +18,7 @@ vi.mock("@/lib/auth/pikas-context", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(async () => ({
-    auth: { signInWithPassword, signOut },
+    auth: { signInWithPassword, signOut }, rpc,
   })),
 }));
 
@@ -48,6 +49,7 @@ describe("public tenant login route", () => {
       data: { user: { id: "auth-user-id" } },
       error: null,
     });
+    rpc.mockResolvedValue({data: {}, error: null});
     signOut.mockResolvedValue({ error: null });
     resolvePikasIdentity.mockResolvedValue(activeTenantIdentity);
     pilotHome.mockReturnValue("/pilot/connected");

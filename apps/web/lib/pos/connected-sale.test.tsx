@@ -264,3 +264,42 @@ describe('anonymous connected sales and explicit tender',()=>{
  it('anonymous idempotency conflict stays unresolved and cannot start a new request',async()=>{await anonymous();sale.setTender('cash');sale.setCash('200');send.mockImplementationOnce(async()=>{throw new PosRequestError('IDEMPOTENCY_CONFLICT');});await sale.checkout();const pending=sale.getSnapshot().pending;await sale.reset();sale.anonymous();expect(sale.getSnapshot().pending).toBe(pending);expect(data.size).toBe(1);});
  it('strict anonymous request/receipt validation rejects malformed purchaser/tender combinations',async()=>{await anonymous();sale.setTender('cash');sale.setCash('200');await sale.checkout();const request=sale.getSnapshot().pending!.request,r=sale.getSnapshot().receipt!;expect(checkoutSchema.safeParse(request).success).toBe(true);expect(checkoutSchema.safeParse({...request,tender:{type:'student_wallet'}}).success).toBe(false);expect(checkoutSchema.safeParse({...request,tender:{type:'staff_credit'}}).success).toBe(false);expect(checkoutSchema.safeParse({...request,purchaser:'fake'}).success).toBe(false);for(const change of [{customer_name:'Inventado'},{customer_type:'student'},{cafeteria_customer_id:customer.customer_id},{wallet_balance_after_minor:'100'},{change_due_minor:'1'}])expect(receiptSchema.safeParse({...r,...change}).success).toBe(false);});
 });
+
+
+describe("4D.7F real-user recovery binding", () => {
+  async function uncertainAs(user: string) {
+    const bound = { ...context, authenticated_user_id: user };
+    send.mockImplementation(async op => op.operation === "bootstrap" ? { ...bootstrap(), context: bound } : op.operation === "customer" ? purchaseContext() : op.operation === "checkout" ? Promise.reject(new PosRequestError("expired")) : []);
+    sale = new ConnectedSale(bound, send, () => id(7));
+    await prepare(); await sale.checkout();
+    return data.get("pikas:connected-pos:pending:v1")!;
+  }
+  it("retains exact checkout through expiry and retries only after same-user context restoration", async () => {
+    const saved = await uncertainAs(id(80));
+    const bound = { ...context, authenticated_user_id: id(80) };
+    const restoredSend = vi.fn(async (op: PosOperation) => op.operation === "bootstrap" ? { ...bootstrap(), context: bound } : op.operation === "checkout" ? receipt(op.request) : purchaseContext());
+    const restored = new ConnectedSale(bound, restoredSend); await restored.start(storage);
+    expect(restoredSend.mock.calls.map(([op]) => op.operation)).toEqual(["bootstrap"]);
+    expect(data.get("pikas:connected-pos:pending:v1")).toBe(saved);
+    await restored.retry();
+    expect(restoredSend.mock.calls.find(([op]) => op.operation === "checkout")![0]).toEqual({ operation: "checkout", request: JSON.parse(saved).request });
+  });
+  it("another real operator using the same José persona cannot execute the first operator's journal", async () => {
+    const saved = await uncertainAs(id(80));
+    const bound = { ...context, authenticated_user_id: id(81) };
+    const changedSend = vi.fn(async () => ({ ...bootstrap(), context: bound }));
+    const changed = new ConnectedSale(bound, changedSend); await changed.start(storage); await changed.retry();
+    expect(changed.getSnapshot().recoveryBlocked).toBe(true);
+    expect(changedSend).toHaveBeenCalledTimes(1);
+    expect(data.get("pikas:connected-pos:pending:v1")).toBe(saved);
+  });
+  it("legacy unbound POV journal is retained and blocked rather than attributed to the current operator", async () => {
+    const saved = await uncertainAs(id(80)); const legacy = JSON.parse(saved); delete legacy.auth_user;
+    data.set("pikas:connected-pos:pending:v1", JSON.stringify(legacy));
+    const bound = { ...context, authenticated_user_id: id(80) };
+    const changedSend = vi.fn(async () => ({ ...bootstrap(), context: bound }));
+    const changed = new ConnectedSale(bound, changedSend); await changed.start(storage); await changed.retry();
+    expect(changed.getSnapshot().recoveryBlocked).toBe(true); expect(changedSend).toHaveBeenCalledTimes(1);
+    expect(data.get("pikas:connected-pos:pending:v1")).toBe(JSON.stringify(legacy));
+  });
+});

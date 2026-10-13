@@ -1,12 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
+  const expectedSession = (await headers()).get("x-pikas-session-id");
   const { url, anonKey } = getSupabasePublicConfig();
 
   return createServerClient(url, anonKey, {
+    global: { headers: expectedSession ? { "x-pikas-session-id": expectedSession } : {} },
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll(values) {

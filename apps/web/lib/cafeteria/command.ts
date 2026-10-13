@@ -1,3 +1,4 @@
+import { sessionFetch } from "../auth/session-fetch";
 import { commandSchema, commandResultSchema, type CafeteriaCommand } from './contracts';
 import { z } from 'zod';
 export const pendingSchema = z.object({ key: z.uuid(), command: commandSchema }).strict();
@@ -11,7 +12,7 @@ export function prepare(storage: Pick<Storage,'getItem'|'setItem'>, key: string,
  const pending = { key: crypto.randomUUID(), command: commandSchema.parse(command) };
  storage.setItem(key,JSON.stringify(pending)); return pending;
 }
-export async function send(pending: Pending, fetcher: typeof fetch = fetch): Promise<'success'|'rejected'|'pending-identity'|'uncertain'> {
+export async function send(pending: Pending, fetcher: typeof fetch = sessionFetch): Promise<'success'|'rejected'|'pending-identity'|'uncertain'> {
  try {
   const response = await fetcher('/api/cafeteria',{ method:'POST', headers:{'Content-Type':'application/json','Idempotency-Key':pending.key},body:JSON.stringify(pending.command) });
   const body = await response.json();

@@ -13,6 +13,7 @@ const membershipSchema = z.object({
 }).strict();
 
 export const posAccessContextSchema = z.object({
+  authenticated_user_id: z.uuid().optional(),
   actor: z.object({ person_id: z.uuid(), display_name: z.string().min(1) }).strict(),
   memberships: z.array(membershipSchema).min(1),
   pov: z.object({

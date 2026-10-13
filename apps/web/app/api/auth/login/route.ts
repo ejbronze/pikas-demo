@@ -53,10 +53,16 @@ export async function POST(request: NextRequest) {
   });
   if (error || !data.user) return fail(request, "credentials");
 
+  const started = await supabase.rpc("pikas_session_start");
+  if (started.error) {
+    await supabase.auth.signOut({ scope: "local" });
+    return fail(request, "session");
+  }
+
   const identity = await resolvePikasIdentity(supabase);
   const target = pilotHome(identity);
   if (!target) {
-    const { error: signOutError } = await supabase.auth.signOut();
+    const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
     if (signOutError) throw signOutError;
     return fail(
       request,

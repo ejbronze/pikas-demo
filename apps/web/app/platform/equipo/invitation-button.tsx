@@ -1,4 +1,5 @@
 'use client';
+import { sessionFetch } from '../../../lib/auth/session-fetch';
 import { useRef,useState } from 'react';
 export function InvitationButton({handle}:{handle:string}) {
  const [busy,setBusy]=useState(false),[link,setLink]=useState(''),[message,setMessage]=useState('');
@@ -8,7 +9,7 @@ export function InvitationButton({handle}:{handle:string}) {
   if(inFlight.current)return;
   inFlight.current=true;setBusy(true);setMessage('');setLink('');setCopyFeedback(null);
   try {
-   const response=await fetch('/api/platform/team/invitation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle})});
+   const response=await sessionFetch('/api/platform/team/invitation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle})});
    const result=await response.json();
    if(!response.ok){setMessage(['identity_exists','identity_unavailable'].includes(result.error)?'La identidad no puede recibir este enlace. Si ya tiene cuenta, puede iniciar sesión mediante su acceso existente; no se modificó su contraseña.':'No se pudo crear el enlace. Comprueba la configuración y el acceso preparado.');return;}
    if(result.delivery!=='link_only'||typeof result.link!=='string')throw Error('invalid');

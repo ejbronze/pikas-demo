@@ -1,3 +1,4 @@
+import { sessionFetch } from "../auth/session-fetch";
 import { z } from "zod";
 import { commandSchema, commandResultSchema, type SchoolCommand } from "./contracts";
 export const pendingCommandSchema = z.object({ key: z.uuid(), command: commandSchema }).strict();
@@ -14,7 +15,7 @@ export function prepareCommand(storage: Pick<Storage, "getItem" | "setItem">, st
   storage.setItem(storageKey, JSON.stringify(pending));
   return pending;
 }
-export async function sendCommand(pending: PendingCommand, send: typeof fetch = fetch): Promise<"success" | "rejected" | "pending-identity" | "uncertain"> {
+export async function sendCommand(pending: PendingCommand, send: typeof fetch = sessionFetch): Promise<"success" | "rejected" | "pending-identity" | "uncertain"> {
   try {
     const response = await send("/api/school", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": pending.key }, body: JSON.stringify(pending.command) });
     const body = await response.json();
