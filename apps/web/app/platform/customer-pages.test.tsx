@@ -52,7 +52,7 @@ describe("customer server screens", () => {
     expect(html).toContain("Ana"); expect(html).not.toContain("Verificar identidad y completar acceso"); expect(html).not.toContain("Preparar administrador");
   });
   it("demonstration preserves the existing launcher and real identity", async () => {
-    mocks.launcher.mockResolvedValue({ kind: "active", active: { personaName: "José Ramírez", accountName: "Colegio Horizonte", cafeteriaName: "Cafetería Escolar", canOpenPos: true } });
+    mocks.launcher.mockResolvedValue({ kind: "active", active: { personaName: "José Ramírez", accountName: "Colegio Horizonte", cafeteriaName: "Cafetería Escolar", povCode: 'cashier', operatorName: 'Operador', expiresAt: '2026-10-20T00:00:00Z', destination: '/pos', canOpenExperience: true } });
     const html = renderToStaticMarkup(await DemonstrationPage()); expect(html).toContain('href="/pos"'); expect(html).toContain("José Ramírez"); expect(mocks.launcher).toHaveBeenCalledWith(session.supabase, session.identity);
   });
 });
