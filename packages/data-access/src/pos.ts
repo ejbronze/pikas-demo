@@ -17,6 +17,9 @@ export type PosStudentRecord = {
 };
 
 export type PosMenuItemRecord = {
+  unit?: string;
+  /** Version captured when an authoritative editor draft opens. */
+  catalogVersion?: number;
   id: string;
   name: string;
   description: string;

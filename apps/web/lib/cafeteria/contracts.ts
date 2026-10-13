@@ -10,7 +10,7 @@ const posRole = z.enum(['pos_cashier', 'pos_supervisor']);
 const memberStatus = z.enum(['active', 'suspended', 'inactive']);
 const base = { id, version: version.nullable() };
 const payloads = {
- product_save: z.object({ ...base, name, description, category: z.string().trim().min(1).max(80), price_minor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), active: z.boolean(), available: z.boolean(), ingredients: food, allergens: food }).strict(),
+ product_save: z.object({ ...base, name, description, unit: z.string().trim().min(1).max(40).optional(), category: z.string().trim().min(1).max(80), price_minor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), active: z.boolean(), available: z.boolean(), ingredients: food, allergens: food }).strict(),
  category_save: z.object({ ...base, name: z.string().trim().min(1).max(80), display_order: z.number().int(), status: z.enum(['active','archived']) }).strict(),
  menu_save: z.object({ ...base, name, description, active: z.boolean(), product_ids: z.array(id).max(10000) }).strict(),
  shift_save: z.object({ ...base, menu_id: id, name, start_time: z.string().regex(/^\d{2}:\d{2}$/), end_time: z.string().regex(/^\d{2}:\d{2}$/), enabled: z.boolean(), weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7) }).strict(),
@@ -43,7 +43,7 @@ export const readSchema = z.object({
  scope: z.object({ ...cafeteria, actor_id: id, membership_id: id, account_id: id, capabilities: z.array(z.string()) }).strict(),
  settings: z.object({ currency: z.literal('DOP'), scheduling_enabled: z.boolean(), version }),
  categories: z.array(z.object({ id, name: z.string(), status: z.enum(['active','archived']), display_order: z.number().int(), version })),
- products: z.array(z.object({ id, name: z.string(), description: z.string(), category_id: id.nullable(), price_minor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), active: z.boolean(), available: z.boolean(), ingredients: z.array(z.string()), allergens: z.array(z.string()), version })),
+ products: z.array(z.object({ id, name: z.string(), description: z.string(), unit: z.string().trim().min(1).max(40).default('Unidad'), category_id: id.nullable(), price_minor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), active: z.boolean(), available: z.boolean(), ingredients: z.array(z.string()), allergens: z.array(z.string()), version })),
  menus: z.array(z.object({ id, name: z.string(), description: z.string(), active: z.boolean(), version, product_ids: z.array(id) })),
  shifts: z.array(z.object({ id, menu_id: id, name: z.string(), start_time: z.string(), end_time: z.string(), enabled: z.boolean(), version, weekdays: z.array(z.number().int()) })),
  registers: z.array(z.object({ id, code: z.string(), name: z.string(), status: z.enum(['active','inactive']), version, has_history: z.boolean(), open: z.boolean() })),

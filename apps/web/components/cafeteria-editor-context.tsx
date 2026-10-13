@@ -4,6 +4,9 @@ import type { useDemo } from './demo-provider';
 type Demo = ReturnType<typeof useDemo>;
 export type CatalogWorkspace = Pick<Demo,'connection'|'adminAddMenu'|'adminUpdateMenu'|'adminSaveCafeteriaMenu'|'adminSaveServiceShift'|'adminSetServiceScheduling'> & {
  connected?: boolean;
+ mutationBlocked?: boolean;
+ pendingMutation?: boolean;
+ recoverPending?: () => Promise<{ok:true}|{ok:false;message:string}>;
  timeZone?: string;
  categories?: string[];
  scope: { organizationId:string; locationId:string };

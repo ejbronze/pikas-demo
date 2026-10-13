@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { createCatalogProduct, editCatalogProduct } from './products';
+import { createCatalogProduct, editCatalogProduct, validateProduct } from './products';
 import { preparePosPurchase, validateGeneralCashPurchase, type PosMenuItemRecord } from './pos';
 import { quickAccess } from './financial';
 const product: PosMenuItemRecord = { id: 'p', name: 'Pasta', description: '', category: 'Almuerzo', priceMinor: 18000, available: true, active: true, imageUrl: null, ingredients: ['Trigo'], allergens: ['Gluten'], restrictionTags: ['Vegetariano'] };
 describe('product management', () => {
+  it('defaults legacy unit and validates bounded explicit unit without losing food metadata', () => {
+    expect(validateProduct(product).unit).toBe('Unidad');
+    expect(validateProduct({...product,unit:' Porción '}).unit).toBe('Porción');
+    expect(validateProduct({...product,unit:'Botella'})).toMatchObject({ingredients:['Trigo'],allergens:['Gluten']});
+    for(const unit of ['', ' ', 'x'.repeat(41)])expect(()=>validateProduct({...product,unit})).toThrow('Unidad');
+  });
   it('creates a zero-price product and rejects duplicate IDs', () => {
     const created = createCatalogProduct([], { ...product, priceMinor: 0 });
     expect(created[0]?.priceMinor).toBe(0);
@@ -22,7 +28,7 @@ describe('product management', () => {
   it('preserves metadata and permits removing an existing image', () => {
     const original = { ...product, imageUrl: '/menu/pasta.svg' };
     const edited = editCatalogProduct([original], { ...original, priceMinor: 19500, imageUrl: null }, original)[0]!;
-    expect(edited).toEqual({ ...original, priceMinor: 19500, imageUrl: null });
+    expect(edited).toEqual({ ...original, unit: 'Unidad', priceMinor: 19500, imageUrl: null });
     expect(original.priceMinor).toBe(18000);
   });
   it('does not mistake normalization property order for a stale edit', () => {

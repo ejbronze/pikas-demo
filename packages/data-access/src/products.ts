@@ -17,7 +17,7 @@ export function validateProduct(input: PosMenuItemRecord, previous?: PosMenuItem
   if (input.imageAssetId && !PRODUCT_IMAGE_GALLERY.some(image => image.id === input.imageAssetId && image.src === input.imageUrl)) throw new Error('Referencia de galería no válida.');
   if (input.imageUrl?.startsWith('data:') && !isDemoUploadedImage(input.imageUrl)) throw new Error('La imagen supera el tamaño permitido o no es válida.');
   if (input.imageUrl !== null && !isDemoUploadedImage(input.imageUrl) && !(DEMO_PRODUCT_IMAGES as readonly string[]).includes(input.imageUrl) && input.imageUrl !== previous?.imageUrl) throw new Error('Selecciona una imagen disponible.');
-  return { ...input, id: text(input.id, 'Identificador', 120, true), name: text(input.name, 'Nombre', 120, true), description: text(input.description, 'Descripción', 500), category: text(input.category, 'Categoría', 80, true), ingredients: list(input.ingredients, 'Ingredientes'), allergens: list(input.allergens, 'Alérgenos'), restrictionTags: list(input.restrictionTags, 'Etiquetas alimentarias'), active: input.active ?? previous?.active ?? true };
+  return { ...input, unit: text(input.unit ?? previous?.unit ?? 'Unidad', 'Unidad', 40, true), id: text(input.id, 'Identificador', 120, true), name: text(input.name, 'Nombre', 120, true), description: text(input.description, 'Descripción', 500), category: text(input.category, 'Categoría', 80, true), ingredients: list(input.ingredients, 'Ingredientes'), allergens: list(input.allergens, 'Alérgenos'), restrictionTags: list(input.restrictionTags, 'Etiquetas alimentarias'), active: input.active ?? previous?.active ?? true };
 }
 
 export function createCatalogProduct(products: PosMenuItemRecord[], input: PosMenuItemRecord): PosMenuItemRecord[] {
