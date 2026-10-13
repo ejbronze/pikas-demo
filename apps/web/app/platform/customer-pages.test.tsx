@@ -34,8 +34,12 @@ describe("customer server screens", () => {
   it("detail presents pending/setup state without showing technical identity values", async () => {
     mocks.readPlatform.mockResolvedValue({ kind: "ready", value: customer });
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
-    expect(html).toContain("Identidad pendiente"); expect(html).toContain("No enviamos invitaciones"); expect(html).toContain("Verificar identidad y completar acceso");
+    expect(html).toContain("Acceso preparado"); expect(html).toContain("Activación pendiente"); expect(html).toContain("No enviamos invitaciones"); expect(html).toContain("Verificar identidad y completar acceso");
     expect(html.replace(/<[^>]*>/g, "")).not.toContain(id);
+  });
+  it.each([['linked','Listo para completar'],['granted','Acceso completado']])('presents authoritative %s state without introducing invitation actions',async(status,label)=>{
+    mocks.readPlatform.mockResolvedValue({kind:'ready',value:{...customer,administrator_intents:[{...customer.administrator_intents[0],status}]}});
+    const html=renderToStaticMarkup(await CustomerPage({params:Promise.resolve({accountId:id})}));expect(html).toContain(label);expect(html).not.toContain('Crear enlace de invitación');
   });
   it("sandbox details do not expose customer-admin completion actions", async () => {
     mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { ...customer, tenant_kind: "sandbox" } });

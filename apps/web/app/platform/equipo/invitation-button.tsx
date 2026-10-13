@@ -2,10 +2,11 @@
 import { useRef,useState } from 'react';
 export function InvitationButton({handle}:{handle:string}) {
  const [busy,setBusy]=useState(false),[link,setLink]=useState(''),[message,setMessage]=useState('');
+ const [copyFeedback,setCopyFeedback]=useState<{link:string;message:string}|null>(null);
  const inFlight=useRef(false);
  async function prepare() {
   if(inFlight.current)return;
-  inFlight.current=true;setBusy(true);setMessage('');setLink('');
+  inFlight.current=true;setBusy(true);setMessage('');setLink('');setCopyFeedback(null);
   try {
    const response=await fetch('/api/platform/team/invitation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle})});
    const result=await response.json();
@@ -15,6 +16,11 @@ export function InvitationButton({handle}:{handle:string}) {
   }catch{setMessage('No se pudo confirmar la creación del enlace. No se envió correo. Puedes crear otro para el mismo acceso preparado.');}
   finally{inFlight.current=false;setBusy(false);}
  }
- return <div className="space-y-3"><button className="btn-secondary" disabled={busy} onClick={()=>void prepare()}>{busy?'Preparando…':'Crear enlace de invitación'}</button>
- {message&&<p role="status">{message}</p>}{link&&<label className="block">Enlace privado de activación<input className="field mt-1 w-full" readOnly value={link} onFocus={event=>event.currentTarget.select()}/></label>}</div>;
+ async function copy() {
+  const currentLink=link;
+  try {await navigator.clipboard.writeText(currentLink);setCopyFeedback({link:currentLink,message:'Enlace copiado'});}
+  catch {setCopyFeedback({link:currentLink,message:'No se pudo copiar. Selecciona el enlace privado y cópialo manualmente.'});}
+ }
+ return <div className="min-w-0 space-y-3"><button type="button" className={link?'btn-destructive':'btn'} disabled={busy} onClick={()=>{if(!link||confirm('¿Reemplazar el enlace? El enlace anterior dejará de funcionar.'))void prepare();}}>{busy?'Preparando…':link?'Reemplazar enlace':'Crear enlace de invitación'}</button>
+ {message&&<p role="status">{message}</p>}{link&&<div className="min-w-0 space-y-3"><label className="block">Enlace privado de activación<input className="field mt-1 w-full" readOnly value={link} onFocus={event=>event.currentTarget.select()}/></label><button type="button" className="btn-secondary" onClick={()=>void copy()}>Copiar enlace</button>{copyFeedback?.link===link&&<p role="status">{copyFeedback.message}</p>}</div>}</div>;
 }

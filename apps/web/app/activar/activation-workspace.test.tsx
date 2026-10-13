@@ -20,3 +20,16 @@ it('a clean reload resumes password setting by opaque handle without persisting 
  expect(render().props.children[3].props.children[0].props.children).toBe('Crea tu contraseña');
 });
 it('warns that the private link does not independently prove mailbox ownership',()=>{const tree=render();expect(tree.props.children[1].props.children).toContain('no verifica por separado');});
+
+type TreeProps = {children?:unknown;id?:string;name?:string;role?:string;'aria-describedby'?:string;onChange?:()=>void;onSubmit?:(event:{preventDefault:()=>void;currentTarget:object})=>void};
+type Tree = ReactModule.ReactElement<TreeProps>;
+function find(tree:unknown,predicate:(node:Tree)=>boolean):Tree | undefined {
+ if(!ReactModule.isValidElement<TreeProps>(tree))return;
+ if(predicate(tree))return tree;
+ for(const child of [tree.props?.children].flat(Infinity)){const found=find(child,predicate);if(found)return found;}
+}
+async function passwordForm(){vi.stubGlobal('window',{location:{hash:'',search:'?invitation='+ 'b'.repeat(32)},history:{replaceState:vi.fn()}});render();mocks.effects[0]();await Promise.resolve();mocks.first=false;}
+function submit(password:string,confirmation:string){vi.stubGlobal('FormData',class{get(name:string){return name==='password'?password:confirmation;}});find(render(),n=>n.type==='form')!.props.onSubmit!({preventDefault(){},currentTarget:{}});}
+it('matching passwords send only the existing handle/password payload',async()=>{await passwordForm();const fetcher=vi.fn().mockResolvedValue({ok:true,json:async()=>({})});vi.stubGlobal('fetch',fetcher);submit('secure-password','secure-password');await vi.waitFor(()=>expect(fetcher).toHaveBeenCalledOnce());expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({handle:'b'.repeat(32),password:'secure-password'});});
+it('mismatch prevents submission, associates an inline error, and correction permits submission',async()=>{await passwordForm();const fetcher=vi.fn().mockResolvedValue({ok:true,json:async()=>({})});vi.stubGlobal('fetch',fetcher);submit('secure-password','different-password');expect(fetcher).not.toHaveBeenCalled();const error=find(render(),n=>n.props?.id==='password-mismatch');expect(error!.props.role).toBe('alert');expect(error!.props.children).toContain('no coinciden');const confirmation=find(render(),n=>n.props?.name==='confirmPassword');expect(confirmation!.props['aria-describedby']).toBe(error!.props.id);confirmation!.props.onChange!();expect(find(render(),n=>n.props?.id==='password-mismatch')).toBeUndefined();submit('secure-password','secure-password');await vi.waitFor(()=>expect(fetcher).toHaveBeenCalledOnce());});
+it.each(['weak_password','invalid'])('matching confirmation preserves existing %s error and recovery messaging',async error=>{await passwordForm();vi.stubGlobal('fetch',vi.fn().mockResolvedValue({ok:false,json:async()=>({error})}));submit('secure-password','secure-password');await vi.waitFor(()=>expect(find(render(),n=>n.props?.role==='alert')!.props.children).toContain(error==='weak_password'?'política de seguridad':'Reintenta con la misma contraseña'));expect(find(render(),n=>n.type==='form')).toBeDefined();});

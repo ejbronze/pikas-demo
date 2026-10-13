@@ -1,5 +1,6 @@
 import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
 import * as ReactModule from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
 const mocks=vi.hoisted(()=>({slots:[] as unknown[],refs:[] as {current:unknown}[],effects:[] as (()=>unknown)[],first:true,cursor:{state:0,ref:0},refresh:vi.fn()}));
 vi.mock('next/navigation',()=>({useRouter:()=>({refresh:mocks.refresh})}));
 vi.mock('react',async original=>({...await original<typeof import('react')>(),useState:(initial:unknown)=>{const n=mocks.cursor.state++;if(!(n in mocks.slots))mocks.slots[n]=initial;return [mocks.slots[n],(v:unknown)=>{mocks.slots[n]=typeof v==='function'?v(mocks.slots[n]):v;}];},useRef:(initial:unknown)=>{const n=mocks.cursor.ref++;return mocks.refs[n]??={current:initial};},useEffect:(effect:()=>unknown)=>{if(mocks.first)mocks.effects.push(effect);}}));
@@ -26,4 +27,9 @@ describe('team workspace recovery lock',()=>{
  it('old completion retry waits for password readiness without changing its saved key/payload',async()=>{const saved=JSON.stringify({key,command:{operation:'complete',payload:{handle:'b'.repeat(32)}}});sessionStorage.setItem(teamJournalKey(data.actor_handle),saved);data.prepared.push({handle:'b'.repeat(32),name:'Pending',email:'pending@example.invalid',demo:true,status:'pending',identity_ready:false});await mount();const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);expect(render().props.children[2].props.disabled).toBe(true);retry();expect(fetcher).not.toHaveBeenCalled();expect(sessionStorage.getItem(teamJournalKey(data.actor_handle))).toBe(saved);data.prepared[0].identity_ready=true;expect(render().props.children[2].props.disabled).toBe(false);expect(sessionStorage.getItem(teamJournalKey(data.actor_handle))).toBe(saved);});
  it('corrupt journal locks editing and prevents retry',async()=>{sessionStorage.setItem(teamJournalKey(data.actor_handle),'malformed');await mount();expect(locked()).toBe(true);expect(render().props.children[2]).toBeNull();});
  it('duplicate retry sends only once',async()=>{sessionStorage.setItem(teamJournalKey(data.actor_handle),JSON.stringify({key,command}));await mount();let resolve!:(value:unknown)=>void;const fetcher=vi.fn().mockReturnValue(new Promise(r=>{resolve=r;}));vi.stubGlobal('fetch',fetcher);retry();retry();expect(fetcher).toHaveBeenCalledOnce();resolve({ok:false,status:503});await vi.waitFor(()=>expect(render().props.children[2].props.disabled).toBe(false));expect(locked()).toBe(true);});
+});
+
+it.each([['pending',false,'Activación pendiente'],['pending',true,'Listo para completar'],['completed',true,'Acceso completado']] as const)('shows authoritative %s/readiness=%s state with unchanged completion gate',async(status,identity_ready,label)=>{
+ data.prepared.push({handle:'b'.repeat(32),name:'Invitada local',email:'local@example.invalid',demo:false,status,identity_ready});await mount();const html=renderToStaticMarkup(render());expect(html).toContain(label);
+ if(status==='pending'){expect(html).toContain('Acceso preparado');expect(html).toContain('Completar acceso');expect(html).toMatch(identity_ready?/<button class="btn">Completar acceso/:/<button class="btn" disabled="">Completar acceso/);}else expect(html).not.toContain('Completar acceso');
 });

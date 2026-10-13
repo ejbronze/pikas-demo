@@ -3,6 +3,7 @@ import { z } from "zod";
 import { customerOverviewSchema, statusLabel } from "../../../../lib/platform/customer-contracts";
 import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
 import { CustomerHeading, CustomerHierarchy, ReadFailure } from "../../console-views";
+import { AdminStatus } from "../../../../components/admin-interactions";
 import { AdministratorAction } from "./administrator-action";
 export default async function CustomerPage({ params }: { params: Promise<{ accountId: string }> }) {
   const session = await requirePlatform();
@@ -19,11 +20,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
     <CustomerHierarchy customer={customer} />
     <section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Administrador inicial</h2>
-      {customer.administrators.map((admin, index) => <p key={index}>{admin.display_name} · {statusLabel[admin.status]} · Persona {statusLabel[admin.person_status]?.toLowerCase()}</p>)}
+      {customer.administrators.map((admin, index) => <p key={index}>{admin.display_name} · Acceso completado · {statusLabel[admin.status]} · Persona {statusLabel[admin.person_status]?.toLowerCase()}</p>)}
       {initialIntents.length === 0 && customer.administrators.length === 0 && <p>No hay solicitudes de administrador inicial visibles.</p>}
       {initialIntents.map((intent) => <article className="rounded-lg border p-4" key={intent.id}>
-        <p className="font-semibold">{intent.display_name ?? intent.email}</p><p>{intent.email} · {statusLabel[intent.status]}</p>
-        {["pending", "linked"].includes(intent.status) && <><p className="mt-2 text-sm text-slate-600">No enviamos invitaciones desde esta pantalla. La persona debe establecer y confirmar su identidad antes de otorgar acceso. La solicitud vence el {new Date(intent.expires_at).toLocaleDateString("es-DO", { timeZone: "America/Santo_Domingo" })}.</p>
+        <p className="font-semibold">{intent.display_name ?? intent.email}</p><p className="break-all">{intent.email}</p><div className="mt-2 flex flex-wrap gap-2">{intent.status === "pending" && <AdminStatus label="Acceso preparado" />}<AdminStatus label={intent.status === "pending" ? "Activación pendiente" : intent.status === "linked" ? "Listo para completar" : intent.status === "granted" ? "Acceso completado" : statusLabel[intent.status]} /></div>
+        {["pending", "linked"].includes(intent.status) && <><p className="mt-2 text-sm text-slate-600">No enviamos invitaciones desde esta pantalla. La persona debe establecer y confirmar su identidad antes de completar acceso. La verificación final ocurre al completar la solicitud. La solicitud vence el {new Date(intent.expires_at).toLocaleDateString("es-DO", { timeZone: "America/Santo_Domingo" })}.</p>
           {canComplete && customer.administrators.length === 0 && !initialIntents.some((other) => other.status === "granted") && <AdministratorAction actor={session.identity.user.id} accountId={customer.account.id} intentId={intent.id} />}</>}
       </article>)}
       {canPrepare && !hasCurrent && <><p>Prepara el correo del primer administrador. El registro y la entrega de invitaciones requieren configuración externa; preparar no concede acceso.</p><AdministratorAction actor={session.identity.user.id} accountId={customer.account.id} /></>}

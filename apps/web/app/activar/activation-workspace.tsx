@@ -3,6 +3,7 @@ import { useEffect,useRef,useState } from 'react';
 import Link from 'next/link';
 export function ActivationWorkspace() {
  const [token,setToken]=useState(''),[handle,setHandle]=useState(''),[busy,setBusy]=useState(false),[done,setDone]=useState(false),[message,setMessage]=useState('');
+ const [passwordMismatch,setPasswordMismatch]=useState(false);
  const inFlight=useRef(false),initialized=useRef(false);
  useEffect(()=>{if(initialized.current)return;initialized.current=true;const value=new URLSearchParams(window.location.hash.slice(1)).get('token')??'';
   const saved=new URLSearchParams(window.location.search).get('invitation')??'';
@@ -26,8 +27,10 @@ export function ActivationWorkspace() {
  <p>Este enlace privado permite activar la identidad destinataria; no verifica por separado el acceso a su correo. El administrador deberá completar tu acceso después.</p>
  {message&&<p role="alert" className="card p-4">{message}</p>}
  {done?<section className="card space-y-3 p-5"><h2 className="font-bold">Identidad activada</h2><p>Tu contraseña está lista. Tu acceso sigue pendiente de que el administrador pulse «Completar acceso».</p><Link className="btn" href="/backoffice/login">Volver a PIKAS</Link></section>
- :handle?<form className="card space-y-4 p-5" onSubmit={event=>{event.preventDefault();const form=new FormData(event.currentTarget);void send('/api/auth/activation-password',{handle,password:form.get('password')});}}>
- <h2 className="font-bold">Crea tu contraseña</h2><label className="block">Contraseña<input className="field mt-1 w-full" name="password" type="password" autoComplete="new-password" minLength={10} maxLength={128} required/></label><p className="text-sm">Usa al menos 10 caracteres.</p><button className="btn" disabled={busy}>Guardar contraseña</button></form>
+ :handle?<form className="card space-y-4 p-5" onSubmit={event=>{event.preventDefault();const form=new FormData(event.currentTarget);if(form.get('password')!==form.get('confirmPassword')){setPasswordMismatch(true);return;}setPasswordMismatch(false);void send('/api/auth/activation-password',{handle,password:form.get('password')});}}>
+ <h2 className="font-bold">Crea tu contraseña</h2><label className="block">Contraseña<input className="field mt-1 w-full" name="password" type="password" autoComplete="new-password" minLength={10} maxLength={128} required onChange={()=>setPasswordMismatch(false)}/></label><p className="text-sm">Usa al menos 10 caracteres.</p>
+ <label className="block" htmlFor="confirm-password">Confirmar contraseña</label><input id="confirm-password" className="field w-full" name="confirmPassword" type="password" autoComplete="new-password" required aria-invalid={passwordMismatch} aria-describedby={passwordMismatch?'password-mismatch':undefined} onChange={()=>setPasswordMismatch(false)}/>
+ {passwordMismatch&&<p id="password-mismatch" role="alert" className="text-sm text-red-700">Las contraseñas no coinciden. Revisa ambos campos.</p>}<button className="btn" disabled={busy}>Guardar contraseña</button></form>
  :token?<section className="card space-y-4 p-5"><p>Al continuar, este navegador usará la cuenta destinataria de la invitación. Si compartes el dispositivo, continúa en una ventana privada.</p><button className="btn" disabled={busy} onClick={()=>void send('/api/auth/activate',{token})}>{busy?'Confirmando…':'Activar mi cuenta'}</button></section>:null}
  <p><Link href="/backoffice/login" className="underline">Ya tengo cuenta</Link> · <Link href="/forgot-password" className="underline">Recuperar contraseña</Link></p>
  </main>;
