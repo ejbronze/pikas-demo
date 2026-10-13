@@ -145,3 +145,9 @@ describe("connected register lifecycle", () => {
   expect((await call(op, "https://pikas-pikas.app", id(99))).status).toBe(400);
  });
 });
+
+it('accepts a strictly validated anonymous cash checkout and rejects anonymous wallet before RPC',async()=>{
+ const request={...checkout,cafeteria_customer_id:null,tender:{type:'cash',cash_received_minor:'15000'}};
+ mocks.rpc.mockResolvedValue({data:{...receipt,cafeteria_customer_id:null,customer_type:null,customer_name:null,tender_type:'cash',cash_received_minor:'15000',change_due_minor:'5000',wallet_balance_after_minor:null},error:null});
+ expect((await call({operation:'checkout',request})).status).toBe(200);expect(mocks.rpc).toHaveBeenCalledWith('checkout_purchase',{p_request:request});mocks.rpc.mockClear();expect((await call({operation:'checkout',request:{...request,tender:{type:'student_wallet'}}})).status).toBe(400);expect(mocks.rpc).not.toHaveBeenCalled();
+});

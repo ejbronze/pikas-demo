@@ -1,0 +1,67 @@
+-- LOCAL ONLY pikas-4d6 deterministic fixture; every write rolls back.
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select no_plan();
+create function pg_temp.actor(q text, auth_id text default 'ec08ad21-4020-4b0d-b041-ee4a1fe09471') returns jsonb language plpgsql as $$
+declare r jsonb;begin
+ perform set_config('request.jwt.claim.sub',auth_id,true);set local role authenticated;execute q into r;reset role;return r;
+exception when others then reset role;raise;end $$;
+create function pg_temp.denied(payload jsonb) returns text language plpgsql as $$
+begin perform pg_temp.actor(format('select public.checkout_purchase(%L::jsonb)',payload));return 'allowed';exception when others then return sqlstate;end $$;
+create function pg_temp.pov(code text) returns jsonb language sql as $$select pg_temp.actor(format('select public.platform_enter_sandbox_pov(%L,%L,%L,%L)',gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe',code));$$;
+select pg_temp.pov('cashier');
+create temp table opened as select (pg_temp.actor($q$select to_jsonb(x) from public.open_register_session('4c000000-0000-4000-8000-000000000010','4c000000-0000-4000-8000-000000000011',0,'pos-anonymous-local-open-0001') x$q$)->>'session_id')::uuid id;
+create temp table baseline as select (select count(*) from public.persons) persons,(select count(*) from public.students) students,(select count(*) from public.student_enrollments) enrollments,(select count(*) from public.student_wallets) wallets,(select count(*) from public.wallet_purchase_debits) debits,(select count(*) from public.wallet_ledger_entries) ledger,(select count(*) from public.student_daily_spend_events) usage,(select count(*) from public.purchase_tenders) tenders,(select count(*) from public.purchases) purchases;
+create temp table request as select jsonb_build_object('request_key',gen_random_uuid()::text,'register_session_id',(select id from opened),'cafeteria_customer_id',null,'expected_total_minor','9500','items',jsonb_build_array(jsonb_build_object('product_id','4c000000-0000-4000-8000-000000000033','quantity',1,'expected_product_version',1,'expected_unit_price_minor','9500')),'tender',jsonb_build_object('type','cash','cash_received_minor','10000')) payload;
+create temp table result as select pg_temp.actor(format('select public.checkout_purchase(%L::jsonb)',payload)) receipt from request;
+set constraints all immediate;
+set constraints all deferred;
+select ok((select receipt->>'purchase_id' is not null from result),'anonymous cashier POV checkout succeeds');
+select ok((select cafeteria_customer_id is null and customer_type_snapshot is null and customer_display_name_snapshot is null and student_id is null and staff_affiliation_id is null from public.purchases where id=((select receipt from result)->>'purchase_id')::uuid),'all purchaser identity fields remain null');
+select is((select count(*) from public.persons),(select persons from baseline),'no Person created');
+select is((select count(*) from public.students),(select students from baseline),'no Student created');
+select is((select count(*) from public.student_enrollments),(select enrollments from baseline),'no enrollment created');
+select is((select count(*) from public.student_wallets),(select wallets from baseline),'no wallet created');
+select is((select count(*) from public.wallet_purchase_debits),(select debits from baseline),'no wallet debit');
+select is((select count(*) from public.wallet_ledger_entries),(select ledger from baseline),'no wallet ledger entry');
+select is((select count(*) from public.student_daily_spend_events),(select usage from baseline),'no student spending event');
+select ok((select receipt->>'tender_type'='cash' and receipt->>'total_minor'='9500' and receipt->>'cash_received_minor'='10000' and receipt->>'change_due_minor'='500' from result),'authoritative received/total/change correct');
+select ok(exists(select 1 from public.purchase_tenders t join public.purchase_cash_tenders ct on ct.tender_id=t.id where t.purchase_id=((select receipt from result)->>'purchase_id')::uuid and t.tender_type='cash' and ct.cash_received_minor=10000 and ct.change_due_minor=500),'cash payment persisted');
+select ok(exists(select 1 from public.purchase_items i join public.cafeteria_products p on p.id=i.product_id where i.purchase_id=((select receipt from result)->>'purchase_id')::uuid and i.product_name_snapshot=p.name and i.product_version_snapshot=p.version and i.unit_price_minor=9500 and i.quantity=1 and i.line_total_minor=9500),'item identity/name/version/prices snapshot correct');
+select ok(exists(select 1 from public.purchases p join public.register_sessions s on s.id=p.register_session_id where p.id=((select receipt from result)->>'purchase_id')::uuid and p.account_id=s.account_id and p.school_id=s.school_id and p.cafeteria_id='b9496342-5079-46ae-83b8-05c39bcbd7fe' and p.register_id='4c000000-0000-4000-8000-000000000010' and p.operator_person_id=s.operator_person_id and p.operator_membership_id=s.operator_membership_id and p.operator_role_code='pos_cashier'),'exact scope/register/session/effective cashier retained');
+select ok(exists(select 1 from public.audit_events a join public.purchases p on p.id=a.target_id where p.id=((select receipt from result)->>'purchase_id')::uuid and a.action='purchase_committed' and a.actor_person_id=p.operator_person_id and a.authenticated_user_id='ec08ad21-4020-4b0d-b041-ee4a1fe09471' and a.sandbox_pov_session_id is not null),'real operator + effective cashier + POV audit attribution retained');
+select is(pg_temp.actor(format('select public.checkout_purchase(%L::jsonb)',(select payload from request))),(select receipt from result),'exact replay returns original receipt');
+select is((select count(*) from public.purchases),(select purchases+1 from baseline),'exact replay creates one purchase');
+select is((select count(*) from public.purchase_tenders),(select tenders+1 from baseline),'exact replay creates one tender');
+select is(pg_temp.denied((select payload||jsonb_build_object('tender',jsonb_build_object('type','cash','cash_received_minor','11000')) from request)),'23505','same key changed cash payload conflicts');
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text,'tender',jsonb_build_object('type','student_wallet')) from request)),'23514','anonymous wallet rejected');
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text,'tender',jsonb_build_object('type','staff_credit')) from request)),'23514','anonymous credit rejected');
+select is(pg_temp.denied((select (payload-'tender')||jsonb_build_object('request_key',gen_random_uuid()::text) from request)),'22023','missing tender rejected');
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text,'tender',jsonb_build_object('type','card')) from request)),'22023','unsupported tender rejected');
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text,'tender',jsonb_build_object('type','cash','cash_received_minor','9000')) from request)),'22023','insufficient cash rejected');
+update public.cafeteria_register_assignments set status='inactive',version=version+1 where id='4c000000-0000-4000-8000-000000000011';
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text) from request)),'42501','inactive exact assignment rejected');
+update public.cafeteria_register_assignments set status='active',version=version+1 where id='4c000000-0000-4000-8000-000000000011';
+update public.cafeteria_products set available=false where id='4c000000-0000-4000-8000-000000000033';
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text) from request)),'23514','unavailable product rejected');
+update public.cafeteria_products set available=true,active=false where id='4c000000-0000-4000-8000-000000000033';
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text) from request)),'23514','inactive product rejected');
+update public.cafeteria_products set active=true where id='4c000000-0000-4000-8000-000000000033';
+select is(pg_temp.denied((select jsonb_set(payload||jsonb_build_object('request_key',gen_random_uuid()::text),'{items,0,expected_unit_price_minor}','"9499"') from request)),'40001','stale price evidence rejected');
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text,'expected_total_minor','9499') from request)),'40001','stale total rejected');
+-- Existing synthetic actor/scope only; this new session is rolled back with all test writes.
+create temp table foreign_session as select (pg_temp.actor($q$select to_jsonb(x) from public.open_register_session('00000000-0000-0000-0000-000000009401','00000000-0000-0000-0000-000000009501',0,'pos-anonymous-foreign-open-0001') x$q$,'00000000-0000-0000-0000-000000002008')->>'session_id')::uuid id;
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text,'register_session_id',(select id from foreign_session)) from request)),'42501','cross-cafeteria session denied');
+select pg_temp.pov('school_admin');
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text) from request)),'42501','school admin POV cannot be POS actor');
+select pg_temp.pov('cafeteria_admin');
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text) from request)),'42501','cafeteria admin POV cannot be POS actor');
+select pg_temp.pov('cashier');
+select pg_temp.actor(format('select to_jsonb(x) from public.close_my_register_session(%L,1,9500,%L) x',(select id from opened),gen_random_uuid()));
+select is(pg_temp.denied((select payload||jsonb_build_object('request_key',gen_random_uuid()::text) from request)),'23514','closed session rejects a new sale');
+select is(pg_temp.actor(format('select public.checkout_purchase(%L::jsonb)',(select payload from request))),(select receipt from result),'closed-session exact replay retains original receipt');
+select is((select count(*) from public.purchases),(select purchases+1 from baseline),'all denials leave purchase count unchanged');
+select ok(not exists(select 1 from public.cafeteria_memberships m join public.persons p on p.id=m.person_id where p.auth_user_id='ec08ad21-4020-4b0d-b041-ee4a1fe09471'),'real platform operator receives no cafeteria membership');
+select * from finish();
+rollback;

@@ -38,7 +38,7 @@ const storageKey = "pikas:connected-pos:pending:v1";
 export type SaleState = {
   context: PosAccessContext; bootstrap: Bootstrap | null; phase: "entry" | "identity" | "items" | "payment" | "completed";
   busy: boolean; notice: string; customers: Customer[]; customer: Customer | null; purchaseContext: PurchaseContext | null;
-  cart: { product_id: string; quantity: number }[]; tender: "student_wallet" | "cash"; cash: string;
+  purchaserMode: "student" | "anonymous" | null; cart: { product_id: string; quantity: number }[]; tender: "student_wallet" | "cash" | null; cash: string;
   registerPending: RegisterPending | null; receipt: Receipt | null; pending: Pending | null; recoveryBlocked: boolean;
 };
 
@@ -51,7 +51,7 @@ export class ConnectedSale {
   constructor(context: PosAccessContext, private send: (operation: PosOperation) => Promise<unknown> = requestPos,
     private key: () => string = () => crypto.randomUUID()) {
     this.state = { context, bootstrap: null, phase: "entry", busy: false, notice: "", customers: [], customer: null,
-      purchaseContext: null, cart: [], tender: "student_wallet", cash: "", receipt: null, pending: null, registerPending: null, recoveryBlocked: false };
+      purchaseContext: null, purchaserMode: null, cart: [], tender: null, cash: "", receipt: null, pending: null, registerPending: null, recoveryBlocked: false };
   }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -91,7 +91,9 @@ export class ConnectedSale {
   }
   private error(error: unknown) { return error instanceof PosRequestError ? error.message : "No se pudo confirmar la operación. Verifica la conexión."; }
   private operable() { return !this.state.busy && !this.state.pending && !this.state.registerPending && !this.state.recoveryBlocked && this.state.bootstrap?.blocked === null; }
-  identify = () => { if (this.operable()) this.update({ phase: "identity", notice: "" }); };
+  private hasPurchaser() { return this.state.purchaserMode==="anonymous"||(this.state.purchaserMode==="student"&&Boolean(this.state.customer&&this.state.purchaseContext)); }
+  identify = () => { if (this.operable()) this.update({ phase: "identity", purchaserMode:null, customer:null, purchaseContext:null, customers:[], cart:[], tender:null, cash:"", notice: "" }); };
+  anonymous = () => { if(this.operable())this.update({phase:"items",purchaserMode:"anonymous",customer:null,purchaseContext:null,customers:[],cart:[],tender:null,cash:"",notice:""}); };
   async search(query: string) {
     if (!this.operable()) return;
     this.update({ busy: true, customers: [], notice: "" });
@@ -109,13 +111,13 @@ export class ConnectedSale {
   }
   async select(customer: Customer) {
     if (!this.operable() || customer.customer_type !== "student") return;
-    this.update({ busy: true, purchaseContext: null, notice: "" });
-    try { this.update({ customer, purchaseContext: await this.contextFor(customer.customer_id), cart: [], tender: "student_wallet", cash: "", phase: "items" }); }
+    this.update({ busy: true, purchaserMode:null, customer:null, purchaseContext: null, cart:[], tender:null, cash:"", notice: "" });
+    try { this.update({ purchaserMode:"student", customer, purchaseContext: await this.contextFor(customer.customer_id), cart: [], tender: null, cash: "", phase: "items" }); }
     catch (error) { this.update({ customer: null, notice: this.error(error) }); }
     finally { this.update({ busy: false }); }
   }
   quantity(productId: string, delta: number) {
-    if (!this.operable() || this.state.phase !== "items" || !this.state.purchaseContext || !this.state.bootstrap?.catalog?.products.some((p) => p.product_id === productId)) return;
+    if (!this.operable() || this.state.phase !== "items" || !this.hasPurchaser() || !this.state.bootstrap?.catalog?.products.some((p) => p.product_id === productId)) return;
     const cart = [...this.state.cart]; const index = cart.findIndex((l) => l.product_id === productId);
     const quantity = (cart[index]?.quantity ?? 0) + delta;
     if (quantity > 20 || (index < 0 && cart.length >= 30) || quantity < 0) return;
@@ -125,23 +127,23 @@ export class ConnectedSale {
     this.update({ cart });
   }
   total() { return this.state.cart.reduce((n, l) => n + BigInt(this.state.bootstrap!.catalog!.products.find((p) => p.product_id === l.product_id)!.price_minor) * BigInt(l.quantity), 0n); }
-  setTender(tender: "cash" | "student_wallet") { if (this.operable()) this.update({ tender }); }
+  setTender(tender: "cash" | "student_wallet") { if (this.operable()&&this.hasPurchaser()&&(tender==="cash"||(tender==="student_wallet"&&this.state.purchaserMode==="student"))) this.update({ tender, cash:this.state.tender===tender?this.state.cash:"" }); }
   setCash(cash: string) { if (this.operable()) this.update({ cash }); }
   async review() {
-    if (!this.operable() || !this.state.customer || !this.state.cart.length) return;
+    if (!this.operable() || !this.hasPurchaser() || !this.state.cart.length) return;
     this.update({ busy: true, purchaseContext: null, notice: "" });
-    try { this.update({ purchaseContext: await this.contextFor(this.state.customer.customer_id), phase: "payment" }); }
+    try { this.update({ purchaseContext: this.state.purchaserMode==="anonymous"?null:await this.contextFor(this.state.customer!.customer_id), phase: "payment" }); }
     catch (error) { this.update({ notice: this.error(error) }); }
     finally { this.update({ busy: false }); }
   }
   back = () => { if (this.operable()) this.update({ phase: "items" }); };
   async checkout() {
-    if (!this.operable() || !this.state.customer || !this.state.purchaseContext || !this.state.cart.length || this.state.phase !== "payment") return;
+    if (!this.operable() || !this.hasPurchaser() || !this.state.cart.length || this.state.phase !== "payment") return;
     const total = this.total();
-    const issue = paymentIssue(this.state.purchaseContext, total, this.state.tender, this.state.cash);
-    if (issue) { this.update({ notice: issue }); return; }
+    const issue = paymentIssue(this.state.purchaseContext, total, this.state.tender, this.state.cash,this.state.purchaserMode==="anonymous");
+    if (issue || this.state.tender===null) { this.update({ notice: issue ?? "Selecciona un método de pago." }); return; }
     const request = checkoutSchema.parse({ request_key: this.key(), register_session_id: this.state.bootstrap!.session!.session_id,
-      cafeteria_customer_id: this.state.customer.customer_id, expected_total_minor: total.toString(),
+      cafeteria_customer_id: this.state.purchaserMode==="anonymous"?null:this.state.customer!.customer_id, expected_total_minor: total.toString(),
       items: this.state.cart.map((line) => { const p = this.state.bootstrap!.catalog!.products.find((p) => p.product_id === line.product_id)!;
         return { ...line, expected_product_version: p.version, expected_unit_price_minor: p.price_minor }; }),
       tender: this.state.tender === "cash" ? { type: "cash", cash_received_minor: parseCash(this.state.cash)! } : { type: "student_wallet" } });
@@ -163,12 +165,13 @@ export class ConnectedSale {
         receipt.items.length !== pending.request.items.length || receipt.items.some((i) => !pending.request.items.some((p) => p.product_id === i.product_id &&
           p.quantity === i.quantity && p.expected_unit_price_minor === i.unit_price_minor && p.expected_product_version === i.product_version)) ||
         (pending.request.tender.type === "cash" && receipt.cash_received_minor !== pending.request.tender.cash_received_minor)) throw new Error("receipt_mismatch");
-      this.update({ receipt, phase: "completed", cart: [] });
-      try { this.update({ purchaseContext: await this.contextFor(receipt.cafeteria_customer_id) }); }
+      this.update({ receipt, phase: "completed", cart: [], purchaserMode:receipt.cafeteria_customer_id===null?"anonymous":"student" });
+      if(receipt.cafeteria_customer_id===null){this.update({purchaseContext:null});}
+      else try { this.update({ purchaseContext: await this.contextFor(receipt.cafeteria_customer_id) }); }
       catch { this.update({ purchaseContext: null, notice: "Compra confirmada. No se pudo actualizar el contexto del estudiante." }); }
     } catch (error) {
       if (error instanceof PosRequestError && error.definite) {
-        try { this.storage!.removeItem(storageKey); this.update({ pending: null, purchaseContext: null, cart: [], phase: "identity" }); refreshAfter = true; }
+        try { this.storage!.removeItem(storageKey); this.update({ pending: null, purchaserMode:null, customer:null, purchaseContext: null, cart: [], tender:null, cash:"", phase: pending.request.cafeteria_customer_id===null?"entry":"identity" }); refreshAfter = true; }
         catch { this.update({ recoveryBlocked: true }); }
         this.update({ notice: error.message });
       } else this.update({ notice: "El resultado del cobro no está confirmado. Reintenta la misma venta; no inicies otra." });
@@ -179,7 +182,7 @@ export class ConnectedSale {
     if (this.state.busy || this.state.registerPending || this.state.recoveryBlocked || (this.state.pending && !this.state.receipt)) return;
     try { this.storage?.removeItem(storageKey); }
     catch { this.update({ recoveryBlocked: true, notice: "No se pudo cerrar el seguimiento de la venta." }); return; }
-    this.update({ pending: null, receipt: null, customer: null, purchaseContext: null, cart: [], customers: [], tender: "student_wallet", cash: "", phase: "entry", notice: "" });
+    this.update({ pending: null, receipt: null, purchaserMode:null, customer: null, purchaseContext: null, cart: [], customers: [], tender: null, cash: "", phase: "entry", notice: "" });
     await this.refresh();
   }
   async openRegister(registerId: string, cash: string) {
@@ -209,7 +212,7 @@ export class ConnectedSale {
       const result = registerResultSchema.parse(await this.send(pending.request))[0];
       if (pending.request.operation === "close_register" && (result.session_id !== pending.request.session_id || result.status !== "closed")) throw new Error("register_mismatch");
       this.storage!.removeItem(registerStorageKey);
-      this.update({ registerPending: null, phase: "entry", customer: null, purchaseContext: null, customers: [], cash: "", tender: "student_wallet", notice: result.status === "closed" ? "Caja cerrada y efectivo contado registrado." : "Caja abierta." });
+      this.update({ registerPending: null, phase: "entry", purchaserMode:null, customer: null, purchaseContext: null, customers: [], cash: "", tender: null, notice: result.status === "closed" ? "Caja cerrada y efectivo contado registrado." : "Caja abierta." });
       confirmed = true;
     } catch (error) {
       if (error instanceof PosRequestError && error.definite) {

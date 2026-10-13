@@ -2,7 +2,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { posContext } from "./access-context.test-fixtures";
-import { bootstrapSchema, formatMinor, parseCash, paymentIssue, receiptSchema, type Checkout, type PosOperation } from "./contracts";
+import { bootstrapSchema, checkoutSchema, formatMinor, parseCash, paymentIssue, receiptSchema, type Checkout, type PosOperation } from "./contracts";
 import { ConnectedSale, PosRequestError, requestPos } from "./connected-sale";
 import { CommittedReceipt, ConnectedPosView } from "../../components/connected-pos-dashboard";
 
@@ -23,7 +23,7 @@ const purchaseContext = () => ({ customer_id: customer.customer_id, customer_typ
   spent_today_minor: "0", available_today_minor: "40000", restrictions: [{ type: "allergy", code: "milk", label: "Leche" }] });
 const receipt = (request: Checkout) => ({ purchase_id: id(6), purchase_number: "42", purchased_at: "2026-10-09T12:10:00Z", business_date: "2026-10-09",
   business_timezone: "America/Santo_Domingo", currency_code: "DOP", total_minor: request.expected_total_minor, register_id: session.register_id,
-  register_session_id: request.register_session_id, cafeteria_customer_id: request.cafeteria_customer_id, customer_type: "student", customer_name: customer.display_name,
+  register_session_id: request.register_session_id, cafeteria_customer_id: request.cafeteria_customer_id, customer_type: request.cafeteria_customer_id===null?null:"student", customer_name: request.cafeteria_customer_id===null?null:customer.display_name,
   tender_type: request.tender.type, cash_received_minor: request.tender.type === "cash" ? request.tender.cash_received_minor : null,
   change_due_minor: request.tender.type === "cash" ? (BigInt(request.tender.cash_received_minor) - BigInt(request.expected_total_minor)).toString() : null,
   wallet_balance_after_minor: request.tender.type === "student_wallet" ? "37450" : null,
@@ -40,7 +40,7 @@ beforeEach(() => {
     op.operation === "customer" ? purchaseContext() : op.operation === "checkout" ? receipt(op.request) : []);
   sale = new ConnectedSale(context, send, () => id(7));
 });
-async function prepare() { await sale.start(storage); sale.identify(); await sale.search("Estudiante"); await sale.select(customer); sale.quantity(product.product_id, 1); await sale.review(); }
+async function prepare(chooseWallet=true) { await sale.start(storage); sale.identify(); await sale.search("Estudiante"); await sale.select(customer); sale.quantity(product.product_id, 1); await sale.review(); if(chooseWallet)sale.setTender("student_wallet"); }
 const html = () => renderToStaticMarkup(<ConnectedPosView sale={sale} state={sale.getSnapshot()} />);
 
 describe("authoritative connected sale journey", () => {
@@ -73,7 +73,7 @@ describe("authoritative connected sale journey", () => {
   it("creates a new request key only for the next sale after confirmed reset", async () => {
     let keyNumber = 10; sale = new ConnectedSale(context, send, () => id(keyNumber++));
     await prepare(); await sale.checkout(); await sale.reset();
-    await sale.select(customer); sale.quantity(product.product_id, 1); await sale.review(); await sale.checkout();
+    await sale.select(customer); sale.quantity(product.product_id, 1); await sale.review(); sale.setTender("student_wallet"); await sale.checkout();
     const calls = send.mock.calls.map(([op]) => op).filter((op) => op.operation === "checkout");
     expect(calls.map((op) => op.request.request_key)).toEqual([id(10), id(11)]);
   });
@@ -83,7 +83,7 @@ describe("authoritative connected sale journey", () => {
     expect(html()).toContain("Categorías de productos"); expect(html()).toContain("Venta actual");
     expect(html()).toContain("Reducir cantidad"); expect(html()).toContain("Aumentar cantidad");
     expect(html()).toMatch(/<button[^>]*disabled=""[^>]*>Recargar saldo/);
-    await sale.review(); expect(html()).toContain("Elegir efectivo"); expect(html()).toContain("Volver a productos");
+    await sale.review(); expect(html()).toContain("Efectivo"); expect(html()).toContain("Volver a productos");
     expect(send.mock.calls.map(([op]) => op.operation)).not.toContain("refund");
   });
   it("blocks when no valid open session exists, without faking a register or sale", async () => {
@@ -98,7 +98,7 @@ describe("authoritative connected sale journey", () => {
   it("revalidates context before payment and refuses a newly lowered limit", async () => {
     await sale.start(storage); await sale.select(customer); sale.quantity(product.product_id, 1);
     send.mockResolvedValue({ ...purchaseContext(), per_transaction_limit: { enabled: true, limit_minor: "100" } });
-    await sale.review(); await sale.checkout();
+    await sale.review(); sale.setTender("student_wallet"); await sale.checkout();
     expect(sale.getSnapshot().notice).toContain("Límite por compra"); expect(data.size).toBe(0);
   });
   it("freezes cart/payment and reuses the exact saved request after an uncertain result", async () => {
@@ -253,4 +253,14 @@ it("does not invent readiness if an open succeeds but the subsequent read fails"
  send.mockResolvedValue({ ...bootstrap(), registers: [{ cafeteria_id: session.cafeteria_id, register_id: session.register_id, assignment_id: session.assignment_id, register_code: "R1", display_name: "Caja", register_version: 1, assignment_version: 1 }], session: null, catalog: null, blocked: "Abre caja" }); await sale.start(storage);
  send.mockResolvedValueOnce([{ session_id: session.session_id, status: "open", version: 1 }]).mockRejectedValueOnce(new Error("read unavailable"));
  await sale.openRegister(session.register_id, "100"); expect(sale.getSnapshot().bootstrap).toBeNull(); sale.identify(); expect(sale.getSnapshot().phase).toBe("entry");
+});
+
+async function anonymous(){await sale.start(storage);sale.anonymous();sale.quantity(product.product_id,1);await sale.review();}
+describe('anonymous connected sales and explicit tender',()=>{
+ it('new/student/reset sales start unselected and cannot charge before an explicit choice',async()=>{expect(sale.getSnapshot().tender).toBeNull();await prepare(false);expect(sale.getSnapshot().tender).toBeNull();expect(html()).toContain('Sin seleccionar');await sale.checkout();expect(send.mock.calls.some(([op])=>op.operation==='checkout')).toBe(false);expect(data.size).toBe(0);sale.setTender('student_wallet');await sale.checkout();await sale.reset();expect(sale.getSnapshot()).toMatchObject({purchaserMode:null,tender:null,customer:null,purchaseContext:null,cash:'',cart:[],phase:'entry'});});
+ it('anonymous cash uses null customer, no student reads, committed change/receipt and neutral reset',async()=>{await anonymous();expect(sale.getSnapshot().tender).toBeNull();expect(html()).toContain('No Usuario');expect(html()).not.toContain('Recargar saldo');expect(html()).not.toContain('Saldo PIKAS');sale.setTender('student_wallet');expect(sale.getSnapshot().tender).toBeNull();await sale.checkout();expect(data.size).toBe(0);sale.setTender('cash');sale.setCash('200.00');await sale.checkout();expect(sale.getSnapshot().receipt).toMatchObject({cafeteria_customer_id:null,customer_type:null,customer_name:null,change_due_minor:'7450'});expect(html()).toContain('Cliente: No Usuario');expect(renderToStaticMarkup(<CommittedReceipt receipt={sale.getSnapshot().receipt!}/>)).toContain('Cliente: No Usuario');expect(send.mock.calls.some(([op])=>op.operation==='customer')).toBe(false);const pending=sale.getSnapshot().pending!;expect(pending.request).toMatchObject({cafeteria_customer_id:null,tender:{type:'cash',cash_received_minor:'20000'}});await sale.reset();expect(sale.getSnapshot()).toMatchObject({purchaserMode:null,tender:null,purchaseContext:null,customer:null,cart:[],cash:''});});
+ it('switching purchaser modes clears student identity, restrictions, cash, tender and cart',async()=>{await prepare();sale.back();sale.setTender('cash');sale.setCash('200');sale.anonymous();expect(sale.getSnapshot()).toMatchObject({purchaserMode:'anonymous',customer:null,purchaseContext:null,cart:[],cash:'',tender:null});sale.setTender('cash');sale.setCash('200');sale.quantity(product.product_id,1);sale.identify();expect(sale.getSnapshot()).toMatchObject({purchaserMode:null,customer:null,purchaseContext:null,cart:[],cash:'',tender:null,phase:'identity'});await sale.select(customer);expect(sale.getSnapshot()).toMatchObject({purchaserMode:'student',tender:null,cash:'',cart:[]});expect(sale.getSnapshot().purchaseContext!.restrictions).toHaveLength(1);});
+ it.each([401,403])('uncertain anonymous checkout freezes and survives reload/recovery %s with its exact request',async status=>{await anonymous();sale.setTender('cash');sale.setCash('200');send.mockImplementationOnce(async()=>{throw Error('lost response');});await sale.checkout();const saved=[...data.values()][0],original=structuredClone(sale.getSnapshot().pending);sale.identify();sale.anonymous();await sale.reset();expect(sale.getSnapshot().pending).toEqual(original);sale=new ConnectedSale(context,send);await sale.start(storage);send.mockImplementationOnce(async()=>{throw new PosRequestError(String(status));});await sale.retry();expect([...data.values()][0]).toBe(saved);expect(sale.getSnapshot().receipt).toBeNull();await sale.retry();expect(sale.getSnapshot().receipt!.cafeteria_customer_id).toBeNull();const calls=send.mock.calls.map(([op])=>op).filter(op=>op.operation==='checkout');expect(calls).toHaveLength(3);expect(calls[1]).toEqual(calls[0]);expect(calls[2]).toEqual(calls[0]);});
+ it('anonymous idempotency conflict stays unresolved and cannot start a new request',async()=>{await anonymous();sale.setTender('cash');sale.setCash('200');send.mockImplementationOnce(async()=>{throw new PosRequestError('IDEMPOTENCY_CONFLICT');});await sale.checkout();const pending=sale.getSnapshot().pending;await sale.reset();sale.anonymous();expect(sale.getSnapshot().pending).toBe(pending);expect(data.size).toBe(1);});
+ it('strict anonymous request/receipt validation rejects malformed purchaser/tender combinations',async()=>{await anonymous();sale.setTender('cash');sale.setCash('200');await sale.checkout();const request=sale.getSnapshot().pending!.request,r=sale.getSnapshot().receipt!;expect(checkoutSchema.safeParse(request).success).toBe(true);expect(checkoutSchema.safeParse({...request,tender:{type:'student_wallet'}}).success).toBe(false);expect(checkoutSchema.safeParse({...request,tender:{type:'staff_credit'}}).success).toBe(false);expect(checkoutSchema.safeParse({...request,purchaser:'fake'}).success).toBe(false);for(const change of [{customer_name:'Inventado'},{customer_type:'student'},{cafeteria_customer_id:customer.customer_id},{wallet_balance_after_minor:'100'},{change_due_minor:'1'}])expect(receiptSchema.safeParse({...r,...change}).success).toBe(false);});
 });
