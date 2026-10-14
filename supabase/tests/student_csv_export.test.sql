@@ -1,0 +1,50 @@
+-- Focused synthetic export fixture; everything except the installed RPC rolls back.
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select no_plan();
+create temporary table fixture as select auth_user_id uid,'b2c00000-0000-4000-8000-000000000001'::uuid sid from persons where id='4d6b0000-0000-4000-8000-000000000001';
+insert into auth.sessions(id,user_id,created_at,updated_at) select sid,uid,clock_timestamp(),clock_timestamp() from fixture;
+select set_config('request.jwt.claims',jsonb_build_object('sub',uid,'role','authenticated','session_id',sid)::text,true) from fixture;
+select public.pikas_session_start();
+select public.platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','school_admin');
+insert into school_locations(id,account_id,school_id,code,name,status) values ('b2c00000-0000-4000-8000-000000000099','03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488','B2C-SECOND','Segunda sede','active'),('b2c00000-0000-4000-8000-000000000098','03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488','B2C-INACTIVE','Inactiva','inactive');
+create temporary table source as select n,gen_random_uuid() id from generate_series(1,1001) n;
+insert into persons(id,display_name) select id,'B2C Export Peña '||n from source;
+insert into students(id,account_id,school_id,person_id,student_code,first_name,last_name,display_name,status)
+ select id,'03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,'B2C-EXPORT-'||n,'B2C Export','Peña','B2C Export Peña '||n,case when n<=1000 then 'active' else 'inactive' end from source;
+insert into student_enrollments(id,account_id,school_id,student_id,starts_on)
+ select id,'03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,current_date from source where n<=1000;
+insert into student_campus_placements(account_id,school_id,enrollment_id,school_location_id,grade_label,class_label,homeroom_label,starts_on)
+ select '03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,case when n<=600 then 'cc7ca5f3-d27e-43ea-b3c9-8a6ef4e327d4'::uuid else 'b2c00000-0000-4000-8000-000000000099'::uuid end,case when n<=700 then 'B2C 4' else 'B2C 40' end,'A','Aula Ñ',current_date from source where n<=1000;
+create function pg_temp.export_rows(p_status text default '',p_location uuid default null,p_grade text default null,p_query text default 'B2C Export') returns jsonb language sql as $$select public.school_student_export('df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',p_query,p_status,p_location,p_grade)$$;
+set local role authenticated;
+select is(jsonb_array_length(pg_temp.export_rows('active')->'rows'),1000,'exact upper bound exports complete authoritative set');
+select throws_ok($q$select pg_temp.export_rows()$q$,'54000','student_export_limit','1001 results explicitly rejected; never truncated');
+select is(jsonb_array_length(pg_temp.export_rows('inactive')->'rows'),1,'status filter includes inactive student');
+select is(jsonb_array_length(pg_temp.export_rows('',null,null,'B2C-EXPORT-1001')->'rows'),1,'student-code search authoritative');
+select is(jsonb_array_length(pg_temp.export_rows('',null,null,'B2C DOES NOT EXIST')->'rows'),0,'empty result explicit');
+select is(jsonb_array_length(pg_temp.export_rows('active','cc7ca5f3-d27e-43ea-b3c9-8a6ef4e327d4')->'rows'),600,'main campus filter');
+select is(jsonb_array_length(pg_temp.export_rows('active','b2c00000-0000-4000-8000-000000000099')->'rows'),400,'same-school secondary campus filter');
+select is(jsonb_array_length(pg_temp.export_rows('active',null,'B2C 4')->'rows'),700,'exact grade does not include B2C 40');
+select is(jsonb_array_length(pg_temp.export_rows('active',null,'b2c 4')->'rows'),0,'grade is exact and case-sensitive');
+select is(jsonb_array_length(pg_temp.export_rows('active','b2c00000-0000-4000-8000-000000000099','B2C 4')->'rows'),100,'combined status campus and grade filters');
+select is(pg_temp.export_rows('active','b2c00000-0000-4000-8000-000000000099','B2C 40','B2C-EXPORT-999')#>>'{rows,0,campus}','Segunda sede','combined search returns authoritative campus name');
+select is(pg_temp.export_rows('active',null,null,'B2C-EXPORT-999')#>>'{rows,0,homeroom}','Aula Ñ','placement fields preserved');
+select ok(not exists(select 1 from jsonb_array_elements(pg_temp.export_rows('inactive')->'rows') r where r ?| array['id','person_id','auth_user_id','account_id','school_id','location_id','wallet','balance']),'export rows contain no internal IDs or financial data');
+select is(pg_temp.export_rows('inactive')->>'school_id','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488','response scope bound');
+select throws_ok($q$select pg_temp.export_rows('', 'b2c00000-0000-4000-8000-000000000098')$q$,'22023','invalid_school_location','inactive campus denied');
+select throws_ok($q$select pg_temp.export_rows('unknown')$q$,'22023','invalid_school_filter','invalid status denied');
+select throws_ok($q$select pg_temp.export_rows('',null,'')$q$,'22023','invalid_school_filter','invalid grade denied');
+set local role anon;
+select throws_ok($q$select pg_temp.export_rows('active')$q$,'42501',null,'anonymous caller cannot execute export');
+reset role;
+select throws_ok(format('select pg_temp.export_rows(''active'',%L)',(select id from school_locations where school_id<>'df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488' limit 1)),'22023','invalid_school_location','cross-school campus denied');
+select throws_ok(format('select public.school_student_export(%L)',(select id from schools where id<>'df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488' limit 1)),'42501','school_authority_required','other school authority denied');
+select public.platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','cafeteria_admin');
+select throws_ok($q$select pg_temp.export_rows('active')$q$,'42501','sandbox_admin_authority_required','cafeteria POV cannot export school students');
+select public.platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','school_admin');
+update pikas_private.application_sessions set started_at=clock_timestamp()-interval '1 hour',last_active_at=clock_timestamp()-interval '31 minutes' where session_id=(select sid from fixture);
+select throws_ok($q$select pg_temp.export_rows('active')$q$,'42501','application_session_expired','expired application session denied');
+select * from finish();
+rollback;
