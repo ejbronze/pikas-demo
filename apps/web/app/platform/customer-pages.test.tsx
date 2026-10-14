@@ -32,9 +32,9 @@ describe("customer server screens", () => {
     expect(renderToStaticMarkup(await NewCustomerPage())).toContain("No tienes permiso");
   });
   it("detail presents pending/setup state without showing technical identity values", async () => {
-    mocks.readPlatform.mockResolvedValue({ kind: "ready", value: customer });
+    mocks.readPlatform.mockImplementation(async (_session, _cap, rpc) => ({ kind: "ready", value: rpc === "platform_customer_activation_status" ? {intent_id:id,account_id:id,identity_state:"missing",link_state:"none",expires_at:null} : customer }));
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
-    expect(html).toContain("Acceso preparado"); expect(html).toContain("Activación pendiente"); expect(html).toContain("No enviamos invitaciones"); expect(html).toContain("Verificar identidad y completar acceso");
+    expect(html).toContain("Acceso preparado"); expect(html).toContain("Activación pendiente"); expect(html).toContain("No se envía correo"); expect(html).toContain("Verificar identidad y completar acceso"); expect(html).toContain("Generar enlace de activación");
     expect(html.replace(/<[^>]*>/g, "")).not.toContain(id);
   });
   it.each([['linked','Listo para completar'],['granted','Acceso completado']])('presents authoritative %s state without introducing invitation actions',async(status,label)=>{

@@ -6,7 +6,7 @@ import { completeAdminResultSchema, completeAdminSchema, prepareResultSchema } f
 import { postPlatform } from "../../../../lib/platform/customer-journey";
 
 const requestSchema = z.object({ key: z.uuid(), body: z.union([completeAdminSchema, z.object({ accountId: z.uuid(), scopeKind: z.literal("account"), schoolId: z.null(), cafeteriaId: z.null(), roleCode: z.literal("account_admin"), intendedEmail: z.email(), expiresAt: z.iso.datetime() }).strict()]) });
-export function AdministratorAction({ accountId, intentId, actor }: { accountId: string; intentId?: string; actor: string }) {
+export function AdministratorAction({ accountId, intentId, actor, identityReady = true }: { accountId: string; intentId?: string; actor: string; identityReady?: boolean }) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [message, setMessage] = useState("");
@@ -39,7 +39,7 @@ export function AdministratorAction({ accountId, intentId, actor }: { accountId:
   }
   return <form className="mt-4 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
     <label className="block">{intentId ? "Nombre del administrador" : "Correo del primer administrador"}<input className="field mt-1 w-full" required={!locked} disabled={locked || done} maxLength={intentId ? 200 : 254} type={intentId ? "text" : "email"} value={value} onChange={(event) => setValue(event.target.value)} /></label>
-    <button className="btn" disabled={busy || done}>{busy ? "Procesando…" : locked ? "Reintentar la misma solicitud" : intentId ? "Verificar identidad y completar acceso" : "Preparar administrador"}</button>
+    <button className="btn" disabled={busy || done || (Boolean(intentId) && !identityReady && !locked)}>{busy ? "Procesando…" : locked ? "Reintentar la misma solicitud" : intentId ? "Verificar identidad y completar acceso" : "Preparar administrador"}</button>
     {!locked && !done && <button type="button" className="btn-secondary ml-3" disabled={busy} onClick={() => void submit(true)}>Recuperar solicitud pendiente</button>}
     {message && <p role={done ? "status" : "alert"}>{message}</p>}
   </form>;

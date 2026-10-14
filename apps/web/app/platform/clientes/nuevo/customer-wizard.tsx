@@ -52,14 +52,14 @@ export function CustomerWizard({ actor }: { actor: string }) {
     {error && <p role="alert" className="rounded-lg bg-amber-50 p-3">{error}</p>}
     {state?.tenant && <p role="status" className="rounded-lg bg-emerald-50 p-3">Cliente y estructura inicial creados.</p>}
     {state?.administrator ? <><p role="status">Solicitud de administrador preparada para {state.draft.administratorEmail}.</p>
-      <p>No se ha enviado una invitación ni otorgado acceso. La identidad debe registrarse y confirmar su correo antes de completar el acceso.</p>
+      <p>No se ha enviado una invitación ni otorgado acceso. Desde el cliente, genera su enlace privado de activación. Después de que guarde su contraseña, completa el mismo acceso preparado.</p>
       <Link className="btn" href={`/platform/clientes/${state.tenant!.account_id}`} onClick={() => { try { journey.current?.finish(); } catch { /* Keep recovery available. */ } }}>Ver cliente y completar administrador</Link>
     </> : <>
       {step < 5 ? <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); setError(""); setStep(step + 1); }}>
         {stepFields[step].map((field) => <label className="block" key={field}>{labels[field]}<input required className="field mt-1 w-full" type={field === "administratorEmail" ? "email" : "text"}
           maxLength={field.endsWith("Code") ? 64 : field === "administratorEmail" ? 254 : field === "businessTimezone" ? 100 : 200} value={draft[field]}
           onChange={(event) => setDraft({ ...draft, [field]: event.target.value })} /></label>)}
-        {step === 4 && <p className="text-sm text-slate-600">Se preparará acceso de administrador del cliente. El correo por sí solo no concede acceso; el registro y la confirmación todavía requieren configuración de invitaciones.</p>}
+        {step === 4 && <p className="text-sm text-slate-600">Se preparará acceso de administrador del cliente. El correo por sí solo no concede acceso; después podrás generar su enlace privado de activación desde el cliente.</p>}
         <div className="flex gap-3">{step > 0 && <button type="button" className="btn-secondary" onClick={() => setStep(step - 1)}>Anterior</button>}<button className="btn">Continuar</button></div>
       </form> : <><dl className="grid gap-3 sm:grid-cols-2">{Object.entries(labels).map(([field, label]) => <div key={field}><dt className="text-sm text-slate-600">{label}</dt><dd className="font-semibold">{draft[field as keyof CustomerDraft]}</dd></div>)}</dl>
         {state?.tenant && <p>El cliente ya existe. El siguiente intento solo recupera o prepara su administrador.</p>}
