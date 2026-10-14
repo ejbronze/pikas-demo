@@ -18,8 +18,10 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
   const query = z.string().max(80).safeParse(params.q ?? "");
   const status = z.enum(["", "active", "suspended", "inactive"]).safeParse(params.status ?? "");
   const cursor = z.uuid().nullable().safeParse(params.after ?? null);
-  if (!query.success || !status.success || !cursor.success) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><p role="alert" className="card p-5">Filtros inválidos. Regresa a la sección para repetir la búsqueda.</p></ConnectedSchoolShell>;
-  const response = await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: section, p_query: query.data, p_status: status.data, p_after: cursor.data, p_limit: 50 });
+  const location = z.uuid().nullable().safeParse(params.location || null);
+  const grade = z.string().min(1).max(80).nullable().safeParse(params.grade || null);
+  if (!query.success || !status.success || !cursor.success || !location.success || !grade.success) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><p role="alert" className="card p-5">Filtros inválidos. Regresa a la sección para repetir la búsqueda.</p></ConnectedSchoolShell>;
+  const response = await client.rpc(section === "students" ? "school_student_roster" : "school_admin_read", { p_school_id: schoolId, ...(section === "students" ? { p_location_id: location.data, p_grade: grade.data } : { p_section: section }), p_query: query.data, p_status: status.data, p_after: cursor.data, p_limit: 50 });
   const parsed = readSchema.safeParse(response.data);
   if (response.error || !parsed.success || parsed.data.scope.school_id !== schoolId || parsed.data.scope.actor_id !== access.context.person_id) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><p role="alert" className="card p-5">No se pudo cargar la información con tus permisos actuales. Recarga para reintentar.</p></ConnectedSchoolShell>;
   let students: SchoolStudent[] = section === "students" ? (parsed.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row) : [];
@@ -28,5 +30,5 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     const result = readSchema.safeParse(roster.data);
     if (!roster.error && result.success && result.data.scope.school_id === schoolId && result.data.scope.actor_id === access.context.person_id) students = (result.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row);
   }
-  return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ConnectedSchoolPages key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} data={parsed.data} students={students} query={query.data} status={status.data} /></ConnectedSchoolShell>;
+  return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ConnectedSchoolPages key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
 }

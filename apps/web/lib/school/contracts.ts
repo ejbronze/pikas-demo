@@ -29,6 +29,7 @@ export type SchoolStudent = z.infer<typeof studentSchema>;
 export const readSchema = z.object({
   scope: z.object({ actor_id: id, membership_id: id, role: z.enum(["account_admin", "school_admin"]), account_id: id, school_id: id, account_name: z.string(), school_name: z.string(), tenant_kind: z.enum(["customer", "sandbox"]) }).strict(),
   locations: z.array(z.object({ id, name: z.string() })),
+  grades: z.array(z.string()).optional(),
   counts: z.object({ students: z.number().int().nonnegative(), active: z.number().int().nonnegative(), suspended: z.number().int().nonnegative(), inactive: z.number().int().nonnegative(), cafeterias: z.number().int().nonnegative() }).optional(),
   rows: z.array(z.union([studentSchema, z.object({ id, name: z.string(), location: z.string(), status: z.string(), sharing_status: z.enum(["active", "revoked"]), categories: z.array(z.string()), customer_count: z.number().int(), customers: z.array(z.object({ student_id: id, display_name: z.string(), status: z.string() })) }), z.object({ id, occurred_at: z.string(), action: z.string(), target_type: z.string(), actor_name: z.string().nullable() })])).optional(),
   next_cursor: id.nullable().optional(),
