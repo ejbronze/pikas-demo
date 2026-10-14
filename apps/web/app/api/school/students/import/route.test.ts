@@ -1,0 +1,25 @@
+import { NextRequest } from "next/server";
+import { beforeEach,expect,it,vi } from "vitest";
+const mocks=vi.hoisted(()=>({create:vi.fn(),access:vi.fn(),rpc:vi.fn()}));
+vi.mock("../../../../../lib/supabase/server",()=>({createSupabaseServerClient:mocks.create}));
+vi.mock("../../../../../lib/auth/school-access",()=>({resolveSchoolAccess:mocks.access}));
+import { POST } from "./route";
+const id="b2a00000-0000-4000-8000-000000000001";
+const rows=[{source_row:2,first_name:"Ana",last_name:"Test",student_code:"X",starts_on:"2026-10-13"}];
+const body={action:"validate",schoolId:id,rows};
+const request=(value:unknown=body,key=id,origin="http://localhost")=>new NextRequest("http://localhost/api/school/students/import",{method:"POST",headers:{Origin:origin,"Content-Type":"application/json","Idempotency-Key":key},body:JSON.stringify(value)});
+beforeEach(()=>{vi.resetAllMocks();mocks.create.mockResolvedValue({rpc:mocks.rpc});mocks.access.mockResolvedValue({status:"authorized",context:{schools:[{school_id:id}]}});mocks.rpc.mockResolvedValue({data:{school_id:id,valid:false,rows:[{source_row:2,row:rows[0],errors:["existing_code"]}]},error:null});});
+it("returns row-level validation including invalid values without writing",async()=>{expect((await POST(request({...body,rows:[{source_row:2,first_name:5}]}))).status).toBe(200);expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("school_student_bulk_validate",{p_school_id:id,p_rows:[{source_row:2,first_name:5}]});});
+it("commit passes only explicit selection and exact request identity",async()=>{mocks.rpc.mockResolvedValue({data:{status:"committed",school_id:id,request_id:id,created:[{source_row:2,student_id:id,enrollment_id:id}],excluded_rows:[]},error:null});expect((await POST(request({...body,action:"commit",included_rows:[2],confirmed:true}))).status).toBe(200);expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("school_student_bulk_commit",{p_school_id:id,p_rows:rows,p_request_id:id,p_included_rows:[2],p_confirmed:true});});
+it.each([false,undefined])("requires explicit confirmation %s",async confirmed=>{expect((await POST(request({...body,action:"commit",included_rows:[2],confirmed}))).status).toBe(400);expect(mocks.rpc).not.toHaveBeenCalled();});
+it("requires a stable commit key",async()=>expect((await POST(request({...body,action:"commit",included_rows:[2],confirmed:true},""))).status).toBe(400));
+it("rejects more than 200 source rows",async()=>{expect((await POST(request({...body,rows:Array(201).fill(rows[0])}))).status).toBe(413);expect(mocks.create).not.toHaveBeenCalled();});
+it("rejects streamed payload over one MiB before creating a client",async()=>{expect((await POST(request({...body,extra:"x".repeat(1048576)}))).status).toBe(413);expect(mocks.create).not.toHaveBeenCalled();});
+it.each([["unauthenticated",401],["forbidden",403],["unavailable",503]])("fails closed for %s",async(status,expected)=>{mocks.access.mockResolvedValue({status});expect((await POST(request())).status).toBe(expected);expect(mocks.rpc).not.toHaveBeenCalled();});
+it("rejects a different school",async()=>expect((await POST(request({...body,schoolId:"b2a00000-0000-4000-8000-000000000009"}))).status).toBe(403));
+it("rejects cross origin",async()=>{expect((await POST(request(body,id,"https://other.invalid"))).status).toBe(403);expect(mocks.create).not.toHaveBeenCalled();});
+it("rejects supplied actor/role fields",async()=>{expect((await POST(request({...body,actor_id:id}))).status).toBe(400);expect(mocks.create).not.toHaveBeenCalled();});
+it.each([["42501",403],["23505",409],["22023",422],["XX000",502]])("maps %s without exposing private errors",async(code,status)=>{mocks.rpc.mockResolvedValue({error:{code,message:"private details"}});const r=await POST(request());expect(r.status).toBe(status);expect(await r.text()).not.toContain("private details");});
+it("does not treat a mismatched success receipt as confirmed",async()=>{mocks.rpc.mockResolvedValue({data:{status:"committed",school_id:id,request_id:"b2a00000-0000-4000-8000-000000000009",created:[{source_row:2,student_id:id,enrollment_id:id}],excluded_rows:[]}});expect((await POST(request({...body,action:"commit",included_rows:[2],confirmed:true}))).status).toBe(502);});
+
+it("requires the successful receipt to match the exact confirmed row set",async()=>{mocks.rpc.mockResolvedValue({data:{status:"committed",school_id:id,request_id:id,created:[{source_row:9,student_id:id,enrollment_id:id}],excluded_rows:[]},error:null});expect((await POST(request({...body,action:"commit",included_rows:[2],confirmed:true}))).status).toBe(502);});
