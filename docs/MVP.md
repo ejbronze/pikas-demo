@@ -1,4 +1,24 @@
-# Alcance del MVP — milestone 0.6.0
+# Alcance y roadmap de PIKAS
+
+## Phase 4D — Production Administration & Provisioning
+
+**STATUS: COMPLETE** · **Production acceptance: PASSED** · 2026-10-15.
+
+El alcance probado cubre onboarding de cliente nuevo, organización, activación y administración, personal operativo y venta No Usuario en efectivo con recibo, sin intervención de desarrollador/base de datos. La [línea base del producto](PRODUCT_BASELINE.md) conserva componentes completos, evidencia, seguimiento acotado y reglas de congelación.
+
+## Siguiente fase planificada — Phase 5 — Financial Operations & Visibility
+
+1. **5.1 Transaction & Register History**
+2. **5.2 Wallet / PIKAS Cash Replenishments**
+3. **5.3 Refunds**
+4. **5.4 Reporting & Reconciliation**
+5. **5.5 Platform Analytics**
+
+Este roadmap no inicia implementación. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
+
+## Referencia histórica — milestone 0.6.0
+
+El alcance siguiente corresponde al demo local de ese milestone, no a la línea base productiva actual.
 
 PIKAS conserva cinco experiencias responsivas en español: Familia, Estudiante, POS, Administración escolar y Administración de cafetería. Diseñada y desarrollada por Palmchat Innovations LLC.
 

@@ -1,5 +1,18 @@
 # PIKAS
 
+## Estado actual — Phase 4D
+
+**Phase 4D — Production Administration & Provisioning**
+**STATUS: COMPLETE** · **Production acceptance: PASSED** · 2026-10-15.
+
+Producción: **https://pikas-pikas.app/**. La aceptación de un cliente nuevo probó onboarding, activación y administración, provisión de cajero/caja y una venta No Usuario en efectivo con recibo, sin intervención de desarrollador/base de datos. La [línea base canónica](docs/PRODUCT_BASELINE.md) registra source, deployment, migración, evidencia, seguimiento estudiantil y congelación de Phase 4D.
+
+La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility](docs/MVP.md); no se inicia en este checkpoint. No Usuario en efectivo ya está soportado.
+
+## Referencia histórica — demo local 0.6.x
+
+Las secciones siguientes describen el demo histórico y sus limitaciones en aquel milestone. Sus versiones, URLs y pendientes no sustituyen la línea base de producción indicada arriba.
+
 PIKAS es una aplicación escolar unificada para Familias, Estudiantes, Cafetería/POS y Administración. El milestone local **0.6.5** evoluciona la línea base 0.5.3 sin cambiar marca ni espacios de trabajo. Verificada localmente; la aplicación y su lockfile están en **0.6.5**.
 
 PIKAS es diseñada y desarrollada por **Palmchat Innovations LLC**.

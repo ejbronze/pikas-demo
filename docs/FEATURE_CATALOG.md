@@ -1,4 +1,16 @@
-# Catálogo de funcionalidades — milestone 0.6.1
+# Catálogo de funcionalidades
+
+## Producción — Phase 4D completa
+
+**STATUS: COMPLETE** · **Production acceptance: PASSED** · 2026-10-15.
+
+El [registro canónico de Phase 4D](PRODUCT_BASELINE.md) enumera los componentes 4D.1–4D.8 completos y la evidencia de aceptación. Las capacidades conectadas incluyen gestión/provisión de clientes en Platform, administración escolar y de cafetería, equipo de Platform, activación segura de cuentas, POVs sandbox, UX administrativa Beta, importación estudiantil, filtros y exportaciones CSV, delegación de cafetería, activación de cajeros y entrada autorizada al POS.
+
+La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo comprometida con recibo. La búsqueda POS del estudiante recién inscrito queda como seguimiento acotado; no se declara probado ese camino de venta estudiantil. Las capacidades completadas no equivalen a pruebas individuales de cada función durante 4D.8.
+
+## Referencia histórica — milestone 0.6.1
+
+La tabla siguiente conserva el alcance del demo de ese milestone; sus estados pendientes no describen la producción actual.
 
 “Demo funcional” significa comportamiento local ficticio, con persistencia en el mismo navegador/origen. No implica integración financiera productiva con Supabase. Ver [Modelo financiero](POS_FINANCIAL_MODEL.md) para contratos y límites.
 

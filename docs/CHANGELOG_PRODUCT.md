@@ -1,5 +1,15 @@
 # Registro de cambios del producto
 
+## 2026-10-15 — Cierre de Phase 4D: Production Administration & Provisioning
+
+- **STATUS: COMPLETE** · **Production acceptance: PASSED**. Cliente ficticio nuevo incorporado y operado mediante PIKAS hasta una venta No Usuario + Efectivo confirmada, sin intervención de desarrollador/base de datos.
+- Línea base aceptada: rama `Pikas_demo`, source `df802b530b3cab4a92140f7d7b9a025e36f2b9c7`, deployment `dpl_4pLUTkodjv4qpNEpxDDUNeu3L8E4`, migraciones alineadas hasta `202610150001_cafeteria_staff_activation.sql`, dominio `pikas-pikas.app`.
+- Recibo #1, compra `daccc804-d8e1-4ef1-9789-99156075fe50`: 1 Agua Ficticia Beta 4D.8, total RD$25.00, recibido RD$50.00, cambio RD$25.00.
+- [Evidencia y componentes completos 4D.1–4D.8](PRODUCT_BASELINE.md), incluido el seguimiento de Sol Ficticia Beta no devuelta por búsqueda POS. No bloqueó el camino aceptado No Usuario + Efectivo. Reautenticación por timeout: política esperada.
+- Phase 4D queda como línea base congelada; cambios posteriores requieren defecto confirmado o función aprobada y regresiones dirigidas. Migraciones comprometidas inmutables.
+- Próxima fase planificada: [Phase 5 — Financial Operations & Visibility](MVP.md), sin iniciarla.
+- Cierre exclusivamente documental, sin nueva versión de paquete, cambios de código/migraciones ni despliegue.
+
 ## 2026-09-24 — PIKAS 0.6.5: selección de productos en POS
 
 - Reorganización espacial del desktop POS: Cliente, Top 5 y Productos forman una columna de selección; Venta actual permanece como columna de transacción dedicada.
