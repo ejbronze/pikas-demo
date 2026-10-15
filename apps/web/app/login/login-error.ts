@@ -4,6 +4,7 @@ export type LoginErrorMessage = {
 };
 
 const messages: Record<string, LoginErrorMessage> = {
+  cafeteria_authority: {title:"No tienes acceso de administración a una cafetería",body:"Tu cuenta necesita un acceso explícito a la cafetería. Vuelve a Administración escolar para solicitarlo al administrador de la cuenta."},
   membership: {
     title: "No tienes acceso a una cuenta de PIKAS",
     body: "Tu usuario no está asociado actualmente a ninguna escuela o cafetería. Si crees que esto es un error, comunícate con el administrador de tu institución.",

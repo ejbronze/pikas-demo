@@ -26,7 +26,7 @@ export async function sendCommand(pending: PendingCommand, send: typeof fetch = 
     const result = commandResultSchema.safeParse(body.result);
     if (!result.success) return "uncertain";
     const op = pending.command.operation;
-    const expected = op === "student_create" || op === "student_update" || op === "student_status" ? "student_id" : op.startsWith("student_") ? "enrollment_id" : op === "admin_prepare" ? "invitation_id" : op.startsWith("admin_") ? "membership_id" : op === "sharing_set" ? "share_id" : "customer_id";
+    const expected = op === "student_create" || op === "student_update" || op === "student_status" ? "student_id" : op.startsWith("student_") ? "enrollment_id" : op === "admin_prepare" || op === "cafeteria_admin_prepare" ? "invitation_id" : op.startsWith("admin_") || op.startsWith("cafeteria_admin_") ? "membership_id" : op === "sharing_set" ? "share_id" : "customer_id";
     return expected in result.data ? "success" : "uncertain";
   } catch { return "uncertain"; }
 }

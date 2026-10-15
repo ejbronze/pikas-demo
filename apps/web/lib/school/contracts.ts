@@ -10,6 +10,9 @@ export type SchoolContext = z.infer<typeof schoolContextSchema>;
 export const sectionSchema = z.enum(["summary", "students", "administrators", "cafeterias", "activity"]);
 export type SchoolSection = z.infer<typeof sectionSchema>;
 export const commandSchema = z.discriminatedUnion("operation", [
+  z.object({schoolId:id,operation:z.literal("cafeteria_admin_self"),payload:z.object({cafeteria_id:id}).strict()}).strict(),
+  z.object({schoolId:id,operation:z.literal("cafeteria_admin_prepare"),payload:z.object({cafeteria_id:id,email:z.email().trim()}).strict()}).strict(),
+  z.object({schoolId:id,operation:z.literal("cafeteria_admin_complete"),payload:z.object({cafeteria_id:id,invitation_id:id,display_name:z.string().trim().min(1).max(200)}).strict()}).strict(),
   z.object({ schoolId: id, operation: z.literal("student_create"), payload: z.object({ ...studentNames, ...placement }).strict() }).strict(),
   z.object({ schoolId: id, operation: z.literal("student_update"), payload: z.object({ student_id: id, ...studentNames }).strict() }).strict(),
   z.object({ schoolId: id, operation: z.literal("student_status"), payload: z.object({ student_id: id, status: z.enum(["active", "suspended", "inactive"]) }).strict() }).strict(),

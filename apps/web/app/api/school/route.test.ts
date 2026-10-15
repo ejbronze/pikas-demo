@@ -19,3 +19,5 @@ describe("authenticated school adapter", () => {
   it("does not expose raw database/security errors", async () => { mocks.rpc.mockResolvedValue({ data: null, error: { code: "XX000", message: "secret-internals" } }); const response = await POST(request()); expect(response.status).toBe(502); expect(await response.text()).not.toContain("secret-internals"); });
   it("invalid success result fails closed", async () => { mocks.rpc.mockResolvedValue({ data: { auth_id: id }, error: null }); expect((await POST(request())).status).toBe(502); });
 });
+
+it('dispatches explicit delegation to its separate scoped RPC',async()=>{const payload={cafeteria_id:id};mocks.rpc.mockResolvedValue({data:{membership_id:id,status:'accepted'},error:null});expect((await POST(request({schoolId:id,operation:'cafeteria_admin_self',payload}))).status).toBe(200);expect(mocks.rpc).toHaveBeenCalledWith('cafeteria_delegation_command',{p_school_id:id,p_cafeteria_id:id,p_request_id:id,p_operation:'cafeteria_admin_self',p_payload:payload});});

@@ -22,3 +22,9 @@ describe("school command validation and recovery", () => {
   it("unconfirmed identity is honestly pending", async () => { expect(await sendCommand({ key: id, command }, vi.fn().mockResolvedValue({ ok: false, status: 422, json: async () => ({ error: "confirmed_identity_pending" }) }))).toBe("pending-identity"); });
   it("conflict or server failure is never silently replaced", async () => { expect(await sendCommand({ key: id, command }, vi.fn().mockResolvedValue({ ok: false, status: 409, json: async () => ({ error: "conflict" }) }))).toBe("uncertain"); });
 });
+
+it.each(["cafeteria_admin_self","cafeteria_admin_prepare","cafeteria_admin_complete"] as const)("recognizes exact delegation result for %s",async operation=>{
+ const payload=operation==="cafeteria_admin_prepare"?{cafeteria_id:id,email:"fictional@example.invalid"}:operation==="cafeteria_admin_complete"?{cafeteria_id:id,invitation_id:id,display_name:"Fictional"}:{cafeteria_id:id};
+ const parsed=commandSchema.parse({schoolId:id,operation,payload});const result=operation==="cafeteria_admin_prepare"?{invitation_id:id,status:"pending"}:{membership_id:id,status:"accepted"};
+ expect(await sendCommand({key:id,command:parsed},vi.fn().mockResolvedValue({ok:true,json:async()=>({result})})) ).toBe("success");
+});

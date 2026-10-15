@@ -16,3 +16,8 @@ describe("connected school presentation", () => {
  it("roster contains explicit profile actions without embedded student mutation forms", () => { const student={id,first_name:"Luna",last_name:"Castillo",display_name:"Luna Castillo",student_code:"LUNA",status:"active" as const,enrollment:null}; const html=renderToStaticMarkup(<ConnectedSchoolPages section="students" data={data} students={[student]}/>); expect(html).toContain("Ver perfil de Luna Castillo"); expect(html).toContain("Crear estudiante"); expect(html).not.toContain("Editar estudiante"); expect(html).not.toContain("Cambiar estado"); expect(html).not.toContain("name=\"first_name\""); });
  it("administrator preparation does not claim email delivery or expose IDs", () => { const html=renderToStaticMarkup(<ConnectedSchoolPages section="administrators" data={data} />); expect(html).toContain("No se envía un correo"); expect(html).toContain("correo confirmado"); expect(html).not.toContain("token_hash"); });
 });
+
+it.each([['account_admin','customer',true],['school_admin','customer',false],['account_admin','sandbox',false]] as const)('delegation surface is restricted for %s/%s',(role,tenant,visible)=>{
+ const scoped:SchoolRead={...data,scope:{...data.scope,role,tenant_kind:tenant},rows:[{id,name:'Fictional Cafe',location:'Campus',status:'active',sharing_status:'revoked',categories:[],customer_count:0,customers:[]}]};
+ expect(renderToStaticMarkup(<ConnectedSchoolPages section="cafeterias" data={scoped}/>).includes('aria-label="Administración de cafetería"')).toBe(visible);
+});

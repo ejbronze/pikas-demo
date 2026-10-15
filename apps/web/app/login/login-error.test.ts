@@ -24,3 +24,5 @@ describe("public login error messages", () => {
     expect(getLoginErrorMessage("unknown")).toBeNull();
   });
 });
+
+it('explains explicit cafeteria authority without suggesting login grants roles',()=>{expect(getLoginErrorMessage('cafeteria_authority')?.body).toContain('Administración escolar');});

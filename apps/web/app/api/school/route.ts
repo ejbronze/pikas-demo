@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
     if (access.status === "unauthenticated") return fail("authentication_required", 401);
     if (access.status === "unavailable") return fail("authorization_unavailable", 503);
     if (access.status !== "authorized" || !access.context.schools.some(s => s.school_id === parsed.data.schoolId)) return fail("school_authority_required", 403);
-    const { data, error } = await client.rpc("school_admin_command", { p_school_id: parsed.data.schoolId, p_request_id: key.data, p_operation: parsed.data.operation, p_payload: parsed.data.payload });
+    const delegation = parsed.data.operation.startsWith("cafeteria_admin_");
+    const { data, error } = await client.rpc(delegation ? "cafeteria_delegation_command" : "school_admin_command", { p_school_id: parsed.data.schoolId, p_request_id: key.data, p_operation: parsed.data.operation, p_payload: parsed.data.payload, ...(delegation ? {p_cafeteria_id: (parsed.data.payload as {cafeteria_id:string}).cafeteria_id} : {}) });
     if (error) {
       if (error.code === "42501") return fail("school_authority_required", 403);
       if (error.code === "23505") return fail("school_operation_conflict", 409);
