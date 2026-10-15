@@ -1,0 +1,16 @@
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {beforeEach,expect,it,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({identity:vi.fn(),pos:vi.fn()}));
+vi.mock('next/link',()=>({default:({children,href}:{children:React.ReactNode;href:string})=><a href={href}>{children}</a>}));
+vi.mock('next/navigation',()=>({redirect:()=>{throw Error('redirect');}}));
+vi.mock('@/lib/auth/pikas-context',()=>({resolvePikasIdentity:mocks.identity}));
+vi.mock('@/lib/auth/pos-access',()=>({resolvePosAccess:mocks.pos}));
+vi.mock('@/lib/supabase/server',()=>({createSupabaseServerClient:async()=>({})}));
+(globalThis as {React?:typeof React}).React=React;
+import Page from './page';
+beforeEach(()=>{mocks.identity.mockResolvedValue({status:'ready',person:{displayName:'Fictional Cashier'},memberships:[{id:'member',scopeKind:'cafeteria',roleCode:'pos_cashier'}]});mocks.pos.mockResolvedValue({status:'forbidden'});});
+it('does not offer POS based only on a displayed membership',async()=>{expect(renderToStaticMarkup(await Page())).not.toContain('Entrar al POS');});
+it.each(['pos_cashier','pos_supervisor'])('offers POS only for server-confirmed %s',async role=>{mocks.pos.mockResolvedValue({status:'authorized',context:{pov:null,memberships:[{role_code:role}]}});const html=renderToStaticMarkup(await Page());expect(html).toContain('Entrar al POS');expect(html).toContain('href="/pos"');});
+it('does not turn cafeteria administration into POS authority',async()=>{mocks.pos.mockResolvedValue({status:'authorized',context:{pov:null,memberships:[{role_code:'cafeteria_admin'}]}});expect(renderToStaticMarkup(await Page())).not.toContain('Entrar al POS');});
+it('does not surface sandbox POV through normal cashier entry',async()=>{mocks.pos.mockResolvedValue({status:'authorized',context:{pov:{session_id:'pov'},memberships:[{role_code:'pos_cashier'}]}});expect(renderToStaticMarkup(await Page())).not.toContain('Entrar al POS');});

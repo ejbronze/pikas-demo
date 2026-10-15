@@ -27,7 +27,7 @@ export function ConnectedCafeteriaProvider({data,children,recoveryActorId}:{data
    }
    sessionStorage.removeItem(storageKey);setPending(null);
    if(outcome==='success'){setMessage('Cambio confirmado.');router.refresh();return {ok:true};}
-   const message=outcome==='pending-identity'?'Identidad pendiente: debe registrarse y confirmar su correo. No se ha concedido acceso.':'No se realizó el cambio. Revisa los datos, versiones y permisos actuales.';
+   const message=outcome==='pending-identity'?'Identidad pendiente: activa la identidad y guarda su contraseña mediante el enlace privado antes de confirmar. No se ha concedido acceso.':'No se realizó el cambio. Revisa los datos, versiones y permisos actuales.';
    setMessage(message);return {ok:false,message};
   } catch { const message='No se pudo completar la preparación o confirmación. Revisa la solicitud pendiente antes de continuar.';setMessage(message);return {ok:false,message}; }
   finally {inFlight.current=false;setBusy(false);}

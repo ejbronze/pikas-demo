@@ -1,3 +1,5 @@
+import Link from "next/link";
+import {resolvePosAccess} from "@/lib/auth/pos-access";
 import { redirect } from "next/navigation";
 import { resolvePikasIdentity } from "@/lib/auth/pikas-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -30,6 +32,8 @@ export default async function PilotConnectedPage() {
     );
   }
 
+  const pos = await resolvePosAccess(await createSupabaseServerClient());
+  const canEnterPos = pos.status === "authorized" && !pos.context.pov && pos.context.memberships.some(m => m.role_code === "pos_cashier" || m.role_code === "pos_supervisor");
   return (
     <main className="mx-auto max-w-2xl p-8">
       <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
@@ -54,6 +58,7 @@ export default async function PilotConnectedPage() {
           </li>
         ))}
       </ul>
+      {canEnterPos && <Link className="btn mt-6 inline-flex" href="/pos">Entrar al POS</Link>}
       <form action="/api/auth/logout" method="post" className="mt-8">
         <button className="btn">Cerrar sesión</button>
       </form>
