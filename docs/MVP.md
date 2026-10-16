@@ -6,15 +6,19 @@
 
 El alcance probado cubre onboarding de cliente nuevo, organización, activación y administración, personal operativo y venta No Usuario en efectivo con recibo, sin intervención de desarrollador/base de datos. La [línea base del producto](PRODUCT_BASELINE.md) conserva componentes completos, evidencia, seguimiento acotado y reglas de congelación.
 
-## Siguiente fase planificada — Phase 5 — Financial Operations & Visibility
+## Phase 5 — Financial Operations & Visibility
 
-1. **5.1 Transaction & Register History**
+1. **5.1 Transaction & Register History** — implementado localmente en [Phase 5A](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md), junto con la base de conciliación de cierre de 5.4.
 2. **5.2 Wallet / PIKAS Cash Replenishments**
 3. **5.3 Refunds**
 4. **5.4 Reporting & Reconciliation**
 5. **5.5 Platform Analytics**
 
-Este roadmap no inicia implementación. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
+Phase 5A es el único milestone implementado en este trabajo; la aceptación productiva sigue en Phase 4D. Phase 5 no está completa. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
+
+## Después de Phase 5
+
+Phase 6: hardening financiero, autoridad, concurrencia y casos operativos. Phase 7: paquete de operación/preparación del piloto Beta 1. No se implementan en Phase 5A.
 
 ## Referencia histórica — milestone 0.6.0
 

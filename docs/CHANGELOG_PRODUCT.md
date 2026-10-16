@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## 2026-10-16 — Phase 5A: operaciones de transacciones y caja (local)
+
+- Historial conectado de compras/recibos y sesiones; cierre administrativo excepcional con confirmación, contado/esperado/diferencia y captura inmutable para nuevos cierres.
+- Reintento exacto y recuperación de éxito perdido; rechazo de esperado obsoleto y ventas contra sesión cerrada. Capacidades y fronteras sandbox existentes conservadas.
+- Migración aditiva `202610160001_transaction_register_operations.sql`; [decisiones, contratos y validación](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). `CLAUDE.md` añade guía durable de ingeniería.
+- No completa Phase 5; sin nuevas recargas/refunds conectadas, reporting amplio ni analytics. Sin acceso productivo, push o despliegue.
+
 ## 2026-10-15 — Cierre de Phase 4D: Production Administration & Provisioning
 
 - **STATUS: COMPLETE** · **Production acceptance: PASSED**. Cliente ficticio nuevo incorporado y operado mediante PIKAS hasta una venta No Usuario + Efectivo confirmada, sin intervención de desarrollador/base de datos.

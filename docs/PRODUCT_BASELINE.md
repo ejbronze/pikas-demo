@@ -82,6 +82,10 @@ El comportamiento completado de Phase 4D constituye la línea base de producció
 
 La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility](MVP.md). No se inicia como parte de este cierre. El soporte de venta en efectivo No Usuario ya existe.
 
+## Phase 5A — implementación local
+
+Transacciones, detalle de compra/recibo, historial/detalle de sesiones y cierre excepcional administrativo con conciliación durable. Esperado = fondo + ventas efectivo + cobros de personal en efectivo − reembolsos de efectivo; diferencia = contado − esperado. Se preservan capacidades y límites sandbox de Phase 4. [Contrato y evidencia local](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). No cambia la línea base de producción ni completa Phase 5.
+
 ## Referencia histórica: demo local 0.6.1
 
 El contenido siguiente conserva el estado y los límites del milestone histórico; no describe el estado de producción aceptado arriba.

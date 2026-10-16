@@ -8,6 +8,15 @@ El [registro canónico de Phase 4D](PRODUCT_BASELINE.md) enumera los componentes
 
 La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo comprometida con recibo. La búsqueda POS del estudiante recién inscrito queda como seguimiento acotado; no se declara probado ese camino de venta estudiantil. Las capacidades completadas no equivalen a pruebas individuales de cada función durante 4D.8.
 
+## Phase 5A — conectado, alcance local
+
+- Historial paginado de compras y detalle con productos/precios/tender e identidad de recibo.
+- Historial/detalle de sesiones con apertura, operador, movimientos de efectivo y conciliación.
+- Cierre excepcional administrativo con revisión/confirmación, esperado revalidado bajo bloqueo, conteo/diferencia inmutables y recuperación de respuesta perdida.
+- Cierre propio POS conservado con confirmación explícita; la sesión cerrada no acepta ventas ni se reemplaza automáticamente.
+
+[Autoridad, sandbox, contratos, migración y validación](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). No incluye nuevas recargas/refunds conectadas, reportes amplios ni analytics.
+
 ## Referencia histórica — milestone 0.6.1
 
 La tabla siguiente conserva el alcance del demo de ese milestone; sus estados pendientes no describen la producción actual.

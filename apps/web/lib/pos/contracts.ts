@@ -2,7 +2,7 @@ import { z } from "zod";
 import { posAccessContextSchema } from "./access-context";
 
 const maxAmount = 9223372036854775807n;
-export const minorSchema = z.string().regex(/^(0|[1-9][0-9]{0,18})$/).refine((s) => BigInt(s) <= maxAmount);
+export const minorSchema = z.string().regex(/^(0|[1-9][0-9]{0,18})$/).pipe(z.string().refine((s) => BigInt(s) <= maxAmount));
 const catalogMinor = z.union([minorSchema, z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).transform(String)]);
 const uuid = z.uuid();
 export const registerSchema = z.object({ cafeteria_id: uuid, register_id: uuid, assignment_id: uuid,

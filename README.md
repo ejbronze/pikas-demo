@@ -9,6 +9,10 @@ Producción: **https://pikas-pikas.app/**. La aceptación de un cliente nuevo pr
 
 La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility](docs/MVP.md); no se inicia en este checkpoint. No Usuario en efectivo ya está soportado.
 
+## Phase 5A — milestone local
+
+Historial de transacciones/recibos y sesiones de caja conectado a registros autoritativos; cierre excepcional administrativo con conteo, esperado, diferencia inmutable y recuperación idempotente. [Semántica, autoridad y validación local](docs/PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). La aceptación productiva sigue en Phase 4D; Phase 5 no está completa.
+
 ## Referencia histórica — demo local 0.6.x
 
 Las secciones siguientes describen el demo histórico y sus limitaciones en aquel milestone. Sus versiones, URLs y pendientes no sustituyen la línea base de producción indicada arriba.
