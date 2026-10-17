@@ -22,8 +22,12 @@ This is 5C.1 only. Phase 5C is not complete: 5C.2 (replenishment reversals) and
   `refund_cash_outflows` row reduces that session's expected cash (Phase 5A
   `register_cash_summary`). If the original sale was in a historical closed session,
   that session is never reopened or rewritten. The refund still links to the original
-  purchase. A cash refund larger than the current register's expected cash is rejected
-  (`CASH_INSUFFICIENT`).
+  purchase. Expected cash is an accounting value, not proof of what is physically in the
+  drawer, so it may go negative. For example, RD$200 expected minus a RD$300 refund
+  leaves −RD$100. A cashier refund that would make expected cash negative requires an
+  override (`cash_shortfall`). A POS Supervisor refunding directly from their own
+  register is not asked to approve themselves; the shortfall is recorded in the audit
+  event.
 - **PIKAS Cash.** The student's wallet is credited, with a linked immutable `refund`
   ledger entry. Register cash is not affected. Daily spending compensation follows the
   existing same-business-day rule.
@@ -36,13 +40,19 @@ This is 5C.1 only. Phase 5C is not complete: 5C.2 (replenishment reversals) and
 - **POS Supervisor:** refunds directly from their own open register (`supervisor_direct`).
 - **Cashier:** refunds without an override (`independent`) only if all of these hold:
   - the sale is at most 5 minutes old;
-  - the cashier's independent refunds today are fewer than the configured count limit;
-  - the cashier's independent refunds today plus this refund stay within the configured
-    amount limit.
+  - the refunds the cashier initiated today are fewer than the configured count limit;
+  - the refunds the cashier initiated today, plus this refund, stay within the configured
+    amount limit;
+  - a cash refund would not make expected cash negative.
 
-  Otherwise an override is required. Each refund event counts once, and the actual
-  refunded amount counts toward the amount limit. A refund that would cross the amount
-  limit requires an override. Overridden refunds do not consume the cashier's allowance.
+  Otherwise an override is required. **All** refunds a cashier initiates count toward
+  that day's totals, including approved overrides. The limits bound the cashier's
+  autonomous authority; they are not a bucket that leaves out approved activity. For
+  example, with limits of 5 refunds / RD$1,000, a day of 12 refunds / RD$3,400 is
+  recorded as exactly that, whether 5 were autonomous and 7 approved or any other split.
+  Once either threshold is reached, every later cashier refund that day requires an
+  override. A refund that would cross a threshold also requires one, and still counts
+  after approval.
 - **Limits** (`cashier_daily_refund_count_limit`, `daily_independent_refund_allowance_minor`)
   are configured by a Cafeteria Admin (Configuración POS) or a POS Supervisor
   (`configure_cashier_refund_limits`). Both default to 0, so every cashier refund requires
@@ -64,7 +74,8 @@ This is 5C.1 only. Phase 5C is not complete: 5C.2 (replenishment reversals) and
   authority is exercised by authorizing at the POS. The cash comes from the
   cashier's current register.
 - **Audit.** The refund records the initiating actor, the approver, the approver's role
-  and why an override was required (`sale_age`, `count_limit`, `amount_limit`). Audit
+  and why an override was required (`sale_age`, `count_limit`, `amount_limit`,
+  `cash_shortfall`). Audit
   events cover approval issuance and consumption, and refund commit.
 - **Sandbox POV** remains excluded: the API denies it, and the database gives the
   operator no refund authority.
@@ -99,6 +110,12 @@ Each refund stores:
   request in session storage until a result is confirmed.
 - Migration `202610180001_controlled_purchase_refunds.sql` (additive). The new RPCs use
   the POS application-session timeout.
+- Migration `202610180002_refine_refund_limits_cash_shortfall.sql` (additive owner
+  corrections):
+  - Cashier usage counts all cashier-initiated refunds.
+  - `cash_shortfall` replaces the cash rejection.
+  - Pre-lock pricing (`price_refund_items`) fixes exact retry: a refund that exhausted
+    a line now returns the original result instead of `REFUND_EXCEEDS_REMAINING`.
 
 ## Local validation
 
@@ -109,7 +126,14 @@ python3 scripts/test-phase5c1-refund-races.py
 node scripts/test-phase5c1-refund-browser.mjs
 ```
 
-- **pgTAP `phase5c1_refunds.test.sql`: 47/47.** Covers:
+- **pgTAP `phase5c1_refunds.test.sql`: 60/60**, including the corrections:
+  - approved refunds counting toward daily count and amount, and the threshold
+    continuing to require override;
+  - cashier shortfall requiring override, then expected cash at −RD$50;
+  - supervisor shortfall without self-approval;
+  - shortfall initiator/approver/trigger recorded, with exact retry.
+
+  It also covers:
   - full, partial and multiple partial refunds, in cash and in PIKAS Cash;
   - over-refund, exact retry and changed-payload rejection;
   - cash reducing the current register; a closed historical register left unchanged;
@@ -123,7 +147,8 @@ node scripts/test-phase5c1-refund-browser.mjs
 - **Races: 7/7 with observed `pg_blocking_pids` blocking.** Covers duplicate retry,
   concurrent over-refund, concurrent partials of the same line, the cashier limit,
   authority revoked while waiting, wallet refund vs. wallet purchase, and register
-  closed while waiting.
+  closed while waiting. After the corrections, the affected races (duplicate retry,
+  concurrent over-refund, cashier limit) were rerun and pass.
 - **Production-mode browser** (`next build --webpack`, real local Auth), fictional cashier at
   390/768/1440px with no overflow and no page errors:
   1. Partial cash refund inside the window; expected cash RD$200 → RD$150.

@@ -20,10 +20,11 @@ export const approvalRequestSchema = z.object({ ...refundBase, issuance_key: uui
   approver_password: z.string().min(4).max(128) }).strict().refine(otherNeedsNotes);
 export const approvalResultSchema = z.object({ approval_id: uuid, purchase_id: uuid, amount_minor: minorSchema,
   approver_role: z.enum(["pos_supervisor", "cafeteria_admin"]), issued_at: z.string(), expires_at: z.string() }).strict();
-export const overrideReasonSchema = z.enum(["sale_age", "count_limit", "amount_limit"]);
+export const overrideReasonSchema = z.enum(["sale_age", "count_limit", "amount_limit", "cash_shortfall"]);
 export const overrideLabels: Record<z.infer<typeof overrideReasonSchema>, string> = {
   sale_age: "Pasaron más de 5 minutos desde la venta", count_limit: "Se alcanzó el límite diario de reembolsos del cajero",
   amount_limit: "Este reembolso supera el monto diario permitido al cajero",
+  cash_shortfall: "El efectivo esperado de esta caja quedaría en negativo",
 };
 export const refundabilitySchema = z.object({
   purchase_id: uuid, purchase_number: minorSchema, purchased_at: z.string(), sale_age_seconds: minorSchema, customer_name: z.string(),

@@ -70,6 +70,10 @@ select is((select count(*) from refunds where purchase_id=current_setting('t.p1'
 select throws_ok($$update refund_items set quantity=1$$,'23514',null,'Refund items immutable');
 select pg_temp.as_user('00000000-0000-0000-0000-000000002008');
 select is(pg_temp.attempt(current_setting('t.sid'),current_setting('t.p1')::uuid,1,'5c1-cash-after-full-1'),'REFUND_EXCEEDS_REMAINING:','Fully refunded purchase cannot be refunded again');
+-- Correction 1: approved refunds are part of the cashier's actual daily activity.
+select is((select (x->>'cashier_used_count')||'/'||(x->>'cashier_used_amount_minor') from (select get_purchase_item_refundability(current_setting('t.sid')::uuid,(select purchase_number from purchases where id=current_setting('t.p1')::uuid)) x) q),'3/15000','Overridden refund counts toward daily count and amount');
+select set_config('t.pt',pg_temp.sale('5c1-sale-cash-pt-0001',1,'cash')::text,true);
+select is(pg_temp.attempt(current_setting('t.sid'),current_setting('t.pt')::uuid,1,'5c1-cash-after-limit-1'),'REFUND_APPROVAL_REQUIRED:count_limit','Threshold reached keeps requiring override');
 
 -- Amount limit crossing; POS Supervisor authority to configure and approve
 select pg_temp.as_user('00000000-0000-0000-0000-000000002011');
@@ -84,6 +88,7 @@ select set_config('t.a2',pg_temp.approve(current_setting('t.sid'),current_settin
 select pg_temp.as_user('00000000-0000-0000-0000-000000002008');
 select is(pg_temp.refund(current_setting('t.sid'),current_setting('t.p2')::uuid,1,'5c1-amount-approved-01',current_setting('t.a2')::uuid)->>'approver_role','pos_supervisor','POS Supervisor authorizes override');
 select throws_ok($$select pg_temp.refund(current_setting('t.sid'),current_setting('t.p2')::uuid,1,'5c1-amount-reuse-00001',current_setting('t.a2')::uuid)$$,'23514',null,'Approval is single-use');
+select is((select (x->>'cashier_used_count')||'/'||(x->>'cashier_used_amount_minor') from (select get_purchase_item_refundability(current_setting('t.sid')::uuid,(select purchase_number from purchases where id=current_setting('t.p1')::uuid)) x) q),'4/20000','Approved threshold-crossing refund contributes to totals');
 
 -- PIKAS Cash refunds
 reset role; select pg_temp.as_user('00000000-0000-0000-0000-000000002011');
@@ -124,6 +129,7 @@ select throws_ok($$select pg_temp.refund(current_setting('t.sid'),current_settin
 select pg_temp.as_user('00000000-0000-0000-0000-000000002008');
 select throws_ok($$select pg_temp.refund(current_setting('t.sid'),'5c100000-0000-4000-8000-0000000000ff',1,'5c1-missing-purchase')$$,'42501',null,'Unknown/foreign purchase denied');
 select is((get_purchase_item_refundability(current_setting('t.sid')::uuid,(select purchase_number from purchases where id=current_setting('t.p1')::uuid))->'items'->0->>'refunded_quantity'),'3','Cumulative refund state visible to operator');
+select set_config('t.p6',pg_temp.sale('5c1-sale-cash-p6-0001',3,'cash')::text,true);
 
 -- Historical closed register is never rewritten; the supervisor's current register pays out
 reset role; select set_config('t.version',(select version::text from register_sessions where id=current_setting('t.sid')::uuid),true);
@@ -137,6 +143,27 @@ reset role;
 select is(pg_temp.expected(current_setting('t.sid')),current_setting('t.closed_expected'),'Closed historical register unchanged');
 select is(pg_temp.expected(current_setting('t.sid2')),'5000','Current register pays the cash refund');
 select is((select register_session_id::text from refunds where request_key='5c1-super-direct-0001'),current_setting('t.sid2'),'Refund links purchase from closed session to current session');
+
+-- Correction 2: expected cash may go negative; a cashier needs override, a supervisor acts directly.
+select pg_temp.as_user('00000000-0000-0000-0000-000000002011');
+select is(pg_temp.refund(current_setting('t.sid2'),current_setting('t.p6')::uuid,2,'5c1-super-shortfall-01')->>'authorization_mode','supervisor_direct','Supervisor shortfall refund needs no self-approval');
+reset role;
+select is(pg_temp.expected(current_setting('t.sid2')),'-5000','Supervisor shortfall drives expected cash negative');
+select is((select after_metadata->>'cash_shortfall' from audit_events where action='refund_committed' and target_id=(select id from refunds where request_key='5c1-super-shortfall-01')),'true','Supervisor shortfall audited');
+select pg_temp.as_user('00000000-0000-0000-0000-000000002008');
+select set_config('t.sid3',(select session_id::text from open_register_session('00000000-0000-0000-0000-000000009402','00000000-0000-0000-0000-000000009502',0,'5c1-open-cashier-0002')),true);
+select is(pg_temp.attempt(current_setting('t.sid3'),current_setting('t.p6')::uuid,1,'5c1-cash-shortfall-01'),'REFUND_APPROVAL_REQUIRED:cash_shortfall','Cashier refund that would make expected cash negative requires override');
+select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
+select set_config('t.a3',pg_temp.approve(current_setting('t.sid3'),current_setting('t.p6')::uuid,1,'5c1-approve-shortfall1')::text,true);
+select pg_temp.as_user('00000000-0000-0000-0000-000000002008');
+select is(pg_temp.refund(current_setting('t.sid3'),current_setting('t.p6')::uuid,1,'5c1-cash-shortfall-01',current_setting('t.a3')::uuid)->>'override_reasons','["cash_shortfall"]','Authorized shortfall refund succeeds');
+select is(pg_temp.refund(current_setting('t.sid3'),current_setting('t.p6')::uuid,1,'5c1-cash-shortfall-01',current_setting('t.a3')::uuid)->>'refund_ordinal','2','Exact retry of shortfall refund is idempotent');
+reset role;
+select is(pg_temp.expected(current_setting('t.sid3')),'-5000','Expected cash becomes the correct negative value');
+select is((select array[(select auth_user_id::text from persons where id=actor_person_id),(select auth_user_id::text from persons where id=approver_person_id),array_to_string(override_reasons,',')]
+ from refunds where request_key='5c1-cash-shortfall-01'),array['00000000-0000-0000-0000-000000002008','00000000-0000-0000-0000-000000002003','cash_shortfall'],'Shortfall initiator, approver and trigger recorded');
+select is((select count(*) from refunds where request_key='5c1-cash-shortfall-01'),1::bigint,'One shortfall refund row');
+select is(pg_temp.expected(current_setting('t.sid')),current_setting('t.closed_expected'),'Historical register still unchanged');
 set constraints all immediate;
 select * from finish();
 rollback;

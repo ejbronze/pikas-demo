@@ -4,6 +4,7 @@
 
 - Reembolsos por artículo desde el POS: varios eventos por compra sin exceder cantidad ni total; recibo original inmutable. Efectivo sale de la caja abierta actual (nunca se reescribe una caja cerrada); PIKAS Cash vuelve al monedero con asiento de ledger enlazado.
 - Cajero sin autorización solo dentro de 5 minutos y de sus límites diarios (cantidad y monto, configurables por administrador de cafetería o supervisor POS). Si no, autorización del supervisor o administrador en el mismo dispositivo, sin cerrar la sesión del cajero; se auditan iniciador, aprobador y motivo del override.
+- Correcciones del propietario (`202610180002`): todos los reembolsos iniciados por el cajero, incluidos los autorizados, cuentan en sus totales diarios (los límites solo acotan su autonomía); un reembolso en efectivo puede dejar el efectivo esperado en negativo con autorización (`cash_shortfall`) en lugar de rechazarse. El reintento exacto devuelve el reembolso original aunque haya agotado la línea.
 - Motivo obligatorio ("Otro" exige explicación). Migración aditiva `202610180001_controlled_purchase_refunds.sql`; [modelo, autoridad y validación](PHASE_5C1_REFUNDS.md).
 - Phase 5C no está completa: 5C.2 (reversión de recargas) y 5C.3 (ajustes, aprobaciones, notificaciones) diferidos. Sin acceso productivo, push ni despliegue.
 

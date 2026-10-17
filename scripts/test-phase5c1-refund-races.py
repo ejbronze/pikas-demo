@@ -77,8 +77,8 @@ if 'concurrent_partial_same_item' in CASES:
  race('concurrent_partial_same_item',SUPER,refund_sql(ss,p,2,uid()),CASHIER,refund_sql(cs,p,2,uid()),'REFUND_EXCEEDS_REMAINING',
   lambda:sql(f"select sum(quantity) from refund_items where purchase_id='{p}';")=='2')
 if 'cashier_limit' in CASES:
- # One independent refund left today: the waiting refund must require override, never exceed.
- used=int(sql(f"select count(*) from refunds r join persons x on x.id=r.actor_person_id where x.auth_user_id='{CASHIER}' and r.authorization_mode='independent' and r.cafeteria_id='{CAFE}';"))
+ # One autonomous refund left today (all cashier-initiated refunds count): the waiting one must require override.
+ used=int(sql(f"select count(*) from refunds r join persons x on x.id=r.actor_person_id where x.auth_user_id='{CASHIER}' and r.actor_role_code='pos_cashier' and r.cafeteria_id='{CAFE}';"))
  limits(used+1,100000000)
  p1=sale(1,'cash');p2=sale(1,'cash')
  race('cashier_limit',CASHIER,refund_sql(cs,p1,1,uid()),CASHIER,refund_sql(cs,p2,1,uid()),'REFUND_APPROVAL_REQUIRED',lambda:count(p1)==1 and count(p2)==0,

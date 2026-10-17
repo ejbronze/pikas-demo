@@ -41,9 +41,9 @@ describe("POS refund boundary", () => {
     expect((await call({ operation: "refund", request: bad })).status).toBe(400); expect(mocks.rpc).not.toHaveBeenCalled();
   });
   it("surfaces required override with its reasons as a definite rejection", async () => {
-    refundResponse = { data: null, error: { code: "42501", message: "REFUND_APPROVAL_REQUIRED", details: "sale_age,count_limit" } };
+    refundResponse = { data: null, error: { code: "42501", message: "REFUND_APPROVAL_REQUIRED", details: "sale_age,count_limit,cash_shortfall,unknown" } };
     const r = await call({ operation: "refund", request });
-    expect(r.status).toBe(409); expect(await r.json()).toEqual({ error: "REFUND_APPROVAL_REQUIRED", definite: true, override_reasons: ["sale_age", "count_limit"] });
+    expect(r.status).toBe(409); expect(await r.json()).toEqual({ error: "REFUND_APPROVAL_REQUIRED", definite: true, override_reasons: ["sale_age", "count_limit", "cash_shortfall"] });
   });
   it("keeps unknown failures uncertain", async () => {
     refundResponse = { data: null, error: { code: "XX000", message: "private" } };
