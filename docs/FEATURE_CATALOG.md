@@ -19,6 +19,14 @@ La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo com
 
 [Autoridad, sandbox, contratos, migración y validación](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). No incluye nuevas recargas/refunds conectadas, reportes amplios ni analytics.
 
+## Phase 5B — PIKAS Cash (local, no desplegado)
+
+- Saldo PIKAS Cash autoritativo del estudiante e historial paginado del monedero: recargas, compras POS con recibo/productos, y ajustes/reembolsos históricos existentes en solo lectura.
+- Recarga manual verificada (`manual_verified`) por Administración Escolar con referencia o nota, confirmación explícita, saldo resultante del servidor y recuperación exacta de respuesta perdida.
+- No registra efectivo de caja ni amplía límites de gasto; POV sandbox sin operaciones financieras.
+
+[Modelo financiero, autoridad, contratos y validación](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Sin reembolsos/reversiones, pasarela de pago ni reportes.
+
 ## Referencia histórica — milestone 0.6.1
 
 La tabla siguiente conserva el alcance del demo de ese milestone; sus estados pendientes no describen la producción actual.

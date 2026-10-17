@@ -134,6 +134,10 @@ La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility]
 
 Transacciones, detalle de compra/recibo, historial/detalle de sesiones y cierre excepcional administrativo con conciliación durable. Esperado = fondo + ventas efectivo + cobros de personal en efectivo − reembolsos de efectivo; diferencia = contado − esperado. Se preservan capacidades y límites sandbox de Phase 4. [Contrato y evidencia local](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). La aceptación productiva y su único seguimiento se registran arriba; Phase 5 no está completa.
 
+## Phase 5B — fundamento de implementación (local)
+
+PIKAS Cash reutiliza el monedero y el ledger inmutable existentes: saldo actual = suma firmada de movimientos (recargas positivas, compras negativas). Recarga `manual_verified` con capacidades existentes `school:wallets:read/replenish`, revalidación de autoridad tras la espera del bloqueo por estudiante y clave de solicitud ligada al payload. Independiente del efectivo de caja de Phase 5A. [Contrato y evidencia local](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). No aplicado en producción; Phase 5 no está completa.
+
 ## Referencia histórica: demo local 0.6.1
 
 El contenido siguiente conserva el estado y los límites del milestone histórico; no describe el estado de producción aceptado arriba.

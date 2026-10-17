@@ -23,6 +23,10 @@ La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility]
 
 Historial de transacciones/recibos y sesiones de caja conectado a registros autoritativos; cierre excepcional administrativo con conteo, esperado, diferencia inmutable y recuperación idempotente. [Semántica, autoridad y validación local](docs/PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). La aceptación productiva Phase 5A y su único seguimiento se registran arriba; Phase 5 no está completa.
 
+## Phase 5B — milestone local (no desplegado)
+
+PIKAS Cash desde el perfil estudiantil de Administración Escolar: saldo autoritativo, historial inmutable de recargas y compras con recibo, y recarga manual verificada (`manual_verified`) con confirmación explícita y recuperación idempotente. No es efectivo de caja. [Modelo, autoridad y validación local](docs/PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Pendiente de checkpoint productivo; Phase 5 no está completa.
+
 ## Referencia histórica — demo local 0.6.x
 
 Las secciones siguientes describen el demo histórico y sus limitaciones en aquel milestone. Sus versiones, URLs y pendientes no sustituyen la línea base de producción indicada arriba.

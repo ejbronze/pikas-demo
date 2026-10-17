@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## 2026-10-16 — Phase 5B: PIKAS Cash / operaciones de monedero (local)
+
+- PIKAS Cash en el perfil estudiantil de Administración Escolar: saldo autoritativo, historial del monedero con recargas y compras POS (recibo y productos) y recarga manual verificada con confirmación explícita.
+- Reutiliza monedero, ledger inmutable, `manual_verified` y capacidades escolares existentes; revalida autoridad tras la espera del bloqueo; reintento exacto y recuperación de éxito perdido.
+- Migración aditiva `202610160002_wallet_operations.sql`; [modelo, contratos y validación](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Documentación canónica actualizada (README, línea base, catálogo, MVP).
+- Las recargas no son efectivo de caja ni amplían límites de gasto. Sin reembolsos/reversiones (Phase 5C). Sin acceso productivo, push o despliegue; Phase 5 no está completa.
+
 ## 2026-10-16 — Cierre de aceptación productiva Phase 5A
 
 - **PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**. [Evidencia y seguimiento canónicos](PRODUCT_BASELINE.md).
