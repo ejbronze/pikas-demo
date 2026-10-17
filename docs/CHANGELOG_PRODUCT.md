@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Phase 5C.3: ajustes administrativos de monedero (local)
+
+- Ajustes positivos y negativos para correcciones excepcionales, como nuevo movimiento inmutable del ledger; nunca se sobrescribe un saldo. Motivo y explicación escrita obligatorios; se registran actor, rol real, alcance, saldo antes/después y evidencia idempotente.
+- Autoridad: administración de cuenta (su cuenta), escolar (su escuela) y de cafetería (solo estudiantes conectados a su cafetería). Supervisor, cajero, Plataforma y POV sandbox sin autoridad. Sin aprobación obligatoria en Beta; ajustes de soporte PIKAS autorizados por el cliente diferidos.
+- Saldo negativo permitido; compras con PIKAS Cash siguen bloqueadas por la regla de saldo suficiente; sin impacto en el efectivo de caja. Migración aditiva `202610200001_administrative_wallet_adjustments.sql`; [detalle](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md). Sin acceso productivo, push ni despliegue.
+
 ## Cierre de aceptación productiva Phase 5C.2
 
 - **PHASE 5C.2 — COMPLETE / PRODUCTION ACCEPTED**, congelado. Source `9f228dc97de268c01d45290fa8adeb488ef48b8e`; migración `202610190001_replenishment_reversals.sql`. [Evidencia y reglas finales](PHASE_5C2_REPLENISHMENT_REVERSALS.md).

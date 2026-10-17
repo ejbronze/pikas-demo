@@ -29,3 +29,12 @@ describe('replenishment reversal boundary',()=>{
  it('denies sandbox POV and other schools',async()=>{mocks.access.mockResolvedValue({status:'authorized',context:{schools:[{school_id:id}],pov:{}}});expect((await POST(req(reverse))).status).toBe(403);mocks.access.mockResolvedValue({status:'authorized',context:{schools:[{school_id:'5bf00000-0000-4000-8000-000000000002'}]}});expect((await POST(req(reverse))).status).toBe(403);});
  it('treats a result for another replenishment as uncertain',async()=>{mocks.rpc.mockResolvedValue({data:{request_key:id,school_id:id,student_id:id,reversal_id:id,replenishment_id:'5bf00000-0000-4000-8000-000000000002',amount_minor:'1',balance_after_minor:'0',reason:'wrong_amount',reversed_at:'t'},error:null});expect((await POST(req(reverse))).status).toBe(502);});
 });
+const adjust={operation:'adjust',school_id:id,student_id:id,amount_minor:'-7500',reason:'authorized_debit',explanation:'Débito documentado',request_key:id};
+const adjusted={request_key:id,adjustment_id:id,student_id:id,amount_minor:'-7500',balance_before_minor:'5000',balance_after_minor:'-2500',reason:'authorized_debit',actor_role:'school_admin',posted_at:'t',school_id:id};
+describe('administrative adjustment boundary',()=>{
+ it('forwards the exact signed amount, reason and explanation',async()=>{mocks.rpc.mockResolvedValue({data:adjusted,error:null});const r=await POST(req(adjust));expect(r.status).toBe(200);expect(mocks.rpc).toHaveBeenCalledWith('school_wallet_adjust',{p_school_id:id,p_student_id:id,p_amount_minor:'-7500',p_reason:'authorized_debit',p_explanation:'Débito documentado',p_request_key:id});});
+ it.each([{explanation:''},{explanation:'abc'},{reason:''},{amount_minor:'0'},{amount_minor:'1.5'},{reason:'authorized_credit'},{reason:'duplicate_manual_credit_correction'},{balance_minor:'1'}])('rejects invalid adjustment %j',async x=>{expect((await POST(req({...adjust,...x}))).status).toBe(400);expect(mocks.rpc).not.toHaveBeenCalled();});
+ it('requires matching request header',async()=>{expect((await POST(req(adjust,'http://localhost','other'))).status).toBe(400);});
+ it('treats a result with another amount as uncertain',async()=>{mocks.rpc.mockResolvedValue({data:{...adjusted,amount_minor:'-1'},error:null});expect((await POST(req(adjust))).status).toBe(502);});
+ it('denies sandbox POV',async()=>{mocks.access.mockResolvedValue({status:'authorized',context:{schools:[{school_id:id}],pov:{}}});expect((await POST(req(adjust))).status).toBe(403);});
+});

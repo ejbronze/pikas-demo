@@ -6,13 +6,13 @@ Definida por el propietario durante la aceptación productiva de Phase 5B (migra
 
 | Rol | PIKAS Cash |
 | --- | --- |
-| Administrador de cuenta | Leer y recargar (`manual_verified`) en las escuelas de su cuenta. Sin `manage` ni `adjust`. |
+| Administrador de cuenta | Leer y recargar (`manual_verified`) en las escuelas de su cuenta. Sin `manage` ni `adjust` heredado; desde 5C.3 (local) ajuste administrativo excepcional en su cuenta. |
 | Administrador escolar | Leer, recargar, `manage` y `adjust` en su escuela (sin cambios; varias por escuela). |
 | Administrador de cafetería | Solo saldo/estado de clientes que la escuela comparte con su cafetería. Sin historial, recargas, `manage` ni `adjust`; se retira la antigua capacidad `cafeteria:wallets:replenish`. |
 | Plataforma | Sin acceso permanente. Diferido: acceso de soporte temporal de solo lectura autorizado por el cliente (código/sesión de corta duración, revocable y auditado). |
 | POS | Solo uso operativo del saldo en ventas; sin autoridad administrativa. |
 
-Revertir una recarga verificada (Phase 5C.2, local): solo administración de cuenta y escolar, por el monto exacto original, una vez; puede dejar el saldo negativo. Recargar no es ajustar. PIKAS Cash no es efectivo físico de caja. La primera recarga verificada abre el monedero si aún no existe; la creación independiente sigue requiriendo `manage`. Reembolsos/reversiones: Phase 5C. POV sandbox: sin operaciones financieras.
+Revertir una recarga verificada (Phase 5C.2, local): solo administración de cuenta y escolar, por el monto exacto original, una vez; puede dejar el saldo negativo. Ajuste administrativo (Phase 5C.3, local): administración de cuenta (su cuenta), escolar (su escuela) y de cafetería (solo estudiantes conectados a su cafetería); supervisor POS, cajero, Plataforma y POV sandbox sin autoridad; explicación obligatoria y sin aprobación obligatoria en Beta. Recargar no es ajustar. PIKAS Cash no es efectivo físico de caja. La primera recarga verificada abre el monedero si aún no existe; la creación independiente sigue requiriendo `manage`. Reembolsos/reversiones: Phase 5C. POV sandbox: sin operaciones financieras.
 
 ## Reembolsos de compras (Phase 5C.1, local)
 

@@ -46,3 +46,17 @@ describe('capability-aware wallet surfaces',()=>{
   expect(html).not.toMatch(/Recarga|recarga verificada|Monto de recarga/);
  });
 });
+describe('administrative adjustment surfaces (5C.3)',()=>{
+ it('cafeteria lookup offers adjustment only with the server capability',()=>{
+  for(const [caps,visible] of [[['cafeteria:wallets:read','cafeteria:wallets:administrative_adjust'],true],[['cafeteria:wallets:read'],false]] as const){
+   const read=cafeteriaRead();read.scope.capabilities=[...caps];read.scope.tenant_kind='customer';
+   const html=renderToStaticMarkup(<ConnectedCafeteriaProvider data={read}><ConnectedCafeteriaPages section="schools" data={read}/></ConnectedCafeteriaProvider>);
+   expect(html.includes('Los ajustes administrativos son solo para correcciones excepcionales')).toBe(visible);
+  }
+ });
+ it('wallet page passes adjust authority to the wallet',async()=>{
+  mocks.wallet.mockResolvedValue({school_id:id,read:true,replenish:true,reverse:true,adjust:true});
+  renderToStaticMarkup(await WalletPage({params:Promise.resolve({studentId:id}),searchParams:Promise.resolve({school:id})}));
+  expect(mocks.walletProps[0]).toMatchObject({canAdjust:true,canReverse:true});
+ });
+});

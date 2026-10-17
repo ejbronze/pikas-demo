@@ -24,15 +24,15 @@ insert into student_enrollments(account_id,school_id,student_id,starts_on) value
 -- Policy shape
 select ok(not has_function_privilege('anon','school_wallet_access(uuid)','execute') and not has_function_privilege('anon','cafeteria_wallet_read(uuid,text)','execute'),'Anonymous cannot use new wallet reads');
 select ok(not has_function_privilege('service_role','cafeteria_wallet_read(uuid,text)','execute'),'No service-role wallet bypass');
-select is((select array_agg(capability order by capability) from pikas_private.role_capabilities where scope_kind='account' and role_code='account_admin' and capability like '%wallet%'),array['school:wallets:read','school:wallets:replenish','school:wallets:reverse_replenishment'],'Account Admin: read + replenish (+ 5C.2 reversal) only');
-select is((select array_agg(capability order by capability) from pikas_private.role_capabilities where role_code='school_admin' and capability like '%wallet%'),array['school:wallets:adjust','school:wallets:manage','school:wallets:read','school:wallets:replenish','school:wallets:reverse_replenishment'],'School Admin authority unchanged (+ 5C.2 reversal)');
-select is((select array_agg(capability order by capability) from pikas_private.role_capabilities where role_code='cafeteria_admin' and capability like '%wallet%'),array['cafeteria:wallets:read'],'Cafeteria Admin: scoped read only');
+select is((select array_agg(capability order by capability) from pikas_private.role_capabilities where scope_kind='account' and role_code='account_admin' and capability like '%wallet%'),array['school:wallets:administrative_adjust','school:wallets:read','school:wallets:replenish','school:wallets:reverse_replenishment'],'Account Admin: read + replenish (+ 5C.2 reversal, 5C.3 administrative adjustment) only');
+select is((select array_agg(capability order by capability) from pikas_private.role_capabilities where role_code='school_admin' and capability like '%wallet%'),array['school:wallets:adjust','school:wallets:administrative_adjust','school:wallets:manage','school:wallets:read','school:wallets:replenish','school:wallets:reverse_replenishment'],'School Admin authority unchanged (+ 5C.2 reversal, 5C.3 administrative adjustment)');
+select is((select array_agg(capability order by capability) from pikas_private.role_capabilities where role_code='cafeteria_admin' and capability like '%wallet%'),array['cafeteria:wallets:administrative_adjust','cafeteria:wallets:read'],'Cafeteria Admin: scoped read (+ 5C.3 scoped administrative adjustment) only');
 select is((select count(*) from pikas_private.role_capabilities where role_code in ('pos_operator','pos_cashier','pos_supervisor') and capability like '%wallet%'),0::bigint,'POS roles have no administrative wallet capability');
 select is((select count(*) from pikas_private.platform_role_capabilities where capability like '%wallet%'),0::bigint,'Platform has no standing wallet capability');
 
 -- Account Admin (initial-customer shape)
 select pg_temp.as_user('00000000-0000-0000-0000-000000002001');
-select is(school_wallet_access('00000000-0000-0000-0000-000000000011'),jsonb_build_object('school_id','00000000-0000-0000-0000-000000000011','read',true,'replenish',true,'reverse',true),'Account Admin wallet access derived server-side');
+select is(school_wallet_access('00000000-0000-0000-0000-000000000011'),jsonb_build_object('school_id','00000000-0000-0000-0000-000000000011','read',true,'replenish',true,'reverse',true,'adjust',true),'Account Admin wallet access derived server-side');
 select is(pg_temp.balance(),'0','Account Admin reads balance');
 select is(pg_temp.credit(2500,'5bf00000-0000-4000-8000-0000000000a1')->>'balance_after_minor','2500','Account Admin manual_verified replenish');
 select is(pg_temp.credit(2500,'5bf00000-0000-4000-8000-0000000000a1')->>'balance_after_minor','2500','Exact retry returns original result');

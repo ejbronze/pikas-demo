@@ -17,3 +17,10 @@ describe('cafeteria wallet read boundary',()=>{
  it('maps database denial without detail',async()=>{mocks.rpc.mockResolvedValue({error:{code:'42501',message:'private-details'}});const r=await POST(req());expect(r.status).toBe(403);expect(await r.text()).not.toContain('private-details');});
  it('rejects results carrying history or another cafeteria',async()=>{mocks.rpc.mockResolvedValue({data:{cafeteria_id:id,students:[{student_id:id,display_name:'Sol',wallet_status:'active',balance_minor:'1',reference:'x'}]},error:null});expect((await POST(req())).status).toBe(502);mocks.rpc.mockResolvedValue({data:{cafeteria_id:'5bf00000-0000-4000-8000-000000000002',students:[]},error:null});expect((await POST(req())).status).toBe(502);});
 });
+describe('cafeteria scoped adjustment',()=>{
+ const adjust={operation:'adjust',cafeteria_id:id,student_id:id,amount_minor:'2500',reason:'administrative_correction',explanation:'Corrección documentada',request_key:id};
+ const reqA=(b:unknown,key=id)=>new Request('http://localhost/api/cafeteria/wallet',{method:'POST',headers:{origin:'http://localhost','Content-Type':'application/json','Idempotency-Key':key},body:JSON.stringify(b)});
+ it('forwards to the scoped RPC and validates the result',async()=>{mocks.rpc.mockResolvedValue({data:{request_key:id,adjustment_id:id,student_id:id,amount_minor:'2500',balance_before_minor:'0',balance_after_minor:'2500',reason:'administrative_correction',actor_role:'cafeteria_admin',posted_at:'t',cafeteria_id:id},error:null});
+  expect((await POST(reqA(adjust))).status).toBe(200);expect(mocks.rpc).toHaveBeenCalledWith('cafeteria_wallet_adjust',{p_cafeteria_id:id,p_student_id:id,p_amount_minor:'2500',p_reason:'administrative_correction',p_explanation:'Corrección documentada',p_request_key:id});});
+ it('maps scope denial and requires key/explanation',async()=>{mocks.rpc.mockResolvedValue({error:{code:'42501',message:'cafeteria_authority_required'}});expect((await POST(reqA(adjust))).status).toBe(403);expect((await POST(reqA(adjust,'5bf00000-0000-4000-8000-000000000009'))).status).toBe(400);expect((await POST(reqA({...adjust,explanation:''}))).status).toBe(400);});
+});
