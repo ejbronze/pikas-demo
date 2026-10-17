@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## 2026-10-18 — Phase 5C.1: reembolsos controlados (local)
+
+- Reembolsos por artículo desde el POS: varios eventos por compra sin exceder cantidad ni total; recibo original inmutable. Efectivo sale de la caja abierta actual (nunca se reescribe una caja cerrada); PIKAS Cash vuelve al monedero con asiento de ledger enlazado.
+- Cajero sin autorización solo dentro de 5 minutos y de sus límites diarios (cantidad y monto, configurables por administrador de cafetería o supervisor POS). Si no, autorización del supervisor o administrador en el mismo dispositivo, sin cerrar la sesión del cajero; se auditan iniciador, aprobador y motivo del override.
+- Motivo obligatorio ("Otro" exige explicación). Migración aditiva `202610180001_controlled_purchase_refunds.sql`; [modelo, autoridad y validación](PHASE_5C1_REFUNDS.md).
+- Phase 5C no está completa: 5C.2 (reversión de recargas) y 5C.3 (ajustes, aprobaciones, notificaciones) diferidos. Sin acceso productivo, push ni despliegue.
+
 ## 2026-10-17 — Cierre de aceptación productiva Phase 5B
 
 - **PHASE 5B — COMPLETE / PRODUCTION ACCEPTED**. Source `e05cf5f27f17733ea26a13bf089ce0ccb654c8b5`, migraciones alineadas hasta `202610170001_beta_wallet_authority.sql`. [Evidencia canónica](PRODUCT_BASELINE.md).

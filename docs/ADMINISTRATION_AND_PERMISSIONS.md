@@ -14,6 +14,17 @@ Definida por el propietario durante la aceptación productiva de Phase 5B (migra
 
 Recargar no es ajustar. PIKAS Cash no es efectivo físico de caja. La primera recarga verificada abre el monedero si aún no existe; la creación independiente sigue requiriendo `manage`. Reembolsos/reversiones: Phase 5C. POV sandbox: sin operaciones financieras.
 
+## Reembolsos de compras (Phase 5C.1, local)
+
+| Rol | Reembolsos |
+| --- | --- |
+| Administrador de cafetería | Autoriza reembolsos en el POS de su cafetería; configura límites diarios de cajeros. No opera cajas. |
+| Supervisor POS | Reembolsa directamente desde su caja abierta; autoriza reembolsos de cajeros; configura límites. |
+| Cajero | Sin autorización solo dentro de 5 minutos desde la venta y dentro de sus límites diarios (cantidad y monto); si no, requiere autorización en el mismo dispositivo. |
+| Plataforma / POV sandbox | Sin autoridad de reembolso. |
+
+Detalle en [Phase 5C.1](PHASE_5C1_REFUNDS.md).
+
 ## Referencia histórica — milestone 0.6.1
 
 La autorización productiva corresponde a Auth/RLS y funciones de servidor. El demo comprueba roles y políticas, pero localStorage y las credenciales públicas no son seguridad productiva.

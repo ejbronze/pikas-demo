@@ -29,6 +29,12 @@ La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo com
 
 [Modelo financiero, autoridad, contratos y validación](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Sin reembolsos/reversiones, pasarela de pago ni reportes.
 
+## Phase 5C.1 — Reembolsos controlados (local, no desplegado)
+
+- Pestaña POS "Reembolsos": búsqueda por recibo, estado acumulado, modal por artículo/cantidad con monto calculado, motivo y confirmación.
+- Efectivo desde la caja abierta actual; PIKAS Cash al monedero. Autorización de supervisor/administrador en el mismo dispositivo cuando el cajero excede 5 minutos o sus límites diarios.
+- Límites diarios de cajero en Configuración POS. [Detalle](PHASE_5C1_REFUNDS.md). Sin reversión de recargas, ajustes ni notificaciones (5C.2/5C.3).
+
 ## Referencia histórica — milestone 0.6.1
 
 La tabla siguiente conserva el alcance del demo de ese milestone; sus estados pendientes no describen la producción actual.

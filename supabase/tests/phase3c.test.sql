@@ -55,7 +55,8 @@ select is((select count(*) from public.cafeteria_refund_policies),4::bigint,'Exi
 select is((select count(*) from public.cafeteria_refund_policies where supervisor_override_enabled and daily_independent_refund_allowance_minor=0 and currency_code='DOP' and version=1),4::bigint,'Policies have locked safe defaults');
 select is((select count(*) from public.refunds),0::bigint,'No fabricated refunds');
 select ok(to_regclass('public.cafeteria_refund_counters') is null,'No cafeteria-wide refund counter');
-select ok(to_regclass('public.refund_items') is null,'No item refund allocation');
+-- Phase 5C.1 (202610180001) adds item-level refund allocation; no item rows exist before any refund.
+select is((select count(*) from public.refund_items),0::bigint,'No item refund allocation before refunds');
 select pg_temp.login('2002');
 set local role authenticated;
 select lives_ok($$select public.post_manual_wallet_replenishment('00000000-0000-0000-0000-000000007001',20000,'phase3c-wallet-funding-0001','synthetic funding','local evidence',null)$$,'Synthetic wallet funding through frozen RPC');
@@ -155,8 +156,8 @@ select is((select sum(amount_minor)::bigint from public.wallet_ledger_entries),1
 
 select ok(not exists(select 1 from pikas_private.role_capabilities where capability like '%refund%' and role_code in ('school_admin','account_admin','pos_operator','backoffice')),'No implied administrative or reserved authority');
 select is((select count(*) from pikas_private.role_capabilities where role_code='pos_cashier' and capability like '%refund%'),2::bigint,'Cashier create and own-read only');
-select is((select count(*) from pikas_private.role_capabilities where role_code='pos_supervisor' and capability like '%refund%'),5::bigint,'Supervisor explicit operational capability set');
-select is((select count(*) from pikas_private.role_capabilities where role_code='cafeteria_admin' and capability like '%refund%'),2::bigint,'Admin read and configure only');
+select is((select count(*) from pikas_private.role_capabilities where role_code='pos_supervisor' and capability like '%refund%'),6::bigint,'Supervisor explicit operational capability set (5C.1 adds limit configuration)');
+select is((select count(*) from pikas_private.role_capabilities where role_code='cafeteria_admin' and capability like '%refund%'),4::bigint,'Admin read, configure and 5C.1 authorize/limits only');
 select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pikas_private' and p.proname like '%refund%' and p.proname<>'can_read_refund' and has_function_privilege('authenticated',p.oid,'EXECUTE')),'Private refund helpers are not callable');
 select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pikas_private' and p.prosecdef and not ('search_path=""'=any(p.proconfig))),'Definers have empty search paths');
 select ok(not exists(select 1 from pg_policies where schemaname='public' and cmd<>'SELECT'),'No write RLS policies added');

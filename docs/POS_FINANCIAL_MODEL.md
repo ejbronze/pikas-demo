@@ -1,5 +1,7 @@
 # POS y control financiero — milestone 0.6.1
 
+> **Vigente (Phase 5C.1, local):** los reembolsos conectados son por artículo, con límites diarios de cajero (cantidad y monto), ventana de 5 minutos y autorización de supervisor/administrador en el mismo dispositivo. Ver [Phase 5C.1](PHASE_5C1_REFUNDS.md). Lo siguiente describe el demo histórico.
+
 > **Futuro 0.7.0:** autoridad diaria de reembolso para cajeros. La futura política deberá permitir configurar un límite diario, exigir override de supervisor cuando se exceda, mantener el cajero autenticado y auditar tanto `processed by` como `authorized by`. La autoridad deberá imponerse server-side/authoritatively con semántica explícita de día de negocio. No está implementado en 0.6.4.
 
 ## Alcance y fuente de verdad

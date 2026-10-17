@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { posAccessContextSchema } from "./access-context";
+import { refundRequestSchema } from "./refunds";
 
 const maxAmount = 9223372036854775807n;
 export const minorSchema = z.string().regex(/^(0|[1-9][0-9]{0,18})$/).pipe(z.string().refine((s) => BigInt(s) <= maxAmount));
@@ -55,6 +56,8 @@ export const operationSchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("search"), query: z.string().trim().min(2).max(80).regex(/^[^%_\\]+$/) }).strict(),
   z.object({ operation: z.literal("customer"), customer_id: uuid }).strict(),
   z.object({ operation: z.literal("checkout"), request: checkoutSchema }).strict(),
+  z.object({ operation: z.literal("refund_lookup"), purchase_number: z.string().regex(/^[1-9][0-9]{0,17}$/) }).strict(),
+  z.object({ operation: z.literal("refund"), request: refundRequestSchema }).strict(),
 ]);
 export type Bootstrap = z.infer<typeof bootstrapSchema>;
 export type Customer = z.infer<typeof customerSchema>;

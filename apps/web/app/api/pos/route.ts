@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolvePosAccess } from "@/lib/auth/pos-access";
 import { bootstrapSchema, catalogSchema, checkoutSchema, customerSchema, operationSchema, purchaseContextSchema,
   receiptSchema, registerSchema, sessionSchema, registerResultSchema } from "../../../lib/pos/contracts";
+import { definiteRefundRejections, overrideReasonSchema, refundResultSchema, refundabilitySchema } from "../../../lib/pos/refunds";
 
 type Client = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 class PosFailure extends Error {
@@ -12,7 +13,7 @@ const rejected = new Set(["PRODUCT_STALE", "TOTAL_STALE", "PRODUCT_UNAVAILABLE",
   "TRANSACTION_LIMIT_EXCEEDED", "DAILY_LIMIT_EXCEEDED", "INSUFFICIENT_BALANCE", "WALLET_FROZEN",
   "register_already_has_open_session", "operator_already_has_open_session", "register_or_operator_already_has_open_session",
   "stale_register_session_version", "register_session_already_closed", "active_register_required", "enabled_cafeteria_currency_required",
-  "CASH_INSUFFICIENT", "SESSION_CLOSED", "SESSION_CURRENCY_MISMATCH", "REGISTER_INACTIVE", "ASSIGNMENT_INACTIVE", "PURCHASE_COUNTER_MISSING"]);
+  "CASH_INSUFFICIENT", "SESSION_CLOSED", "SESSION_CURRENCY_MISMATCH", "REGISTER_INACTIVE", "ASSIGNMENT_INACTIVE", "PURCHASE_COUNTER_MISSING", "PURCHASE_NOT_FOUND"]);
 async function rpc<T>(client: Client, name: string, args: Record<string, unknown> | undefined, schema: z.ZodType<T>): Promise<T> {
   const { data, error } = await client.rpc(name, args);
   if (error) {
@@ -74,6 +75,29 @@ export async function POST(request: Request) {
       if (op.operation !== "bootstrap") throw new PosFailure(409, "register_not_ready");
       return json({ result: bootstrapSchema.parse({ context: access.context, registers: scopedRegisters, session: null, catalog: null,
         blocked: "No hay una caja abierta y autorizada. Abre una caja asignada desde Caja para continuar." }) });
+    }
+    if (op.operation === "refund_lookup" || op.operation === "refund") {
+      // Sandbox POV keeps its financial exclusion; refunds run only under a real operator's open session.
+      if (access.context.pov) throw new PosFailure(403, "pos_authority_required");
+      if (op.operation === "refund_lookup") {
+        const result = await rpc(client, "get_purchase_item_refundability", { p_register_session_id: session.session_id,
+          p_purchase_number: op.purchase_number }, refundabilitySchema);
+        return json({ result });
+      }
+      if (request.headers.get("Idempotency-Key") !== op.request.request_key) return json({ error: "invalid_idempotency_key" }, 400);
+      const { data, error } = await client.rpc("create_purchase_item_refund", { p_register_session_id: session.session_id,
+        p_purchase_id: op.request.purchase_id, p_items: op.request.items, p_reason: op.request.reason, p_notes: op.request.notes || null,
+        p_request_key: op.request.request_key, p_approval_id: op.request.approval_id });
+      if (error) {
+        if (error.message === "REFUND_APPROVAL_REQUIRED") return json({ error: "REFUND_APPROVAL_REQUIRED", definite: true,
+          override_reasons: String(error.details ?? "").split(",").filter((r) => overrideReasonSchema.safeParse(r).success) }, 409);
+        if (definiteRefundRejections.has(error.message)) return json({ error: error.message, definite: true }, 409);
+        if (error.code === "42501") return json({ error: "pos_authority_required", definite: true }, 403);
+        throw new PosFailure(502, "pos_operation_unavailable");
+      }
+      const result = refundResultSchema.safeParse(data);
+      if (!result.success || result.data.purchase_id !== op.request.purchase_id || result.data.approval_id !== op.request.approval_id) throw new PosFailure(502, "invalid_pos_response");
+      return json({ result: result.data });
     }
     if (op.operation === "search") {
       const customers = await rpc(client, "cafeteria_customer_projection", { p_cafeteria_id: session.cafeteria_id, p_query: op.query }, z.array(customerSchema));

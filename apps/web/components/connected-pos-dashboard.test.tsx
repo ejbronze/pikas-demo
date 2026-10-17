@@ -40,7 +40,7 @@ describe("connected POS access boundary", () => {
   it("blocks sales until readiness is loaded and never mounts demo financial actions", async () => {
     const html = renderToStaticMarkup(await PosPage());
     const buttons = [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)];
-    expect(buttons.length).toBe(8);
+    expect(buttons.length).toBe(9); // 5C.1 adds the Reembolsos tab, disabled under sandbox POV.
     for (const [, attributes, label] of buttons) {
       if (!["Salir", "Verificar caja y catálogo", "Venta", "Caja"].includes(label)) expect(attributes).toContain("disabled");
     }

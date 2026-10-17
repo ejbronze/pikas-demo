@@ -8,6 +8,7 @@ import { formatMinor, parseCash, paymentIssue, type Receipt } from "../lib/pos/c
 import { formatReceiptTimestamp, useCatalogView } from "../lib/pos/presentation";
 import { BrandLogo } from "./brand-logo";
 import { ProductImage } from "./product-image";
+import { PosRefunds } from "./pos-refunds";
 
 export function PosAccessBanner({ context }: { context: PosAccessContext }) {
   if (!context.pov) return null;
@@ -35,7 +36,7 @@ export function ConnectedPosDashboard({ context, initialWorkspace = "sale" }: { 
 // Presentation retains the existing POS classes, steps and controls. All connected actions use the
 // authenticated adapter; it never imports the demo provider, financial helpers, history or printing.
 export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { sale: ConnectedSale; state: SaleState; initialWorkspace?: "sale" | "register" }) {
-  const [workspace, setWorkspace] = useState(initialWorkspace);
+  const [workspace, setWorkspace] = useState<"sale" | "register" | "refunds">(initialWorkspace);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todas");
@@ -72,7 +73,7 @@ export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { s
       </div>
       <div className="mx-auto max-w-[1440px] space-y-4 p-3 md:p-5">
         <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Espacios de trabajo POS">
-          <div className="pos-workspace-tabs"><button className={workspace === "sale" ? "pos-workspace-tab pos-workspace-tab-active" : "pos-workspace-tab"} aria-current={workspace === "sale" ? "page" : undefined} onClick={() => setWorkspace("sale")}>Venta</button><button className="pos-workspace-tab" disabled>Transacciones</button><button className={workspace === "register" ? "pos-workspace-tab pos-workspace-tab-active" : "pos-workspace-tab"} aria-current={workspace === "register" ? "page" : undefined} onClick={() => setWorkspace("register")}>Caja</button></div>
+          <div className="pos-workspace-tabs"><button className={workspace === "sale" ? "pos-workspace-tab pos-workspace-tab-active" : "pos-workspace-tab"} aria-current={workspace === "sale" ? "page" : undefined} onClick={() => setWorkspace("sale")}>Venta</button><button className="pos-workspace-tab" disabled>Transacciones</button><button className={workspace === "refunds" ? "pos-workspace-tab pos-workspace-tab-active" : "pos-workspace-tab"} aria-current={workspace === "refunds" ? "page" : undefined} disabled={Boolean(context.pov)} onClick={() => setWorkspace("refunds")}>Reembolsos</button><button className={workspace === "register" ? "pos-workspace-tab pos-workspace-tab-active" : "pos-workspace-tab"} aria-current={workspace === "register" ? "page" : undefined} onClick={() => setWorkspace("register")}>Caja</button></div>
           <button className="btn pos-customer-search-action" disabled={!ready || frozen} onClick={() => { setWorkspace("sale"); sale.identify(); }}>Buscar usuario PIKAS</button>
         </nav>
         {state.notice ? <p role="alert" className="rounded-xl bg-amber-100 p-4">{state.notice}</p> : null}
@@ -80,6 +81,7 @@ export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { s
         {!state.bootstrap ? <p role="status">{state.busy ? "Verificando caja y catálogo…" : "Caja y catálogo sin confirmar."}</p> : state.bootstrap.blocked ? <p role="status" className="rounded-xl bg-amber-50 p-4">{state.bootstrap.blocked}</p> : null}
         {(!state.bootstrap || state.bootstrap.blocked) && !frozen ? <button className="btn-secondary" onClick={() => void sale.refresh()}>Verificar caja y catálogo</button> : null}
         {workspace === "register" ? <ConnectedRegister sale={sale} state={state} /> : null}
+        {workspace === "refunds" ? session && !context.pov ? <PosRefunds actorId={context.actor.person_id} currency={session.currency_code} /> : <p role="status" className="card p-6">Abre una caja para registrar reembolsos.</p> : null}
         <div hidden={workspace !== "sale"}>
         {state.pending && !state.receipt && !state.recoveryBlocked ? <section className="card space-y-3 p-6"><h1 className="text-2xl font-black">Confirmar venta pendiente</h1><p>Reintentar conserva la misma clave y el mismo cobro. No inicies otra venta hasta conocer el resultado.</p><button className="btn" disabled={state.busy} onClick={() => void sale.retry()}>Reintentar misma venta</button></section> : null}
         {!state.pending && !state.recoveryBlocked && state.phase === "entry" ? <section className="card p-6 md:p-10"><span className="label">Paso 1 · Cliente</span><h1 className="mt-3 text-3xl font-black">¿A quién atendemos?</h1><div className="mt-8 grid gap-4 sm:grid-cols-2"><button className="btn min-h-28 text-xl" disabled={!ready || frozen} onClick={sale.identify}>Usuario PIKAS</button><button className="btn-secondary min-h-28 text-xl" disabled={!ready || frozen} onClick={sale.anonymous}>No Usuario</button></div></section> : null}
