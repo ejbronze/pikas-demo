@@ -1,14 +1,21 @@
 # PIKAS
 
-## Estado actual — Phase 5C.1
+## Estado actual — Phase 5C.2
+
+**PHASE 5C.2 — COMPLETE / PRODUCTION ACCEPTED** (reversión de recargas). Source
+`9f228dc97de268c01d45290fa8adeb488ef48b8e`, migración `202610190001_replenishment_reversals.sql`.
+Reversión controlada de la recarga de aceptación Phase 5B (RD$25.00): original intacta y marcada
+"Revertida", reversión enlazada de −RD$25.00, saldo RD$0.00. [Reglas y evidencia](docs/PHASE_5C2_REPLENISHMENT_REVERSALS.md).
+Phase 5C no está completa: 5C.3 (ajustes, reglas de aprobación y notificaciones) sigue diferido.
+
+## Línea base anterior — Phase 5C.1
 
 **PHASE 5C.1 — COMPLETE / PRODUCTION ACCEPTED** (reembolsos controlados de compras). Source
 `f2433884c3eb92b0ba85aa3ffa064776f74c6a85`, migraciones hasta
 `202610180002_refine_refund_limits_cash_shortfall.sql`. Reembolso controlado en efectivo de RD$25.00
 sobre el recibo #2 en BETA-01: recibo intacto, evento enlazado, estado acumulado persistente y efectivo
-esperado de vuelta a RD$3,000.00. [Reglas y evidencia](docs/PHASE_5C1_REFUNDS.md). Phase 5C no está
-completa: 5C.2 (reversión de recargas) y 5C.3 (ajustes, reglas de aprobación y notificaciones) siguen
-diferidos.
+esperado de vuelta a RD$3,000.00. [Reglas y evidencia](docs/PHASE_5C1_REFUNDS.md). En ese checkpoint 5C.2 y
+5C.3 aún estaban diferidos.
 
 ## Línea base anterior — Phase 5B
 

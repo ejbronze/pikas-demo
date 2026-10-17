@@ -1,5 +1,9 @@
 # Línea base del producto PIKAS
 
+## Phase 5C.2 — aceptación de producción
+
+**PHASE 5C.2 — COMPLETE / PRODUCTION ACCEPTED** y congelado como línea base Beta de reversión de recargas. Source `9f228dc97de268c01d45290fa8adeb488ef48b8e`; migración `202610190001_replenishment_reversals.sql`. Reglas finales y evidencia (reversión de la recarga de aceptación Phase 5B, saldo RD$0.00, original intacta) en [Phase 5C.2](PHASE_5C2_REPLENISHMENT_REVERSALS.md). 5C.3 diferido.
+
 ## Phase 5C.1 — aceptación de producción
 
 **PHASE 5C.1 — COMPLETE / PRODUCTION ACCEPTED** y congelado como línea base Beta de reembolsos de compras. Source `f2433884c3eb92b0ba85aa3ffa064776f74c6a85`; migraciones `202610180001` y `202610180002`. Reglas finales y evidencia de aceptación (recibo #2, reembolso #1 de RD$25.00 en BETA-01, efectivo esperado de vuelta a RD$3,000.00, sin reescribir cajas históricas) en [Phase 5C.1](PHASE_5C1_REFUNDS.md). 5C.2 y 5C.3 diferidos; reembolsos de crédito de personal diferidos. Auditoría UX/UI transversal registrada en el [roadmap](MVP.md) antes de Phase 6.

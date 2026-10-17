@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Cierre de aceptación productiva Phase 5C.2
+
+- **PHASE 5C.2 — COMPLETE / PRODUCTION ACCEPTED**, congelado. Source `9f228dc97de268c01d45290fa8adeb488ef48b8e`; migración `202610190001_replenishment_reversals.sql`. [Evidencia y reglas finales](PHASE_5C2_REPLENISHMENT_REVERSALS.md).
+- Una única reversión controlada de la recarga de aceptación Phase 5B (RD$25.00, `ACEPTACION-5B`): original intacta y marcada "Revertida", reversión enlazada con actor y motivo, saldo RD$0.00. Saldo negativo no reproducido en producción (cubierto localmente).
+- Phase 5C no completa: 5C.3 diferido. Auditoría UX/UI ampliada con nuevas observaciones en el [roadmap](MVP.md). Cierre exclusivamente documental; sin push ni despliegue.
+
 ## Phase 5C.2: reversión de recargas (local)
 
 - Administración de cuenta y escolar pueden revertir una recarga verificada errónea: nuevo evento negativo inmutable enlazado, por el monto exacto original, una sola vez; la recarga original no cambia y ambos movimientos quedan visibles.

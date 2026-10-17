@@ -10,11 +10,11 @@ El alcance probado cubre onboarding de cliente nuevo, organización, activación
 
 1. **5.1 Transaction & Register History** — implementado y aceptado en producción con un seguimiento documentado en [Phase 5A](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md), junto con la base de conciliación de cierre de 5.4.
 2. **5.2 Wallet / PIKAS Cash Replenishments** — completo y aceptado en producción en [Phase 5B](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md) (2026-10-17), con la política Beta de autoridad PIKAS Cash.
-3. **5.3 Refunds** — 5C.1 reembolsos controlados de compras completo y aceptado en producción ([Phase 5C.1](PHASE_5C1_REFUNDS.md)); 5C.2 reversión de recargas implementada localmente ([Phase 5C.2](PHASE_5C2_REPLENISHMENT_REVERSALS.md)); 5C.3 ajustes/aprobaciones/notificaciones diferido.
+3. **5.3 Refunds** — 5C.1 reembolsos controlados de compras completo y aceptado en producción ([Phase 5C.1](PHASE_5C1_REFUNDS.md)); 5C.2 reversión de recargas completo y aceptado en producción ([Phase 5C.2](PHASE_5C2_REPLENISHMENT_REVERSALS.md)); 5C.3 ajustes/aprobaciones/notificaciones diferido.
 4. **5.4 Reporting & Reconciliation**
 5. **5.5 Platform Analytics**
 
-Phase 5A es el único milestone implementado en este trabajo; la aceptación productiva Phase 5A pasó con un único seguimiento de re-verificación POS pendiente por acceso al cajero ficticio (ver la línea base canónica). Phase 5B (5.2) está completo y aceptado en producción. Phase 5C.1 (reembolsos de compras) está completo y aceptado en producción; Phase 5C.2 (reversión de recargas) está implementado localmente, pendiente de checkpoint productivo; Phase 5C no está completa (5C.3 diferido). Phase 5 no está completa. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
+Phase 5A es el único milestone implementado en este trabajo; la aceptación productiva Phase 5A pasó con un único seguimiento de re-verificación POS pendiente por acceso al cajero ficticio (ver la línea base canónica). Phase 5B (5.2) está completo y aceptado en producción. Phase 5C.1 (reembolsos de compras) está completo y aceptado en producción; Phase 5C.2 (reversión de recargas) está completo y aceptado en producción; Phase 5C no está completa (5C.3 diferido). Phase 5 no está completa. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
 
 ## Después de Phase 5
 
@@ -30,6 +30,30 @@ Observaciones conocidas a conservar:
 - La pantalla de sesión finalizada / recuperación de autenticación carece de la marca PIKAS, jerarquía visual y acciones pulidas.
 
 Alcance: claridad de tareas, jerarquía de acciones, etapas del flujo, retroalimentación, claridad financiera, terminología, estados de error/recuperación, consistencia, eficiencia, comportamiento responsive/táctil, accesibilidad, adecuación por rol y pulido visual. Los hallazgos se priorizan como usabilidad/seguridad, fricción de flujo, pulido visual o mejora futura antes de implementar cambios.
+
+#### Observaciones adicionales (cierre de Phase 5C.2)
+
+Candidatas para el análisis; no son requisitos de implementación ni autorizan rediseño.
+
+- **Profundidad de navegación:** tareas importantes y frecuentes requieren demasiados clics y rutas anidadas. Preferir navegación superficial y orientada a tareas; el usuario no debe entender la jerarquía organizacional interna para encontrar una acción común. Los paneles por rol deberían funcionar cada vez más como lanzadores de tareas comunes.
+- **Acciones rápidas** (según rol y autorización): Nueva venta, Reembolsos, Recargar PIKAS Cash, Movimientos, Cajas, Cerrar caja, Productos, Personal, Reportes.
+- **Modales y etapas del flujo:** evaluar experiencias modales contextuales para flujos transaccionales cortos (cobro/pago, reembolso, recarga, reversión) que guíen paso a paso y preserven el contexto. No forzar todos los flujos en modales; usarlos donde reduzcan cambios de contexto y carga cognitiva.
+- **Cobro POS:** la acción de pago en efectivo no es suficientemente visible. Evaluar un modal de pago enfocado entre la confirmación del pedido y la finalización: total → método de pago → efectivo recibido → cambio → confirmación final. La acción de compromiso financiero final debe ser inequívoca.
+- **Lenguaje visual financiero** consistente en todo PIKAS: dinero positivo/aditivo en verde; negativo/deductivo en rojo; saldos actuales neutros (navy) salvo que el estado sea negativo; saldos negativos en rojo. No depender solo del color: conservar +/−, etiquetas, íconos u otras señales para accesibilidad. Ejemplos: +RD$25.00 Recarga verificada (positivo); −RD$25.00 Reversión de recarga (negativo); −RD$50.00 Reembolso (negativo); RD$425.00 Saldo actual (neutro); −RD$75.00 Saldo actual (negativo).
+- **Affordance de acciones:** acciones importantes a veces quedan ocultas. Auditar la jerarquía primaria, secundaria, terciaria y correctiva/peligrosa; las acciones primarias deben reconocerse de inmediato como clicables; evitar esconder acciones comunes en tarjetas o páginas anidadas.
+- **Experiencia de caja:** mostrar de forma prominente el fondo inicial, ventas en efectivo, reembolsos en efectivo, efectivo esperado y estado actual de caja/sesión. Cerrar la caja no debe ser el único propósito visualmente dominante de la pantalla de caja abierta.
+- **Descubrimiento de reembolsos:** evaluar acceso desde transacciones recientes y/o paneles por rol, en lugar de requerir primero el número de recibo o conocer la ruta.
+- **Sesión / recuperación:** la pantalla de sesión finalizada es visualmente plana y carece de marca PIKAS, jerarquía y acciones pulidas.
+
+#### Análisis de recorridos (click-path)
+
+Para flujos de alta frecuencia, medir: interacciones/clics actuales, número de páginas/contextos de navegación, cambios de contexto innecesarios, interacción objetivo propuesta y recorrido simplificado propuesto. Incluir al menos: realizar una venta, cobro en efectivo, cobro con PIKAS Cash, reembolsar una transacción reciente, recargar monedero, revertir recarga, buscar estudiante, abrir caja, cerrar caja, revisar la actividad del día, gestionar cajeros/personal y gestionar límites de gasto.
+
+Formato de hallazgos: Tarea · Recorrido actual · Número de interacciones · Número de navegaciones/contextos · Hallazgo · Impacto en el usuario · Severidad · Recomendación · Recorrido objetivo · Esfuerzo estimado.
+
+Prioridad: **P0** riesgo financiero/de usabilidad · **P1** fricción relevante del flujo · **P2** jerarquía visual/pulido · **P3** mejora futura.
+
+La auditoría es **primero análisis**: no autoriza un rediseño amplio autónomo.
 
 
 Phase 6: hardening financiero, autoridad, concurrencia y casos operativos. Phase 7: paquete de operación/preparación del piloto Beta 1. No se implementan en Phase 5A.

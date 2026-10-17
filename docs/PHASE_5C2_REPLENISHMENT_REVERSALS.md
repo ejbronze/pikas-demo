@@ -1,8 +1,30 @@
 # Phase 5C.2 — Replenishment Reversals
 
-Implemented and verified locally on 2026-10-19. Not yet applied to production.
-This is 5C.2 only. Phase 5C is not complete: 5C.3 (administrative adjustments, approval
-rules and related notifications) remains deferred. Phase 5C.1 refunds are unchanged.
+**STATUS: COMPLETE / PRODUCTION ACCEPTED — FROZEN.** Implemented locally on 2026-10-19
+(`9f228dc9`), then accepted in production. This is 5C.2 only. Phase 5C is not complete:
+5C.3 (administrative adjustments, approval rules and related notifications) remains
+deferred. Phase 5C.1 refunds are unchanged. The rules below are the accepted Beta
+baseline. Change them only for a confirmed defect or an approved later milestone, with
+targeted regression.
+
+## Production acceptance
+
+**PHASE 5C.2 PRODUCTION ACCEPTANCE PASS.**
+- Production source: `9f228dc97de268c01d45290fa8adeb488ef48b8e`.
+- Migration: `202610190001_replenishment_reversals.sql`.
+
+Controlled acceptance used Academia Piloto PIKAS · Aceptación 4D.8, Escuela Ficticia
+Beta 4D.8, student Sol Ficticia Beta, and Administrador Ficticio Beta.
+- The target was the existing Phase 5B acceptance replenishment: +RD$25.00 "Recarga
+  verificada", reference `ACEPTACION-5B`, note "Prueba controlada de aceptación Phase 5B".
+- One reversal was executed. The original +RD$25.00 stayed intact with its reference and
+  note, and is now visibly marked "Revertida".
+- A separate −RD$25.00 "Reversión de recarga" links back to it, with Administrador
+  Ficticio Beta as actor and the reason recorded.
+- The balance became RD$0.00 (RD$25 − RD$25). No history was deleted or rewritten, and
+  no additional reversal was performed.
+- Negative-balance behavior was intentionally not reproduced in production. It is
+  covered by the focused database, concurrency and local browser validation below.
 
 ## Semantics
 
