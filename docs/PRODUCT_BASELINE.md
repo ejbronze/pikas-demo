@@ -1,5 +1,9 @@
 # Línea base del producto PIKAS
 
+## Phase 5C.1 — aceptación de producción
+
+**PHASE 5C.1 — COMPLETE / PRODUCTION ACCEPTED** y congelado como línea base Beta de reembolsos de compras. Source `f2433884c3eb92b0ba85aa3ffa064776f74c6a85`; migraciones `202610180001` y `202610180002`. Reglas finales y evidencia de aceptación (recibo #2, reembolso #1 de RD$25.00 en BETA-01, efectivo esperado de vuelta a RD$3,000.00, sin reescribir cajas históricas) en [Phase 5C.1](PHASE_5C1_REFUNDS.md). 5C.2 y 5C.3 diferidos; reembolsos de crédito de personal diferidos. Auditoría UX/UI transversal registrada en el [roadmap](MVP.md) antes de Phase 6.
+
 ## Phase 5B — aceptación de producción (2026-10-17)
 
 **PHASE 5B — COMPLETE / PRODUCTION ACCEPTED.** Source `e05cf5f27f17733ea26a13bf089ce0ccb654c8b5`; migraciones alineadas hasta `202610170001_beta_wallet_authority.sql` (proyecto pikas-pilot).

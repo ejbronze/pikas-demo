@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Cierre de aceptación productiva Phase 5C.1
+
+- **PHASE 5C.1 — COMPLETE / PRODUCTION ACCEPTED**, congelado. Source `f2433884c3eb92b0ba85aa3ffa064776f74c6a85`; migraciones `202610180001_controlled_purchase_refunds.sql` y `202610180002_refine_refund_limits_cash_shortfall.sql`. [Evidencia y reglas finales](PHASE_5C1_REFUNDS.md).
+- Reembolso controlado en efectivo de RD$25.00 del recibo #2 en BETA-01 (sesión nueva; la sesión cerrada de Phase 5A no se tocó): recibo intacto, reembolso enlazado, estado acumulado persistente, efectivo esperado de vuelta a RD$3,000.00. Sin transacciones adicionales.
+- Phase 5C no completa: 5C.2 y 5C.3 diferidos. Auditoría UX/UI transversal registrada como elemento futuro en el [roadmap](MVP.md). Cierre exclusivamente documental; sin push ni despliegue.
+
 ## 2026-10-18 — Phase 5C.1: reembolsos controlados (local)
 
 - Reembolsos por artículo desde el POS: varios eventos por compra sin exceder cantidad ni total; recibo original inmutable. Efectivo sale de la caja abierta actual (nunca se reescribe una caja cerrada); PIKAS Cash vuelve al monedero con asiento de ledger enlazado.

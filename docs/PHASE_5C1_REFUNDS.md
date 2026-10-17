@@ -1,8 +1,33 @@
 # Phase 5C.1 — Controlled Purchase Refunds
 
-Implemented and verified locally on 2026-10-18. Not yet applied to production.
+**STATUS: COMPLETE / PRODUCTION ACCEPTED — FROZEN.** Implemented locally on 2026-10-18
+(`b3b4889f`), corrected by the owner (`f2433884`), then accepted in production.
 This is 5C.1 only. Phase 5C is not complete: 5C.2 (replenishment reversals) and
-5C.3 (administrative wallet adjustments, approvals and notifications) are deferred.
+5C.3 (administrative wallet adjustments, approval rules and related notifications) are
+deferred. The rules below are the accepted Beta baseline. Change them only for a
+confirmed defect or an approved later milestone, with targeted regression.
+
+## Production acceptance
+
+**PHASE 5C.1 PRODUCTION ACCEPTANCE PASS.**
+- Production source: `f2433884c3eb92b0ba85aa3ffa064776f74c6a85`.
+- Migrations: `202610180001_controlled_purchase_refunds.sql` and
+  `202610180002_refine_refund_limits_cash_shortfall.sql`.
+
+Controlled acceptance used the fictional Beta customer: Academia Piloto PIKAS ·
+Aceptación 4D.8, Escuela Ficticia Beta 4D.8, Cafetería Ficticia Beta, Caja Ficticia Beta
+4D.8 / BETA-01, Cajero Ficticio Beta.
+- A new register session was opened normally with RD$3,000.00. The historical Phase 5A
+  closed session was not reopened or modified.
+- Receipt #2: a No Usuario cash sale of 1 × Agua Ficticia Beta 4D.8, RD$25.00.
+- Refund #1: RD$25.00 in cash, through the deployed refund workflow.
+- Receipt #2 stayed intact. Refund #1 is a separate linked event.
+- The receipt showed RD$25.00 refunded and RD$0.00 available; the item showed
+  1 refunded and 0 available. No further refund was offered.
+- The state persisted after leaving and re-entering the flow.
+- Expected cash went back to RD$3,000.00 after the sale and refund. No historical
+  register was rewritten.
+- No second refund or other production transaction was performed.
 
 ## Model
 

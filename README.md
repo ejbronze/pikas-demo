@@ -1,6 +1,16 @@
 # PIKAS
 
-## Estado actual — Phase 5B
+## Estado actual — Phase 5C.1
+
+**PHASE 5C.1 — COMPLETE / PRODUCTION ACCEPTED** (reembolsos controlados de compras). Source
+`f2433884c3eb92b0ba85aa3ffa064776f74c6a85`, migraciones hasta
+`202610180002_refine_refund_limits_cash_shortfall.sql`. Reembolso controlado en efectivo de RD$25.00
+sobre el recibo #2 en BETA-01: recibo intacto, evento enlazado, estado acumulado persistente y efectivo
+esperado de vuelta a RD$3,000.00. [Reglas y evidencia](docs/PHASE_5C1_REFUNDS.md). Phase 5C no está
+completa: 5C.2 (reversión de recargas) y 5C.3 (ajustes, reglas de aprobación y notificaciones) siguen
+diferidos.
+
+## Línea base anterior — Phase 5B
 
 **PHASE 5B — COMPLETE / PRODUCTION ACCEPTED** (2026-10-17). PIKAS Cash operativo en producción
 con source `e05cf5f27f17733ea26a13bf089ce0ccb654c8b5` y migraciones hasta
@@ -8,7 +18,7 @@ con source `e05cf5f27f17733ea26a13bf089ce0ccb654c8b5` y migraciones hasta
 cuenta; una recarga controlada `manual_verified` de RD$25.00 pasó y persistió tras recargar la página,
 con un único movimiento. Política Beta de autoridad PIKAS Cash aceptada
 ([permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), [Phase 5B](docs/PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md)).
-Phase 5C no iniciada; el acceso de soporte de Plataforma autorizado por el cliente sigue diferido.
+En ese checkpoint Phase 5C aún no se había iniciado; el acceso de soporte de Plataforma autorizado por el cliente sigue diferido.
 
 ## Línea base anterior — Phase 5A
 
