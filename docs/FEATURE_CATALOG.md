@@ -29,6 +29,11 @@ La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo com
 
 [Modelo financiero, autoridad, contratos y validación](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Sin reembolsos/reversiones, pasarela de pago ni reportes.
 
+## Phase 5C.2 — Reversión de recargas (local, no desplegado)
+
+- "Revertir recarga" en el historial PIKAS Cash para administración de cuenta/escolar: modal con monto original, referencia, saldo resultante, advertencia de saldo negativo, motivo y confirmación.
+- Recarga original y reversión visibles por separado; una sola reversión por recarga. [Detalle](PHASE_5C2_REPLENISHMENT_REVERSALS.md).
+
 ## Phase 5C.1 — Reembolsos controlados (completo, aceptado en producción)
 
 - Pestaña POS "Reembolsos": búsqueda por recibo, estado acumulado, modal por artículo/cantidad con monto calculado, motivo y confirmación.

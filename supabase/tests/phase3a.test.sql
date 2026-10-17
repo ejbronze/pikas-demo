@@ -4,8 +4,8 @@ set search_path=public,extensions;
 select no_plan();
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),58::bigint,
-  'RLS is enabled on all Phase 1 through Phase 4C public tables');
+  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),60::bigint,
+  'RLS is enabled on all public tables (58 through Phase 4C + 5C.1 refund_items + 5C.2 reversals)');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'No direct authenticated write policies exist');
 select ok(not has_table_privilege('authenticated','public.student_wallets','UPDATE') and
@@ -53,8 +53,9 @@ select throws_ok($$update student_wallets set student_id='00000000-0000-0000-000
   where id='00000000-0000-0000-0000-000000007001'$$,'23514',null,'Wallet student identity is immutable');
 select throws_ok($$update student_wallets set currency_code='USD'
   where id='00000000-0000-0000-0000-000000007001'$$,'23514',null,'Wallet currency is immutable');
-select throws_ok($$update student_wallets set current_balance_minor=-1
-  where id='00000000-0000-0000-0000-000000007001'$$,'23514',null,'Wallet cannot have a negative balance');
+-- Phase 5C.2 (202610190001): negative balances are meaningful state after replenishment reversals;
+-- purchases and adjustments keep their own non-negative guards.
+select ok(not exists(select 1 from pg_constraint where conname='student_wallets_current_balance_minor_check'),'Negative wallet balance representable for 5C.2 reversals');
 
 insert into auth.users(id,aud,role,email)
 values('00000000-0000-0000-0000-000000002013','authenticated','authenticated','wallet-student@example.invalid');

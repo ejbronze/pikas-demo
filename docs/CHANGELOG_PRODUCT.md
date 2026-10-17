@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Phase 5C.2: reversión de recargas (local)
+
+- Administración de cuenta y escolar pueden revertir una recarga verificada errónea: nuevo evento negativo inmutable enlazado, por el monto exacto original, una sola vez; la recarga original no cambia y ambos movimientos quedan visibles.
+- El saldo PIKAS Cash puede quedar negativo; las compras con PIKAS Cash siguen bloqueadas por la regla de saldo suficiente hasta que recargas legítimas lo cubran. Sin impacto en el efectivo de caja. Motivo obligatorio ("Otro" exige explicación).
+- Corrige el desbordamiento del guardia de recarga/ajuste con saldo negativo. Migración aditiva `202610190001_replenishment_reversals.sql`; [detalle](PHASE_5C2_REPLENISHMENT_REVERSALS.md). Phase 5C no completa: 5C.3 diferido. Sin acceso productivo, push ni despliegue.
+
 ## Cierre de aceptación productiva Phase 5C.1
 
 - **PHASE 5C.1 — COMPLETE / PRODUCTION ACCEPTED**, congelado. Source `f2433884c3eb92b0ba85aa3ffa064776f74c6a85`; migraciones `202610180001_controlled_purchase_refunds.sql` y `202610180002_refine_refund_limits_cash_shortfall.sql`. [Evidencia y reglas finales](PHASE_5C1_REFUNDS.md).

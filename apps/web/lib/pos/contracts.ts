@@ -19,11 +19,13 @@ export const catalogSchema = z.object({ cafeteria_id: uuid, status: z.enum(["man
 const restrictionSchema = z.object({ type: z.string(), code: z.string(), label: z.string() });
 export const customerSchema = z.object({ customer_id: uuid, customer_type: z.enum(["student", "staff"]), display_name: z.string(),
   student_code: z.string().nullable(), grade_label: z.string().nullable(), class_label: z.string().nullable(), restrictions: z.array(restrictionSchema) });
+const signedMinor = z.string().regex(/^(0|-?[1-9][0-9]{0,18})$/);
 const limitSchema = z.object({ enabled: z.boolean(), limit_minor: minorSchema.nullable() }).refine((l) => !l.enabled || l.limit_minor !== null);
 export const purchaseContextSchema = z.object({ customer_id: uuid, customer_type: z.literal("student"), currency_code: z.string().length(3),
   business_date: z.string(), business_timezone: z.string(), as_of: z.string(),
-  wallet: z.object({ status: z.enum(["active", "frozen"]), balance_minor: minorSchema }).nullable(),
-  daily_limit: limitSchema, per_transaction_limit: limitSchema, spent_today_minor: minorSchema, available_today_minor: minorSchema,
+  // A reversed replenishment can leave the wallet negative; checkout keeps rejecting insufficient balance.
+  wallet: z.object({ status: z.enum(["active", "frozen"]), balance_minor: signedMinor }).nullable(),
+  daily_limit: limitSchema, per_transaction_limit: limitSchema, spent_today_minor: minorSchema, available_today_minor: signedMinor,
   restrictions: z.array(restrictionSchema) });
 export const checkoutSchema = z.object({ request_key: uuid, register_session_id: uuid, cafeteria_customer_id: uuid.nullable(),
   items: z.array(z.object({ product_id: uuid, quantity: z.number().int().min(1).max(20), expected_product_version: z.number().int().positive(),
@@ -68,8 +70,8 @@ export type Receipt = z.infer<typeof receiptSchema>;
 export type PosOperation = z.infer<typeof operationSchema>;
 
 export function formatMinor(amount: string | bigint, currency: string) {
-  const n = BigInt(amount);
-  return `${currency === "DOP" ? "RD$" : currency} ${(n / 100n).toLocaleString("es-DO")}.${(n % 100n).toString().padStart(2, "0")}`;
+  const n = BigInt(amount), abs = n < 0n ? -n : n;
+  return `${n < 0n ? "−" : ""}${currency === "DOP" ? "RD$" : currency} ${(abs / 100n).toLocaleString("es-DO")}.${(abs % 100n).toString().padStart(2, "0")}`;
 }
 export function parseCash(value: string): string | null {
   const match = /^(0|[1-9][0-9]*)(?:[.,]([0-9]{1,2}))?$/.exec(value.trim());

@@ -12,7 +12,7 @@ Definida por el propietario durante la aceptación productiva de Phase 5B (migra
 | Plataforma | Sin acceso permanente. Diferido: acceso de soporte temporal de solo lectura autorizado por el cliente (código/sesión de corta duración, revocable y auditado). |
 | POS | Solo uso operativo del saldo en ventas; sin autoridad administrativa. |
 
-Recargar no es ajustar. PIKAS Cash no es efectivo físico de caja. La primera recarga verificada abre el monedero si aún no existe; la creación independiente sigue requiriendo `manage`. Reembolsos/reversiones: Phase 5C. POV sandbox: sin operaciones financieras.
+Revertir una recarga verificada (Phase 5C.2, local): solo administración de cuenta y escolar, por el monto exacto original, una vez; puede dejar el saldo negativo. Recargar no es ajustar. PIKAS Cash no es efectivo físico de caja. La primera recarga verificada abre el monedero si aún no existe; la creación independiente sigue requiriendo `manage`. Reembolsos/reversiones: Phase 5C. POV sandbox: sin operaciones financieras.
 
 ## Reembolsos de compras (Phase 5C.1, local)
 
