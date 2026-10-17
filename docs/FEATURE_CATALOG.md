@@ -8,7 +8,9 @@ El [registro canónico de Phase 4D](PRODUCT_BASELINE.md) enumera los componentes
 
 La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo comprometida con recibo. La búsqueda POS del estudiante recién inscrito queda como seguimiento acotado; no se declara probado ese camino de venta estudiantil. Las capacidades completadas no equivalen a pruebas individuales de cada función durante 4D.8.
 
-## Phase 5A — conectado, alcance local
+## Phase 5A — aceptación productiva con un seguimiento
+
+**PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**. La [línea base](PRODUCT_BASELINE.md) registra la evidencia y la re-verificación POS pendiente por acceso al cajero ficticio; no constituye fallo funcional.
 
 - Historial paginado de compras y detalle con productos/precios/tender e identidad de recibo.
 - Historial/detalle de sesiones con apertura, operador, movimientos de efectivo y conciliación.

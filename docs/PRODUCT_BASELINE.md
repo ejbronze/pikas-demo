@@ -1,5 +1,53 @@
 # Línea base del producto PIKAS
 
+## Phase 5A — aceptación de producción (2026-10-16)
+
+**PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**
+
+Checkpoint de activación confirmado por el propietario: `pikas-pikas.app` sirve
+`d2fdd6888a53e8571550423f4bffd5876e94883e`, deployment
+`dpl_ET7gUF21YZUpXnVzTBP3863EmzV2`, base alineada hasta
+`202610160001_transaction_register_operations.sql`. Este registro documental no
+repite verificaciones de infraestructura ni ejecuta otra activación.
+
+La aceptación mediante UI normal de Academia Piloto PIKAS · Aceptación 4D.8 /
+Cafetería Ficticia Beta confirmó historial de transacciones, detalle del recibo #1,
+historial de caja y detalle de la sesión `17fc9f13-6770-4a3c-b38d-6be8ae720f94`
+de Caja Ficticia Beta 4D.8 · BETA-01. La compra
+`daccc804-d8e1-4ef1-9789-99156075fe50` conservó 1 Agua Ficticia Beta 4D.8,
+No Usuario, efectivo RD$25.00, recibido RD$50.00, cambio RD$25.00 y atribución a
+Cajero Ficticio Beta.
+
+Antes del cierre, la UI confirmó fondo RD$0.00, una venta en efectivo RD$25.00,
+sin otros movimientos de efectivo y esperado RD$25.00. El cierre explícito
+administrativo tuvo éxito: **esperado RD$25.00 / contado RD$25.00 / diferencia
+RD$0.00**. Tras recargar y reabrir el detalle persistieron el estado cerrado,
+los importes, la atribución a Administrador Ficticio Beta y el timestamp visible
+`16/10/2026, 9:17:56 p. m.` (Santo Domingo). El recibo #1 permaneció intacto.
+
+**Único seguimiento:** la afirmación final de UI productiva de rechazo POS contra
+la sesión cerrada **no se ejecutó**. El acceso `cajero.beta4d8@example.invalid`
+está Completado, el propietario no dispone de su contraseña y `.invalid` no tiene
+un buzón utilizable para completar la recuperación normal. Se solicitó recuperación
+mediante PIKAS; la UI respondió: «Si existe una cuenta con ese correo, recibirás
+instrucciones para recuperar el acceso.» No se confirma entrega de un enlace.
+Administración mantuvo Completado, sin exponer contraseña ni ofrecer una
+reactivación inapropiada. Esto **no se clasifica como fallo funcional de Phase 5A**.
+
+El rechazo POS de sesiones cerradas ya fue probado **localmente** durante Phase 5A,
+con pruebas enfocadas/regresiones POS y navegador en modo producción local. Esa
+evidencia no sustituye ni se presenta como la comprobación pendiente en producción.
+
+Reverificar el rechazo POS de caja cerrada durante la próxima sesión controlada de
+cajero en producción/piloto con credenciales válidas. **No reabrir ni mutar la sesión
+BETA-01 completada para obtener esa prueba.** No continuar recuperación de credenciales,
+modificar/reemplazar al cajero ni fabricar evidencia mediante intervención técnica.
+
+No se crearon ventas ni sesiones de caja adicionales. No se entró en Colegio Horizonte,
+no se modificaron sus datos y no apareció información financiera de otros clientes o
+sandbox en los historiales inspeccionados. No se inició Phase 5B. La aceptación se
+detiene aquí; este cierre documental no realiza mutaciones en producción.
+
 ## Phase 4D — Production Administration & Provisioning
 
 **STATUS: COMPLETE**
@@ -82,9 +130,9 @@ El comportamiento completado de Phase 4D constituye la línea base de producció
 
 La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility](MVP.md). No se inicia como parte de este cierre. El soporte de venta en efectivo No Usuario ya existe.
 
-## Phase 5A — implementación local
+## Phase 5A — fundamento de implementación
 
-Transacciones, detalle de compra/recibo, historial/detalle de sesiones y cierre excepcional administrativo con conciliación durable. Esperado = fondo + ventas efectivo + cobros de personal en efectivo − reembolsos de efectivo; diferencia = contado − esperado. Se preservan capacidades y límites sandbox de Phase 4. [Contrato y evidencia local](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). No cambia la línea base de producción ni completa Phase 5.
+Transacciones, detalle de compra/recibo, historial/detalle de sesiones y cierre excepcional administrativo con conciliación durable. Esperado = fondo + ventas efectivo + cobros de personal en efectivo − reembolsos de efectivo; diferencia = contado − esperado. Se preservan capacidades y límites sandbox de Phase 4. [Contrato y evidencia local](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). La aceptación productiva y su único seguimiento se registran arriba; Phase 5 no está completa.
 
 ## Referencia histórica: demo local 0.6.1
 

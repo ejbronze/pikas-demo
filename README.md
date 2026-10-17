@@ -1,6 +1,16 @@
 # PIKAS
 
-## Estado actual — Phase 4D
+## Estado actual — Phase 5A
+
+**PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**.
+Historial de transacciones/recibos y sesiones operativo en producción; BETA-01 cerrada
+con esperado/contado/diferencia RD$25.00/RD$25.00/RD$0.00 y persistencia verificada.
+La [línea base canónica](docs/PRODUCT_BASELINE.md) registra el único seguimiento:
+re-verificar rechazo POS en una futura sesión controlada con credenciales válidas,
+sin reabrir ni mutar BETA-01. Ese comportamiento ya pasó validación local; no se
+presenta como re-verificación UI productiva ejecutada. Phase 5B no iniciada.
+
+## Línea base anterior — Phase 4D
 
 **Phase 4D — Production Administration & Provisioning**
 **STATUS: COMPLETE** · **Production acceptance: PASSED** · 2026-10-15.
@@ -11,7 +21,7 @@ La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility]
 
 ## Phase 5A — milestone local
 
-Historial de transacciones/recibos y sesiones de caja conectado a registros autoritativos; cierre excepcional administrativo con conteo, esperado, diferencia inmutable y recuperación idempotente. [Semántica, autoridad y validación local](docs/PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). La aceptación productiva sigue en Phase 4D; Phase 5 no está completa.
+Historial de transacciones/recibos y sesiones de caja conectado a registros autoritativos; cierre excepcional administrativo con conteo, esperado, diferencia inmutable y recuperación idempotente. [Semántica, autoridad y validación local](docs/PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). La aceptación productiva Phase 5A y su único seguimiento se registran arriba; Phase 5 no está completa.
 
 ## Referencia histórica — demo local 0.6.x
 

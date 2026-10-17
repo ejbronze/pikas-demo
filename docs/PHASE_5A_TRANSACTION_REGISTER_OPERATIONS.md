@@ -1,9 +1,32 @@
 # Phase 5A — Transaction & Register Operations
 
-Local milestone, 2026-10-16. Production remains the accepted Phase 4D baseline.
+Implemented locally on 2026-10-16; production acceptance passed with one documented
+follow-up. See the production acceptance record in PRODUCT_BASELINE.md.
 This milestone covers 5.1 plus the register-close foundation for 5.4; it does not
 complete Phase 5 or introduce replenishment, refund, reporting-dashboard or
 platform-analytics product flows.
+
+## Production acceptance and remaining follow-up
+
+**PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**.
+The [canonical acceptance record](PRODUCT_BASELINE.md) separates owner-confirmed
+activation provenance, observed production UI evidence and existing local validation.
+Transaction/receipt history and register history/detail passed. BETA-01 closed with
+expected/count/difference RD$25.00/RD$25.00/RD$0.00, persisted after reload, and
+retained Receipt #1 unchanged. No additional sale/session or Horizonte mutation occurred.
+
+The cashier POS assertion was not executed in production: the activation-completed
+fictional cashier uses an inaccessible .invalid mailbox, its password is unavailable,
+and normal UI recovery returned only its privacy-preserving conditional response.
+Administration correctly exposed neither the password nor an inappropriate activation
+reset. This is not classified as a Phase 5A functional failure. Closed-session rejection
+already passed focused POS/regression and production-mode browser validation locally;
+those results are not represented as production UI re-verification.
+
+Re-verify during the next controlled production/pilot cashier session with valid operator
+credentials. Do not reopen or mutate completed BETA-01, continue credential recovery,
+replace the cashier, or manufacture proof through technical intervention. Acceptance
+is stopped; Phase 5B has not started.
 
 ## Architecture and product decisions
 

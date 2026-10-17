@@ -5,7 +5,9 @@ The current objective is a controlled Beta 1 pilot. Phase 4D production
 administration/provisioning is closed; its accepted source is `df802b530b3cab4a92140f7d7b9a025e36f2b9c7`,
 with documentation checkpoint `5b2968df2e8a7e725eee467adedc91668a280f2f`.
 Phase 5A adds local transaction/register operations and close reconciliation; see
-`docs/PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md`. Production remains Phase 4D.
+`docs/PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md`. Phase 5A production acceptance passed with one documented follow-up: re-verify
+closed-register POS rejection during a future controlled pilot/operator session
+with valid credentials; never reopen or mutate completed BETA-01 for this proof.
 Read the current canonical baseline before treating historical demo notes as current.
 
 Read `README.md`, `docs/PRODUCT_BASELINE.md`, `docs/FEATURE_CATALOG.md`,

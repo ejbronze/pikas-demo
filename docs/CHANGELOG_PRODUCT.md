@@ -1,5 +1,14 @@
 # Registro de cambios del producto
 
+## 2026-10-16 — Cierre de aceptación productiva Phase 5A
+
+- **PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**. [Evidencia y seguimiento canónicos](PRODUCT_BASELINE.md).
+- Source `d2fdd6888a53e8571550423f4bffd5876e94883e`, deployment `dpl_ET7gUF21YZUpXnVzTBP3863EmzV2`, migraciones alineadas hasta `202610160001`, según checkpoint de activación confirmado por el propietario.
+- Historial/recibo #1 y sesiones operativos; BETA-01 cerrada explícitamente con esperado/contado/diferencia RD$25.00/RD$25.00/RD$0.00. Persistencia tras recarga y recibo intacto verificados por UI.
+- Rechazo POS tras cierre probado localmente; la re-verificación UI productiva no se ejecutó por falta de acceso al cajero ficticio ya activado con correo .invalid. Recuperación normal devolvió respuesta condicional; no constituye fallo funcional de Phase 5A.
+- Único seguimiento: verificar durante una futura sesión controlada de producción/piloto con credenciales válidas, sin reabrir ni mutar BETA-01 completada. Sin ventas/sesiones adicionales ni acceso/mutación de Horizonte. Phase 5B no iniciada.
+- Cierre exclusivamente documental; sin más recuperación de credenciales ni mutaciones en producción.
+
 ## 2026-10-16 — Phase 5A: operaciones de transacciones y caja (local)
 
 - Historial conectado de compras/recibos y sesiones; cierre administrativo excepcional con confirmación, contado/esperado/diferencia y captura inmutable para nuevos cierres.
