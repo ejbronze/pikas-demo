@@ -1,6 +1,16 @@
 # PIKAS
 
-## Estado actual — Phase 5A
+## Estado actual — Phase 5B
+
+**PHASE 5B — COMPLETE / PRODUCTION ACCEPTED** (2026-10-17). PIKAS Cash operativo en producción
+con source `e05cf5f27f17733ea26a13bf089ce0ccb654c8b5` y migraciones hasta
+`202610170001_beta_wallet_authority.sql`. Resuelto el bloqueo de autoridad del administrador de
+cuenta; una recarga controlada `manual_verified` de RD$25.00 pasó y persistió tras recargar la página,
+con un único movimiento. Política Beta de autoridad PIKAS Cash aceptada
+([permisos](docs/ADMINISTRATION_AND_PERMISSIONS.md), [Phase 5B](docs/PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md)).
+Phase 5C no iniciada; el acceso de soporte de Plataforma autorizado por el cliente sigue diferido.
+
+## Línea base anterior — Phase 5A
 
 **PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**.
 Historial de transacciones/recibos y sesiones operativo en producción; BETA-01 cerrada
@@ -8,7 +18,7 @@ con esperado/contado/diferencia RD$25.00/RD$25.00/RD$0.00 y persistencia verific
 La [línea base canónica](docs/PRODUCT_BASELINE.md) registra el único seguimiento:
 re-verificar rechazo POS en una futura sesión controlada con credenciales válidas,
 sin reabrir ni mutar BETA-01. Ese comportamiento ya pasó validación local; no se
-presenta como re-verificación UI productiva ejecutada. Phase 5B no iniciada.
+presenta como re-verificación UI productiva ejecutada. En ese checkpoint Phase 5B aún no se había iniciado.
 
 ## Línea base anterior — Phase 4D
 
@@ -23,9 +33,9 @@ La siguiente fase planificada es [Phase 5 — Financial Operations & Visibility]
 
 Historial de transacciones/recibos y sesiones de caja conectado a registros autoritativos; cierre excepcional administrativo con conteo, esperado, diferencia inmutable y recuperación idempotente. [Semántica, autoridad y validación local](docs/PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). La aceptación productiva Phase 5A y su único seguimiento se registran arriba; Phase 5 no está completa.
 
-## Phase 5B — milestone local (no desplegado)
+## Phase 5B — milestone
 
-PIKAS Cash desde el perfil estudiantil de Administración Escolar: saldo autoritativo, historial inmutable de recargas y compras con recibo, y recarga manual verificada (`manual_verified`) con confirmación explícita y recuperación idempotente. No es efectivo de caja. [Modelo, autoridad y validación local](docs/PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Pendiente de checkpoint productivo; Phase 5 no está completa.
+PIKAS Cash desde el perfil estudiantil de Administración Escolar: saldo autoritativo, historial inmutable de recargas y compras con recibo, y recarga manual verificada (`manual_verified`) con confirmación explícita y recuperación idempotente. No es efectivo de caja. [Modelo, autoridad, validación y aceptación](docs/PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Aceptado en producción (ver arriba); Phase 5 no está completa.
 
 ## Referencia histórica — demo local 0.6.x
 

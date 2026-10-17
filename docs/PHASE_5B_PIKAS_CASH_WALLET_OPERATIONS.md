@@ -1,8 +1,37 @@
 # Phase 5B — PIKAS Cash / Wallet Operations
 
-Implemented and verified locally on 2026-10-16. Not yet applied to production.
+**STATUS: COMPLETE / PRODUCTION ACCEPTED** (2026-10-17). Implemented and verified
+locally on 2026-10-16; the Beta wallet authority was added on 2026-10-17.
 This milestone covers 5.2 (wallet / PIKAS Cash replenishments) only; it does not
 complete Phase 5 or introduce refunds, reversals, reporting dashboards or analytics.
+
+## Production acceptance
+
+**PHASE 5B PRODUCTION ACCEPTANCE PASS.** Production source
+`e05cf5f27f17733ea26a13bf089ce0ccb654c8b5` (Git deployment READY on that source,
+project pikas-pilot); migrations aligned through
+`202610170001_beta_wallet_authority.sql`.
+
+History: the first activation (source `4f0e752b`, migration `202610160002`)
+exposed an authority blocker. The normally provisioned initial customer
+administrator (`account_admin`) received "No se pudo cargar PIKAS Cash con tus
+permisos actuales." The owner then defined the Beta wallet authority below, which
+was implemented, activated and resolved the blocker.
+
+Controlled journey as Account Admin *Administrador Ficticio Beta*, Escuela
+Ficticia Beta 4D.8, student *Sol Ficticia Beta* (BETA-4D8-001):
+
+- Before: balance RD$0.00, wallet active, replenishment controls available.
+- One `manual_verified` replenishment of RD$25.00, reference `ACEPTACION-5B`,
+  note "Prueba controlada de aceptación Phase 5B".
+- After: balance RD$25.00; exactly one replenishment movement showing actor
+  Administrador Ficticio Beta, the reference and note, and resulting balance RD$25.00.
+- After a browser refresh, RD$25.00 and the single movement persisted. No second
+  replenishment was performed.
+
+The final Beta wallet authority policy (`ADMINISTRATION_AND_PERMISSIONS.md`) is
+accepted. Phase 5C (refunds, reversals, correction/audit behavior) is not started.
+Customer-authorized, temporary read-only Platform Admin support access remains deferred.
 
 ## Architecture and product decisions
 

@@ -9,12 +9,12 @@ El alcance probado cubre onboarding de cliente nuevo, organización, activación
 ## Phase 5 — Financial Operations & Visibility
 
 1. **5.1 Transaction & Register History** — implementado y aceptado en producción con un seguimiento documentado en [Phase 5A](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md), junto con la base de conciliación de cierre de 5.4.
-2. **5.2 Wallet / PIKAS Cash Replenishments** — implementado y verificado localmente en [Phase 5B](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md); pendiente de checkpoint productivo.
+2. **5.2 Wallet / PIKAS Cash Replenishments** — completo y aceptado en producción en [Phase 5B](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md) (2026-10-17), con la política Beta de autoridad PIKAS Cash.
 3. **5.3 Refunds**
 4. **5.4 Reporting & Reconciliation**
 5. **5.5 Platform Analytics**
 
-Phase 5A es el único milestone implementado en este trabajo; la aceptación productiva Phase 5A pasó con un único seguimiento de re-verificación POS pendiente por acceso al cajero ficticio (ver la línea base canónica). Phase 5B (5.2) está implementado localmente y aún no se ha aplicado en producción. Phase 5 no está completa. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
+Phase 5A es el único milestone implementado en este trabajo; la aceptación productiva Phase 5A pasó con un único seguimiento de re-verificación POS pendiente por acceso al cajero ficticio (ver la línea base canónica). Phase 5B (5.2) está completo y aceptado en producción. Phase 5C (reembolsos/reversiones) no se ha iniciado. Phase 5 no está completa. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
 
 ## Después de Phase 5
 

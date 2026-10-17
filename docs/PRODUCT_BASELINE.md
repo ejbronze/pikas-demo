@@ -1,5 +1,13 @@
 # Línea base del producto PIKAS
 
+## Phase 5B — aceptación de producción (2026-10-17)
+
+**PHASE 5B — COMPLETE / PRODUCTION ACCEPTED.** Source `e05cf5f27f17733ea26a13bf089ce0ccb654c8b5`; migraciones alineadas hasta `202610170001_beta_wallet_authority.sql` (proyecto pikas-pilot).
+
+- La primera activación (source `4f0e752b`) mostró un bloqueo: el administrador inicial de cuenta (`account_admin`) no podía cargar PIKAS Cash. El propietario definió la política Beta de autoridad PIKAS Cash, que resolvió el bloqueo y queda aceptada ([permisos](ADMINISTRATION_AND_PERMISSIONS.md)).
+- Recorrido controlado: Administrador Ficticio Beta, Escuela Ficticia Beta 4D.8, estudiante Sol Ficticia Beta (BETA-4D8-001). Saldo previo RD$0.00, monedero activo. Una recarga `manual_verified` de RD$25.00 (referencia `ACEPTACION-5B`). Saldo final RD$25.00 con un único movimiento, actor, referencia y nota correctos. Persistió tras recargar la página. Sin segunda recarga.
+- Phase 5C (reembolsos, reversiones, corrección/auditoría) no iniciada. El acceso de soporte de Plataforma, temporal y de solo lectura autorizado por el cliente, sigue diferido. [Detalle](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md).
+
 ## Phase 5A — aceptación de producción (2026-10-16)
 
 **PHASE 5A PRODUCTION ACCEPTANCE PASS WITH ONE DOCUMENTED FOLLOW-UP**
@@ -136,7 +144,7 @@ Transacciones, detalle de compra/recibo, historial/detalle de sesiones y cierre 
 
 ## Phase 5B — fundamento de implementación (local)
 
-PIKAS Cash reutiliza el monedero y el ledger inmutable existentes: saldo actual = suma firmada de movimientos (recargas positivas, compras negativas). Recarga `manual_verified` con capacidades existentes `school:wallets:read/replenish`, revalidación de autoridad tras la espera del bloqueo por estudiante y clave de solicitud ligada al payload. Independiente del efectivo de caja de Phase 5A. [Contrato y evidencia local](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). No aplicado en producción; Phase 5 no está completa.
+PIKAS Cash reutiliza el monedero y el ledger inmutable existentes: saldo actual = suma firmada de movimientos (recargas positivas, compras negativas). Recarga `manual_verified` con capacidades existentes `school:wallets:read/replenish`, revalidación de autoridad tras la espera del bloqueo por estudiante y clave de solicitud ligada al payload. Independiente del efectivo de caja de Phase 5A. [Contrato y evidencia local](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Fundamento inicial local; autoridad ampliada por la política Beta y aceptado en producción el 2026-10-17 (ver arriba). Phase 5 no está completa.
 
 ## Referencia histórica: demo local 0.6.1
 

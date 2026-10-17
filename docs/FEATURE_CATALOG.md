@@ -19,7 +19,9 @@ La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo com
 
 [Autoridad, sandbox, contratos, migración y validación](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md). No incluye nuevas recargas/refunds conectadas, reportes amplios ni analytics.
 
-## Phase 5B — PIKAS Cash (local, no desplegado)
+## Phase 5B — PIKAS Cash (completo, aceptado en producción)
+
+**PHASE 5B PRODUCTION ACCEPTANCE PASS** (2026-10-17). Administrador de cuenta: lectura + recarga verificada; cafetería: saldo de solo lectura ([política](ADMINISTRATION_AND_PERMISSIONS.md)).
 
 - Saldo PIKAS Cash autoritativo del estudiante e historial paginado del monedero: recargas, compras POS con recibo/productos, y ajustes/reembolsos históricos existentes en solo lectura.
 - Recarga manual verificada (`manual_verified`) por Administración Escolar con referencia o nota, confirmación explícita, saldo resultante del servidor y recuperación exacta de respuesta perdida.

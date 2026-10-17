@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## 2026-10-17 — Cierre de aceptación productiva Phase 5B
+
+- **PHASE 5B — COMPLETE / PRODUCTION ACCEPTED**. Source `e05cf5f27f17733ea26a13bf089ce0ccb654c8b5`, migraciones alineadas hasta `202610170001_beta_wallet_authority.sql`. [Evidencia canónica](PRODUCT_BASELINE.md).
+- Resuelto el bloqueo de autoridad del administrador de cuenta observado en la primera activación. La política Beta de autoridad PIKAS Cash queda aceptada.
+- Recarga controlada `manual_verified` de RD$25.00 (Sol Ficticia Beta): saldo RD$0.00 → RD$25.00, un único movimiento, persistencia tras recargar la página. Sin segunda recarga.
+- Phase 5C no iniciada; el soporte de Plataforma autorizado por el cliente sigue diferido. Cierre exclusivamente documental; sin push ni despliegue.
+
 ## 2026-10-17 — Phase 5B: política Beta de autoridad PIKAS Cash (local)
 
 - La aceptación productiva mostró que el administrador inicial de un cliente nuevo (`account_admin`, sin autoridad financiera desde Phase 4D.2) no podía abrir PIKAS Cash. El propietario definió la política Beta.
