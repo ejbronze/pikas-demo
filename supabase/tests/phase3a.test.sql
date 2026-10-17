@@ -28,10 +28,11 @@ select is((select count(*) from student_wallets where student_id='00000000-0000-
 select ok(exists(select 1 from pikas_private.role_capabilities where scope_kind='school' and role_code='school_admin' and capability='school:wallets:read')
   and exists(select 1 from pikas_private.role_capabilities where scope_kind='school' and role_code='school_admin' and capability='school:wallets:adjust'),
   'School Admin has explicit wallet read and adjustment capabilities');
-select ok(exists(select 1 from pikas_private.role_capabilities where scope_kind='cafeteria' and role_code='cafeteria_admin' and capability='cafeteria:wallets:replenish')
+-- Beta wallet policy (202610170001): the cafeteria credit grant is withdrawn; Cafeteria Admin reads only.
+select ok(not exists(select 1 from pikas_private.role_capabilities where scope_kind='cafeteria' and role_code='cafeteria_admin' and capability='cafeteria:wallets:replenish')
   and not exists(select 1 from pikas_private.role_capabilities where scope_kind='cafeteria' and role_code='cafeteria_admin' and capability='cafeteria:wallets:adjust')
   and not exists(select 1 from pikas_private.role_capabilities where scope_kind='cafeteria' and role_code='pos_operator' and capability like '%wallet%'),
-  'Cafeteria Admin can replenish only; POS receives no wallet capability');
+  'Cafeteria Admin cannot replenish or adjust; POS receives no wallet capability');
 select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname in ('public','pikas_private') and p.prosecdef and not ('search_path=""'=any(p.proconfig))),0::bigint,
   'All Phase 3A SECURITY DEFINER functions pin an empty search path');
@@ -141,16 +142,15 @@ select is((select count(*) from wallet_replenishments where idempotency_key in (
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002003',true);
 set local role authenticated;
-select lives_ok($$select public.post_manual_wallet_replenishment('00000000-0000-0000-0000-000000007001',
+select throws_ok($$select public.post_manual_wallet_replenishment('00000000-0000-0000-0000-000000007001',
   1500,'cafe-replenishment-key-01','CAF-REF-01','Verified at Cafeteria A','00000000-0000-0000-0000-000000006901')$$,
-  'Cafeteria Admin posts replenishment for an exact active cafeteria customer');
+  '42501',null,'Cafeteria Admin cannot replenish an exact active cafeteria customer');
 reset role;
-select is((select cafeteria_id from wallet_replenishments where idempotency_key='cafe-replenishment-key-01'),
-  '00000000-0000-0000-0000-000000000111'::uuid,'Cafeteria-origin replenishment records exact cafeteria context');
-select ok(exists(select 1 from audit_events where target_type='wallet_replenishments' and action='wallet_replenishment_posted'
-  and actor_person_id='00000000-0000-0000-0000-000000001003' and actor_role='cafeteria_admin'
-  and actor_scope_kind='cafeteria' and cafeteria_id='00000000-0000-0000-0000-000000000111'),
-  'Cafeteria replenishment audit is exact-cafeteria scoped');
+select is((select count(*) from wallet_replenishments where idempotency_key='cafe-replenishment-key-01'),
+  0::bigint,'Denied cafeteria credit leaves no replenishment');
+select ok(not exists(select 1 from audit_events where target_type='wallet_replenishments' and action='wallet_replenishment_posted'
+  and actor_role='cafeteria_admin'),
+  'No cafeteria-scoped replenishment audit');
 update public.cafeteria_memberships set status='suspended' where id='00000000-0000-0000-0000-000000003201';
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002003',true);
 set local role authenticated;
@@ -189,10 +189,12 @@ select is((select count(*) from student_wallets),0::bigint,'POS operator cannot 
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002001',true);
 set local role authenticated;
-select throws_ok($$select public.post_manual_wallet_replenishment('00000000-0000-0000-0000-000000007001',
-  1000,'account-replenishment-key1','REF-ACCT','Account admin denied')$$,
-  '42501',null,'Account Admin has no implicit financial mutation authority');
-select is((select count(*) from student_wallets),0::bigint,'Account Admin has no implicit wallet data access');
+-- Beta wallet policy: Account Admin reads and posts manual_verified credits (same amount the
+-- withdrawn cafeteria credit used, so later balances are unchanged).
+select lives_ok($$select public.post_manual_wallet_replenishment('00000000-0000-0000-0000-000000007001',
+  1500,'account-replenishment-key1','REF-ACCT','Account admin verified credit')$$,
+  'Account Admin posts manual_verified replenishment');
+select ok((select count(*) from student_wallets)>0,'Account Admin reads wallets in its account');
 
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002002',true);
@@ -337,11 +339,11 @@ select lives_ok($$select public.set_student_status('00000000-0000-0000-0000-0000
   '00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201','inactive')$$,
   'School Admin marks withdrawn student inactive while retaining wallet history');
 reset role;
-select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002003',true);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002001',true);
 set local role authenticated;
 select throws_ok($$select public.post_manual_wallet_replenishment('00000000-0000-0000-0000-000000007001',
-  1000,'withdrawn-replenishment-key-01','REF-WD','Student withdrawn','00000000-0000-0000-0000-000000006901')$$,
-  '23514',null,'Withdrawal blocks ordinary cafeteria replenishment');
+  1000,'withdrawn-replenishment-key-01','REF-WD','Student withdrawn')$$,
+  '23514',null,'Withdrawal blocks ordinary replenishment');
 reset role;
 
 delete from auth.users where id='00000000-0000-0000-0000-000000002013';

@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## 2026-10-17 — Phase 5B: política Beta de autoridad PIKAS Cash (local)
+
+- La aceptación productiva mostró que el administrador inicial de un cliente nuevo (`account_admin`, sin autoridad financiera desde Phase 4D.2) no podía abrir PIKAS Cash. El propietario definió la política Beta.
+- Administrador de cuenta: lectura + recarga `manual_verified`, sin `manage`/`adjust`. Administrador escolar: sin cambios. Administrador de cafetería: solo saldo de clientes compartidos, sin recargas (se retira la antigua capacidad de recarga de cafetería). Plataforma: sin acceso permanente; soporte temporal autorizado por el cliente diferido. POS: solo uso operativo.
+- UI según capacidad del servidor: enlace, página y formulario de recarga solo con autoridad; consulta de saldo de solo lectura en "Escuelas conectadas" de cafetería. [Detalle y validación](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md), [política](ADMINISTRATION_AND_PERMISSIONS.md).
+- Migración aditiva `202610170001_beta_wallet_authority.sql`. Sin acceso productivo, push o despliegue; sin Phase 5C.
+
 ## 2026-10-16 — Phase 5B: PIKAS Cash / operaciones de monedero (local)
 
 - PIKAS Cash en el perfil estudiantil de Administración Escolar: saldo autoritativo, historial del monedero con recargas y compras POS (recibo y productos) y recarga manual verificada con confirmación explícita.

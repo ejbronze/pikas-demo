@@ -15,11 +15,9 @@ complete Phase 5 or introduce refunds, reversals, reporting dashboards or analyt
   `balance_version_after`. Replenishments are positive `replenishment` entries,
   POS wallet purchases negative `purchase` entries. Pre-existing `adjustment` and
   `refund` entries are displayed read-only as historical movements.
-- **Authority.** The existing School Administration capabilities
-  `school:wallets:read` and `school:wallets:replenish` (granted to `school_admin`),
-  enforced through the existing `require_school_admin` guard. First
-  funding of a student without a wallet reuses `create_student_wallet`
-  (`school:wallets:manage`). No new role or capability.
+- **Authority.** As first implemented (`202610160002`): the School Administration
+  capabilities `school:wallets:read`/`replenish`, held only by `school_admin`,
+  through `require_school_admin`. Superseded by the Beta wallet authority below.
 - **Source.** Existing `manual_verified` semantics only: a reference and/or a
   verification note is required. No payment method, gateway or funding source.
 - **Physical cash is separate.** A replenishment is not register cash: it is not
@@ -29,6 +27,40 @@ complete Phase 5 or introduce refunds, reversals, reporting dashboards or analyt
 - **Sandbox.** Administrative sandbox POVs remain excluded from financial
   operations (route, page and database all deny); Edwin/Oscar gain no tenant
   financial authority.
+
+## Beta wallet authority (202610170001)
+
+Production acceptance found that a normally provisioned customer's initial
+administrator holds only `account_admin`, which Phase 4D.2 had intentionally kept
+without financial capabilities, so PIKAS Cash was denied. The owner then defined
+the Beta policy (canonical table in `ADMINISTRATION_AND_PERMISSIONS.md`):
+
+- Account Admin: `school:wallets:read` + `replenish`; no `manage`/`adjust`.
+- School Admin: unchanged (read, replenish, manage, adjust).
+- Cafeteria Admin: new `cafeteria:wallets:read` through `cafeteria_wallet_read`,
+  balance/status only for active customers whose school shares basic
+  identification with that cafeteria; the legacy `cafeteria:wallets:replenish`
+  grant (reachable only through the direct RPC) is withdrawn.
+- Platform: no standing access. Customer-authorized, temporary read-only support
+  access is deferred. POS: operational wallet purchases only.
+
+Implementation, all additive: the role-capability changes; `school_wallet_replenish`
+opens a missing wallet under the already-verified replenish authority (standalone
+`create_student_wallet` still requires `manage`); `post_manual_wallet_replenishment`
+attributes school-scope credits to the actor's real role (`account_admin` or
+`school_admin`); `school_wallet_access(school)` returns server-derived
+`{read, replenish}` so the roster link, wallet page and replenish form render only
+when authorized; `/api/cafeteria/wallet` exposes the read-only cafeteria lookup in
+"Escuelas conectadas".
+
+Validation: 58 pgTAP authority assertions (`phase5b_wallet_authority.test.sql`);
+Phase 5B operations 50/50, Phase 5A 47/47 and Phase 5B foundation 28/28 still
+pass; frozen `phase3a` updated only where it asserted the superseded policy
+(106/106). `phase3b`/`phase3c` failures in the Auth-enabled environment are the
+pre-existing global counts/sums from the fictional Horizonte baseline. Revocation
+races `revoked_authority`, `legacy_revoked` and the new `account_admin_revoked`
+pass with observed blocking. `scripts/test-phase5b-authority-browser.mjs` proves the
+account-admin-only journey and the cafeteria read-only lookup.
 
 ## Authority, locking and recovery
 

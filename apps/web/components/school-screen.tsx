@@ -6,6 +6,7 @@ import { resolveSchoolAccess } from "../lib/auth/school-access";
 import { readSchema, type SchoolSection, type SchoolStudent } from "../lib/school/contracts";
 import { ConnectedSchoolShell } from "./connected-school-shell";
 import { ConnectedSchoolPages } from "./connected-school-pages";
+import { readSchoolWalletAccess } from "../lib/wallet/access";
 export type SchoolSearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function SchoolScreen({ section, searchParams }: { section: SchoolSection; searchParams: SchoolSearchParams }) {
   const client = await createSupabaseServerClient();
@@ -30,5 +31,6 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     const result = readSchema.safeParse(roster.data);
     if (!roster.error && result.success && result.data.scope.school_id === schoolId && result.data.scope.actor_id === access.context.person_id) students = (result.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row);
   }
-  return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ConnectedSchoolPages key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
+  const walletRead = section === "students" && !access.context.pov && (await readSchoolWalletAccess(client, schoolId)).read;
+  return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ConnectedSchoolPages walletRead={walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
 }

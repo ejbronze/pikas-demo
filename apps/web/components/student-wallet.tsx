@@ -5,7 +5,7 @@ import { historySchema, type History, type Credit } from '../lib/wallet/contract
 import { load, prepare, send } from '../lib/wallet/command';
 import { money } from '../lib/cafeteria/operations';
 import { parseCash } from '../lib/pos/contracts';
-export function StudentWallet({ schoolId, studentId, actorId }: {schoolId:string;studentId:string;actorId:string}) {
+export function StudentWallet({ schoolId, studentId, actorId, canReplenish }: {schoolId:string;studentId:string;actorId:string;canReplenish:boolean}) {
   const key = `pikas:wallet:${actorId}:${schoolId}:${studentId}`;
   const [history,setHistory] = useState<History|null>(null);
   const [pending,setPending] = useState<Credit|null>(null);
@@ -31,7 +31,7 @@ export function StudentWallet({ schoolId, studentId, actorId }: {schoolId:string
     {loading&&<p role="status">Consultando PIKAS Cash…</p>}{error&&<p role="alert">{error}</p>}
     <button type="button" className="btn-secondary" disabled={loading} onClick={()=>void read()}>Actualizar saldo e historial</button>
     {history&&<><p className="text-xl font-bold">{history.student_name}</p><section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Saldo PIKAS Cash</h2><p className="text-3xl font-black">{money(history.wallet?.balance_minor??'0')}</p><p>{history.wallet?.status==='frozen'?'Monedero congelado':'Monedero activo'}</p>
-    <form className="space-y-3" noValidate={pending!==null} onSubmit={async event=>{
+    {!canReplenish?<p className="text-sm text-slate-600">Consulta de solo lectura. Tu rol no puede registrar recargas.</p>:<form className="space-y-3" noValidate={pending!==null} onSubmit={async event=>{
       event.preventDefault();if(!ready||inFlight.current)return;
       const form=event.currentTarget;
       inFlight.current=true;setBusy(true);
@@ -57,7 +57,7 @@ export function StudentWallet({ schoolId, studentId, actorId }: {schoolId:string
     <button className="btn" disabled={!ready||busy||(!pending&&history.wallet?.status==='frozen')}>{busy?'Confirmando…':pending?'Recuperar misma recarga':'Confirmar recarga verificada'}</button>
     {pending&&<p className="break-words text-sm">Solicitud pendiente: {money(pending.amount_minor)} · {pending.reference||pending.note}</p>}
     {message&&<p role="status">{message}</p>}
-    </form></section>
+    </form>}</section>
     <section className="space-y-3"><h2 className="text-lg font-bold">Movimientos del monedero</h2><p className="text-xs text-slate-600">Más recientes primero. El saldo de cada movimiento corresponde al momento de registrarlo.</p>
       {!history.movements.length&&<p>No hay movimientos registrados.</p>}
       {history.movements.map(m=><article className="card space-y-2 break-words p-4" key={m.id}><h3 className="font-bold">{{replenishment:'Recarga verificada',purchase:'Compra',adjustment:'Ajuste histórico',refund:'Reembolso histórico'}[m.type]} · {BigInt(m.amount_minor)>0n?'+':''}{money(m.amount_minor)}</h3><p className="text-sm">{new Date(m.occurred_at).toLocaleString('es-DO',{timeZone:'America/Santo_Domingo'})} · {m.actor??'Actor registrado'}</p><p>Saldo después: {money(m.balance_after_minor)}</p>{m.purchase_id&&<details><summary className="cursor-pointer">Recibo #{m.receipt_number} · {m.cafeteria}</summary><p className="break-all text-xs">Compra {m.purchase_id}</p>{m.items.map((i,n)=><p key={n}>{i.quantity} × {i.name} · {money(i.line_total_minor)}</p>)}</details>}{m.replenishment_id&&<p className="break-all text-xs">Recarga {m.replenishment_id} · Fondos manuales verificados</p>}{m.reference&&<p>Referencia: {m.reference}</p>}{m.note&&<p>{m.note}</p>}</article>)}

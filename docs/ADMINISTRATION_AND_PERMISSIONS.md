@@ -1,4 +1,20 @@
-# Administración y permisos — milestone 0.6.1
+# Administración y permisos
+
+## Política Beta de PIKAS Cash (vigente, 2026-10-17)
+
+Definida por el propietario durante la aceptación productiva de Phase 5B (migración `202610170001_beta_wallet_authority.sql`). Phase 4D.2 había excluido intencionalmente toda autoridad financiera de `account_admin`; esta política la sustituye solo en lo indicado.
+
+| Rol | PIKAS Cash |
+| --- | --- |
+| Administrador de cuenta | Leer y recargar (`manual_verified`) en las escuelas de su cuenta. Sin `manage` ni `adjust`. |
+| Administrador escolar | Leer, recargar, `manage` y `adjust` en su escuela (sin cambios; varias por escuela). |
+| Administrador de cafetería | Solo saldo/estado de clientes que la escuela comparte con su cafetería. Sin historial, recargas, `manage` ni `adjust`; se retira la antigua capacidad `cafeteria:wallets:replenish`. |
+| Plataforma | Sin acceso permanente. Diferido: acceso de soporte temporal de solo lectura autorizado por el cliente (código/sesión de corta duración, revocable y auditado). |
+| POS | Solo uso operativo del saldo en ventas; sin autoridad administrativa. |
+
+Recargar no es ajustar. PIKAS Cash no es efectivo físico de caja. La primera recarga verificada abre el monedero si aún no existe; la creación independiente sigue requiriendo `manage`. Reembolsos/reversiones: Phase 5C. POV sandbox: sin operaciones financieras.
+
+## Referencia histórica — milestone 0.6.1
 
 La autorización productiva corresponde a Auth/RLS y funciones de servidor. El demo comprueba roles y políticas, pero localStorage y las credenciales públicas no son seguridad productiva.
 
