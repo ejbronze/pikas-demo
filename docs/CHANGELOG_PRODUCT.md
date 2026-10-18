@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## UX Wave D.1: tareas guiadas de PIKAS Cash (local)
+
+- **Recarga**, **Ajuste administrativo** y **Reversión de recarga** son ahora tareas enfocadas: Detalles → Confirmar → acción final explícita («Recargar RD$ 500.00», «Aplicar ajuste −RD$ 100.00», «Revertir recarga de RD$ 25.00»), con estados claros de registro, éxito, rechazo y «pendiente de confirmar». Desaparecen el formulario permanente de recarga y el `confirm()` del navegador.
+- Al cerrar con datos escritos se pide descartarlos; mientras se registra no se puede cerrar ni enviar dos veces. Nada de lo escrito se guarda: al recargar la página no se recupera, y una operación incierta solo se reintenta con la misma solicitud cuando el usuario lo pide.
+- En móvil la tarea ocupa toda la pantalla con la acción principal al alcance. El foco entra en la tarea, se mantiene dentro y vuelve al botón que la abrió.
+- Sin cambios en autoridad, cálculos, rutas, RPC, base de datos ni en el Demo. Sin push ni despliegue.
+
 ## UX Wave C: shell administrativo unificado (local)
 
 - PIKAS Admin, Cuenta, Escuela y Cafetería comparten un mismo shell: identidad PIKAS Admin, área y contexto actual (escuela/cafetería), navegación según permisos, cuenta y **Cerrar sesión** en un solo lugar. En móvil: barra superior de 56 px, menú de cuenta y navegación inferior con «Más»; Cafetería prioriza Transacciones, Cajas y Reportes. El POS sigue siendo un espacio de trabajo propio.

@@ -1,90 +1,113 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { sessionFetch } from '../lib/auth/session-fetch';
 import { money } from '../lib/cafeteria/operations';
 import { parseCash } from '../lib/pos/contracts';
 import { adjustmentReasons, adjustResultSchema } from '../lib/wallet/contracts';
 import { moneyText, moneyTone, moneyToneClass } from '../lib/money-semantics';
+import { MoneyValue } from './money-value';
+import { TaskActions, TaskCancelButton, TaskOutcome, TaskSummary, TaskWindow } from './task-window';
 
 // Movement semantics from the shared money convention: additive "+" green, deductive "−" red.
 export const signedTone = (minor: string) => moneyToneClass[moneyTone(minor, 'movement')];
 export const signed = (minor: string) => moneyText(minor, 'movement');
 type Scope = { kind: 'school'; schoolId: string } | { kind: 'cafeteria'; cafeteriaId: string };
 type Pending = Record<string, string>;
+type Phase = 'purpose' | 'purchase' | 'reversal' | 'details' | 'confirm' | 'pending' | 'success' | 'rejected' | 'uncertain';
 
-// Exceptional balance corrections only: purchases use Reembolso, wrong replenishments use Revertir recarga.
+// Phase 5C.3 exceptional balance corrections, as a focused task (Wave D.1). Purchases use Reembolso,
+// wrong recargas use Revertir recarga. Typed values stay in memory; the existing recovery journal
+// (exact key + payload) is written only at the explicit final action and retried only by the user.
 export function WalletAdjustmentDialog({ scope, studentId, studentName, actorId, balanceMinor, onClose, onDone }:
   { scope: Scope; studentId: string; studentName: string; actorId: string; balanceMinor: string; onClose: () => void; onDone: (message: string, balanceAfter: string) => void }) {
   const scopeId = scope.kind === 'school' ? scope.schoolId : scope.cafeteriaId;
   const key = `pikas:wallet-adjustment:${actorId}:${scope.kind}:${scopeId}:${studentId}`;
-  const [pending, setPending] = useState<Pending | null>(() => { try { const raw = sessionStorage.getItem(key); return raw ? JSON.parse(raw) as Pending : null; } catch { return null; } });
-  const [step, setStep] = useState<'purpose' | 'purchase' | 'reversal' | 'form'>(pending ? 'form' : 'purpose');
-  const [direction, setDirection] = useState<'credit' | 'debit'>(pending?.amount_minor?.startsWith('-') ? 'debit' : 'credit');
+  const [request, setRequest] = useState<Pending | null>(() => { try { const raw = sessionStorage.getItem(key); return raw ? JSON.parse(raw) as Pending : null; } catch { return null; } });
+  const [phase, setPhase] = useState<Phase>(request ? 'uncertain' : 'purpose');
+  const [direction, setDirection] = useState<'credit' | 'debit'>('credit');
   const [amount, setAmount] = useState('');
-  const [reason, setReason] = useState(pending?.reason ?? '');
-  const [explanation, setExplanation] = useState(pending?.explanation ?? '');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState(pending ? 'Hay un ajuste pendiente de confirmar. Reintentar conserva la misma solicitud.' : '');
+  const [reason, setReason] = useState('');
+  const [explanation, setExplanation] = useState('');
+  const [problem, setProblem] = useState('');
+  const [result, setResult] = useState<{ amount: string; after: string } | null>(null);
+  const inFlight = useRef(false);
   const parsedAmount = parseCash(amount);
-  const signedAmount = pending?.amount_minor ?? (parsedAmount && BigInt(parsedAmount) > 0n ? (direction === 'debit' ? `-${parsedAmount}` : parsedAmount) : null);
-  const after = signedAmount ? (BigInt(balanceMinor) + BigInt(signedAmount)).toString() : null;
+  const signedAmount = parsedAmount && BigInt(parsedAmount) > 0n ? (direction === 'debit' ? `-${parsedAmount}` : parsedAmount) : null;
+  const preview = signedAmount ? (BigInt(balanceMinor) + BigInt(signedAmount)).toString() : null;
   const reasons = adjustmentReasons.filter(([, , d]) => d === 'any' || d === direction);
-  const ready = pending !== null || (signedAmount !== null && reason !== '' && explanation.trim().length >= 5);
-  const submit = async () => {
-    if (busy || !ready || !signedAmount) return;
-    const request: Pending = pending ?? { operation: 'adjust', ...(scope.kind === 'school' ? { school_id: scope.schoolId } : { cafeteria_id: scope.cafeteriaId }),
-      student_id: studentId, amount_minor: signedAmount, reason, explanation: explanation.trim(), request_key: crypto.randomUUID() };
-    try { sessionStorage.setItem(key, JSON.stringify(request)); } catch { setMessage('No se pudo preparar el ajuste. No se envió.'); return; }
-    setPending(request); setBusy(true); setMessage('');
+  const reasonLabel = (id: string) => adjustmentReasons.find(([r]) => r === id)?.[1] ?? id;
+  const review = () => {
+    if (!signedAmount) { setProblem('Introduce un monto positivo con hasta dos decimales y elige si aumenta o disminuye el saldo.'); return; }
+    if (!reason) { setProblem('Selecciona un motivo.'); return; }
+    if (explanation.trim().length < 5) { setProblem('Escribe una explicación de al menos 5 caracteres.'); return; }
+    setProblem(''); setPhase('confirm');
+  };
+  const commit = async () => {
+    if (inFlight.current) return;
+    const outgoing: Pending = request ?? { operation: 'adjust', ...(scope.kind === 'school' ? { school_id: scope.schoolId } : { cafeteria_id: scope.cafeteriaId }),
+      student_id: studentId, amount_minor: signedAmount!, reason, explanation: explanation.trim(), request_key: crypto.randomUUID() };
+    try { sessionStorage.setItem(key, JSON.stringify(outgoing)); } catch { setProblem('No se pudo preparar el ajuste. No se envió.'); return; }
+    inFlight.current = true; setRequest(outgoing); setPhase('pending');
     try {
       const response = await sessionFetch(scope.kind === 'school' ? '/api/school/wallet' : '/api/cafeteria/wallet', { method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': request.request_key }, body: JSON.stringify(request) });
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': outgoing.request_key }, body: JSON.stringify(outgoing) });
       let payload: { result?: unknown } = {};
       try { payload = await response.json(); } catch { /* uncertain */ }
       const parsed = adjustResultSchema.safeParse(payload.result);
-      if (response.ok && parsed.success && parsed.data.student_id === studentId && parsed.data.amount_minor === request.amount_minor) {
-        sessionStorage.removeItem(key);
-        onDone(`Ajuste registrado: ${signed(parsed.data.amount_minor)}. Saldo resultante: ${money(parsed.data.balance_after_minor)}.`, parsed.data.balance_after_minor); return;
+      if (response.ok && parsed.success && parsed.data.student_id === studentId && parsed.data.amount_minor === outgoing.amount_minor) {
+        sessionStorage.removeItem(key); setResult({ amount: parsed.data.amount_minor, after: parsed.data.balance_after_minor }); setPhase('success'); return;
       }
-      if ([400, 401, 403, 422].includes(response.status)) {
-        sessionStorage.removeItem(key); setPending(null);
-        setMessage('No se registró el ajuste. Revisa los datos, el motivo y tus permisos.'); return;
-      }
-      setMessage('Resultado pendiente de confirmar. Reintenta el mismo ajuste; no inicies otro.');
-    } catch { setMessage('Resultado pendiente de confirmar. Reintenta el mismo ajuste; no inicies otro.'); }
-    finally { setBusy(false); }
+      if ([400, 401, 403, 422].includes(response.status)) { sessionStorage.removeItem(key); setRequest(null); setPhase('rejected'); return; }
+      setPhase('uncertain');
+    } catch { setPhase('uncertain'); }
+    finally { inFlight.current = false; }
   };
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 sm:items-center sm:p-4">
-    <div role="dialog" aria-modal="true" aria-labelledby="adjustment-title" className="max-h-[92vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-t-2xl bg-white p-5 sm:rounded-2xl">
-      <h2 id="adjustment-title" className="text-2xl font-black">Corregir saldo</h2>
-      <p className="break-words text-sm"><span className="font-semibold">{studentName}</span> · Saldo actual <span className={`font-bold ${BigInt(balanceMinor) < 0n ? 'text-red-700' : ''}`}>{money(balanceMinor)}</span></p>
-      {step === 'purpose' && <fieldset className="space-y-2"><legend className="font-bold">¿Qué necesitas corregir?</legend>
-        <button type="button" className="btn-secondary w-full justify-start" onClick={() => setStep('purchase')}>Una compra</button>
-        <button type="button" className="btn-secondary w-full justify-start" onClick={() => setStep('reversal')}>Una recarga incorrecta</button>
-        <button type="button" className="btn w-full justify-start" onClick={() => setStep('form')}>Otra corrección excepcional de saldo</button>
-      </fieldset>}
-      {step === 'purchase' && <div role="status" className="space-y-2 rounded-xl bg-slate-100 p-3"><p className="font-bold">Usa Reembolso</p><p className="text-sm">Las compras se corrigen con un reembolso desde el POS (pestaña Reembolsos, con el número de recibo). Así el recibo y el dinero quedan enlazados.</p></div>}
-      {step === 'reversal' && <div role="status" className="space-y-2 rounded-xl bg-slate-100 p-3"><p className="font-bold">Usa Revertir recarga</p><p className="text-sm">{scope.kind === 'school' ? 'Busca la recarga en el historial del monedero y usa "Revertir recarga".' : 'La administración escolar puede revertir la recarga desde el historial del monedero.'}</p></div>}
-      {step === 'form' && <div className="space-y-3">
-        <p className="text-sm">Solo para correcciones excepcionales que no son un reembolso ni una reversión de recarga.</p>
-        <fieldset className="flex flex-wrap gap-4" disabled={busy || pending !== null}><legend className="mb-1 font-bold">Tipo de ajuste</legend>
-          <label className="flex items-center gap-2"><input type="radio" name="direction" checked={direction === 'credit'} onChange={() => { setDirection('credit'); setReason(''); }} /> <span className="font-semibold text-emerald-700">+ Aumentar saldo</span></label>
-          <label className="flex items-center gap-2"><input type="radio" name="direction" checked={direction === 'debit'} onChange={() => { setDirection('debit'); setReason(''); }} /> <span className="font-semibold text-red-700">− Disminuir saldo</span></label>
-        </fieldset>
-        {pending ? <p className="font-bold">Monto: {signed(pending.amount_minor)}</p> : <label className="block font-bold">Monto (RD$)<input className="field mt-1 w-full" aria-label="Monto del ajuste" inputMode="decimal" value={amount} disabled={busy} onChange={e => setAmount(e.target.value)} /></label>}
-        <label className="block font-bold">Motivo<select className="field mt-1 w-full" aria-label="Motivo del ajuste" value={reason} disabled={busy || pending !== null} onChange={e => setReason(e.target.value)}><option value="">Selecciona un motivo</option>{reasons.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-        <label className="block font-bold">Explicación (obligatoria)<textarea className="field mt-1 w-full" aria-label="Explicación del ajuste" maxLength={500} value={explanation} disabled={busy || pending !== null} onChange={e => setExplanation(e.target.value)} /></label>
-        {signedAmount && after && <dl className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-3 text-sm">
-          <dt>Saldo actual</dt><dd className={BigInt(balanceMinor) < 0n ? 'text-red-700' : ''}>{money(balanceMinor)}</dd>
-          <dt>Ajuste</dt><dd className={`font-bold ${signedTone(signedAmount)}`}>{signed(signedAmount)}</dd>
-          <dt>Saldo resultante</dt><dd className={`font-black ${BigInt(after) < 0n ? 'text-red-700' : ''}`}>{money(after)}</dd>
-        </dl>}
-        {after && BigInt(after) < 0n && <p role="alert" className="rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-950">El saldo quedará negativo ({money(after)}). El estudiante no podrá pagar con PIKAS Cash hasta que nuevas recargas cubran el saldo.</p>}
-        <p className="text-sm font-semibold">Esto crea un registro financiero permanente con tu nombre y rol. No se puede editar ni borrar; una corrección posterior requiere otro ajuste.</p>
-        <button className={signedAmount?.startsWith('-') ? 'btn-destructive' : 'btn'} disabled={busy || !ready} onClick={() => void submit()}>{busy ? 'Registrando…' : pending ? 'Reintentar mismo ajuste' : signedAmount ? `Registrar ajuste permanente de ${signed(signedAmount)}` : 'Registrar ajuste permanente'}</button>
-      </div>}
-      <div className="flex flex-wrap gap-3">{step !== 'purpose' && !pending && <button type="button" className="btn-secondary" disabled={busy} onClick={() => setStep('purpose')}>Volver</button>}<button type="button" className="btn-secondary" disabled={busy} onClick={onClose}>Cerrar</button></div>
-      {message && <p role="status">{message}</p>}
-    </div>
-  </div>;
+  const shown = request?.amount_minor ?? signedAmount;
+  // Typed values survive Atrás, so every pre-commit step counts them.
+  const dirty = (['purpose', 'purchase', 'reversal', 'details'].includes(phase) && !!(amount || reason || explanation)) || phase === 'confirm' || phase === 'rejected';
+  const close = () => { if (phase === 'success' && result) onDone(`Ajuste registrado: ${signed(result.amount)}. Saldo resultante: ${money(result.after)}.`, result.after); else onClose(); };
+  const steps = ['Propósito', 'Detalles', 'Confirmar'], step = phase === 'confirm' ? 2 : phase === 'details' ? 1 : 0;
+  const footer = {
+    purpose: <TaskCancelButton>Cancelar</TaskCancelButton>,
+    purchase: <><button type="button" className="btn-secondary" onClick={() => setPhase('purpose')}>Atrás</button><button type="button" className="btn" onClick={close}>Entendido</button></>,
+    reversal: <><button type="button" className="btn-secondary" onClick={() => setPhase('purpose')}>Atrás</button><button type="button" className="btn" onClick={close}>Entendido</button></>,
+    details: <><button type="button" className="btn-secondary" onClick={() => setPhase('purpose')}>Atrás</button><button type="button" className="btn" onClick={review}>Continuar</button></>,
+    confirm: <><button type="button" className="btn-secondary" onClick={() => setPhase('details')}>Atrás</button><button type="button" className={signedAmount?.startsWith('-') ? 'btn-destructive' : 'btn'} onClick={() => void commit()}>Aplicar ajuste {signed(signedAmount ?? '0')}</button></>,
+    pending: <button type="button" className="btn" disabled>Registrando ajuste…</button>,
+    success: <button type="button" className="btn" data-autofocus onClick={close}>Cerrar</button>,
+    rejected: <><TaskCancelButton>Cerrar</TaskCancelButton><button type="button" className="btn" onClick={() => setPhase('details')}>Revisar datos</button></>,
+    uncertain: <><button type="button" className="btn-secondary" onClick={onClose}>Cerrar</button><button type="button" className="btn" onClick={() => void commit()}>Reintentar el mismo ajuste</button></>,
+  }[phase];
+  return <TaskWindow title={phase === 'success' ? 'Ajuste registrado' : 'Corregir saldo'} context={<>{studentName} · Saldo actual <MoneyValue minor={balanceMinor} intent="balance" className="font-bold" /></>}
+    steps={['purpose', 'details', 'confirm'].includes(phase) ? steps : undefined} step={step} busy={phase === 'pending'} dirty={dirty} onClose={close} footer={<TaskActions>{footer}</TaskActions>}>
+    {phase === 'purpose' && <fieldset className="space-y-2"><legend className="mb-2 font-bold">¿Qué necesitas corregir?</legend>
+      {([['purchase', 'Una compra', 'Se corrige con un reembolso desde el POS.'], ['reversal', 'Una recarga incorrecta', 'Se corrige revirtiendo esa recarga.'], ['details', 'Otra corrección excepcional de saldo', 'Ajuste administrativo con motivo y explicación.']] as const)
+        .map(([next, label, help], index) => <button key={next} type="button" data-autofocus={index === 0 ? true : undefined} className="flex min-h-14 w-full flex-col items-start justify-center rounded-xl border px-4 py-2 text-left hover:bg-slate-50" onClick={() => { setProblem(''); setPhase(next); }}><span className="font-bold">{label}</span><span className="text-sm text-slate-600">{help}</span></button>)}
+    </fieldset>}
+    {phase === 'purchase' && <div className="space-y-2 rounded-xl bg-slate-100 p-3"><p className="font-bold">Usa Reembolso</p><p className="text-sm">Las compras se corrigen con un reembolso desde el POS (pestaña Reembolsos, con el número de recibo). Así el recibo y el dinero quedan enlazados.</p></div>}
+    {phase === 'reversal' && <div className="space-y-2 rounded-xl bg-slate-100 p-3"><p className="font-bold">Usa Revertir recarga</p><p className="text-sm">{scope.kind === 'school' ? 'Busca la recarga en Movimientos de PIKAS Cash y usa "Revertir recarga".' : 'La administración escolar puede revertir la recarga desde los movimientos de PIKAS Cash.'}</p></div>}
+    {phase === 'details' && <>
+      <p className="text-sm">Un ajuste administrativo <strong>no es una recarga</strong>: corrige el saldo de forma excepcional y queda registrado con tu nombre y rol.</p>
+      <fieldset className="grid grid-cols-2 gap-2"><legend className="mb-1 font-bold">Tipo de ajuste</legend>
+        {([['credit', '+ Aumentar saldo', 'text-emerald-800'], ['debit', '− Disminuir saldo', 'text-red-800']] as const).map(([value, label, tone]) =>
+          <label key={value} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 font-bold ${tone} ${direction === value ? 'border-slate-900 bg-slate-50' : ''}`}><input type="radio" name="direction" data-autofocus={value === 'credit' ? true : undefined} checked={direction === value} onChange={() => { setDirection(value); setReason(''); }} />{label}</label>)}
+      </fieldset>
+      <label className="block font-bold">Monto (RD$)<input className="field mt-1" aria-label="Monto del ajuste" inputMode="decimal" autoComplete="off" value={amount} onChange={e => setAmount(e.target.value)} /></label>
+      <label className="block font-bold">Motivo<select className="field mt-1" aria-label="Motivo del ajuste" value={reason} onChange={e => setReason(e.target.value)}><option value="">Selecciona un motivo</option>{reasons.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+      <label className="block font-bold">Explicación (obligatoria)<textarea className="field mt-1" aria-label="Explicación del ajuste" maxLength={500} value={explanation} onChange={e => setExplanation(e.target.value)} /></label>
+      {problem && <p role="alert" className="font-bold text-red-800">{problem}</p>}
+    </>}
+    {phase === 'confirm' && signedAmount && preview && <>
+      <p className="font-bold">Revisa el ajuste administrativo antes de aplicarlo.</p>
+      <TaskSummary rows={[['Estudiante', studentName], ['Ajuste', <MoneyValue key="a" minor={signedAmount} intent="movement" />], ['Dirección', signedAmount.startsWith('-') ? 'Disminuye el saldo' : 'Aumenta el saldo'],
+        ['Motivo', reasonLabel(reason)], ['Saldo actual', <MoneyValue key="b" minor={balanceMinor} intent="balance" />], ['Saldo resultante (estimado)', <MoneyValue key="c" minor={preview} intent="balance" />]]} />
+      <p className="break-words rounded-xl bg-slate-50 p-3 text-sm"><span className="font-semibold">Explicación:</span> {explanation.trim()}</p>
+      {BigInt(preview) < 0n && <p role="alert" className="rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-950">El saldo quedará negativo ({money(preview)}). El estudiante no podrá pagar con PIKAS Cash hasta que nuevas recargas cubran el saldo.</p>}
+      <p className="text-sm font-semibold">Esto crea un registro financiero permanente con tu nombre y rol. No se puede editar ni borrar; una corrección posterior requiere otro ajuste.</p>
+    </>}
+    {phase === 'pending' && shown && <TaskOutcome kind="pending" title="Registrando el ajuste…"><p>No cierres esta ventana. Ajuste de <MoneyValue minor={shown} intent="movement" /> para {studentName}.</p></TaskOutcome>}
+    {phase === 'success' && result && <TaskOutcome kind="success" title="Ajuste aplicado"><p className="text-2xl font-black"><MoneyValue minor={result.amount} intent="movement" /></p><p>Saldo actual de {studentName}: <MoneyValue minor={result.after} intent="balance" className="font-bold" /></p></TaskOutcome>}
+    {phase === 'rejected' && <TaskOutcome kind="failure" title="No se registró el ajuste"><p>PIKAS rechazó la solicitud. No se movió dinero. Revisa los datos, el motivo y tus permisos.</p></TaskOutcome>}
+    {phase === 'uncertain' && request && <TaskOutcome kind="uncertain" title="Ajuste pendiente de confirmar"><p>No sabemos si se registró el ajuste de <MoneyValue minor={request.amount_minor} intent="movement" />. Reintenta el mismo ajuste: PIKAS no lo duplicará. No inicies otro.</p></TaskOutcome>}
+  </TaskWindow>;
 }

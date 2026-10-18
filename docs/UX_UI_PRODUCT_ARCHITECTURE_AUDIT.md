@@ -1532,3 +1532,152 @@ Demo (workspace, `DemoEnvironmentBar`, switcher, `/switch`, stale-tab behavior).
   Domingo", POS "Volver a Backoffice"), and H31–H35.
 - **Also deferred:** platform staff single entrance (OD-B6), and returning to the original
   destination after re-login (OD6, security review).
+
+## 26. UX Wave D.1 — TaskWindow foundation and PIKAS Cash financial tasks (local)
+
+**Scope.** A reusable focused-task surface, proven on Recarga first (internal gate), then
+applied unchanged to Administrative Adjustment and Recarga Reversal.
+
+Not changed: financial backend (5B, 5C.1–5C.3), API routes, RPCs, schema, RLS, idempotency,
+authority, the Wave C shell, the Foundation B Demo, POS, register close, and 5D.4–5D.6.
+No owner decision was needed.
+
+### Architecture (`components/task-window.tsx`)
+
+- **`TaskWindow`:** a native modal `<dialog>` (`showModal`, top layer), portalled to
+  `<body>` so no parent layout can shift it.
+  - **While open:** the shell, its mobile navigation and the page behind are inert. Wave C
+    already hides `.mobile-nav` while a `dialog[open]` exists.
+  - **Header:** title, task context (student and current balance where relevant), optional
+    lightweight steps ("Detalles › Confirmar"), and a 44 px "Cerrar tarea" (×).
+  - **Body:** scrolls.
+  - **Footer:** pinned and safe-area aware. Secondary actions come first; the primary
+    action sits at the bottom on mobile.
+  - **Layout:** mobile (< 640 px) is full screen (`100dvh`); desktop is a content-sized
+    (`h-fit`) centered panel, at most 32 rem wide and 90 dvh tall.
+- **One close gate** for ×, the footer Cancel (`TaskCancelButton`, via context), Escape
+  and backdrop:
+  - **busy** (a mutation is unresolved): ignored, with the status "La operación está en
+    curso…";
+  - **dirty** (typed values not yet committed, including values kept after Atrás): an
+    in-app "¿Descartar los datos ingresados?" with "Seguir editando" focused, never
+    `window.confirm`;
+  - **otherwise:** close.
+- **Focus:**
+  - on open: the first `[data-autofocus]` field, or the title;
+  - Tab and Shift+Tab are contained (a modal dialog alone lets focus reach the browser
+    chrome);
+  - on close: focus returns to the opener;
+  - success and error states keep keyboard-usable actions.
+- **Helpers:** `TaskActions`, `TaskSummary` (review rows) and `TaskOutcome` (pending,
+  success, failure, and "pendiente de confirmar", which never claims either outcome).
+- No step framework, draft store or stepper beyond these. `TaskStepper` / `ConfirmStep`
+  were not needed as separate abstractions.
+
+### Financial-task safety model
+
+- **Before the explicit final action:** typed values live only in component memory. No
+  localStorage, sessionStorage, URL, cookie or database draft. A refresh, close, logout,
+  session end or Demo switch discards them. Advancing to Confirmar sends nothing.
+- **At the final action:** the existing 5B/5C recovery journal is written. It stores the
+  exact request key and payload in `sessionStorage`, under the same keys as before, and is
+  the frozen idempotent exact-retry mechanism, not a draft. The existing route is then
+  called once (`inFlight` guard; the primary button becomes a disabled "Registrando…").
+- **Outcome classification is unchanged from the frozen dialogs:**
+  - **authoritative success:** clears the journal and shows the server result (amount and
+    balance after);
+  - **authoritative rejection** (400/401/403/422; 409 = already reversed): clears it and
+    states "No se movió dinero";
+  - **anything else:** "pendiente de confirmar", journal kept.
+  - For Recarga, a non-success during a recovery attempt keeps the request, as before.
+- **Never automatic:** the journal is never sent without the user pressing "Reintentar la
+  misma …".
+  - After a reload, the wallet page shows "Hay una recarga de RD$ X pendiente de confirmar",
+    with Recargar disabled until it is reviewed.
+  - If the session ends mid-request, the boundary unmounts the task; nothing is resent and
+    the exact request awaits explicit retry.
+- **Previews:** previews of resulting balance reuse the existing client arithmetic already
+  present in the adjustment and reversal dialogs (balance ± amount). They are labelled
+  "Saldo resultante (estimado)", and success shows the authoritative `balance_after_minor`.
+- **Money:** all values use `MoneyValue`: Recarga `+` movement, Reversión `−` movement,
+  Ajuste signed by direction, balances as `balance` (negative explicit and red). No new
+  formatter.
+
+### Migrations
+
+- **Recarga:**
+  - **Before:** a permanent amount, reference and note form on the wallet page plus a
+    native `confirm()`.
+  - **Now:** a **Recargar** button next to the balance opens Detalles (amount, reference,
+    note; the existing rule requires a reference or a note) → Confirmar (student, +amount,
+    current and estimated balance, reference/note) → **"Recargar RD$ X"** → success
+    ("Recarga registrada", +amount, authoritative balance).
+  - A frozen PIKAS Cash disables it with a reason; read-only roles see no action.
+- **Ajuste administrativo:**
+  - Same journal and routes (school, or cafeteria-scoped).
+  - Propósito (Una compra → Reembolso guidance; Una recarga incorrecta → Revertir recarga
+    guidance; Otra corrección excepcional) → Detalles ("no es una recarga", + Aumentar / −
+    Disminuir, amount, direction-filtered reason, required explanation) → Confirmar
+    (signed amount, direction text, reason, explanation, balances, negative-balance warning
+    that does not block, permanence notice) → **"Aplicar ajuste ±RD$ X"** (destructive
+    style for debits).
+- **Reversión de recarga:**
+  - Launched only from an unreversed recarga in Movimientos (existing eligibility).
+    Reversed ones show "Revertida · motivo" and no action.
+  - The task shows the original recarga (amount, date, reference, note), then Detalles
+    (reason; explanation required for "Otro") → Confirmar (−amount, balances,
+    negative-balance warning) → **"Revertir recarga de RD$ X"**.
+  - 409 shows "Esta recarga ya fue revertida. Solo puede revertirse una vez." with no retry.
+
+### Authority and Demo
+
+- Buttons follow the existing server-derived wallet access (`replenish`, `reverse`,
+  `adjust`); every mutation remains server-authoritative through the unchanged routes.
+- The Demo school persona's PIKAS Cash page still shows "Las operaciones financieras no
+  están habilitadas…". There is no Recargar, and exactly one Demo bar.
+
+### Validation (local, fictional)
+
+- **Behavioural browser-component suite** `components/wallet-tasks.browser.test.tsx`:
+  **16/16** in real Chromium with scripted `fetch`. It covers:
+  - focus in, containment and return;
+  - Escape, ×, Cancelar and backdrop discard flows, with no native dialogs;
+  - no request before the final action;
+  - the Atrás/edit round-trip;
+  - pending blocking Escape, close and backdrop and preventing a second submit;
+  - rejection, uncertain and explicit same-key retry;
+  - refresh restoring nothing, and session-style unmount mid-request (no resend);
+  - positive and negative adjustments, cafeteria scope and authority rejection;
+  - reversal context, the single commit and 409;
+  - wallet page authority visibility, frozen wallet, and a pending journal surfaced without
+    sending.
+- **Existing suites:** wallet contracts and command, school/cafeteria wallet routes, wallet
+  authority, the adjustment dialog, Wave C shells and primitives, School and Cafeteria
+  pages, the Demo foundation and the switch route. **178/178 across 14 files.**
+- TypeScript, affected ESLint, production build and `git diff --check` pass.
+- **Production-mode browser** (Foundation B stage, loopback adapter, School Admin on the
+  fictional student "Sol Auditoría") at 390/768/1440:
+  - every flow is opened, filled, reviewed, taken back, edited and discarded;
+  - Escape, the backdrop (≥ 768) and refresh restore nothing;
+  - the task is full screen at 390 with the mobile nav hidden; at ≥ 768 it is centered and
+    content-sized;
+  - the footer is always on screen, new controls are ≥ 44 px, there is no overflow, no
+    native dialogs and no page errors;
+  - the cafeteria lookup and the Demo exclusion were checked.
+- **Committed at 1440 only, against local fictional data:**
+  - Recarga +RD$ 5.00 (reference "Transferencia ficticia D1");
+  - Ajuste −RD$ 1.00 (Débito autorizado, "Débito ficticio D1");
+  - reversal of that same RD$ 5.00 recarga (Monto incorrecto).
+
+  The balance went RD$ 155.00 → 154.00, matching the ledger; the recarga now shows
+  "Revertida".
+- A second, non-committing pass re-verified layout after the desktop content-height fix.
+
+### Remaining Wave D work
+
+- **Wave D.2:** register close (admin exceptional close and POS close) on the proven
+  TaskWindow, keeping blind count. Non-financial task windows and approved browser-session
+  drafts (student, product, staff, register, provisioning).
+- **Later Wave D:** students `FilterBar`, wallet history disclosure (H16/H18), `DataList`
+  for other collections, and the student name as the PIKAS Cash title.
+- Wave E (POS and 5D.4) and Wave F (broad accessibility and polish) are untouched.
