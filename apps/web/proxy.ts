@@ -5,6 +5,7 @@ import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { resolvePikasIdentity } from "@/lib/auth/pikas-context";
 import { resolveCafeteriaAccess } from "@/lib/auth/cafeteria-access";
 import { resolveSchoolAccess } from "@/lib/auth/school-access";
+import { canUseSandboxPov } from "./lib/platform/sandbox-launcher";
 import { resolvePosAccess } from "@/lib/auth/pos-access";
 
 const requiredRole = (path: string) =>
@@ -80,12 +81,17 @@ export async function proxy(request: NextRequest) {
     return redirected;
   };
 
+  const demoRecovery = async () => {
+    try { return canUseSandboxPov(await resolvePikasIdentity(supabase)); }
+    catch { return false; } // Keep the original denial if operator lookup is unavailable.
+  };
   if (needed === "pos_operator") {
     const access = await resolvePosAccess(supabase);
     if (access.status === "authorized") return response;
     if (access.status === "unauthenticated") {
       return redirectWithCookies(new URL(`/login?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url));
     }
+    if (await demoRecovery()) return redirectWithCookies(new URL("/platform/demostracion/cambio", request.url));
     return redirectWithCookies(new URL(
       access.status === "forbidden" ? "/login?error=pos_authority" : "/login?error=pos_unavailable",
       request.url,
@@ -95,12 +101,14 @@ export async function proxy(request: NextRequest) {
   if (needed === "school_admin") {
     const access = await resolveSchoolAccess(supabase);
     if (access.status === "authorized") return response;
+    if (access.status !== "unauthenticated" && await demoRecovery()) return redirectWithCookies(new URL("/platform/demostracion/cambio", request.url));
     return redirectWithCookies(new URL(access.status === "unauthenticated" ? "/login?next=%2Fadmin%2Fescuela" : "/login?error=school_authority", request.url));
   }
 
   if (needed === "cafeteria_admin") {
     const access = await resolveCafeteriaAccess(supabase);
     if (access.status === "authorized") return response;
+    if (access.status !== "unauthenticated" && await demoRecovery()) return redirectWithCookies(new URL("/platform/demostracion/cambio", request.url));
     return redirectWithCookies(new URL(access.status === "unauthenticated" ? "/login?next=%2Fadmin%2Fcafeteria" : "/login?error=cafeteria_authority", request.url));
   }
 

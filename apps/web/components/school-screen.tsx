@@ -1,3 +1,4 @@
+import { redirectDemoDenial } from "../lib/platform/demo-recovery";
 import "server-only";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -12,10 +13,10 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
   const client = await createSupabaseServerClient();
   const access = await resolveSchoolAccess(client);
   if (access.status === "unauthenticated") redirect("/login?next=%2Fadmin%2Fescuela");
-  if (access.status !== "authorized") redirect("/login?error=school_authority");
+  if (access.status !== "authorized") return redirectDemoDenial(client, "/login?error=school_authority");
   const params = await searchParams;
   const schoolId = params.school === undefined ? access.context.schools[0].school_id : params.school;
-  if (typeof schoolId !== "string" || !access.context.schools.some(s => s.school_id === schoolId)) redirect("/login?error=school_authority");
+  if (typeof schoolId !== "string" || !access.context.schools.some(s => s.school_id === schoolId)) return redirectDemoDenial(client, "/login?error=school_authority");
   const query = z.string().max(80).safeParse(params.q ?? "");
   const status = z.enum(["", "active", "suspended", "inactive"]).safeParse(params.status ?? "");
   const cursor = z.uuid().nullable().safeParse(params.after ?? null);

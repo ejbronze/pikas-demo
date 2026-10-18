@@ -16,7 +16,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
       {capabilities.includes("platform:tenant:lifecycle:read") && <PlatformNavLink href="/platform/clientes">Clientes</PlatformNavLink>}
       {capabilities.includes("platform:tenant:provision") && capabilities.includes("platform:customer_admin:provision") && <PlatformNavLink href="/platform/clientes/nuevo">Crear cliente</PlatformNavLink>}
       {capabilities.includes("platform:team:manage") && <PlatformNavLink href="/platform/equipo">Equipo de PIKAS</PlatformNavLink>}
-      {capabilities.includes("platform:sandbox:pov:enter") && <PlatformNavLink href="/platform/demostracion">Demostración</PlatformNavLink>}
+      {capabilities.includes("platform:sandbox:pov:enter") && <PlatformNavLink href="/platform/demostracion">Demo</PlatformNavLink>}
     </div></nav>
     <main className="mx-auto max-w-6xl space-y-6 p-5 sm:p-8">{children}</main>
   </div>;

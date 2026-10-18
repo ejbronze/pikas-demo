@@ -163,6 +163,12 @@ describe("sandbox POV routes", () => {
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
+  it("treats authoritative absence as already exited without ending Auth", async () => {
+    rpc.mockImplementation(async name => name === "platform_exit_sandbox_pov" ? {data:null,error:{code:"23514"}} : {data:null,error:null});
+    expect((await doExit({})).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("platform_get_active_sandbox_pov");
+  });
+
   it("surfaces database denial as 403 without a result", async () => {
     rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
     const response = await doEnter(target);

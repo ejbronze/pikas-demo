@@ -8,7 +8,7 @@ import type { PikasIdentity } from "@/lib/auth/pikas-context";
 
 export const SANDBOX_POV_CAPABILITY = "platform:sandbox:pov:enter";
 
-const targetSchema = z.object({
+export const targetSchema = z.object({
   school_id: z.uuid().optional(),
   account_id: z.uuid(),
   account_name: z.string(),
@@ -18,7 +18,7 @@ const targetSchema = z.object({
   persona_display_name: z.string(),
 });
 
-const activeSchema = z.object({
+export const activeSchema = z.object({
   session_id: z.uuid(),
   school_id: z.uuid().optional(),
   account_id: z.uuid(),
@@ -41,7 +41,7 @@ export type SandboxTarget = {
   personaName: string;
 };
 
-export type ActiveSandboxPov = SandboxTarget & { expiresAt: string; canOpenPos: boolean; canOpenExperience: boolean; destination: string; operatorName: string };
+export type ActiveSandboxPov = SandboxTarget & { sessionId: string; expiresAt: string; canOpenPos: boolean; canOpenExperience: boolean; destination: string; operatorName: string };
 
 export type SandboxLauncherState =
   | { kind: "hidden" }
@@ -97,6 +97,7 @@ export async function loadSandboxLauncherState(
       return {
         kind: "active",
         active: {
+          sessionId: a.session_id,
           povCode: a.pov_code,
           schoolId: a.school_id ?? "",
           accountId: a.account_id,

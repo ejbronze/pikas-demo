@@ -182,6 +182,15 @@ export class ConnectedSale {
     } finally { this.update({ busy: false }); }
     if (refreshAfter) await this.refresh();
   }
+  // Demo departure discards only unsent UI state or a confirmed receipt journal.
+  // It never sends a financial request and never removes an uncertain journal.
+  discardForDemoDeparture(): boolean {
+    if (!this.started || !this.storage || this.state.busy || this.state.registerPending || this.state.recoveryBlocked || (this.state.pending && !this.state.receipt)) return false;
+    try { this.storage?.removeItem(storageKey); }
+    catch { return false; }
+    this.update({ pending: null, receipt: null, cart: [], tender: null, cash: "", purchaserMode: null, customer: null, purchaseContext: null, customers: [], phase: "entry" });
+    return true;
+  }
   async reset() {
     if (this.state.busy || this.state.registerPending || this.state.recoveryBlocked || (this.state.pending && !this.state.receipt)) return;
     try { this.storage?.removeItem(storageKey); }

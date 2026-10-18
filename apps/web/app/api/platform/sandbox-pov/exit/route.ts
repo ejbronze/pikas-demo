@@ -9,6 +9,12 @@ export const POST = createPlatformRpcPostHandler({
   capability: "platform:sandbox:pov:enter",
   schema: exitSchema,
   resultSchema,
-  invoke: (supabase, _payload, requestId) =>
-    supabase.rpc("platform_exit_sandbox_pov", { p_request_id: requestId }),
+  invoke: async (supabase, _payload, requestId) => {
+    const response = await supabase.rpc("platform_exit_sandbox_pov", { p_request_id: requestId });
+    if (response.error?.code === "23514") {
+      const current = await supabase.rpc("platform_get_active_sandbox_pov");
+      if (!current.error && current.data === null) return { data: { status: "exited" }, error: null };
+    }
+    return response;
+  },
 });

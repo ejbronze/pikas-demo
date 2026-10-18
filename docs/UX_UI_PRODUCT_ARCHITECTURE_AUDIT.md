@@ -1,8 +1,9 @@
 # PIKAS — Holistic UX/UI Product Architecture Audit (post-5D.3)
 
-**Status:** audit and design only, delivered for owner review. Nothing in this document
-is implemented. No product code, SQL, migration, RLS, sandbox authority, POS or
-deployment changed.
+**Status:** the original audit is owner-approved historical evidence. UX Foundation B
+is implemented locally (implementation record in §23 below). Findings and measurements
+in §§1–22 describe the audited baseline; they are not a new audit. Waves C–F remain
+pending. No SQL, migrations, RLS or deployment changed in Foundation B.
 
 **Baseline:** Phase 5D.3 local checkpoint `7d51a13e`.
 
@@ -1142,3 +1143,193 @@ Cash report lands in the new structure.
   5D.3 evidence), contrast and screen-reader testing (not concluded).
 - **Artifacts (local only):** `/private/tmp/pikas-ux-audit/holistic/` (screenshots,
   `sweep.json`, `journeys.json`, `interact*.json`).
+
+## 23. UX Foundation B — local implementation record
+
+**Scope:** bounded Foundation B implementation, local only, on `Pikas_demo`.
+The historical findings above remain the baseline; this record supersedes their
+Foundation B proposals and pending owner decisions, without reopening the audit.
+
+### Product and architecture
+
+- PIKAS Admin navigation and home now say **Demo**. The existing destination
+  `/platform/demostracion` is the workspace **Explorar PIKAS**. Administration groups
+  Escuela/Cafetería; Operations contains Caja / POS; Padre/Estudiante are plain,
+  noninteractive **Próximamente** cards. No legacy family/student demo links are added.
+- `DemoEnvironmentBar` and `DemoPersonaSwitcher` serve School, Cafeteria and connected
+  POS. One amber control surface identifies Demo, current experience, switching and
+  **Salir del demo**. Normal tenant shells keep their existing authentication controls.
+- `POST /api/platform/sandbox-pov/switch` accepts only strict Zod
+  `{ experience: "school" | "cafeteria" | "pos" }`, same origin and an idempotency UUID.
+  The existing Platform handler authenticates the real operator and requires
+  `platform:sandbox:pov:enter`; Platform Admin alone does not confer that capability.
+- The server reads `platform_get_active_sandbox_pov` and
+  `platform_list_sandbox_pov_targets`. While active, account, school and cafeteria must
+  match the active environment. Initial entry requires exactly one registered
+  environment. Missing, malformed, ambiguous, expired or duplicate targets fail closed.
+  No client identity, tenant ID or return URL is accepted.
+- The existing `platform_enter_sandbox_pov` resolves the registered fictional persona,
+  atomically supersedes the previous POV, preserves the real operator and audit, and
+  establishes the existing four-hour POV. This SQL authority mechanism is unchanged;
+  no database or concurrency suite was rerun to re-prove it.
+- Destinations are always the canonical GET homes: School
+  `/admin/escuela?school=<server-resolved school>`; Cafeteria
+  `/admin/cafeteria?cafeteria=<server-resolved cafeteria>`; cashier `/pos`.
+  Navigation memory is deliberately omitted: canonical homes avoid extra path
+  authorization and never restore forms, tenders, carts or financial state.
+- The canonical **Salir del demo** calls the existing exit RPC, then hard-navigates to
+  the Demo workspace. Authoritative absence is treated as already exited. It never
+  invokes Auth logout. **Cerrar sesión** remains in PIKAS Admin's authenticated session
+  control and uses the existing application-session/logout boundary. It masks/ends the
+  session as before; no sign-in systems were merged.
+- Stale-tab notifications use localStorage only to invalidate the UI, never as
+  authority. A native modal explains the change and traps focus. Proxy/server denial
+  paths recognize a legitimate sandbox operator and show the explanatory Demo state.
+  **Continuar** rechecks the underlying identity and effective context server-side,
+  then navigates to the current home or Demo workspace. No old POV is revived and no
+  mutation is submitted. Actual session termination follows existing authentication.
+- POS blocks switch/exit during busy, unresolved checkout/register operations or blocked
+  recovery. Unsent cart/payment/cash/count input requires explicit native confirmation;
+  cancellation keeps the input, acceptance discards it. A confirmed receipt's journal
+  can be cleared without a request. Financial controls freeze while switching is
+  unresolved. The exact switch key/body is retained for an explicit retry.
+- Existing per-tab POS journals also block Demo workspace/admin controls if the mounted
+  POS controller cannot reconcile them. This is conservative: saved evidence is never
+  deleted or automatically retried from another experience. Cross-tab supersession
+  still uses the existing command revalidation; uncertain evidence stays in its
+  original tab and requires explicit recovery under valid authority.
+- An idle open sandbox register stays open. The UI says **La caja permanecerá abierta**;
+  switching never calls open/close/checkout. Cashier expected closing cash remains hidden.
+- `/login` has a generic **Entrada de PIKAS Admin** pointer to `/backoffice/login`,
+  independent of any supplied email. Cajas list/detail use `MoneyValue` movement
+  semantics with **Sobrante**, **Faltante**, **Cuadrada**; reporting/accounting are unchanged.
+  The school summary directs users to each student's **PIKAS Cash**, according to
+  permissions. Opportunistic copy changes are restricted to touched files.
+
+### Owner decisions closed
+
+| Decision | Implemented resolution |
+| --- | --- |
+| OD-B1 | Navigation label Demo. |
+| OD-B2 | Strict experience-only endpoint; server resolves all identity/scope. |
+| OD-B3 | Idle open register may remain open; no register mutation on switch. |
+| OD-B4 | Canonical homes, no remembered navigation or financial state. |
+| OD-B5 | Existing four-hour RPC semantics, no new session system. |
+| OD-B6 | Static pointer to the separate Platform entrance; no enumeration. |
+| OD-B7 | Same approved account/school/cafeteria environment only. |
+| OD-B8 | Sobrante/Faltante/Cuadrada with existing signed MoneyValue semantics. |
+| OD-B9 | Harmless legacy implementation retained, not linked from the new Demo. |
+| OD-B10 | Draft framework remains deferred to Wave D. |
+| OD-B11 | POS recent sales remains deferred to 5D.4 / Wave E. |
+
+### Validation and local evidence
+
+- **161 focused tests / 10 files passed:** existing POV route/launcher tests, new switch
+  route validation, Demo presentation, journal guards, connected POS controller/access,
+  proxy stale-tab recovery and Cajas presentation. The switch route tests cover all
+  three codes, foreign origin, missing key, arbitrary scope/identity fields, ordinary
+  tenant/Platform-only denial, environment escape, malformed/ambiguous targets and RPC
+  rejection. Existing POS tests retain blind-close/explicit-tender/recovery behavior.
+- The existing connected POS presentation browser-component suite also passed **16
+  tests**, including catalog layout at 390/768/1440: **177 focused tests / 11 files total**.
+- Typecheck, affected ESLint, production build and `git diff --check` passed. No frozen
+  Phase 5 DB/concurrency or unrelated application suites were run.
+- Browser scripts: `scripts/test-ux-foundation-b.mjs` and
+  `scripts/test-ux-foundation-b-pos.cjs`. Actual authenticated fictional local services
+  were used, not production. The production-mode fixture build lives in
+  `/tmp/pikas-foundation-b/app`; its sole runtime source difference is a temporary
+  Supabase config allowance for exactly `http://127.0.0.1:55641` / `pikas-4d6`.
+  Runtime source parity was checked; repository config and `.env.local` are unchanged.
+- The normal source production build also passed with local environment overrides;
+  its strict Supabase hostname guard was preserved. No production service was accessed.
+- Screenshots/results are in `/tmp/pikas-foundation-b/browser`. Measurements distinguish
+  real document requests and changed-URL navigation from Next hydration's duplicate
+  same-URL history replacement events.
+
+| Browser width | School / Cafeteria / POS header | Demo bar | Content after top chrome | Switch | Comparable journey | Including Demo exit |
+| --- | --- | --- | --- | --- | --- | --- |
+| 390 px | 56 px | 45 px (44 + border) | y = 101 px | 2 clicks / 1 navigation | 8 clicks / 5 navigations | 9 clicks / 6 navigations |
+| 768 px | 56 px | 45 px | y = 101 px | 2 / 1 | 8 / 5 | 9 / 6 |
+| 1440 px | 56 px | 45 px | y = 101 px | 2 / 1 | 8 / 5 | 9 / 6 |
+
+- Comparable journey: Platform → Demo → School → Cafeteria → POS → School. The three
+  switches alone are **6 clicks / 3 navigations**. Versus **16 / 13**, the comparable
+  journey uses 50% fewer clicks and 8 fewer navigations. Four actual document loads
+  serve its persona entries; the Demo link is one client navigation. Hydration's
+  same-URL `replaceState` events are retained in evidence but not counted as loads.
+- All widths passed grouping/unavailable personas, one visible Demo bar, no document
+  horizontal overflow, keyboard Enter/Escape/focus return, open-register switching,
+  separate full logout, stale-tab dialog, server denial/recovery and generic login
+  pointer checks, with zero browser page errors or financial writes during switches.
+  The POS workspace tabs wrap on narrow screens, keeping Caja reachable.
+- The dedicated 390 px POS browser check passed four discard confirmations (cancel and
+  accept for sale/payment and counted cash), no restored financial input, no expected
+  closing cash, unresolved checkout blocking both switch and exit, exact journal
+  retention and no automatic replay. Its single fake product existed only in the
+  intercepted browser bootstrap; checkout was intercepted with a simulated uncertain
+  response. **Zero checkout/close requests reached the server.** The open register
+  session remained identical across persona switches.
+- **Minimal local data added:** one fictional José session on **Caja demo Horizonte**,
+  `b8248f2b-4b1c-4672-9514-8ad530bd02b1`, opening cash **RD$ 0.00**, left open for the
+  required demonstration. No sales, top-ups, refunds, adjustments, counted closes,
+  people, memberships or products were added. Normal Auth/POV sessions and audit rows
+  were produced by the tested navigation. Existing local data was not reset or cleaned.
+  Original creation evidence: `browser/initial-local-data-added.json`; subsequent runs
+  reused it. `results.json` and `pos-guards.json` contain final browser results.
+
+### Change manifest and boundaries
+
+The Foundation B commit contains these 39 files:
+
+```text
+apps/web/app/admin/cafeteria/layout.tsx
+apps/web/app/admin/escuela/layout.tsx
+apps/web/app/api/platform/sandbox-pov/exit/route.ts
+apps/web/app/api/platform/sandbox-pov/routes.test.ts
+apps/web/app/api/platform/sandbox-pov/switch/route.test.ts
+apps/web/app/api/platform/sandbox-pov/switch/route.ts
+apps/web/app/login/page.tsx
+apps/web/app/platform/demostracion/cambio/page.tsx
+apps/web/app/platform/demostracion/continuar/page.tsx
+apps/web/app/platform/demostracion/page.tsx
+apps/web/app/platform/layout.tsx
+apps/web/app/platform/page.tsx
+apps/web/components/cafeteria-operations.tsx
+apps/web/components/cafeteria-screen.tsx
+apps/web/components/connected-cafeteria-shell.tsx
+apps/web/components/connected-pos-dashboard.test.tsx
+apps/web/components/connected-pos-dashboard.tsx
+apps/web/components/connected-school-pages.tsx
+apps/web/components/connected-school-shell.tsx
+apps/web/components/demo-environment-bar.tsx
+apps/web/components/demo-foundation.test.tsx
+apps/web/components/demo-persona-switcher.tsx
+apps/web/components/demo-workspace.tsx
+apps/web/components/reconciliation-difference.tsx
+apps/web/components/school-screen.tsx
+apps/web/lib/auth/pos-access.ts
+apps/web/lib/platform/demo-departure.test.ts
+apps/web/lib/platform/demo-departure.ts
+apps/web/lib/platform/demo-experiences.ts
+apps/web/lib/platform/demo-recovery.ts
+apps/web/lib/platform/sandbox-launcher.ts
+apps/web/lib/pos/connected-sale.test.tsx
+apps/web/lib/pos/connected-sale.ts
+apps/web/proxy.test.ts
+apps/web/proxy.ts
+docs/CHANGELOG_PRODUCT.md
+docs/UX_UI_PRODUCT_ARCHITECTURE_AUDIT.md
+scripts/test-ux-foundation-b-pos.cjs
+scripts/test-ux-foundation-b.mjs
+```
+
+Waves C–F (unified shell, TaskWindow/drafts, POS discovery/redesign, broad polish)
+and Phase 5D.4–5D.6 remain untouched. Reporting calculations, blind count, explicit
+tender choice and sandbox financial exclusions are unchanged. There are no migration,
+schema, RLS, tenant-role or production-configuration changes. Docker was not started;
+existing fictional local services were used. No production access, push or deploy.
+No outstanding owner decision or blocker remains for this bounded milestone.
+
+The unrelated `supabase/README.md` is excluded from staging/commit and retains SHA-1
+`12172eba11988bcb9073d042bb6881d33c801072`. The intended final worktree contains only
+that preexisting modification after the local Foundation B commit.

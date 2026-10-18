@@ -303,3 +303,26 @@ describe("4D.7F real-user recovery binding", () => {
     expect(data.get("pikas:connected-pos:pending:v1")).toBe(JSON.stringify(legacy));
   });
 });
+
+describe('Demo departure safety', () => {
+ it('discards unsent cart/tender/cash without a financial request or register close', async () => {
+  await prepare(); sale.setTender('cash'); sale.setCash('200'); const count = send.mock.calls.length;
+  expect(sale.discardForDemoDeparture()).toBe(true);
+  expect(sale.getSnapshot()).toMatchObject({cart:[],tender:null,cash:'',pending:null,phase:'entry'});
+  expect(send.mock.calls.length).toBe(count); expect(sale.getSnapshot().bootstrap?.session).not.toBeNull();
+ });
+ it('blocks uncertain checkout and preserves its exact recovery journal', async () => {
+  await prepare(); send.mockImplementationOnce(async()=>{throw Error('lost response');}); await sale.checkout();
+  const saved=[...data.values()][0], pending=sale.getSnapshot().pending;
+  expect(sale.discardForDemoDeparture()).toBe(false); expect(sale.getSnapshot().pending).toBe(pending); expect([...data.values()][0]).toBe(saved);
+ });
+ it('clears only a confirmed receipt journal without replaying it', async () => {
+  await prepare(); await sale.checkout(); expect(sale.getSnapshot().receipt).not.toBeNull(); const count=send.mock.calls.length;
+  expect(sale.discardForDemoDeparture()).toBe(true); expect(data.size).toBe(0); expect(sale.getSnapshot().receipt).toBeNull(); expect(send.mock.calls.length).toBe(count);
+ });
+ it('blocks unresolved register writes', async () => {
+  send.mockImplementation(async op => { if(op.operation==='bootstrap')return bootstrap();throw Error('lost register response'); });
+  await sale.start(storage); await sale.closeRegister('200');
+  expect(sale.getSnapshot().registerPending).not.toBeNull(); const saved=[...data.values()][0]; expect(sale.discardForDemoDeparture()).toBe(false); expect([...data.values()][0]).toBe(saved);
+ });
+});

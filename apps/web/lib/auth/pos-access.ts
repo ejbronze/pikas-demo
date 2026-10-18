@@ -1,4 +1,5 @@
 import "server-only";
+import { redirectDemoDenial } from "../platform/demo-recovery";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
@@ -39,9 +40,10 @@ export async function requirePosAccess(): Promise<
     await requireRole("pos_operator");
     return { demo: true, context: null };
   }
-  const access = await resolvePosAccess(await createSupabaseServerClient());
+  const client = await createSupabaseServerClient();
+  const access = await resolvePosAccess(client);
   if (access.status === "unauthenticated") redirect("/login?next=%2Fpos");
-  if (access.status === "forbidden") redirect("/login?error=pos_authority");
-  if (access.status !== "authorized") redirect("/login?error=pos_unavailable");
+  if (access.status === "forbidden") return redirectDemoDenial(client, "/login?error=pos_authority");
+  if (access.status !== "authorized") return redirectDemoDenial(client, "/login?error=pos_unavailable");
   return { demo: false, context: access.context };
 }

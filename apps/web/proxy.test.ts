@@ -20,6 +20,7 @@ const request = (path: string, cookie?: string) => new NextRequest(`http://local
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.demo.mockReturnValue(false);
+  mocks.identity.mockResolvedValue({ status: "ready", platform: null });
   mocks.createClient.mockReturnValue({});
   mocks.access.mockResolvedValue({ status: "authorized", context: posContext() });
 });
@@ -76,4 +77,21 @@ describe("school proxy gate", () => {
 describe("cafeteria proxy gate",()=>{
  it.each(["/admin/cafeteria","/admin/cafeteria/productos","/admin/cafeteria/menus/turnos","/admin/cafeteria/personal","/admin/cafeteria/cajas","/admin/cafeteria/configuracion"])("allows DB-authorized %s",async path=>{mocks.cafeteria.mockResolvedValue({status:"authorized"});expect((await proxy(request(path))).headers.get("x-middleware-next")).toBe("1");expect(mocks.identity).not.toHaveBeenCalled();});
  it.each(["forbidden","unavailable","unauthenticated"])("fails closed for %s",async status=>{mocks.cafeteria.mockResolvedValue({status});expect((await proxy(request("/admin/cafeteria"))).headers.get("location")).toContain("/login?");});
+});
+
+
+describe("Demo stale-tab recovery", () => {
+ it.each(["/pos", "/admin/escuela", "/admin/cafeteria"])("explains authority loss for an authenticated sandbox operator on %s", async path => {
+  mocks.identity.mockResolvedValue({ status: "ready", platform: { capabilities: ["platform:sandbox:pov:enter"] } });
+  mocks.access.mockResolvedValue({status:"forbidden"}); mocks.school.mockResolvedValue({status:"forbidden"}); mocks.cafeteria.mockResolvedValue({status:"forbidden"});
+  expect((await proxy(request(path))).headers.get("location")).toBe("http://localhost/platform/demostracion/cambio");
+ });
+ it("preserves the original denial if operator lookup fails", async () => {
+  mocks.access.mockResolvedValue({status:"unavailable"}); mocks.identity.mockRejectedValue(new Error("offline"));
+  expect((await proxy(request("/pos"))).headers.get("location")).toBe("http://localhost/login?error=pos_unavailable");
+ });
+ it("uses normal authentication after actual logout even for a former demo tab", async () => {
+  mocks.access.mockResolvedValue({status:"unauthenticated"});
+  expect((await proxy(request("/pos"))).headers.get("location")).toContain("/login?next="); expect(mocks.identity).not.toHaveBeenCalled();
+ });
 });

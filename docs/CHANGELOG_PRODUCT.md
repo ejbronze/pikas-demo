@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## UX Foundation B: entorno Demo persistente (local)
+
+- **Demo** en la navegación de PIKAS Admin → **Explorar PIKAS**, con Escuela y Cafetería en Administración, Caja / POS en Operaciones y Padre/Estudiante como tarjetas no interactivas «Próximamente».
+- Una barra Demo compartida permite cambiar de experiencia directamente y **Salir del demo** conserva la sesión del operador. El servidor acepta solo un código de experiencia y reutiliza la autoridad, las personas ficticias, la sustitución auditada y la vigencia de cuatro horas existentes.
+- El POS permite dejar su caja abierta; pide confirmar el descarte de venta/pago/conteo sin enviar y bloquea el cambio/salida si hay una operación sin confirmar. No se conservan borradores financieros ni se reenvían operaciones automáticamente. Las pestañas obsoletas muestran una explicación con continuación segura.
+- Encabezados Demo compactos; enlace genérico a PIKAS Admin en `/login`; Cajas presenta Sobrante/Faltante/Cuadrada con `MoneyValue`; el resumen escolar ya reconoce PIKAS Cash.
+- Sin cambios de DB/esquema/RLS, Waves C–F ni Phase 5D.4–5D.6. Solo commit local, sin push ni despliegue. Arquitectura, decisiones OD-B1–OD-B11 y evidencia en el [registro de implementación](UX_UI_PRODUCT_ARCHITECTURE_AUDIT.md#23-ux-foundation-b--local-implementation-record).
+
 ## Phase 5D.3: conciliación de caja (local)
 
 - Reportes de cafetería → **Conciliación de caja** en el mismo período: sesiones cerradas, cuadradas, con faltante y con sobrante (solo conteos; faltantes y sobrantes nunca se compensan), y la lista de sesiones cerradas con esperado, contado y diferencia (contado − esperado), con desglose bajo "Ver desglose".

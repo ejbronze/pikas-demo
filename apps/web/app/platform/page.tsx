@@ -17,7 +17,7 @@ export default async function PlatformHomePage() {
     <div className="grid gap-4 sm:grid-cols-3">
       {session.capabilities.includes("platform:tenant:lifecycle:read") && <Link className="card p-5" href="/platform/clientes"><h2 className="font-bold">Clientes</h2><p>Consulta cuentas y su estructura.</p></Link>}
       {session.capabilities.includes("platform:tenant:provision") && session.capabilities.includes("platform:customer_admin:provision") && <Link className="card p-5" href="/platform/clientes/nuevo"><h2 className="font-bold">Nuevo cliente</h2><p>Crea la estructura inicial y prepara su administrador.</p></Link>}
-      {session.capabilities.includes("platform:sandbox:pov:enter") && <Link className="card p-5" href="/platform/demostracion"><h2 className="font-bold">Demostración</h2><p>Accede al sandbox separado de los clientes.</p></Link>}
+      {session.capabilities.includes("platform:sandbox:pov:enter") && <Link className="card p-5" href="/platform/demostracion"><h2 className="font-bold">Demo</h2><p>Accede al sandbox separado de los clientes.</p></Link>}
     </div>
     {activity && <section className="card p-5"><h2 className="text-lg font-bold">Actividad reciente</h2>
       {activity.kind !== "ready" ? <ReadFailure kind={activity.kind} /> : activity.value.length === 0 ? <p className="mt-3">Todavía no hay actividad registrada.</p> : <ul className="mt-3 space-y-3">{activity.value.map((event) => <li key={event.id}>{activityLabels[event.action] ?? "Actividad de plataforma"}<span className="ml-2 text-sm text-slate-600">{new Date(event.occurred_at).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" })}</span></li>)}</ul>}

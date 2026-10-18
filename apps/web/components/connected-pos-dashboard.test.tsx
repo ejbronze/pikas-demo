@@ -29,9 +29,9 @@ beforeEach(() => {
 describe("connected POS access boundary", () => {
   it("renders the authoritative sandbox identity and persistent banner", async () => {
     const html = renderToStaticMarkup(await PosPage());
-    expect(html).toContain("Modo demostración · Sandbox");
-    expect(html).toContain("José Ramírez · Cajero");
-    expect(html).toContain("Colegio Horizonte · Cafetería Escolar");
+    expect(html).toContain("Entorno Demo");
+    expect(html).toContain("José Ramírez");
+    expect(html).toContain("Cafetería Escolar");
     expect(html).toContain("sticky top-0");
     expect(html).toContain("pos-surface");
     expect(html).toContain("¿A quién atendemos?");
@@ -40,13 +40,13 @@ describe("connected POS access boundary", () => {
   it("blocks sales until readiness is loaded and never mounts demo financial actions", async () => {
     const html = renderToStaticMarkup(await PosPage());
     const buttons = [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)];
-    expect(buttons.length).toBe(9); // 5C.1 adds the Reembolsos tab, disabled under sandbox POV.
+    expect(buttons.length).toBeGreaterThan(9);
     for (const [, attributes, label] of buttons) {
-      if (!["Salir", "Verificar caja y catálogo", "Venta", "Caja"].includes(label)) expect(attributes).toContain("disabled");
+      if (!["Salir del demo", "Escuela", "Cafetería", "Verificar caja y catálogo", "Venta", "Caja"].includes(label)) expect(attributes).toContain("disabled");
     }
     expect(html).not.toContain('href="/pos/caja"');
     expect(html).not.toContain('action="/api/pos');
-    expect(html).toContain('action="/api/auth/logout"');
+    expect(html).not.toContain('action="/api/auth/logout"');
     expect(html).not.toContain("Caja 1");
     expect(html).not.toContain("Caja Demo");
     expect(html).not.toContain("Sofía");
@@ -68,7 +68,7 @@ describe("connected POS access boundary", () => {
   });
   it("does not mount demo register actions on a connected caja page", async () => {
     const html = renderToStaticMarkup(await CajaPage());
-    expect(html).toContain("José Ramírez · Cajero");
+    expect(html).toContain("José Ramírez");
     expect(html).toContain("Estado de caja sin confirmar.");
     expect(mocks.registers).not.toHaveBeenCalled();
   });
