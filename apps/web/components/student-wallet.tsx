@@ -6,7 +6,8 @@ import { load, prepare, send } from '../lib/wallet/command';
 import { money } from '../lib/cafeteria/operations';
 import { parseCash } from '../lib/pos/contracts';
 import { adjustmentReasons, reversalReasons } from '../lib/wallet/contracts';
-import { WalletAdjustmentDialog, signed, signedTone } from './wallet-adjustment-dialog';
+import { WalletAdjustmentDialog } from './wallet-adjustment-dialog';
+import { MoneyValue } from './money-value';
 import { WalletReversalDialog, loadPendingReversal, reversalJournalKey } from './wallet-reversal-dialog';
 const reasonLabel = Object.fromEntries(reversalReasons) as Record<string,string>;
 const adjustmentLabel = Object.fromEntries(adjustmentReasons.map(([id,label])=>[id,label])) as Record<string,string>;
@@ -39,8 +40,8 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
   return <div className="space-y-5"><p className="text-sm text-slate-600">Saldo del estudiante. Las recargas manuales requieren fondos previamente verificados.</p>
     {loading&&<p role="status">Consultando PIKAS Cash…</p>}{error&&<p role="alert">{error}</p>}
     <button type="button" className="btn-secondary" disabled={loading} onClick={()=>void read()}>Actualizar saldo e historial</button>
-    {history&&<><p className="text-xl font-bold">{history.student_name}</p><section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Saldo PIKAS Cash</h2><p className={`text-3xl font-black ${BigInt(history.wallet?.balance_minor??'0')<0n?'text-red-700':''}`}>{money(history.wallet?.balance_minor??'0')}</p>
-    {canAdjust&&<button type="button" className="btn-secondary" onClick={()=>setAdjusting(true)}>Corregir saldo</button>}<p>{history.wallet?.status==='frozen'?'Monedero congelado':'Monedero activo'}</p>
+    {history&&<><p className="text-xl font-bold">{history.student_name}</p><section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Saldo PIKAS Cash</h2><p className="text-3xl font-black"><MoneyValue minor={history.wallet?.balance_minor??'0'} intent="balance"/></p>
+    {canAdjust&&<button type="button" className="btn-secondary" onClick={()=>setAdjusting(true)}>Corregir saldo</button>}<p>{history.wallet?.status==='frozen'?'PIKAS Cash congelado':'PIKAS Cash activo'}</p>
     {BigInt(history.wallet?.balance_minor??'0')<0n&&<p role="alert" className="rounded-xl bg-amber-100 p-3 font-bold text-amber-950">Saldo negativo. No se pueden pagar compras con PIKAS Cash hasta que nuevas recargas cubran el saldo.</p>}
     {pendingReversal&&<p role="alert" className="text-sm">Hay una reversión pendiente de confirmar. Abre la recarga correspondiente y reintenta la misma reversión.</p>}
     {!canReplenish?<p className="text-sm text-slate-600">Consulta de solo lectura. Tu rol no puede registrar recargas.</p>:<form className="space-y-3" noValidate={pending!==null} onSubmit={async event=>{
@@ -70,9 +71,9 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     {pending&&<p className="break-words text-sm">Solicitud pendiente: {money(pending.amount_minor)} · {pending.reference||pending.note}</p>}
     {message&&<p role="status">{message}</p>}
     </form>}</section>
-    <section className="space-y-3"><h2 className="text-lg font-bold">Movimientos del monedero</h2><p className="text-xs text-slate-600">Más recientes primero. El saldo de cada movimiento corresponde al momento de registrarlo.</p>
+    <section className="space-y-3"><h2 className="text-lg font-bold">Movimientos de PIKAS Cash</h2><p className="text-xs text-slate-600">Más recientes primero. El saldo de cada movimiento corresponde al momento de registrarlo.</p>
       {!history.movements.length&&<p>No hay movimientos registrados.</p>}
-      {history.movements.map(m=><article className="card space-y-2 break-words p-4" key={m.id}><h3 className="font-bold">{m.type==='adjustment'&&m.actor_role?'Ajuste administrativo':{replenishment:'Recarga verificada',purchase:'Compra',adjustment:'Ajuste histórico',refund:'Reembolso histórico',replenishment_reversal:'Reversión de recarga'}[m.type]} · <span className={signedTone(m.amount_minor)}>{signed(m.amount_minor)}</span></h3><p className="text-sm">{new Date(m.occurred_at).toLocaleString('es-DO',{timeZone:'America/Santo_Domingo'})} · {m.actor??'Actor registrado'}</p><p>Saldo después: <span className={BigInt(m.balance_after_minor)<0n?'text-red-700':''}>{money(m.balance_after_minor)}</span></p>
+      {history.movements.map(m=><article className="card space-y-2 break-words p-4" key={m.id}><h3 className="font-bold">{m.type==='adjustment'&&m.actor_role?'Ajuste administrativo':{replenishment:'Recarga verificada',purchase:'Compra',adjustment:'Ajuste histórico',refund:'Reembolso histórico',replenishment_reversal:'Reversión de recarga'}[m.type]} · <MoneyValue minor={m.amount_minor} intent="movement"/></h3><p className="text-sm">{new Date(m.occurred_at).toLocaleString('es-DO',{timeZone:'America/Santo_Domingo'})} · {m.actor??'Actor registrado'}</p><p>Saldo después: <MoneyValue minor={m.balance_after_minor} intent="balance"/></p>
         {m.type==='adjustment'&&m.actor_role&&<p className="text-sm">Motivo: {adjustmentLabel[m.adjustment_reason??'']??m.adjustment_reason} · {roleLabel[m.actor_role]??m.actor_role}{m.cafeteria?` · ${m.cafeteria}`:''}{m.balance_before_minor?` · Saldo antes: ${money(m.balance_before_minor)}`:''}</p>}{m.purchase_id&&<details><summary className="cursor-pointer">Recibo #{m.receipt_number} · {m.cafeteria}</summary><p className="break-all text-xs">Compra {m.purchase_id}</p>{m.items.map((i,n)=><p key={n}>{i.quantity} × {i.name} · {money(i.line_total_minor)}</p>)}</details>}{m.replenishment_id&&<p className="break-all text-xs">Recarga {m.replenishment_id} · Fondos manuales verificados</p>}{m.reference&&<p>Referencia: {m.reference}</p>}{m.note&&<p>{m.note}</p>}
         {m.type==='replenishment_reversal'&&<><p>Motivo: {reasonLabel[m.reversal_reason??'']??m.reversal_reason}{m.reversal_note?` · ${m.reversal_note}`:''}</p><p className="break-all text-xs">Revierte la recarga {m.reversed_replenishment_id}{m.original_reference?` · Referencia original: ${m.original_reference}`:''}</p></>}
         {m.type==='replenishment'&&m.reversal_id&&<p className="font-bold text-amber-900">Revertida · {reasonLabel[m.reversal_reason??'']??m.reversal_reason}</p>}

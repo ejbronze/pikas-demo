@@ -5,7 +5,7 @@ import { closeResultSchema, historyRequestSchema, money, purchaseDetailSchema, p
 import { parseCash } from '../lib/pos/contracts';
 import { z } from 'zod';
 const date = (s: string) => new Date(s).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
-const tender = (s: string) => ({ cash: 'Efectivo', student_wallet: 'Saldo PIKAS', staff_credit: 'Crédito de personal' })[s] ?? s;
+const tender = (s: string) => ({ cash: 'Efectivo', student_wallet: 'PIKAS Cash', staff_credit: 'Crédito de personal' })[s] ?? s;
 async function request(body: unknown) { const response = await fetch('/api/cafeteria/operations', { method: 'POST', headers: { 'Content-Type': 'application/json', ...((body as CloseRequest).request_key ? { 'Idempotency-Key': (body as CloseRequest).request_key } : {}) }, body: JSON.stringify(body) }); if (!response.ok) {
     const payload = await response.json();
     throw Object.assign(Error('No se pudo confirmar la operación con tus permisos actuales.'), { definite: payload.definite === true });

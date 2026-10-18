@@ -4,10 +4,11 @@ import { sessionFetch } from '../lib/auth/session-fetch';
 import { money } from '../lib/cafeteria/operations';
 import { parseCash } from '../lib/pos/contracts';
 import { adjustmentReasons, adjustResultSchema } from '../lib/wallet/contracts';
+import { moneyText, moneyTone, moneyToneClass } from '../lib/money-semantics';
 
-// Positive/additive amounts green, negative/deductive red; signs and labels always shown.
-export const signedTone = (minor: string) => BigInt(minor) < 0n ? 'text-red-700' : BigInt(minor) > 0n ? 'text-emerald-700' : '';
-export const signed = (minor: string) => `${BigInt(minor) > 0n ? '+' : ''}${money(minor)}`;
+// Movement semantics from the shared money convention: additive "+" green, deductive "−" red.
+export const signedTone = (minor: string) => moneyToneClass[moneyTone(minor, 'movement')];
+export const signed = (minor: string) => moneyText(minor, 'movement');
 type Scope = { kind: 'school'; schoolId: string } | { kind: 'cafeteria'; cafeteriaId: string };
 type Pending = Record<string, string>;
 

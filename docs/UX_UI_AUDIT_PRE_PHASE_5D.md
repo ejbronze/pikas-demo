@@ -1,8 +1,34 @@
 # PIKAS — Cross-role UX/UI Audit (pre-Phase 5D)
 
-**Status:** analysis only. Nothing in this document has been implemented. Every
-recommendation needs owner review before any redesign work starts
-(analysis → owner review → controlled redesign).
+**Status:** analysis delivered and reviewed by the owner. Only **UX Foundation A** has
+been implemented (see "Implementation status" below). Every other recommendation
+remains deferred and needs owner approval per milestone
+(analysis → owner review → controlled redesign). The audit is **not** resolved.
+
+## Implementation status — UX Foundation A
+
+- **F01 — resolved.** Cafeteria Admin navigation now lists **PIKAS Cash** (sidebar after
+  Transacciones; mobile "Más"), opening the existing `/admin/cafeteria/escuelas`
+  surface, now titled "PIKAS Cash". It is shown only when the server-derived read
+  grants `cafeteria:wallets:read` for a customer tenant. Authority is unchanged.
+- **F18 — foundation only.** A shared money convention (`movement` / `balance` /
+  `amount`) was applied to the PIKAS Cash balance and movements, the cafeteria lookup
+  and the adjustment dialog. POS, receipts, refunds, register and Transacciones are not
+  migrated yet.
+- **F19 — rules locked, partial cleanup.** Canonical terms are recorded. "monedero" was
+  removed on the touched surfaces, and the cafeteria Transacciones tender now reads
+  "PIKAS Cash". POS "Saldo PIKAS" labels remain.
+- **OD1–OD8 — decided.** The owner's decisions, and the Actividad /
+  Movimientos / Transacciones / Reportes IA for Phase 5D, are recorded in
+  [UX_FOUNDATIONS.md](UX_FOUNDATIONS.md). Phase 5D must reuse the money semantics and
+  IA rules there.
+- **Still deferred:**
+  - F02–F17, F20–F30.
+  - The remaining F18/F19 adoption.
+  - Wave B–E work: POS payment flow, refund recent sales, session expiry and return,
+    wallet layout, replenishment modal, dashboards and "today", register, admin shell
+    and mobile headers, native confirms, progressive disclosure, spending-limit UI,
+    POS direct routing, accessibility remediation and visual polish.
 
 ## 1. Executive summary
 

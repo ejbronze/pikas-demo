@@ -20,6 +20,8 @@ Phase 5A es el único milestone implementado en este trabajo; la aceptación pro
 
 ### Auditoría UX/UI transversal (antes del hardening de Phase 6)
 
+**Estado:** auditoría entregada ([UX_UI_AUDIT_PRE_PHASE_5D.md](UX_UI_AUDIT_PRE_PHASE_5D.md)). **UX Foundation A completada (local):** F01 resuelto (entrada "PIKAS Cash" para administración de cafetería), semántica monetaria compartida, terminología canónica y distinción Actividad / Movimientos / Transacciones / Reportes en [UX_FOUNDATIONS.md](UX_FOUNDATIONS.md); Phase 5D debe reutilizarlas. El resto de los hallazgos sigue diferido; la auditoría no está resuelta.
+
 Elemento futuro registrado durante la aceptación de Phase 5C.1; no forma parte de 5C.1 y no se rediseña nada como parte de ese cierre. PIKAS debe recibir una auditoría dedicada de UX/UI y diseño de interacción para todos los roles antes del hardening de Phase 6.
 
 Observaciones conocidas a conservar:

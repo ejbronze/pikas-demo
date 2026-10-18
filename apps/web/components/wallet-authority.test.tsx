@@ -43,6 +43,7 @@ describe('capability-aware wallet surfaces',()=>{
   const read=cafeteriaRead();read.scope.capabilities=capabilities;read.scope.tenant_kind=tenant as 'customer'|'sandbox';
   const html=renderToStaticMarkup(<ConnectedCafeteriaProvider data={read}><ConnectedCafeteriaPages section="schools" data={read}/></ConnectedCafeteriaProvider>);
   expect(html.includes('Saldo PIKAS Cash de clientes')).toBe(visible);
+  expect(html).toContain(visible?'>PIKAS Cash</h1>':'>Escuelas conectadas</h1>');
   expect(html).not.toMatch(/Recarga|recarga verificada|Monto de recarga/);
  });
 });

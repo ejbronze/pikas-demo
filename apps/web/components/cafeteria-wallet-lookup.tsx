@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { sessionFetch } from '../lib/auth/session-fetch';
 import { cafeteriaReadSchema, type CafeteriaWalletRead } from '../lib/wallet/contracts';
-import { money } from '../lib/cafeteria/operations';
+import { MoneyValue } from './money-value';
 import { WalletAdjustmentDialog } from './wallet-adjustment-dialog';
 // Balances of eligible customers; with 5C.3 capability, scoped administrative adjustments for those students only.
 export function CafeteriaWalletLookup({ cafeteriaId, actorId = '', canAdjust = false }: { cafeteriaId: string; actorId?: string; canAdjust?: boolean }) {
@@ -31,7 +31,7 @@ export function CafeteriaWalletLookup({ cafeteriaId, actorId = '', canAdjust = f
     {error&&<p role="alert">{error}</p>}
     {message&&<p role="status">{message}</p>}
     {result&&(result.students.length?<ul className="space-y-2" aria-label="Saldos PIKAS Cash">{result.students.map(s=><li key={s.student_id} className="flex flex-wrap items-center justify-between gap-2 border-t pt-2"><span className="break-words font-semibold">{s.display_name}</span>
-      <span className="flex flex-wrap items-center gap-3"><span className={s.wallet_status!==null&&BigInt(s.balance_minor)<0n?'font-bold text-red-700':''}>{s.wallet_status===null?'Sin monedero':`${money(s.balance_minor)}${s.wallet_status==='frozen'?' · Congelado':''}`}</span>
+      <span className="flex flex-wrap items-center gap-3"><span>{s.wallet_status===null?'Sin PIKAS Cash':<><MoneyValue minor={s.balance_minor} intent="balance" className={BigInt(s.balance_minor)<0n?'font-bold':''}/>{s.wallet_status==='frozen'?' · Congelado':''}</>}</span>
       {canAdjust&&<button type="button" className="btn-secondary" aria-label={`Corregir saldo de ${s.display_name}`} onClick={()=>{setMessage('');setAdjusting(s);}}>Corregir saldo</button>}</span></li>)}</ul>:<p>No hay clientes compartidos que coincidan.</p>)}
     {adjusting&&<WalletAdjustmentDialog scope={{kind:'cafeteria',cafeteriaId}} studentId={adjusting.student_id} studentName={adjusting.display_name} actorId={actorId} balanceMinor={adjusting.balance_minor}
       onClose={()=>setAdjusting(null)} onDone={async text=>{setAdjusting(null);setMessage(text);await lookup(lastQuery);}}/>}

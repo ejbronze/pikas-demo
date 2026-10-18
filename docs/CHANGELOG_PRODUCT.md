@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## UX Foundation A: fundamentos UX previos a Phase 5D (local)
+
+- F01 resuelto: la administración de cafetería llega a **PIKAS Cash** (saldos de clientes compartidos y ajustes administrativos acotados ya aceptados) desde la navegación lateral y el menú móvil "Más". Visible solo con la lectura `cafeteria:wallets:read` derivada del servidor en tenants de cliente; misma ruta, sin cambios de autoridad, RLS, RPC ni reglas financieras.
+- Semántica monetaria compartida (`movement` / `balance` / `amount`): recargas `+` en verde, deducciones `−` en rojo, saldos neutros salvo negativos; nunca solo por color. Aplicada al saldo y movimientos PIKAS Cash y a la consulta de cafetería.
+- Terminología canónica (PIKAS Cash, Recarga, Reembolso, Reversión de recarga, Ajuste administrativo, Saldo, Movimientos, Caja, Actividad, Reportes) y distinción de arquitectura de información para Phase 5D en [UX_FOUNDATIONS.md](UX_FOUNDATIONS.md). Correcciones puntuales: "monedero" → PIKAS Cash en superficies tocadas; método de pago "Saldo PIKAS" → "PIKAS Cash" en Transacciones de cafetería.
+- Sin rediseño: el resto de la [auditoría UX/UI](UX_UI_AUDIT_PRE_PHASE_5D.md) sigue diferido. Sin push ni despliegue.
+
 ## Cierre de aceptación productiva Phase 5C.3 — capa de correcciones Phase 5C completa
 
 - **PHASE 5C.3 — COMPLETE / PRODUCTION ACCEPTED**, congelado. Source `07a1b928096fbc1f5731a2e7b1847dfe5ae8f238`; migración `202610200001_administrative_wallet_adjustments.sql`. [Evidencia y reglas finales](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md).
