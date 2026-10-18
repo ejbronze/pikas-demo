@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## UX Wave D.2: cierre de caja y catálogo de cafetería (local)
+
+- **Cierre administrativo excepcional** en una tarea guiada: Detalles → Revisar (contado, esperado actual, diferencia estimada) → «Cerrar caja con RD$ X» → resultado guardado por PIKAS (Contado, Esperado, Diferencia: Cuadrada/Sobrante/Faltante). Se envía exactamente el esperado revisado, así que un esperado desactualizado sigue rechazándose. Por decisión del propietario (Opción A) se conserva la semántica de Phase 5A; el cierre ciego del POS no cambia y un cierre administrativo ciego queda para Wave E.
+- **Productos**: búsqueda, filtros de categoría y estado, orden por nombre o precio, tarjetas y estados vacíos distintos para «sin productos» y «sin resultados». Crear y editar en una tarea con revisión, «Crear otro producto» y borradores opcionales solo en esta pestaña (nunca se envían solos). La carga de fotos aún no está disponible.
+- **Importar CSV**: plantilla, vista previa con las filas listas y las que necesitan atención, y «Importar N productos». Cada producto se registra por separado; el resultado indica cuántos se agregaron, cuáles se rechazaron y si la importación se detuvo en una fila sin confirmar.
+- **Menús y turnos** en tareas enfocadas con selector de productos (búsqueda, categoría, seleccionados); sin `confirm()` del navegador. Sin cambios en base de datos, RPC, autoridad, POS ni compras históricas. Sin push ni despliegue.
+
 ## UX Wave D.1: tareas guiadas de PIKAS Cash (local)
 
 - **Recarga**, **Ajuste administrativo** y **Reversión de recarga** son ahora tareas enfocadas: Detalles → Confirmar → acción final explícita («Recargar RD$ 500.00», «Aplicar ajuste −RD$ 100.00», «Revertir recarga de RD$ 25.00»), con estados claros de registro, éxito, rechazo y «pendiente de confirmar». Desaparecen el formulario permanente de recarga y el `confirm()` del navegador.

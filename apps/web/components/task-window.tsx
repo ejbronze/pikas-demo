@@ -10,9 +10,11 @@ const RequestClose = createContext<() => void>(() => {});
 // - dirty (typed input not yet committed): an in-app discard prompt, never window.confirm;
 // - otherwise it closes, and focus returns to the control that opened it.
 // It holds no data: tasks keep typed values in component memory only.
-export function TaskWindow({ title, context, steps, step, busy = false, dirty = false, onClose, children, footer }: {
+// onKeepDraft (non-financial tasks only) adds "Cerrar y conservar borrador" to the discard prompt;
+// financial tasks never pass it, so their close rules are unchanged.
+export function TaskWindow({ title, context, steps, step, busy = false, dirty = false, onClose, onKeepDraft, children, footer }: {
   title: string; context?: React.ReactNode; steps?: string[]; step?: number;
-  busy?: boolean; dirty?: boolean; onClose: () => void; children: React.ReactNode; footer: React.ReactNode;
+  busy?: boolean; dirty?: boolean; onClose: () => void; onKeepDraft?: () => void; children: React.ReactNode; footer: React.ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -62,8 +64,8 @@ export function TaskWindow({ title, context, steps, step, busy = false, dirty = 
       <footer className="shrink-0 border-t bg-white px-4 py-3 sm:px-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}><RequestClose.Provider value={requestClose}>
         {busyHint && <p role="status" className="mb-2 text-sm font-semibold">La operación está en curso. Espera la confirmación antes de cerrar.</p>}
         {discarding
-          ? <div role="alertdialog" aria-label="Descartar datos" className="space-y-2"><p className="font-bold">¿Descartar los datos ingresados?</p><p className="text-sm text-slate-600">No se ha registrado ninguna operación. Lo que escribiste se perderá.</p>
-            <TaskActions><button type="button" className="btn-secondary" data-keep-editing onClick={() => setDiscarding(false)}>Seguir editando</button><button type="button" className="btn" onClick={() => state.current.onClose()}>Descartar</button></TaskActions></div>
+          ? <div role="alertdialog" aria-label="Descartar datos" className="space-y-2"><p className="font-bold">¿Descartar los datos ingresados?</p><p className="text-sm text-slate-600">{onKeepDraft ? 'No se ha guardado nada. Puedes descartarlo o conservarlo como borrador en esta sesión del navegador.' : 'No se ha registrado ninguna operación. Lo que escribiste se perderá.'}</p>
+            <TaskActions><button type="button" className="btn-secondary" data-keep-editing onClick={() => setDiscarding(false)}>Seguir editando</button>{onKeepDraft && <button type="button" className="btn-secondary" onClick={onKeepDraft}>Cerrar y conservar borrador</button>}<button type="button" className="btn" onClick={() => state.current.onClose()}>Descartar</button></TaskActions></div>
           : footer}
       </RequestClose.Provider></footer>
     </div>

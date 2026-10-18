@@ -1,17 +1,15 @@
 'use client';
 import { AppPageHeader } from './app-page-header';
 import { ReconciliationDifference } from './reconciliation-difference';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { closeResultSchema, historyRequestSchema, money, purchaseDetailSchema, purchaseSchema, sessionDetailSchema, sessionHistorySchema, type CloseRequest, type PurchaseDetail, type PurchaseHistory, type SessionDetail, type SessionHistory } from '../lib/cafeteria/operations';
-import { parseCash } from '../lib/pos/contracts';
+import { historyRequestSchema, money, purchaseDetailSchema, purchaseSchema, sessionDetailSchema, sessionHistorySchema, type CloseRequest, type PurchaseDetail, type PurchaseHistory, type SessionDetail, type SessionHistory } from '../lib/cafeteria/operations';
 import { z } from 'zod';
+import { operationsRequest as request } from '../lib/cafeteria/operations-client';
+import { RegisterCloseTask, registerCloseJournalKey } from './register-close-task';
 const date = (s: string) => new Date(s).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
 const tender = (s: string) => ({ cash: 'Efectivo', student_wallet: 'PIKAS Cash', staff_credit: 'Crédito de personal' })[s] ?? s;
-async function request(body: unknown) { const response = await fetch('/api/cafeteria/operations', { method: 'POST', headers: { 'Content-Type': 'application/json', ...((body as CloseRequest).request_key ? { 'Idempotency-Key': (body as CloseRequest).request_key } : {}) }, body: JSON.stringify(body) }); if (!response.ok) {
-    const payload = await response.json();
-    throw Object.assign(Error('No se pudo confirmar la operación con tus permisos actuales.'), { definite: payload.definite === true });
-} return (await response.json()).result; }
+
 function Sale({ sale, onSelect }: {
     sale: PurchaseHistory;
     onSelect: (id: string) => void;
@@ -30,59 +28,20 @@ function CloseSession({ session, cafeteriaId, actorId, onClosed }: {
     onClosed: (confirmed: boolean) => void;
 }) {
     const router = useRouter();
-    const key = `pikas:register-close:${actorId}:${cafeteriaId}`;
-    const [counted, setCounted] = useState(''), [reason, setReason] = useState<CloseRequest['reason']>('administrative_recovery'), [note, setNote] = useState(''), [review, setReview] = useState(false), [pending, setPending] = useState<CloseRequest | null>(null), [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
-    const lock = useRef(false);
-    useEffect(() => { queueMicrotask(() => { try {
-        const raw = sessionStorage.getItem(key);
-        if (raw) {
-            const stored = historyRequestSchema.parse(JSON.parse(raw));
-            if (stored.operation !== 'close' || stored.cafeteria_id !== cafeteriaId)
-                throw Error();
-            setPending(stored);
-        }
-        setReady(true);
-    }
-    catch {
-        setMessage('No se puede recuperar la solicitud. El cierre está bloqueado.');
-    } }); }, [key, cafeteriaId]);
-    const submit = async () => { if (lock.current || !ready)
-        return; lock.current = true; setBusy(true); try {
-        const amount = parseCash(counted);
-        if (!pending && amount === null)
-            throw Error('Ingresa un conteo válido.');
-        const body = pending ?? historyRequestSchema.parse({ operation: 'close', cafeteria_id: cafeteriaId, session_id: session.id, version: session.version, counted_minor: amount, expected_minor: session.summary.expected_minor, reason, note, request_key: crypto.randomUUID() }) as CloseRequest;
-        sessionStorage.setItem(key, JSON.stringify(body));
-        setPending(body);
-        const result = closeResultSchema.parse(await request(body));
-        if (result.request_key !== body.request_key || result.session.id !== body.session_id || result.session.status !== 'closed')
-            throw Error();
-        sessionStorage.removeItem(key);
-        setPending(null);
-        setReview(false);
-        setMessage('');
-        router.refresh();
-        onClosed(true);
-    }
-    catch (error) {
-        if (!pending && error instanceof Error && 'definite' in error && error.definite) {
-            sessionStorage.removeItem(key);
-            setPending(null);
-            setReview(false);
-            onClosed(false);
-        }
-        setMessage(error instanceof Error ? `${error.message} Conservamos la misma solicitud si quedó pendiente; recupera el acceso y reintenta.` : 'Cierre sin confirmar.');
-    }
-    finally {
-        lock.current = false;
-        setBusy(false);
-    } };
+    const [open, setOpen] = useState(false), [pending, setPending] = useState<CloseRequest | null>(null), [ready, setReady] = useState(false), [message, setMessage] = useState('');
+    const key = registerCloseJournalKey(actorId, cafeteriaId);
+    const readJournal = () => { const raw = sessionStorage.getItem(key); if (!raw) return null; const stored = historyRequestSchema.parse(JSON.parse(raw)); if (stored.operation !== 'close' || stored.cafeteria_id !== cafeteriaId) throw Error(); return stored; };
+    useEffect(() => { queueMicrotask(() => { try { setPending(readJournal()); setReady(true); } catch { setMessage('No se puede recuperar la solicitud. El cierre está bloqueado.'); } }); }, [key, cafeteriaId]); // eslint-disable-line react-hooks/exhaustive-deps -- readJournal only reads these
     if (!pending && (session.status === 'closed' || session.operator_id === actorId))
         return message ? <p role="status">{message}</p> : null;
-    return <section className="mt-5 space-y-3 rounded-xl border border-amber-300 p-4"><h3 className="text-lg font-black">Cierre administrativo excepcional</h3><p>Recuperación de una sesión de otro operador. El cierre es permanente; conserva ventas y atribución originales.</p>{pending ? <><p role="alert">Hay un cierre sin confirmar para la sesión {pending.session_id}. No cambies su clave ni datos.</p><button className="btn" disabled={!ready || busy} onClick={() => void submit()}>{busy ? 'Confirmando…' : 'Recuperar mismo cierre'}</button></> : <form className="space-y-3" onSubmit={e => { e.preventDefault(); if (review)
-        void submit();
-    else
-        setReview(true); }}><fieldset disabled={!ready || busy || review} className="space-y-3"><label className="block font-bold">Efectivo contado<input required className="field mt-1" inputMode="decimal" value={counted} onChange={e => setCounted(e.target.value)}/></label><label className="block font-bold">Motivo<select className="field mt-1" value={reason} onChange={e => setReason(e.target.value as CloseRequest['reason'])}><option value="administrative_recovery">Recuperación administrativa</option><option value="operator_unavailable">Operador no disponible</option><option value="operator_suspended">Operador suspendido</option><option value="auth_access_lost">Acceso perdido</option><option value="other">Otro</option></select></label><label className="block font-bold">Nota<textarea className="field mt-1" maxLength={1000} required={reason === 'other'} value={note} onChange={e => setNote(e.target.value)}/></label></fieldset>{review && <div role="status"><p>Esperado actual: {money(session.summary.expected_minor, session.currency)}. Contado: {parseCash(counted) === null ? 'Inválido' : money(parseCash(counted)!, session.currency)}.</p><p>Si cambia el esperado antes de confirmar, el cierre se rechaza y debes revisar el conteo actualizado.</p><p>¿Confirmas el cierre permanente de esta sesión?</p></div>}<div className="flex flex-wrap gap-3"><button className="btn" disabled={!ready || busy || parseCash(counted) === null}>{busy ? 'Confirmando…' : review ? 'Confirmar cierre permanente' : 'Revisar cierre'}</button>{review && <button type="button" className="btn-secondary" onClick={() => setReview(false)}>Volver al conteo</button>}</div></form>}{message && <p role="status">{message}</p>}</section>;
+    return <section className="mt-5 space-y-3 rounded-xl border border-amber-300 p-4"><h3 className="text-lg font-black">Cierre administrativo excepcional</h3><p>Recuperación de una sesión de otro operador. El cierre es permanente; conserva ventas y atribución originales.</p>
+        {pending && <p role="alert">Hay un cierre sin confirmar en esta cafetería. Revísalo y reintenta el mismo cierre antes de iniciar otro.</p>}
+        {message && <p role="status">{message}</p>}
+        <button type="button" className="btn" disabled={!ready} onClick={() => setOpen(true)}>{pending ? 'Revisar cierre pendiente' : 'Cerrar caja'}</button>
+        {open && <RegisterCloseTask session={session} cafeteriaId={cafeteriaId} actorId={actorId}
+            onClose={() => { setOpen(false); try { setPending(readJournal()); } catch { setPending(null); } }}
+            onClosed={confirmed => { setOpen(false); setPending(null); router.refresh(); onClosed(confirmed); }} />}
+    </section>;
 }
 export function CafeteriaOperations({ cafeteriaId, actorId, kind, sandbox }: {
     cafeteriaId: string;

@@ -9,6 +9,8 @@ export type CatalogWorkspace = Pick<Demo,'connection'|'adminAddMenu'|'adminUpdat
  recoverPending?: () => Promise<{ok:true}|{ok:false;message:string}>;
  timeZone?: string;
  categories?: string[];
+ // Browser-session draft namespace (actor + cafeteria) for non-financial catalog tasks; absent = no drafts.
+ draftScope?: string;
  scope: { organizationId:string; locationId:string };
  state: Pick<Demo['state'],'menuItems'|'cafeteriaOperations'>;
 };

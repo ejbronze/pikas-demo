@@ -1681,3 +1681,189 @@ No owner decision was needed.
 - **Later Wave D:** students `FilterBar`, wallet history disclosure (H16/H18), `DataList`
   for other collections, and the student name as the PIKAS Cash title.
 - Wave E (POS and 5D.4) and Wave F (broad accessibility and polish) are untouched.
+
+## 27. UX Wave D.2 — register close and cafeteria catalog and menu management (local)
+
+**Scope.** Cafeteria Admin exceptional register close on the D.1 TaskWindow (Workstream A),
+then the cafeteria catalog, product tasks, CSV import and menu/turno product selection
+(Workstream B).
+
+Not changed: `cafeteria_operations_close`, the expected-cash and reconciliation calculations,
+admin and cashier authority, the Cashier/POS close UX, D8, Cajas/Reportes expected
+visibility, API routes, RPCs, schema, RLS, migrations, historical purchases, Wave E/F and
+Phase 5D.4–5D.6.
+
+### Owner correction: blind admin close (Option A)
+
+The original D.2 brief assumed the admin close task would keep a blind count. That
+conflicted with frozen Phase 5A: the exceptional admin close RPC requires the reviewed
+`expected_minor` (stale-expected protection), and Cafeteria Admin already sees expected cash
+in Cajas. D.2 stopped with **BLOCKED — OWNER DECISION REQUIRED**. The owner chose
+**Option A**:
+
+- preserve the Phase 5A admin close semantics exactly;
+- the admin TaskWindow may show the authoritative expected cash;
+- the Cashier/POS close workflow (blind count) is not modified.
+
+**This is not a change to Phase 5A.** Option B (a blind admin close) is deferred to Wave E.
+
+### Register close (`components/register-close-task.tsx`)
+
+- **Launcher:** Cajas → session detail → "Cierre administrativo excepcional" with
+  **Cerrar caja**. It is hidden for closed sessions and for the admin's own session, exactly
+  as before. A kept journal shows "Revisar cierre pendiente" instead.
+- **Flow:** Detalles (efectivo contado, motivo, nota) → Revisar (`TaskSummary`: caja,
+  contado, **efectivo esperado actual** = `session.summary.expected_minor`, diferencia
+  estimada, motivo, nota) → **"Cerrar caja con RD$ X"** → authoritative result.
+- **Result:** "Cierre registrado" shows the server-stored capture (Contado, Esperado,
+  Diferencia with Cuadrada/Sobrante/Faltante via `ReconciliationDifference`), labelled
+  "Valores guardados por PIKAS al cerrar". The estimate is never shown as the result.
+- **Request:** unchanged. `/api/cafeteria/operations` `{operation:'close', session_id,
+  version, counted_minor, expected_minor, reason, note, request_key}`. The
+  `expected_minor` sent is exactly the reviewed value, so a stale expected is still
+  rejected by the RPC. `operationsRequest` was moved verbatim to
+  `lib/cafeteria/operations-client.ts` and is shared.
+- **Safety:**
+  - typed values are memory only;
+  - the existing exact-request journal (`pikas:register-close:<actor>:<cafeteria>`) is
+    written at commit and cleared only on an authoritative outcome;
+  - a definite rejection of a fresh request → "No se cerró la caja";
+  - anything else → "pendiente de confirmar" with an explicit "Reintentar el mismo
+    cierre" (same key, same payload);
+  - the TaskWindow is busy while in flight (no close, no second submit).
+
+### Catalog discovery (B2 gate)
+
+- **Worked well:**
+  - the full product editor (price, category, unit, availability, nutrition/allergens);
+  - menus reference `product_ids` without copying products;
+  - turnos are schedules pointing at one menu;
+  - the idempotent catalog command journal.
+- **Awkward:**
+  - plain rows;
+  - native `confirm()`;
+  - editors replacing the page;
+  - a single empty state for "no products" and "no matches";
+  - no sort and no "create another";
+  - a "Próximamente" image box.
+- **Images:** connected mode has no image field in `product_save` or the catalog read; the
+  picker is Demo/localStorage only. Image upload is **deferred**: it needs a storage
+  backend and an image field on save/read (a DB/API change, outside D.2).
+- **CSV:** no import existed. It is feasible without backend changes by reusing
+  `product_save` per row (not atomic). An atomic bulk import would need a server command.
+- **Reports:** Phase 5D.2 top products resolves names by `product_id` from purchases, so
+  catalog edits never rewrite history.
+
+### Catalog implementation (`components/cafeteria-products-editor.tsx`)
+
+- **Preserved:** every field, the validation (`validateProduct`, `parseMoney`, integer
+  minor units), the categories panel, `product_save` through the provider and its journal.
+- **Page:**
+  - header actions **Importar CSV** and **Agregar producto**;
+  - filters: Buscar productos, Categoría, Estado, Ordenar (Nombre A–Z/Z–A, Precio
+    menor/mayor), "N de M productos", Limpiar filtros;
+  - separate empty states: "Aún no hay productos." and "No encontramos productos con estos
+    filtros.";
+  - responsive card grid: initials placeholder, price, category · unit · "En N menús", and
+    Disponible/No disponible/Inactivo chips.
+- **Product task:**
+  - Detalles → Revisar → "Crear producto" / "Guardar cambios";
+  - an in-task warning when a change stops sales (unavailable/inactive);
+  - success offers **Crear otro producto** (a clean task) and Cerrar;
+  - a provider `pending` result is shown as uncertain with "Confirmar solicitud pendiente"
+    (explicit recovery); otherwise "Revisar datos".
+- **Drafts:** non-financial only, through the new optional `TaskWindow.onKeepDraft`
+  ("Cerrar y conservar borrador").
+  - They are stored in `sessionStorage` under
+    `pikas:catalog-draft:<actor>:<cafeteria>:<productId|new>` with the catalog version they
+    started from.
+  - A version mismatch discards the draft with a notice.
+  - They are cleared on save or discard, are never submitted automatically, and show as
+    "Borrador sin guardar" / "Continuar borrador".
+  - Financial tasks never pass `onKeepDraft`.
+- **Image:** connected mode states "La carga de fotos aún no está disponible en esta
+  versión"; the Demo picker is unchanged.
+
+### CSV import (`components/product-import-task.tsx`, `lib/cafeteria/product-csv.ts`)
+
+- **Columns:**
+  - required: `nombre`, `categoria`, `precio`;
+  - optional: `unidad`, `descripcion`, `disponible`, `activo`, `ingredientes`,
+    `alergenos` (lists separated by `|`).
+- **File:** at most 200 rows and 1 MB. A template is downloadable. The RFC 4180 parser was
+  extracted unchanged to `lib/csv-records.ts` and is shared with student CSV.
+- **Validation:**
+  - strict column count (an unquoted `10,5` is never split into a price);
+  - the category must be an existing active category;
+  - price uses `parseMoney`;
+  - `sí`/`no` only;
+  - duplicates are checked within the file and against the catalog;
+  - `validateProduct`;
+  - nothing is coerced.
+- **Preview first:** "N productos listos · M necesitan atención", with a per-line reason.
+  Nothing is created before **"Importar N productos"**.
+- **Commit:** valid rows are sent sequentially as ordinary `product_save` requests, guarded
+  against double runs.
+  - A rejected row is recorded and the import continues.
+  - An **unconfirmed** row stops the import: the provider keeps that exact request for
+    explicit recovery, and the remaining rows are not sent.
+  - The result is truthful: "Se agregaron K de N productos", rejected lines, the stopped
+    line and the count not sent.
+- **Limit:** import only creates products; it never updates existing ones.
+
+### Menus and turnos (`components/cafeteria-menus-editor.tsx`)
+
+- **Data model:** unchanged (`menu_save` with `product_ids`, `shift_save`). Products are
+  referenced, never copied.
+- **Page:** the action is "Crear menú" / "Crear turno de servicio". Menu cards preview their
+  products, or "Este menú todavía no tiene productos.".
+- **Menu task:**
+  - name, description, active, and a deactivation warning;
+  - a product picker with search, a category filter, "Ver seleccionados (n)", 44 px ✓/+
+    toggles ("Añadir/Quitar {producto}") and 8 per page;
+  - **Guardar menú**.
+- **Turno task:** controlled fields with **Guardar turno**.
+- **Confirmations:** all native `confirm()` calls are replaced; switching to manual mode
+  uses an in-app confirmation.
+
+### Validation (local, fictional)
+
+- **Browser-component suites** (real Chromium, scripted `fetch`):
+  - `register-close.browser.test.tsx` **7/7**: the review shows expected, the exact
+    `expected_minor` is sent, there is a single submit, stale-expected is a definite
+    rejection, uncertain outcomes allow only an explicit same-key retry, and nothing is
+    stored before commit.
+  - `catalog.browser.test.tsx` **13/13**: search/filter/sort, empty vs no-match, create,
+    create-another, edit, double-click, drafts, version-mismatch discard, CSV
+    preview/partial/stop, the menu picker, and no native dialogs.
+- **Unit:** `lib/cafeteria/product-csv.test.ts` **20/20**; student CSV is unchanged.
+- **Focused regression:** **272/272 across 22 files**, including the POS/register,
+  cafeteria routes, Phase 5A operations, wallet tasks and shells.
+- TypeScript, affected ESLint, production build and `git diff --check` pass.
+- **Production-mode browser** (Foundation B stage, loopback adapter, fictional Cafeteria
+  Admin) at 1440, 768 and 390:
+  - no overflow, no native dialogs and no page errors;
+  - tasks are full screen at 390 with the mobile nav hidden.
+- **Committed at 1440 only:**
+  - an exceptional close of a fictional "Caja Patio" session, counted RD$ 1,490 →
+    Esperado RD$ 1,500, Faltante −RD$ 10 (DB difference −1000);
+  - product "Batida ficticia D2", created then edited to RD$ 90;
+  - a CSV import that created 2 products and rejected 2 (unknown category, invalid price);
+  - "Menú ficticio D2", created then edited to 3 linked products (no copies).
+- **768/390 (not committed):** close review on Caja Principal (Esperado RD$ 3,425.00,
+  Cuadrada) discarded with no journal left; draft kept across reload, restored and
+  discarded; CSV review discarded; menu/turno discarded. The DB was unchanged.
+
+### Remaining Wave D and boundaries
+
+- **Later Wave D:**
+  - non-financial tasks for students, staff, registers and provisioning;
+  - students `FilterBar`;
+  - wallet history disclosure;
+  - `DataList` for other collections.
+- **Deferred:**
+  - product images (storage plus product field);
+  - atomic bulk CSV (server command);
+  - Option B blind admin close → Wave E.
+- **Wave E** (POS, Cashier close UX, 5D.4) and **Wave F** (broad accessibility/polish) are
+  untouched. The targeted "Sol Ficticia Beta" POS search follow-up was not investigated.
