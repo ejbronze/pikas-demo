@@ -1,0 +1,649 @@
+# Phase 5D — Reporting & Reconciliation (plan)
+
+**Status:** PLANNING ONLY. Nothing here is implemented. This plan needs owner review,
+and decisions on the items marked **OWNER DECISION REQUIRED** (§24), before any slice
+starts.
+
+Established baseline:
+- Phase 5C closure: `efd668cb`.
+- UX/UI audit: `925fe352`.
+- UX Foundation A: `965d53ae`.
+
+Phase 5A–5C financial behavior is frozen. This plan only *reads* what those phases
+write.
+
+Sources reconstructed for this plan:
+- [Phase 5A](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md), [Phase 5B](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md),
+  [5C.1](PHASE_5C1_REFUNDS.md), [5C.2](PHASE_5C2_REPLENISHMENT_REVERSALS.md),
+  [5C.3](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md).
+- [Permissions](ADMINISTRATION_AND_PERMISSIONS.md), [POS financial model](POS_FINANCIAL_MODEL.md)
+  (historical demo), [UX foundations](UX_FOUNDATIONS.md), [UX audit](UX_UI_AUDIT_PRE_PHASE_5D.md).
+- Migrations `202610040001` (purchases), `202610050001` (refunds), `202610030001`
+  (register sessions), `202610070001` (staff receivables), `202610010002` (wallet
+  ledger) and `202610160001` (register cash summary and close reconciliation).
+
+## 1. Objective
+
+Phase 5D gives tenant operators read-only visibility of what their own operation
+recorded. It answers:
+- What happened?
+- How much was sold, and how was it paid?
+- Which products perform?
+- What happened with physical register cash, and are there discrepancies?
+- What PIKAS Cash activity occurred?
+
+Each number has exactly one authoritative derivation, and each role sees only what its
+existing authority already covers.
+
+## 2. Scope
+
+- **Cafeteria Admin "Reportes"** (new, single cafeteria):
+  - sales summary (gross, refunds, net, counts, payment-method mix);
+  - top products;
+  - period register reconciliation.
+- **Cafeteria Admin "Caja":** a live summary of each open session, for the admin only.
+- **Cafeteria Admin "Transacciones":** date and payment-method filters, refund status,
+  and refund events in the detail. This keeps lookup of a specific sale outside
+  Reportes.
+- **School Admin / Account Admin PIKAS Cash report** (school scope), from the wallet
+  ledger they are already authorized to read.
+- Shared date/time and filter contracts, and dedicated read-only reporting RPCs.
+
+## 3. Non-goals
+
+- No change to any financial write path: checkout, refunds, reversals, adjustments,
+  replenishments or register open/close.
+- No new financial authority; no access widened because a report is "read-only".
+- No POS checkout, refund-discovery, session-expiry, wallet-layout, global-navigation or
+  dashboard redesign.
+- No spending-limit UI, POS direct routing or session restoration.
+- No Phase 5E platform analytics, cross-customer data or Platform Admin tenant access.
+- No Phase 6 hardening. No charts or BI tooling. No materialized analytics store.
+- No reporting for sandbox POVs. No mixing of sandbox and customer data.
+
+## 4. Financial definitions (three separate domains)
+
+Three domains are never summed together or presented as one number.
+
+| Domain | What it measures | Authoritative records | Never includes |
+| --- | --- | --- | --- |
+| **A. Sales (Ventas)** | Committed commercial purchases at a cafeteria | `purchases`, `purchase_items`, `purchase_tenders`; corrections in `refunds`, `refund_items` | Recargas, reversals, adjustments, staff-receivable settlements |
+| **B. PIKAS Cash** | Wallet value and its movements | `student_wallets`, `wallet_ledger_entries` and linked typed records | Cash sales, register cash |
+| **C. Register cash (Caja)** | Physical cash expected in a register session | `register_sessions`, `pikas_private.register_cash_summary`, `pikas_private.register_close_reconciliations` | PIKAS Cash and staff-credit sales, recargas, wallet corrections |
+
+How a sale touches each domain:
+
+| Record | Sales | PIKAS Cash | Register cash |
+| --- | --- | --- | --- |
+| Cash sale | +total | — | +total (received − change) |
+| PIKAS Cash sale | +total | −total (`purchase` entry) | — |
+| Staff-credit sale | +total | — | — |
+
+- A **RD$500 PIKAS Cash sale** is RD$500 of sales and a −RD$500 wallet movement. It is
+  not register cash.
+- A **RD$1,000 recarga** is a +RD$1,000 wallet movement. It is not sales and not
+  register cash (Phase 5B: replenishments carry no session attribution).
+
+Register cash uses the frozen Phase 5A formula, reused and never re-derived:
+
+`expected = opening cash + cash sales + cash staff-receivable settlements − cash refund outflows`
+
+- A **staff-receivable cash settlement** adds register cash but is **not** sales.
+- A **cash refund** leaves the operator's **current** session (5C.1), which may differ
+  from the session of the original sale.
+
+## 5. Gross / refunds / net semantics
+
+The bare label "Ventas" is never used for a total. Every money total names its basis.
+
+| Metric (UI label) | Definition | Basis date |
+| --- | --- | --- |
+| **Ventas brutas** | Σ `purchases.total_minor` of committed purchases, all payment methods (Efectivo, PIKAS Cash, Crédito de personal) | `purchases.business_date` |
+| **Reembolsos** | Σ `refunds.amount_minor` of refund events, split by tender (Efectivo / PIKAS Cash) | `refunds.business_date` (event date) |
+| **Ventas netas** | Ventas brutas − Reembolsos, same period | event-date basis (see below) |
+| **Transacciones** | Count of committed purchases in the period, including later fully refunded ones | `purchases.business_date` |
+| **Ticket promedio (bruto)** | Ventas brutas ÷ Transacciones; shown only when the count is > 0 | as above |
+| **Transacción reembolsada (total)** | A purchase whose cumulative refunds equal its total (latest `refunds.remaining_after_minor` = 0) | state as of report time |
+| **Transacción reembolsada parcialmente** | Cumulative refunds > 0 and < total | state as of report time |
+| **Unidades vendidas** | Σ `purchase_items.quantity` | `purchases.business_date` |
+| **Unidades reembolsadas** | Σ `refund_items.quantity` | see §14 (top products) |
+| **Unidades netas** | Unidades vendidas − unidades reembolsadas of those same lines | see §14 |
+
+**Event-date basis (recommended).** A refund counts on the business date it happened,
+not on the date of the original sale. This matches the frozen register model: a cash
+refund leaves the current session, and closed sessions are never rewritten. A refund
+today of a sale from last week therefore reduces today's Ventas netas. It can make a
+day's net negative; that is shown signed with its label, never hidden.
+**OWNER DECISION REQUIRED (D3)** to confirm event-date basis rather than original-sale
+attribution.
+
+Correction treatment:
+
+| Correction | Reduces Ventas brutas? | Shown separately? | Ventas netas | Register cash | Wallet totals | Transaction count | Product units / ranking |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Full cash refund | No | Yes, Reembolsos (Efectivo) | Reduces | −amount in the refunding session | No | Unchanged (marked "reembolsada") | Units refunded (§14) |
+| Partial / item cash refund | No | Yes | Reduces by amount | −amount in the refunding session | No | Unchanged (marked "parcial") | Refunded lines only |
+| PIKAS Cash refund (full or partial) | No | Yes, Reembolsos (PIKAS Cash) | Reduces | None | +amount (`refund` entry) | Unchanged | As above |
+| Legacy amount-only refund (pre-5C.1) | No | Yes | Reduces | As recorded | As recorded | Unchanged | No unit allocation (gap G2) |
+| Replenishment reversal | — | Only in PIKAS Cash reports | Not sales | None | −amount (Reversiones) | Not a transaction | None |
+| Administrative adjustment | — | Only in PIKAS Cash reports | Not sales | None | ±amount (Ajustes, split credit/debit) | Not a transaction | None |
+| Negative wallet balance | — | Only in PIKAS Cash reports (count and total of negative balances) | Not sales | None | Point-in-time state, not a movement | — | — |
+
+Staff-credit purchases cannot be refunded (5C.1 deferral), so their sales are never
+reduced.
+
+## 6. Role authority matrix
+
+The matrix maps onto existing capabilities. No new capability is proposed for Beta.
+Cafeteria reports reuse:
+- `cafeteria:pos:purchases:read` for sales and products;
+- `cafeteria:pos:sessions:read` for reconciliation.
+
+Both go through `pikas_private.require_financial_admin`, which already requires
+`require_cafeteria_admin`. School reports reuse `school:wallets:read` through
+`require_school_admin`.
+
+| Surface / metric | Account Admin | School Admin | Cafeteria Admin | POS Supervisor | Cashier | Platform Admin | Sandbox POV |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Cafeteria sales summary (gross / refunds / net / mix) | NO (**D1**) | NO (**D1**) | SCOPED: own administered cafeteria | NO | NO | NO | NO |
+| Top products | NO | NO | SCOPED: own cafeteria | NO | NO | NO | NO |
+| Period register reconciliation | NO | NO | SCOPED: own cafeteria | NO (**D7**) | NO | NO | NO |
+| Live open-session summary incl. expected cash | NO | NO | SCOPED: own cafeteria (admin-only Caja) | NO (**D7**) | NO, blind count (owner decision 1) | NO | NO |
+| Transacciones lookup and filters | NO | NO | SCOPED: own cafeteria | Existing POS history only | Own sales (`read_own`), existing | NO | NO |
+| PIKAS Cash school report | SCOPED: schools in own account | SCOPED: own school | NO (balance lookup of connected customers only, existing) | NO | NO | NO | NO |
+| PIKAS Cash spending by cafeteria (wallet-paid only) | SCOPED (**D10**) | SCOPED (**D10**) | NO | NO | NO | NO | NO |
+| Aggregate balance of connected customers | — | — | NO (**D13**) | NO | NO | NO | NO |
+| CSV export of financial data | Deferred (**D9**) | Deferred | Deferred | NO | NO | NO | NO |
+
+Scope notes:
+- **Cafeteria Admin:** only cafeterias where it holds an active `cafeteria_admin`
+  membership, one cafeteria per report through the existing context switcher. No
+  multi-cafeteria roll-up in 5D.
+- **School Admin:** being connected to a cafeteria does **not** grant visibility of the
+  cafeteria's commercial data. No school or account capability reads `purchases` today.
+  PIKAS Cash data comes from the school's own wallet ledger.
+- **Account Admin:** the wallet scope follows the Beta wallet authority (read and
+  replenish in its account's schools). An account-wide roll-up across its own schools is
+  tenant reporting (5D), not 5E. It is a later slice option, not required.
+- **Platform Admin:** no standing tenant financial authority. Customer-authorized
+  support access remains deferred.
+- **Sandbox POV:** the frozen admin POV allowlist excludes financial history. Every
+  report RPC denies it, as `cafeteria_operations_read` does.
+
+## 7. Surface / information architecture
+
+This follows [UX_FOUNDATIONS §3](UX_FOUNDATIONS.md).
+
+| Surface | Question | 5D content | Not here |
+| --- | --- | --- | --- |
+| **Transacciones** (Cafeteria Admin, existing) | "Which sale?" | Chronological sales with date and payment-method filters, refund status badge, refund events in the detail | Totals, charts |
+| **Caja** (Cafeteria Admin, existing) | "What is in this register?" | Session history (5A) plus a live summary for open sessions (admin only) and per-session reconciliation | Period analytics |
+| **Reportes** (Cafeteria Admin, new nav entry) | "What does the data tell me?" | Sales summary, top products, period reconciliation | Acting on a single sale; links go to Transacciones and Caja |
+| **Movimientos** (School/Account, existing per-student wallet page) | "What happened to this wallet?" | Unchanged | Aggregates |
+| **PIKAS Cash report** (School/Account) | "What does wallet activity tell me?" | School-level wallet summary (§12) | Sales totals |
+| **Actividad** (School, existing) | "What happened?" (audit) | Unchanged in 5D | Analytics |
+
+- Reportes gets one Cafeteria Admin navigation entry, "Reportes", added only in the
+  slice that ships real content. There are no placeholders.
+- No new Actividad page for cafeterias in 5D: Transacciones and the Caja history are its
+  operational history.
+- Report rows link into Transacciones/Caja detail, never into financial actions
+  directly.
+
+## 8. Cafeteria Admin reporting contract
+
+| Item | Surface | 5D? |
+| --- | --- | --- |
+| Ventas brutas, Reembolsos (by tender), Ventas netas | Reportes | Yes |
+| Transacciones, Ticket promedio (bruto) | Reportes | Yes |
+| Payment-method mix (Efectivo / PIKAS Cash / Crédito de personal): amount and count, gross | Reportes | Yes |
+| Transactions fully / partially refunded (count) | Reportes | Yes |
+| Top products, units sold / refunded / net | Reportes | Yes |
+| Period reconciliation (sessions, expected, counted, difference) | Reportes, detail in Caja | Yes |
+| Live open-session summary | Caja | Yes |
+| Transaction lookup with date, payment-method filter and refund status | Transacciones | Yes |
+| Location filter | — | Not needed (a cafeteria has exactly one `school_location_id`) |
+| Register filter | Reportes / Caja | Defer |
+| Cashier/staff filter or staff performance | — | Defer (**D12**) |
+| Dashboard "Hoy" card (F07/F10) | Resumen | Defer (dashboard work) |
+
+## 9. School Admin reporting contract
+
+- **Yes (scoped to its school, `school:wallets:read`):** the PIKAS Cash report (§12).
+- **No:** cafeteria sales totals, payment-method mix, products and register cash. These
+  are the cafeteria's commercial data; no school capability covers them.
+  **OWNER DECISION REQUIRED (D1)**. Recommendation: no.
+- **Optional, D10:** PIKAS Cash spending by cafeteria, from the school's own ledger
+  `purchase` entries (wallet-paid portion only). Per-student this is already visible in
+  Movimientos.
+- No per-student "top spender" rankings in 5D (privacy, not needed for operations).
+
+## 10. Account Admin reporting contract
+
+- **Yes:** the same PIKAS Cash report as School Admin, for any school in its account,
+  through the existing school selector. Recargas are already within its authority.
+- **No:** cafeteria sales totals. No account capability reads purchases, and Phase 4D.2
+  deliberately withheld financial authority beyond the owner's Beta wallet policy.
+  **OWNER DECISION REQUIRED (D2)**. Recommendation: no for 5D. If approved later, it
+  needs an explicit new capability and its own slice.
+- An account-wide wallet roll-up across its schools is optional (slice 5D.5b) and not
+  required for Beta.
+
+## 11. POS Supervisor / Cashier visibility
+
+This is operational visibility, not formal reporting. 5D adds **no** POS surface and
+changes nothing in the POS.
+
+- **Cashier, open register** (existing, unchanged):
+  - status, register and opening float (which they counted themselves);
+  - own sales and receipts (`read_own`);
+  - refund lookup.
+
+  The owner's blind-count decision stands: no expected-cash value before the count, and
+  no running cash-sales or cash-refund totals. Those would let the cashier derive the
+  expected amount. Showing a non-cash transaction count is acceptable.
+  **D6** confirms whether any running money total may be shown; recommendation: no.
+- **Cashier, own close** (existing): enters counted cash only; the close is blind.
+  Whether the cashier sees the difference afterwards is **D8**; recommendation: not in
+  5D.
+- **POS Supervisor:** holds `cafeteria:pos:sessions:read` and exceptional close, but
+  `cafeteria_operations_read` admits only cafeteria admins. 5D gives supervisors no
+  reporting. Their own register close stays blind like a cashier's.
+  **D7** decides any future supervisor oversight view (other sessions' expected cash).
+
+## 12. PIKAS Cash reporting contract (School / Account Admin)
+
+All metrics are per school wallet scope, from `wallet_ledger_entries` joined to its
+typed records. Period movements use `occurred_at` converted to the school's business
+date (gap G1).
+
+| Metric (UI label) | Definition | Intent (UX foundations) |
+| --- | --- | --- |
+| **Recargas** | Σ `replenishment` entries in period; count | `movement` (+) |
+| **Reversiones de recarga** | Σ \|`replenishment_reversal`\| in period; count | `movement` (−) |
+| **Recargas netas** | Recargas − Reversiones (event-date) | `movement` |
+| **Compras con PIKAS Cash** | Σ \|`purchase`\| entries in period; count | `movement` (−) |
+| **Reembolsos a PIKAS Cash** | Σ `refund` entries in period | `movement` (+) |
+| **Ajustes administrativos** | Credits and debits shown separately, plus net; legacy rows as "Ajuste histórico" | `movement` |
+| **Movimiento neto del período** | Σ all entry amounts in period | `movement` |
+| **Saldo PIKAS Cash total (ahora)** | Σ `current_balance_minor` over the school's wallets; point-in-time | `balance` |
+| **Saldos negativos** | Count of wallets < 0 and their total | `balance` (red) |
+| **Monederos activos** | Wallets with status active / total; wallets with ≥1 movement in period | count |
+
+Rules:
+- Aggregate balance is a liability-like stored value. It is **never** labeled as
+  revenue or sales.
+- Recargas are **never** labeled as sales. Funding source remains `manual_verified`
+  only; no payment-method breakdown exists.
+- Identity check, used as an acceptance criterion: Σ period movements equals the change
+  in total balance between period start and end, derived from `balance_after_minor`
+  snapshots.
+- Historical balance at a past date and trends: defer.
+- Cafeteria Admin receives no aggregated wallet data (**D13**). Its existing per-customer
+  balance lookup is unchanged.
+
+## 13. Register reconciliation contract
+
+Phase 5A accounting is reused verbatim; nothing is reinterpreted.
+
+- **Per session:**
+  - Closed session: the immutable `register_close_reconciliations.summary` captured at
+    close, with `difference_minor = counted − expected`.
+  - Pre-5A closed session: derived summary, labeled as lacking a close-time capture (as
+    5A does).
+  - Open session: live `register_cash_summary`, labeled "En curso". It has no counted
+    cash and no difference.
+- **Fields:** Fondo inicial, Ventas en efectivo, Cobros de crédito de personal en
+  efectivo, Reembolsos en efectivo, Efectivo esperado, Efectivo contado, Diferencia.
+- **Difference** always carries a text label: "Cuadrada" (0), "Sobrante" (> 0),
+  "Faltante" (< 0). It is rendered with the existing `balance` intent (negative red,
+  otherwise neutral) plus the label. No new color convention.
+- **Period reconciliation (Reportes):**
+  - sessions whose `opened_business_date` is in range;
+  - totals over closed sessions only;
+  - count and list of sessions with a non-zero difference (Σ faltantes and Σ sobrantes
+    shown separately, plus net);
+  - open sessions listed separately and excluded from difference totals.
+- **Attribution caveat (shown as help text):** cash refunds reduce the session in which
+  they were paid out, which may differ from the session of the original sale. The
+  "Reembolsos en efectivo" in reconciliation (by session) can therefore differ from the
+  cash "Reembolsos" in the sales summary (by refund business date). Both are correct
+  for their question and are never forced to match.
+- **Caja vs Reportes:**
+  - Caja is the operational per-session place: history, detail, admin exceptional close,
+    live open summary.
+  - Reportes is the period roll-up, linking to Caja detail.
+- Expected cash is an accounting value and may be negative (5C.1 `cash_shortfall`);
+  display it signed.
+
+## 14. Top products (Beta definition)
+
+- **Population:** purchase lines whose purchase `business_date` falls in the selected
+  range, one cafeteria.
+- **Ranking metric:** **net units** = units sold on those lines − units refunded on
+  those same lines (`refund_items`, cumulative up to report time). This is sale-cohort
+  attribution: product performance answers "what sold", so refunds attach to the
+  original sale, and net units are never negative. The money totals in §5 use the
+  event-date basis; the help text states the difference. Confirmed by **D4**.
+- **Tie-breakers:** net revenue (Σ line totals − Σ refunded line amounts) descending,
+  then the latest product name snapshot (locale order), then `product_id`.
+- **Columns:** product, net units, units sold, units refunded, net revenue (`amount`
+  intent).
+- **Size:** top 10 (a small prioritized list, consistent with the earlier Top-5
+  direction). No full-catalog table in 5D.
+- **Default range:** last 30 days (matching the existing cafeteria Top-5 window), with
+  the same presets as other reports.
+- **Product identity:** group by `product_id`; display the most recent
+  `product_name_snapshot` in range (gap G5).
+- **Legacy amount-only refunds** have no unit allocation: those lines count as fully
+  sold, and a note shows the unallocated refund amount (gap G2).
+
+## 15. Date / time semantics
+
+- **Authority:** `schools.business_timezone` (validated IANA name, default
+  `America/Santo_Domingo`). Purchases, refunds and register sessions already snapshot
+  `business_timezone_snapshot` and `business_date` / `opened_business_date`, enforced
+  by check constraints. Reports filter on these stored business dates, never on UTC
+  days.
+- **"Hoy":** the current business date computed **server-side** in the cafeteria's
+  school timezone. "Ayer" is that date − 1. "Últimos 7 días" is today and the previous
+  6 days (inclusive).
+- **Custom range:** inclusive start and end business dates; end not in the future;
+  maximum span 92 days (**D11**).
+- **Midnight crossings:** a session open across midnight keeps its sales on each sale's
+  own business date in the sales summary. In reconciliation it belongs to its
+  `opened_business_date` and shows its close time.
+- **Open vs closed sessions:** see §13. Sales from an open session are included in sales
+  totals (they are committed).
+- **Display:** timestamps in the business timezone returned by the RPC, with the date
+  and the zone named in the period header. Never UTC.
+- **Gaps:**
+  - G1: wallet ledger entries have no timezone/business-date snapshot.
+  - G4: some existing UI hardcodes `America/Santo_Domingo`.
+
+## 16. Filter contract
+
+| Filter | Classification | Notes |
+| --- | --- | --- |
+| Hoy | REQUIRED FOR 5D | Default for the sales summary and reconciliation |
+| Ayer | REQUIRED FOR 5D | |
+| Últimos 7 días | REQUIRED FOR 5D | |
+| Custom date range | REQUIRED FOR 5D | Bounded (D11); server-validated |
+| Cafeteria | REQUIRED FOR 5D | Via the existing context switcher; one cafeteria per report |
+| Payment method | REQUIRED FOR 5D (Transacciones only) | Reportes already splits by method |
+| Register | USEFUL BUT DEFER | Caja already lists by register |
+| Cashier / staff | USEFUL BUT DEFER | Staff-performance sensitivity (D12) |
+| Location | NOT NEEDED | Cafeteria implies one location |
+| Last 30 days | Default for Top products only | |
+
+## 17. Empty / error / state behavior
+
+| State | Behavior |
+| --- | --- |
+| No sales in period | "Sin ventas en este período" plus the period; no table of zeros, no average ticket |
+| No refunds | "Sin reembolsos en este período"; Ventas netas = Ventas brutas, stated |
+| No register sessions | "No hay sesiones de caja en este período"; link to Caja |
+| Open session | Labeled "En curso"; expected shown to admin only; no difference; excluded from difference totals |
+| Closed session | Captured summary; pre-5A sessions labeled "Sin captura al cierre" |
+| Zero difference | "Cuadrada" label, neutral |
+| Non-zero difference | "Faltante"/"Sobrante" label, signed amount; sessions listed |
+| No PIKAS Cash usage | Tender row "PIKAS Cash: sin ventas"; wallet report "Sin movimientos" |
+| Partially refunded sale | "Reembolsada parcialmente" badge, refunded and remaining amounts in the detail |
+| Fully refunded sale | "Reembolsada" badge; still counted as a transaction and in Ventas brutas |
+| Negative Ventas netas (event-date) | Shown signed with an explanatory note |
+| Authority loss / sandbox POV | Same denial copy as existing operations reads; no partial data |
+| RPC failure / malformed response | Strict Zod validation; "No se pudo cargar el reporte" plus retry; no stale cached totals |
+| Range too large / invalid | Field-level validation; the server rejects with a definite error |
+
+## 18. Data-source matrix
+
+| Metric | Definition | Authoritative source | Fields | Filters | Refund / correction treatment | Role scope | Ambiguity | Implementation note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Ventas brutas | Σ purchase totals | `purchases` | `total_minor`, `business_date`, `cafeteria_id`, `currency_code` | date, cafeteria | none (gross) | Cafeteria Admin | staff credit included (D5) | numeric sum, return as string |
+| Mix by method | gross by tender | `purchases` ⋈ `purchase_tenders` | `tender_type` | date | none | Cafeteria Admin | — | three fixed rows, always shown |
+| Reembolsos | Σ refund events | `refunds` | `amount_minor`, `tender_type`, `business_date` | date | event-date | Cafeteria Admin | basis (D3) | `refunds_business_date` index exists |
+| Ventas netas | brutas − reembolsos | derived server-side | — | date | event-date | Cafeteria Admin | D3 | same RPC call, one transaction snapshot |
+| Transacciones | count purchases | `purchases` | `id` | date | refunded still counted | Cafeteria Admin | — | — |
+| Refund status | total vs cumulative refunds | `refunds` (latest `remaining_after_minor`) | `purchase_id`, `refund_ordinal` | — | as of now | Cafeteria Admin | legacy refunds | add to `operation_purchase`-style read, not a new write |
+| Units sold / refunded / net | Σ quantities | `purchase_items`, `refund_items` | `quantity`, `product_id`, `line_total_minor` | date (purchase) | cohort (§14) | Cafeteria Admin | G2, G5 | `purchase_items_product_idx` exists |
+| Session reconciliation | 5A formula | `register_close_reconciliations` (closed), `register_cash_summary` (open / pre-5A) | summary JSON, `difference_minor` | `opened_business_date` | refunds by paying session | Cafeteria Admin | attribution caveat (§13) | never recompute closed captures |
+| Wallet movements | Σ ledger by `entry_type` | `wallet_ledger_entries` | `amount_minor`, `entry_type`, `occurred_at`, `school_id` | date (derived) | reversals/adjustments separate | School / Account Admin | G1 | typed joins only for labels |
+| Total / negative balances | point-in-time | `student_wallets` | `current_balance_minor`, `status` | none | — | School / Account Admin | — | label "ahora" |
+| PIKAS Cash by cafeteria | Σ purchase entries by cafeteria | ledger ⋈ `wallet_purchase_debits` | `cafeteria_id` | date | refunds via `wallet_refund_credits.cafeteria_id` | School / Account Admin (D10) | — | wallet-paid only, labeled |
+
+## 19. Recommended technical architecture
+
+**Dedicated read-only SECURITY DEFINER RPCs with server-side aggregation**, following
+the accepted `cafeteria_operations_read` pattern:
+
+- **`cafeteria_report_read(p_cafeteria_id, p_kind, p_from date, p_to date)`**:
+  - `p_kind` ∈ `sales_summary`, `products`, `reconciliation`;
+  - calls `begin_sandbox_admin_command('cafeteria_admin')`, then
+    `require_financial_admin` with `cafeteria:pos:purchases:read` (sales, products) or
+    `cafeteria:pos:sessions:read` (reconciliation);
+  - re-checks authority after reading, as the 5A read does;
+  - returns `{cafeteria_id, tenant_kind, business_timezone, from, to, data}`.
+- **`school_wallet_report(p_school_id, p_from, p_to)`**: under `require_school_admin` +
+  `school:wallets:read`. It covers the Account Admin through the existing Beta policy.
+- **Additive extension of the Transacciones read:** date, tender and refund status. No
+  change to existing RPC signatures; add a new kind or a new function rather than
+  altering frozen ones.
+- **Rules for all of them:**
+  - Aggregation in PostgreSQL `numeric`; amounts returned as decimal strings and parsed
+    with existing `minorSchema`/BigInt.
+  - No client-side financial aggregation; the browser only formats with `MoneyValue`.
+  - Each response is computed in one statement or snapshot, so gross, refunds and net
+    are mutually consistent.
+  - Server derives "Hoy" and validates ranges.
+  - `authenticated`-only execute; private helpers revoked from all client roles.
+  - Same-origin `POST /api/cafeteria/reports` and `/api/school/wallet-report` with strict
+    Zod, `no-store`, and error mapping as in existing routes.
+- **Not recommended:**
+  - Database views: RLS-bound views would need new table read grants and duplicate the
+    authority logic.
+  - Materialized views: staleness and refresh complexity.
+  - Client queries: authority and consistency risk.
+- **Performance:**
+  - Existing indexes: `purchases_cafeteria_time_idx` (purchased_at),
+    `refunds_business_date`, `purchase_items_product_idx`.
+  - An additive index on `purchases(cafeteria_id, business_date)` is likely needed
+    (gap G3). Decide with EXPLAIN on local fixtures in slice 5D.1.
+  - Bounded ranges keep Beta volumes small.
+- The application-session pre-request guard must be reviewed for the new RPC paths, as
+  for previous RPCs (dependency).
+
+## 20. Export decision
+
+| Export | Classification |
+| --- | --- |
+| Student roster CSV (connected) | ALREADY SUFFICIENT (exists; out of scope) |
+| Demo transactions CSV (`admin-pages.tsx`) | Not applicable (demo-only, local storage) |
+| Connected transactions / report CSV | **DEFER** (**D9**) |
+
+If the owner requires an export for the pilot, add it as a final optional slice
+(5D.6). It would reuse the existing `csvCell` formula-injection protection, the BOM and
+the server-bounded RPC pattern from `school_student_export`, with the same authority as
+the report it exports.
+
+## 21. 5D vs 5E boundary
+
+| Phase 5D (tenant) | Deferred to Phase 5E (platform) |
+| --- | --- |
+| One cafeteria's sales, products, reconciliation | Cross-customer sales totals and rankings |
+| One school's or account's PIKAS Cash activity | Platform-wide wallet aggregates and stored-value totals |
+| Tenant-authorized roles only | Platform adoption, growth, active customers / users |
+| Customer tenants (sandbox labeled and isolated) | Platform-wide refund / adjustment / reversal pattern analytics |
+| | Customer health and benchmarking; multi-cafeteria or multi-account comparisons for PIKAS staff |
+| | Any Platform Admin financial visibility (requires customer-authorized support context first) |
+
+5E must exclude `tenant_kind = 'sandbox'` data from customer analytics.
+
+## 22. Dependencies
+
+- Owner decisions D1–D13 (§24) before the affected slices.
+- Local Auth-enabled environment `scripts/setup-step4d6-local.py` (Docker) for every
+  slice with SQL.
+- The application-session pre-request guard review for new RPC paths.
+- `UX_FOUNDATIONS.md` money semantics (`MoneyValue`), terminology and IA.
+- Fictional fixtures covering cash, PIKAS Cash, staff credit, partial/full/legacy
+  refunds, refunds in a later session, midnight-crossing and pre-5A sessions, reversals,
+  adjustments and negative balances.
+
+## 23. Risks
+
+- **Definition drift:** the same number derived in two places. Mitigated by single RPCs
+  (§18) and identity tests.
+- **Authority creep:** "read-only" used to widen access. Mitigated by reusing existing
+  capabilities, plus denial tests for every non-authorized role and POV.
+- **Domain conflation:** recargas shown as sales, or PIKAS Cash sales counted as cash.
+  Mitigated by §4, labels and tests.
+- **Event-date vs cohort confusion:** refunds and net vs top products. Mitigated by
+  explicit help text and D3/D4.
+- **Blind-count leakage:** totals exposing expected cash. Mitigated by §11; no POS
+  change.
+- **Timezone errors at midnight boundaries.** Mitigated by stored business dates and
+  boundary tests.
+- **Performance on unindexed `business_date`** (G3).
+- **Legacy data** (amount-only refunds, pre-5A sessions, legacy adjustments). Labeled,
+  never reinterpreted.
+- **Scope creep** into dashboards, audit waves or 5E. Mitigated by §3 and the slicing.
+
+## 24. Owner decisions required
+
+Each is **OWNER DECISION REQUIRED**. Recommendations are given; nothing is assumed
+granted.
+
+| ID | Decision | Recommendation |
+| --- | --- | --- |
+| D1 | Should School Admin see cafeteria sales totals? | No |
+| D2 | Should Account Admin see cafeteria sales totals? | No for 5D; a later explicit capability if wanted |
+| D3 | Refund basis for Reembolsos / Ventas netas | Event-date (matches register model) |
+| D4 | Top products: net units with sale-cohort refund attribution, top 10, last 30 days | Yes |
+| D5 | Include staff-credit purchases in Ventas brutas (separate method row) | Yes |
+| D6 | May a cashier see any running money total during an open register? | No (count only) |
+| D7 | POS Supervisor oversight of other sessions / expected cash | Not in 5D |
+| D8 | Cashier sees the close difference after own blind close | Not in 5D |
+| D9 | Financial CSV export in Beta | Defer (optional 5D.6) |
+| D10 | School / Account: PIKAS Cash spending by cafeteria (wallet-paid only) | Yes |
+| D11 | Maximum custom range | 92 days |
+| D12 | Cashier / staff filter or staff performance | Defer |
+| D13 | Cafeteria Admin aggregate balance of connected customers | No |
+
+## 25. Proposed implementation slices
+
+Each slice is independently implementable, testable, reviewable and committable.
+None reopens frozen 5A–5C behavior.
+
+**5D.1 — Reporting foundation and sales summary (Cafeteria Admin)**
+- Goal: Reportes with Ventas brutas / Reembolsos / Ventas netas, Transacciones, Ticket
+  promedio, method mix; Hoy / Ayer / 7 días / custom.
+- Surfaces: new "Reportes" nav entry and page.
+- Data:
+  - `cafeteria_report_read` kind `sales_summary`;
+  - server business-date helper;
+  - possibly the additive `business_date` index;
+  - API route and Zod contracts.
+- Authority: reuse `cafeteria:pos:purchases:read`.
+- Focused tests:
+  - pgTAP: identities, event-date refunds, timezone boundary, staff credit, legacy
+    refunds;
+  - denial of school, account, supervisor, cashier, platform, sandbox POV and foreign
+    cafeteria;
+  - route/contract tests;
+  - browser at 390/768/1440.
+- Dependencies: D1–D3, D5, D11. Owner acceptance: yes. Docker: yes.
+
+**5D.2 — Top products**
+- Goal: top 10 by net units (§14).
+- Surfaces: a Reportes section.
+- Data: kind `products`.
+- Authority: as 5D.1.
+- Focused tests: cohort refunds, ties, product rename, legacy refunds, empty state.
+- Dependencies: 5D.1, D4. Owner acceptance: yes. Docker: yes.
+
+**5D.3 — Reconciliation**
+- Goal: period reconciliation in Reportes; live open-session summary in admin Caja.
+- Data: kind `reconciliation`, reusing `register_close_reconciliations` and
+  `register_cash_summary`.
+- Authority: `cafeteria:pos:sessions:read`, admin only. No POS or cashier change.
+- Focused tests:
+  - matches 5A captures exactly;
+  - pre-5A labeling;
+  - refund in a later session;
+  - negative expected cash;
+  - midnight crossing;
+  - open session excluded from differences;
+  - the cashier POS shows no new data.
+- Dependencies: 5D.1. Owner acceptance: yes. Docker: yes.
+
+**5D.4 — Transacciones lookup**
+- Goal: date and payment-method filters, refund status badge, refund events in the
+  detail (F13 subset).
+- Data: a new read kind or function, additive.
+- Authority: `cafeteria:pos:purchases:read`.
+- Focused tests: filter correctness, full/partial/legacy refund status, pagination, the
+  existing 5A route tests.
+- Dependencies: none beyond 5D.1 helpers. Owner acceptance: yes. Docker: yes.
+
+**5D.5 — PIKAS Cash report (School / Account Admin)**
+- Goal: §12 metrics for one school.
+- Surfaces: a school-scoped "PIKAS Cash" report section, linked from the existing
+  student list / PIKAS Cash entry. No new global category.
+- Data: `school_wallet_report`.
+- Authority: `school:wallets:read` (Account Admin through the Beta policy).
+- Focused tests:
+  - ledger identity;
+  - reversal and adjustment separation;
+  - negative balances;
+  - cafeteria admin, cashier, platform and sandbox denial;
+  - G1 date derivation.
+- Dependencies: D10. Owner acceptance: yes. Docker: yes.
+- 5D.5b (optional): an Account-wide roll-up across its schools.
+
+**5D.6 — Export (optional, only if D9 = required)**
+- Goal: CSV of Transacciones or the report for the selected range.
+- Data and authority: as the report it exports; bounded rows; `csvCell`.
+- Focused tests: injection protection, limits, authority.
+- Docker: yes.
+
+## 26. Acceptance criteria
+
+- Every displayed number maps to exactly one row of §18 and one RPC kind.
+- Identities hold on fixtures:
+  - Ventas netas = Ventas brutas − Reembolsos;
+  - Σ method mix = Ventas brutas;
+  - Σ Reembolsos by tender = Reembolsos;
+  - reconciliation equals the 5A captures;
+  - wallet period movements = balance change.
+- Recargas, reversals and adjustments never appear in sales; PIKAS Cash sales never
+  appear in register cash.
+- Midnight and timezone boundary tests pass, using stored business dates; the UI never
+  shows UTC.
+- Every non-authorized role, foreign tenant and sandbox POV is denied server-side.
+  Being connected to a school grants no cafeteria sales visibility.
+- No POS behavior changes. Blind count is preserved, and no cashier-visible money total
+  is added.
+- Money display uses `MoneyValue` intents and canonical terms; meaning is never
+  color-only.
+- Empty and edge states in §17 render as specified at 390/768/1440 px with no overflow.
+- Focused regression of touched reads (5A operations route/read). Frozen financial
+  suites are rerun only if a slice touches their functions, which none should.
+
+## 27. Explicitly deferred work
+
+- Phase 5E platform analytics (§21) and Platform Admin support access.
+- Charts, trends, comparisons, historical balance at a date, multi-cafeteria and
+  account-wide sales roll-ups.
+- Register and staff filters, staff performance, supervisor oversight view.
+- Cashier difference after close; any POS change.
+- Financial CSV export (unless D9).
+- Dashboard "Hoy" launchpads (F07/F10), Actividad redesign, and the remaining UX audit
+  waves.
+- Staff-credit refunds, receivable reporting beyond register cash settlements.
+- Schema gaps:
+  - G1: ledger business-date snapshot;
+  - G2: unit allocation for legacy refunds;
+  - G4: hardcoded display timezone.
+
+  These are documented and handled by labeling, not by migrations that rewrite history.
+- Gaps G3 (index) and G5 (product naming) are resolved inside their slices.
