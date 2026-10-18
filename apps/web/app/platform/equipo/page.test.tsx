@@ -5,7 +5,7 @@ const mocks=vi.hoisted(()=>({require:vi.fn(),read:vi.fn()}));
 vi.mock('../../../lib/platform/customer-console',()=>({requirePlatform:mocks.require,readPlatform:mocks.read}));
 vi.mock('@/lib/platform/customer-console',()=>({requirePlatform:mocks.require,readPlatform:mocks.read}));
 vi.mock('@/components/brand-logo',()=>({BrandLogo:()=>null}));
-vi.mock('next/navigation',()=>({useRouter:()=>({refresh(){}})}));
+vi.mock('next/navigation',()=>({useRouter:()=>({refresh(){}}),usePathname:()=>'/platform/equipo'}));
 (globalThis as {React?:typeof React}).React=React;
 import TeamPage from './page';
 import PlatformLayout from '../layout';

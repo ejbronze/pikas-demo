@@ -3,8 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ requirePlatform: vi.fn(), readPlatform: vi.fn(), launcher: vi.fn() }));
 vi.mock("@/lib/platform/customer-console", () => ({ requirePlatform: mocks.requirePlatform, readPlatform: mocks.readPlatform }));
-vi.mock("@/lib/platform/sandbox-launcher", () => ({ loadSandboxLauncherState: mocks.launcher }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {} }) }));
+vi.mock("@/lib/platform/sandbox-launcher", async () => ({ ...(await import("../../lib/platform/sandbox-launcher")), loadSandboxLauncherState: mocks.launcher }));
+// No vitest alias config: resolve the Demo workspace component to its real implementation.
+vi.mock("@/components/demo-workspace", async () => await import("../../components/demo-workspace"));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {}, replace() {}, push() {} }), usePathname: () => "/platform/demostracion" }));
 (globalThis as { React?: typeof React }).React = React;
 import CustomersPage from "./clientes/page";
 import CustomerPage from "./clientes/[accountId]/page";
@@ -51,8 +53,22 @@ describe("customer server screens", () => {
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
     expect(html).toContain("Ana"); expect(html).not.toContain("Verificar identidad y completar acceso"); expect(html).not.toContain("Preparar administrador");
   });
-  it("demonstration preserves the existing launcher and real identity", async () => {
-    mocks.launcher.mockResolvedValue({ kind: "active", active: { personaName: "José Ramírez", accountName: "Colegio Horizonte", cafeteriaName: "Cafetería Escolar", povCode: 'cashier', operatorName: 'Operador', expiresAt: '2026-10-20T00:00:00Z', destination: '/pos', canOpenExperience: true } });
-    const html = renderToStaticMarkup(await DemonstrationPage()); expect(html).toContain('href="/pos"'); expect(html).toContain("José Ramírez"); expect(mocks.launcher).toHaveBeenCalledWith(session.supabase, session.identity);
+  it("detail accepts a well-formed fixture account identifier and still rejects malformed ones", async () => {
+    mocks.readPlatform.mockResolvedValue({ kind: "missing" });
+    await CustomerPage({ params: Promise.resolve({ accountId: "00000000-0000-0000-0000-000000000001" }) });
+    expect(mocks.readPlatform).toHaveBeenLastCalledWith(expect.anything(), "platform:tenant:lifecycle:read", "platform_get_customer_overview", { p_account_id: "00000000-0000-0000-0000-000000000001" }, expect.anything());
+    mocks.readPlatform.mockClear();
+    await CustomerPage({ params: Promise.resolve({ accountId: "not-an-id" }) });
+    expect(mocks.readPlatform).not.toHaveBeenCalled();
+  });
+  it("Demo workspace keeps the real operator identity and the Foundation B experiences", async () => {
+    const target = { account_id: "03e71159-69e9-4387-9b3b-65799d49faf0", account_name: "Colegio Horizonte", cafeteria_id: "b9496342-5079-46ae-83b8-05c39bcbd7fe", cafeteria_name: "Cafetería Escolar", school_id: "df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488", persona_display_name: "José Ramírez" };
+    const rpc = vi.fn().mockResolvedValue({ data: ["cashier", "school_admin", "cafeteria_admin"].map(pov_code => ({ ...target, pov_code })), error: null });
+    mocks.requirePlatform.mockResolvedValue({ ...session, supabase: { rpc } });
+    mocks.launcher.mockResolvedValue({ kind: "targets", targets: [] });
+    const html = renderToStaticMarkup(await DemonstrationPage());
+    expect(html).toContain("Explorar PIKAS"); expect(html).toContain("Sigues actuando como Operador");
+    for (const label of ["Administración", "Operaciones", "Caja / POS", "Próximamente"]) expect(html).toContain(label);
+    expect(mocks.launcher).toHaveBeenCalledWith({ rpc }, session.identity);
   });
 });

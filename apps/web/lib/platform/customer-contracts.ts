@@ -6,17 +6,19 @@ export const statusLabel: Record<string, string> = {
   pending: "Identidad pendiente", linked: "Identidad vinculada", granted: "Acceso otorgado",
   expired: "Solicitud vencida", revoked: "Solicitud revocada",
 };
-const entity = z.object({ id: z.uuid(), name: z.string(), code: z.string(), status: lifecycleStatus });
+// Read projections accept any well-formed identifier (as other connected reads do): the database
+// is authoritative, and one fixture row with a non-RFC-4122 UUID must not blank the whole list.
+const entity = z.object({ id: z.guid(), name: z.string(), code: z.string(), status: lifecycleStatus });
 export const customerListSchema = z.object({
   customers: z.array(entity.extend({ tenant_kind: z.enum(["customer", "sandbox"]),
     school_count: z.number().int().nonnegative(), location_count: z.number().int().nonnegative(), cafeteria_count: z.number().int().nonnegative() })),
-  next_cursor: z.uuid().nullable(),
+  next_cursor: z.guid().nullable(),
 });
 export const customerOverviewSchema = z.object({
   account: entity,
   tenant_kind: z.enum(["customer", "sandbox"]),
   schools: z.array(entity.extend({ business_timezone: z.string(), locations: z.array(entity.extend({ cafeterias: z.array(entity) })) })),
-  customer_admin_onboarding: z.array(z.object({ intent_id: z.uuid(), role: z.string(), scope: z.string(), status: z.string(), person: z.object({ id: z.uuid(), display_name: z.string() }).nullable() })),
+  customer_admin_onboarding: z.array(z.object({ intent_id: z.uuid(), role: z.string(), scope: z.string(), status: z.string(), person: z.object({ id: z.guid(), display_name: z.string() }).nullable() })),
   administrators: z.array(z.object({ display_name: z.string(), status: lifecycleStatus, person_status: lifecycleStatus })),
   administrator_intents: z.array(z.object({ id: z.uuid(), email: z.string(), status: z.enum(["pending", "linked", "granted", "expired", "revoked"]),
     expires_at: z.string(), role_code: z.string(), scope_kind: z.string(), display_name: z.string().nullable() })),

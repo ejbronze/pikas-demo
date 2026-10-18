@@ -9,7 +9,7 @@ import { customerActivationStatusSchema } from "../../../../lib/platform/custome
 import { AdministratorAction } from "./administrator-action";
 export default async function CustomerPage({ params }: { params: Promise<{ accountId: string }> }) {
   const session = await requirePlatform();
-  const id = z.uuid().safeParse((await params).accountId);
+  const id = z.guid().safeParse((await params).accountId);
   if (!id.success) return <ReadFailure kind="missing" />;
   const result = await readPlatform(session, "platform:tenant:lifecycle:read", "platform_get_customer_overview", { p_account_id: id.data }, customerOverviewSchema);
   if (result.kind !== "ready") return <ReadFailure kind={result.kind} />;

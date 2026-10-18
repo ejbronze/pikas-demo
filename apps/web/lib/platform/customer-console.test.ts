@@ -28,3 +28,16 @@ describe("platform server customer access", () => {
     mocks.rpc.mockRejectedValue(new Error("network")); expect(await readPlatform(session, "platform:tenant:lifecycle:read", "platform_list_customers", {}, z.array(z.string()))).toEqual({ kind: "unavailable" });
   });
 });
+
+describe('customer read projections', () => {
+  const row = (id: string) => ({ id, name: 'Cliente ficticio', code: 'C', status: 'active', tenant_kind: 'customer', school_count: 1, location_count: 1, cafeteria_count: 1 });
+  it('accept well-formed identifiers that are not RFC 4122 (local foundation fixtures) without blanking the list', async () => {
+    const { customerListSchema } = await import('./customer-contracts');
+    expect(customerListSchema.safeParse({ customers: [row('00000000-0000-0000-0000-000000000001'), row(crypto.randomUUID())], next_cursor: null }).success).toBe(true);
+  });
+  it('still reject malformed identifiers and unknown statuses', async () => {
+    const { customerListSchema } = await import('./customer-contracts');
+    expect(customerListSchema.safeParse({ customers: [row('not-an-id')], next_cursor: null }).success).toBe(false);
+    expect(customerListSchema.safeParse({ customers: [{ ...row(crypto.randomUUID()), status: 'deleted' }], next_cursor: null }).success).toBe(false);
+  });
+});

@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## UX Foundation B.1: navegación de PIKAS Admin (local)
+
+- Navegación de PIKAS Admin: **Inicio · Clientes · Equipo · Demo**, cada destino según su capacidad de plataforma. «Crear cliente» deja la barra y sigue disponible en Inicio y en Clientes.
+- **Inicio** ofrece tarjetas a Clientes, Nuevo cliente, Equipo y Demo solo cuando el operador tiene la capacidad correspondiente; un operador solo de Demo ve únicamente Demo.
+- Clientes acepta identificadores bien formados aunque no sean RFC 4122 (fixtures locales), en lugar de ocultar toda la lista. Sin cambios de autoridad, base de datos ni del flujo Demo. Sin push ni despliegue.
+
 ## UX Foundation B: entorno Demo persistente (local)
 
 - **Demo** en la navegación de PIKAS Admin → **Explorar PIKAS**, con Escuela y Cafetería en Administración, Caja / POS en Operaciones y Padre/Estudiante como tarjetas no interactivas «Próximamente».

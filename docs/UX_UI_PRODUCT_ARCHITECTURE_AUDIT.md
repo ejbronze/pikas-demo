@@ -1333,3 +1333,78 @@ No outstanding owner decision or blocker remains for this bounded milestone.
 The unrelated `supabase/README.md` is excluded from staging/commit and retains SHA-1
 `12172eba11988bcb9073d042bb6881d33c801072`. The intended final worktree contains only
 that preexisting modification after the local Foundation B commit.
+
+## 24. UX Foundation B.1 — PIKAS Admin navigation correction (local)
+
+**Owner report.** After Foundation B, the PIKAS Admin home showed only *Inicio · Demo*
+while saying "Administra clientes y sus accesos desde aquí."
+
+**Root cause.** Navigation was already capability-gated, and the screenshot operator
+("Operador Ficticio Demo UX") is the audit's local **sandbox-only** fixture: it holds
+`platform_sandbox_operator` (`platform:sandbox:pov:enter`) and nothing else. *Inicio ·
+Demo* is the correct authority behavior for it. The real gaps were:
+
+- **Inicio copy and cards:** the home claimed customer administration to every operator
+  and had no Equipo entry point for those who hold it.
+- **Clientes failed locally (H22, both audits):** `platform_list_customers` returns the
+  local `supabase/fixtures/foundation.sql` accounts `00000000-0000-0000-0000-00000000000{1,2}`.
+  These are valid PostgreSQL UUIDs but not RFC 4122, so the web projection's `z.uuid()`
+  rejected the whole response and the page failed closed. Production accounts are
+  created with `gen_random_uuid()` and were unaffected.
+- **Equipo failed locally (H22, both audits):** the audit's fictional Platform Admin was
+  inserted directly into `platform_memberships`. It therefore lacked the opaque
+  `platform_team_handles` row that the `202610100004` backfill and the team "complete"
+  flow give every real operator, so `actor_handle` was `null` and the strict team read
+  correctly failed closed. **This was a fixture artifact, not a product defect.** The
+  route works for a properly provisioned Platform Admin.
+
+**Changes (no authority, Demo, DB, schema or RLS change):**
+- Navigation: **Inicio · Clientes · Equipo · Demo**. "Crear cliente" leaves the bar; it
+  remains on Inicio ("Nuevo cliente") and as the Clientes page action. Clientes stays
+  current on detail and Nuevo cliente pages. The logo label reads "PIKAS Admin".
+- Inicio (`h1` **PIKAS Admin**) shows one card per destination the operator may open. The
+  greeting only claims customer administration when an administrative destination is
+  available.
+- Customer read projections (list rows, cursor, overview entities and onboarding person,
+  detail route parameter) use `z.guid()`, the repository's existing convention for
+  connected reads that include foundation fixtures. Write and result schemas keep
+  `z.uuid()`. The RPCs and capabilities remain authoritative.
+
+| Destination | Capability required (nav, card and page) |
+| --- | --- |
+| Inicio | Any active Platform identity (`requirePlatform`) |
+| Clientes (+ detail) | `platform:tenant:lifecycle:read` |
+| Nuevo cliente (Inicio card, Clientes action, page) | `platform:tenant:provision` **and** `platform:customer_admin:provision` |
+| Equipo | `platform:team:manage` |
+| Demo | `platform:sandbox:pov:enter` (separate `platform_sandbox_operator` role) |
+
+`platform_admin` holds the first four capability groups. It does **not** hold the Demo
+capability. A person sees all four destinations only when they also hold the separate
+sandbox-operator membership. No role mapping was changed.
+
+**Validation (local, fictional).**
+- 102 focused tests / 10 files pass: platform shell, Inicio capability matrix, customer
+  pages/contracts, Equipo page, the Demo switch/launcher routes, and the platform
+  customer workflows.
+- Two platform-shell tests were already failing at `653c64f` (a stale "Demostración"
+  label and a `next/navigation` mock without `usePathname`), and `customer-pages.test.tsx`
+  could not load (unresolved `@/components/demo-workspace` without a vitest alias).
+  These were corrected test-side only; its stale launcher assertion now checks the
+  accepted Foundation B workspace. No Demo code changed.
+- Typecheck, affected ESLint, production build and `git diff --check` pass.
+- Production-mode browser (Foundation B stage, loopback adapter) at 390/768/1440:
+  - **full fictional Platform Admin who also holds the sandbox role:** nav and cards
+    Inicio/Clientes/Equipo/Demo; Clientes lists 7 local accounts; Equipo loads; Demo opens
+    *Explorar PIKAS*; Inicio returns.
+  - **Platform Admin without the sandbox role:** Inicio/Clientes/Equipo; direct
+    `/platform/demostracion` → "No tienes acceso al Demo."
+  - **sandbox-only operator:** Inicio/Demo only, no customer-administration claim; direct
+    `/platform/clientes`, `/platform/clientes/nuevo` and `/platform/equipo` show the
+    permission message and no data.
+  - No overflow and no page errors.
+- Local fixtures:
+  - new "Administradora Ficticia PIKAS Admin" (`@example.invalid`) with the existing
+    `platform_admin` and `platform_sandbox_operator` roles plus its team handle;
+  - the missing team handle added for the existing audit Platform Admin fixture.
+
+  The sandbox-only fixture is unchanged. No production identity was touched.
