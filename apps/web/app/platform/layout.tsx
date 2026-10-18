@@ -1,22 +1,18 @@
-import Link from "next/link";
-import { PlatformNavLink } from "./platform-nav-link";
-import { BrandLogo } from "@/components/brand-logo";
+import { AdministrativeShell, type ShellNavItem } from "../../components/administrative-shell";
 import { requirePlatform } from "@/lib/platform/customer-console";
 
+// Destinations are decided here, on the server, from Platform capabilities; each page enforces them again.
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { identity, capabilities } = await requirePlatform();
-  return <div className="admin-ux min-h-screen bg-slate-50 text-slate-900">
-    <header className="border-b bg-white px-5 py-4"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-      <Link href="/platform" aria-label="PIKAS Admin, inicio"><BrandLogo /></Link>
-      <div className="flex min-w-0 flex-wrap items-center gap-3"><span className="min-w-0 break-words text-sm">{identity.person.displayName} · Plataforma</span>
-        <form action="/api/auth/logout" method="post"><button className="btn-secondary">Cerrar sesión</button></form></div>
-    </div></header>
-    <nav aria-label="Plataforma" className="border-b bg-white"><div className="mx-auto flex max-w-6xl flex-wrap gap-1 px-3 py-2 sm:px-5">
-      <PlatformNavLink href="/platform">Inicio</PlatformNavLink>
-      {capabilities.includes("platform:tenant:lifecycle:read") && <PlatformNavLink href="/platform/clientes">Clientes</PlatformNavLink>}
-      {capabilities.includes("platform:team:manage") && <PlatformNavLink href="/platform/equipo">Equipo</PlatformNavLink>}
-      {capabilities.includes("platform:sandbox:pov:enter") && <PlatformNavLink href="/platform/demostracion">Demo</PlatformNavLink>}
-    </div></nav>
-    <main className="mx-auto max-w-6xl space-y-6 p-5 sm:p-8">{children}</main>
-  </div>;
+  const nav: ShellNavItem[] = [
+    { href: "/platform", label: "Inicio", icon: "home", match: "/platform", exact: true },
+    ...(capabilities.includes("platform:tenant:lifecycle:read") ? [{ href: "/platform/clientes", label: "Clientes", icon: "clients", match: "/platform/clientes" } as const] : []),
+    ...(capabilities.includes("platform:team:manage") ? [{ href: "/platform/equipo", label: "Equipo", icon: "team", match: "/platform/equipo" } as const] : []),
+    ...(capabilities.includes("platform:sandbox:pov:enter") ? [{ href: "/platform/demostracion", label: "Demo", icon: "demo", match: "/platform/demostracion" } as const] : []),
+  ];
+  return <AdministrativeShell tone="navy" area="Plataforma" homeHref="/platform" navLabel="Plataforma" nav={nav}
+    context={{ label: "PIKAS Admin", name: "Plataforma PIKAS" }}
+    account={{ name: identity.person.displayName, role: "Operador de PIKAS" }} logout>
+    {children}
+  </AdministrativeShell>;
 }

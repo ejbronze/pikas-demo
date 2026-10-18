@@ -2,6 +2,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
 import { ReadFailure } from "./console-views";
+import { AppPageHeader } from "../../components/app-page-header";
 
 const auditSchema = z.array(z.object({ id: z.uuid(), occurred_at: z.string(), action: z.string() }));
 const activityLabels: Record<string, string> = {
@@ -22,8 +23,7 @@ export default async function PlatformHomePage() {
     ? await readPlatform(session, "platform:audit:read", "platform_read_audit", { p_limit: 5 }, auditSchema) : null;
   const available = destinations.filter((d) => d.allowed(session.capabilities));
   const administers = available.some((d) => d.href !== "/platform/demostracion");
-  return <><h1 className="text-3xl font-bold">PIKAS Admin</h1>
-    <p>Hola, {session.identity.person.displayName}. {administers ? "Administra clientes y sus accesos desde aquí." : available.length ? "Tu acceso de PIKAS Admin incluye Demo." : "Tu acceso no incluye destinos administrativos."}</p>
+  return <><AppPageHeader title="PIKAS Admin" description={<>Hola, {session.identity.person.displayName}. {administers ? "Administra clientes y sus accesos desde aquí." : available.length ? "Tu acceso de PIKAS Admin incluye Demo." : "Tu acceso no incluye destinos administrativos."}</>} />
     {available.length > 0 && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {available.map((d) => <Link key={d.href} className="card p-5" href={d.href}><h2 className="font-bold">{d.title}</h2><p>{d.text}</p></Link>)}
     </div>}

@@ -1,5 +1,6 @@
 "use client";
 
+import { AppPageHeader } from './app-page-header';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AdminDialog, AdminStatus } from './admin-interactions';
@@ -22,10 +23,7 @@ export function CafeteriaProductsEditor() {
   const close = (message?: string) => { setEditor(null); if (message) setNotice(message); };
 
   return <>
-    <header className="flex flex-wrap items-center justify-between gap-4">
-      <div><p className="label">Administración de cafetería</p><h1 ref={heading} tabIndex={-1} className="text-3xl font-black">Productos</h1><p className="mt-2 text-slate-600">Administra precios, información alimentaria y disponibilidad.</p></div>
-      <button className="btn" disabled={connection !== 'Online'} onClick={() => { setNotice(''); setEditor({ id: crypto.randomUUID() }); }}>Agregar producto</button>
-    </header>
+    <AppPageHeader headingRef={heading} title="Productos" description="Administra precios, información alimentaria y disponibilidad." action={<button className="btn" disabled={connection !== 'Online'} onClick={() => { setNotice(''); setEditor({ id: crypto.randomUUID() }); }}>Agregar producto</button>} />
     {notice ? <p role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-emerald-900">{notice}</p> : null}
     {connection !== 'Online' ? <p role="status" className="mt-4">Confirma la conexión para guardar cambios.</p> : null}
     <div className="mt-6 grid gap-3 md:grid-cols-[2fr_1fr_1fr]">

@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## UX Wave C: shell administrativo unificado (local)
+
+- PIKAS Admin, Cuenta, Escuela y Cafetería comparten un mismo shell: identidad PIKAS Admin, área y contexto actual (escuela/cafetería), navegación según permisos, cuenta y **Cerrar sesión** en un solo lugar. En móvil: barra superior de 56 px, menú de cuenta y navegación inferior con «Más»; Cafetería prioriza Transacciones, Cajas y Reportes. El POS sigue siendo un espacio de trabajo propio.
+- Encabezados de página consistentes (el título coincide con la navegación; enlace de regreso solo en páginas de detalle), estados vacíos/errores con reintento, métricas y tabla responsiva de Clientes.
+- Sesión: pantalla clara de «Tu sesión terminó» con el acceso correcto, cuenta regresiva en el aviso y mensaje en `/login` para accesos escolares denegados. Ninguna operación se repite.
+- La navegación móvil queda oculta mientras hay un diálogo modal. El Demo, la autoridad, los cálculos financieros y la base de datos no cambian. Sin push ni despliegue.
+
 ## UX Foundation B.1: navegación de PIKAS Admin (local)
 
 - Navegación de PIKAS Admin: **Inicio · Clientes · Equipo · Demo**, cada destino según su capacidad de plataforma. «Crear cliente» deja la barra y sigue disponible en Inicio y en Clientes.

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { z } from "zod";
 import { customerOverviewSchema, statusLabel } from "../../../../lib/platform/customer-contracts";
 import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
@@ -23,7 +22,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
     return read.kind === "ready" && read.value.intent_id === intent.id && read.value.account_id === customer.account.id ? read.value : null;
   }));
   const hasCurrent = customer.administrators.length > 0 || customer.customer_admin_onboarding.some((intent) => intent.role === "account_admin" && intent.scope === "account" && intent.status === "granted") || initialIntents.some((intent) => ["pending", "linked", "granted"].includes(intent.status));
-  return <><Link className="text-emerald-700 underline" href="/platform/clientes">Volver a clientes</Link>
+  return <>
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
     <CustomerHierarchy customer={customer} />
     <section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Administrador inicial</h2>

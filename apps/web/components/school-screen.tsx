@@ -8,6 +8,8 @@ import { readSchema, type SchoolSection, type SchoolStudent } from "../lib/schoo
 import { ConnectedSchoolShell } from "./connected-school-shell";
 import { ConnectedSchoolPages } from "./connected-school-pages";
 import { readSchoolWalletAccess } from "../lib/wallet/access";
+import { ErrorState } from "./state-panels";
+const sectionPath: Record<SchoolSection, string> = { summary: "", students: "/estudiantes", administrators: "/administradores", cafeterias: "/cafeterias", activity: "/actividad" };
 export type SchoolSearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function SchoolScreen({ section, searchParams }: { section: SchoolSection; searchParams: SchoolSearchParams }) {
   const client = await createSupabaseServerClient();
@@ -22,10 +24,10 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
   const cursor = z.uuid().nullable().safeParse(params.after ?? null);
   const location = z.uuid().nullable().safeParse(params.location || null);
   const grade = z.string().min(1).max(80).nullable().safeParse(params.grade || null);
-  if (!query.success || !status.success || !cursor.success || !location.success || !grade.success) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><p role="alert" className="card p-5">Filtros inválidos. Regresa a la sección para repetir la búsqueda.</p></ConnectedSchoolShell>;
+  if (!query.success || !status.success || !cursor.success || !location.success || !grade.success) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ErrorState title="Los filtros no son válidos." description="Vuelve a la sección para repetir la búsqueda." retryHref={`/admin/escuela${sectionPath[section]}?school=${schoolId}`} /></ConnectedSchoolShell>;
   const response = await client.rpc(section === "students" ? "school_student_roster" : "school_admin_read", { p_school_id: schoolId, ...(section === "students" ? { p_location_id: location.data, p_grade: grade.data } : { p_section: section }), p_query: query.data, p_status: status.data, p_after: cursor.data, p_limit: 50 });
   const parsed = readSchema.safeParse(response.data);
-  if (response.error || !parsed.success || parsed.data.scope.school_id !== schoolId || parsed.data.scope.actor_id !== access.context.person_id) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><p role="alert" className="card p-5">No se pudo cargar la información con tus permisos actuales. Recarga para reintentar.</p></ConnectedSchoolShell>;
+  if (response.error || !parsed.success || parsed.data.scope.school_id !== schoolId || parsed.data.scope.actor_id !== access.context.person_id) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ErrorState title="No pudimos cargar esta sección." description="Puede ser un problema temporal o un cambio en tus permisos." retryHref={`/admin/escuela${sectionPath[section]}?school=${schoolId}`} /></ConnectedSchoolShell>;
   let students: SchoolStudent[] = section === "students" ? (parsed.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row) : [];
   if (section === "cafeterias") {
     const roster = await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "students", p_query: query.data, p_limit: 100 });
@@ -33,5 +35,5 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     if (!roster.error && result.success && result.data.scope.school_id === schoolId && result.data.scope.actor_id === access.context.person_id) students = (result.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row);
   }
   const walletRead = section === "students" && !access.context.pov && (await readSchoolWalletAccess(client, schoolId)).read;
-  return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ConnectedSchoolPages walletRead={walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
+  return <ConnectedSchoolShell context={access.context} schoolId={schoolId} role={parsed.data.scope.role}><ConnectedSchoolPages walletRead={walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
 }

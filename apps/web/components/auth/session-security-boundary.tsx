@@ -2,6 +2,7 @@
 
 import { bindApplicationSession } from "../../lib/auth/session-fetch";
 import Link from "next/link";
+import { BrandLogo } from "../brand-logo";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { applicationSessionSchema, protectedSurface, remainingSessionMs, type ApplicationSession } from "@/lib/auth/application-session";
@@ -120,15 +121,29 @@ export function SessionSecurityBoundary({ enabled, children }: { enabled: boolea
     {/* Temporary reconciliation hides/inerts the workspace without losing an idle cart or draft.
         Terminal expiry unmounts it; durable recovery journals remain untouched. */}
     {!ended && snapshot && <div hidden={masked} inert={masked}>{children}</div>}
-    {masked && <main className="p-8" aria-live="polite"><h1>{ended ? "Tu sesión se cerró" : "Verificando tu sesión"}</h1>
-      <p>{ended ? "Vuelve a iniciar sesión para continuar. Las operaciones pendientes conservan su información de recuperación." : "Se requiere una sesión válida para mostrar la aplicación."}</p>
-      <Link href="/login">Iniciar sesión</Link><p className="mt-3"><Link href="/backoffice/login">Acceso de Plataforma</Link></p></main>}
+    {masked && <SessionStatePanel ended={ended} platform={path.startsWith("/platform")} />}
     <dialog ref={dialog} aria-labelledby="session-warning-title" aria-describedby="session-warning-description" onCancel={event => event.preventDefault()} className="max-w-md rounded-xl bg-white p-6 text-slate-900 shadow-xl backdrop:bg-black/40">
-      <h2 id="session-warning-title">Tu sesión está por vencer</h2>
-      <p id="session-warning-description">Por seguridad, tu sesión se cerrará en 2 minutos por inactividad.</p>
-      <p aria-live="off">Tiempo restante: {Math.ceil(remaining / 1000)} segundos.</p>
+      <h2 id="session-warning-title" className="text-xl font-black">Tu sesión está por vencer</h2>
+      <p id="session-warning-description" className="mt-2">Por seguridad, la sesión se cerrará por inactividad. Continúa para seguir trabajando.</p>
+      <p aria-live="off" className="mt-2 text-2xl font-black tabular-nums">{Math.floor(Math.ceil(remaining / 1000) / 60)}:{String(Math.ceil(remaining / 1000) % 60).padStart(2, "0")}</p>
       <div className="mt-4 flex gap-3"><button ref={continueButton} className="btn" type="button" disabled={busy} onClick={async () => { setBusy(true); await reconcile("activity"); setBusy(false); }}>Continuar sesión</button>
         <button className="btn-secondary" type="button" disabled={busy} onClick={() => void logout()}>Cerrar sesión</button></div>
     </dialog>
   </>;
+}
+
+// Presentation only: the boundary decides when the session is being verified or has ended.
+// Never resumes or resubmits work; recovery journals stay untouched.
+export function SessionStatePanel({ ended, platform }: { ended: boolean; platform: boolean }) {
+  return <main className="grid min-h-screen place-items-center bg-slate-50 p-4" aria-live="polite">
+      <section className="card w-full max-w-md space-y-3 p-6 text-slate-900">
+        <BrandLogo className="h-auto w-32" />
+        <h1 className="text-2xl font-black">{ended ? "Tu sesión terminó" : "Verificando tu sesión"}</h1>
+        <p className="text-slate-700">{ended
+          ? "Por seguridad, la sesión se cerró por inactividad, desde otra pestaña o al salir. Inicia sesión para continuar."
+          : "Estamos confirmando que tu sesión sigue activa. Esto toma solo un momento."}</p>
+        {ended && <p className="text-sm text-slate-600">No se repetirá ninguna operación. Las operaciones pendientes conservan su información de recuperación para que las revises al volver.</p>}
+        <Link className={ended ? "btn w-full" : "text-sm font-bold underline"} href={platform ? "/backoffice/login" : "/login"}>{ended ? "Iniciar sesión" : "Si no avanza, inicia sesión de nuevo"}</Link>
+      </section>
+    </main>;
 }

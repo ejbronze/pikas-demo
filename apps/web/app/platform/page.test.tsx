@@ -13,7 +13,7 @@ describe('PIKAS Admin Inicio', () => {
   it('a full Platform Admin with Demo gets Clientes, Nuevo cliente, Equipo and Demo entry points', async () => {
     const html = await home([...admin, 'platform:sandbox:pov:enter']);
     expect(cards(html)).toEqual(['/platform/clientes', '/platform/clientes/nuevo', '/platform/equipo', '/platform/demostracion']);
-    expect(html).toContain('<h1 class="text-3xl font-bold">PIKAS Admin</h1>');
+    expect(html).toMatch(/<h1[^>]*>PIKAS Admin<\/h1>/);
     expect(html).toContain('Administra clientes y sus accesos desde aquí.');
   });
   it('Platform Admin without sandbox capability gets no Demo card', async () => {

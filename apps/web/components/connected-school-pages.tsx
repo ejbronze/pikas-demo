@@ -1,4 +1,6 @@
 "use client";
+import { AppPageHeader } from "./app-page-header";
+import { MetricCard } from "./metric-card";
 import Link from "next/link";
 import {CafeteriaAdminDelegation} from "./cafeteria-admin-delegation";
 import { useState } from "react";
@@ -10,7 +12,8 @@ import { StudentImportWorkflow } from "./student-import-workflow";
 import { StudentCreateWorkflow } from "./student-create-workflow";
 import { SchoolCommandForm } from "./school-command-form";
 import type { SchoolRead, SchoolSection, SchoolStudent } from "../lib/school/contracts";
-const titles: Record<SchoolSection, string> = { summary: "Resumen de la escuela", students: "Estudiantes", administrators: "Administradores", cafeterias: "Cafeterías conectadas", activity: "Actividad" };
+const descriptions: Record<SchoolSection, string> = { summary: "Estado de la escuela y accesos frecuentes.", students: "Gestiona estudiantes, su inscripción y su estado.", administrators: "Personas con acceso de administración en esta escuela.", cafeterias: "Cafeterías conectadas y la información compartida con ellas.", activity: "Eventos operativos recientes de la escuela." };
+const titles: Record<SchoolSection, string> = { summary: "Resumen", students: "Estudiantes", administrators: "Administradores", cafeterias: "Cafeterías conectadas", activity: "Actividad" };
 const value = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
 const optional = (data: FormData, key: string) => value(data, key) || null;
 const names = (data: FormData) => ({ first_name: value(data, "first_name"), last_name: value(data, "last_name"), student_code: value(data, "student_code") });
@@ -25,8 +28,8 @@ export function ConnectedSchoolPages({ section, data, students = [], query = "",
   const scope = data.scope;
   const props = { actorId: recoveryActorId ?? scope.actor_id, schoolId: scope.school_id };
   const href = (path: string) => `/admin/escuela${path}?school=${scope.school_id}`;
-  return <><header><p className="text-xs font-bold uppercase tracking-widest text-indigo-600">Administración escolar</p><h1 className="mt-2 text-3xl font-black">{titles[section]}</h1><p className="mt-2 text-sm text-slate-500">{scope.school_name} · Información de tu escuela.</p></header>
-  {section === "summary" && data.counts && <><div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{[["Estudiantes", data.counts.students], ["Activos", data.counts.active], ["Suspendidos", data.counts.suspended], ["Cafeterías conectadas", data.counts.cafeterias]].map(([label, count]) => <article key={label} className="card p-5"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-black">{count}</p></article>)}</div><div className="grid gap-4 md:grid-cols-2"><Link className="card p-5 font-bold" href={href("/estudiantes")}>Gestionar estudiantes →</Link><Link className="card p-5 font-bold" href={href("/cafeterias")}>Revisar cafeterías conectadas →</Link></div><p className="text-sm text-slate-500">Consulta PIKAS Cash desde la ficha de cada estudiante, según tus permisos.</p></>}
+  return <><AppPageHeader title={titles[section]} description={descriptions[section]} />
+  {section === "summary" && data.counts && <><dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">{([["Estudiantes", data.counts.students], ["Activos", data.counts.active], ["Suspendidos", data.counts.suspended], ["Cafeterías conectadas", data.counts.cafeterias]] as const).map(([label, count]) => <MetricCard key={label} label={label}>{count}</MetricCard>)}</dl><div className="grid gap-4 md:grid-cols-2"><Link className="card p-5 font-bold" href={href("/estudiantes")}>Gestionar estudiantes →</Link><Link className="card p-5 font-bold" href={href("/cafeterias")}>Revisar cafeterías conectadas →</Link></div><p className="text-sm text-slate-500">Consulta PIKAS Cash desde la ficha de cada estudiante, según tus permisos.</p></>}
   {section === "students" && <><form method="get" className="flex flex-wrap gap-3"><input name="school" type="hidden" value={scope.school_id} /><input className="field flex-1" name="q" aria-label="Buscar estudiantes por nombre o código" placeholder="Buscar por nombre o código" maxLength={80} defaultValue={query} /><select className="field" name="status" aria-label="Estado del estudiante" defaultValue={status}><option value="">Todos los estados</option>{["active", "suspended", "inactive"].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select><select className="field" name="location" aria-label="Campus / sede" defaultValue={location}><option value="">Todos los campus</option>{data.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select><select className="field" name="grade" aria-label="Grado exacto" defaultValue={grade}><option value="">Todos los grados</option>{data.grades?.map(g => <option key={g} value={g}>{g}</option>)}</select><button className="btn-secondary">Buscar</button></form>
   <div className="flex flex-wrap gap-3"><button type="button" className="btn" onClick={() => setCreating(true)}>Crear estudiante</button><button type="button" className="btn-secondary" onClick={() => setImporting(true)}>Importar CSV</button></div>
   <StudentExportControls students={students} locations={data.locations} filters={{ schoolId: scope.school_id, query, status: status as "" | "active" | "suspended" | "inactive", location: location || null, grade: grade || null }} />

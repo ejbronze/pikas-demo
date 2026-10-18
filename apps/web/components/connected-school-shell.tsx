@@ -1,24 +1,21 @@
 "use client";
 import { DemoEnvironmentBar } from "./demo-environment-bar";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Users, ShieldCheck, Utensils, ReceiptText } from "lucide-react";
-import { BrandLogo } from "./brand-logo";
+import { AdministrativeShell, type ShellNavItem } from "./administrative-shell";
 import type { SchoolContext } from "../lib/school/contracts";
-const items = [["", "Resumen", Home], ["/estudiantes", "Estudiantes", Users], ["/administradores", "Administradores", ShieldCheck], ["/cafeterias", "Cafeterías conectadas", Utensils], ["/actividad", "Actividad", ReceiptText]] as const;
-export function ConnectedSchoolShell({ context, schoolId, children }: { context: SchoolContext; schoolId: string; children: React.ReactNode }) {
-  const pathname = usePathname();
+const items = [["", "Resumen", "home"], ["/estudiantes", "Estudiantes", "users"], ["/administradores", "Administradores", "shield"], ["/cafeterias", "Cafeterías conectadas", "utensils"], ["/actividad", "Actividad", "receipt"]] as const;
+const roles = { account_admin: { area: "Administración de cuenta", role: "Administrador de cuenta" }, school_admin: { area: "Administración escolar", role: "Administrador escolar" } } as const;
+// role comes from the server-validated school read when one exists; otherwise the label stays neutral.
+export function ConnectedSchoolShell({ context, schoolId, role, children }: { context: SchoolContext; schoolId: string; role?: keyof typeof roles; children: React.ReactNode }) {
   const scope = context.schools.find(s => s.school_id === schoolId)!;
-  const nav = (mobile = false) => items.map(([suffix, label, Icon]) => {
-    const path = `/admin/escuela${suffix}`;
-    const active = pathname === path;
-    return <Link key={path} href={`${path}?school=${schoolId}`} aria-current={active ? "page" : undefined} className={mobile ? `flex flex-col items-center justify-center min-h-20 min-w-0 gap-1 px-1 py-2 text-center text-[10px] font-semibold leading-tight ${active ? "text-indigo-700" : "text-slate-500"}` : `nav-link flex items-center gap-3 rounded-xl p-3 ${active ? "bg-white/15 text-white" : "text-slate-300"}`}><Icon className="shrink-0" size={mobile ? 18 : 20} /><span className="min-w-0 break-words">{label}</span></Link>;
-  });
-  return <div className="admin-ux min-h-screen bg-slate-50 md:grid md:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[250px_minmax(0,1fr)]">
-    <aside className="sticky top-0 hidden h-screen flex-col bg-[#101c35] p-3 text-white md:flex lg:p-5"><BrandLogo compact /><p className="my-6 text-xs font-bold uppercase tracking-widest text-slate-400">PIKAS Admin</p><nav className="space-y-2" aria-label="Administración escolar">{nav()}</nav></aside>
-    <div className="min-w-0">{context.pov ? <><header className="flex h-14 min-w-0 items-center gap-3 border-b bg-white px-4"><p className="min-w-0 truncate font-bold">{scope.school_name}</p><span className="ml-auto shrink-0 text-xs text-slate-500">Datos ficticios</span></header><DemoEnvironmentBar pov={context.pov} /></> : <header className="sticky top-0 z-30 flex min-h-14 flex-wrap items-center justify-between gap-3 border-b bg-white/95 px-4 py-3 md:px-6"><div className="min-w-0 flex-1 basis-48 break-words"><p className="font-bold">{scope.school_name}</p><p className="text-xs text-slate-500">{scope.account_name} · {context.display_name}</p></div><form method="get" className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:max-w-sm"><label className="sr-only" htmlFor="workspace-school">Escuela</label><select className="field min-w-0 flex-1" id="workspace-school" name="school" defaultValue={schoolId}>{context.schools.map(s => <option key={s.school_id} value={s.school_id}>{s.school_name}</option>)}</select><button className="btn-secondary shrink-0" type="submit">Cambiar</button></form><form method="post" action="/api/auth/logout"><button className="btn-secondary">Cerrar sesión</button></form></header>}
-    {!context.pov && scope.tenant_kind === "sandbox" && <div className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-950" role="status">DEMO / SANDBOX · {scope.school_name} · Datos de prueba</div>}
-    <main className="app-main min-w-0 break-words mx-auto max-w-7xl space-y-5 p-4 sm:p-5 md:p-6">{children}</main></div>
-    <nav className="mobile-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-white/95 md:hidden" aria-label="Administración escolar móvil">{nav(true)}</nav>
-  </div>;
+  const nav: ShellNavItem[] = items.map(([suffix, label, icon]) => ({ href: `/admin/escuela${suffix}?school=${schoolId}`, label, icon, match: `/admin/escuela${suffix}`, exact: suffix === "" }));
+  const labels = role ? roles[role] : { area: "Administración escolar", role: "Administración" };
+  return <AdministrativeShell tone="navy" area={labels.area} homeHref={`/admin/escuela?school=${schoolId}`} navLabel="Administración escolar" nav={nav}
+    context={{ label: "Escuela", name: scope.school_name, detail: context.pov ? "Datos ficticios" : role === "account_admin" ? scope.account_name : undefined }}
+    switcher={context.pov ? undefined : { id: "workspace-school", name: "school", label: "Escuela", value: schoolId, options: context.schools.map(s => ({ value: s.school_id, label: s.school_name })) }}
+    account={context.pov ? { name: context.pov.operator_name, role: "Operador de PIKAS · Demo" } : { name: context.display_name, role: labels.role }}
+    logout={!context.pov}
+    demo={context.pov ? <DemoEnvironmentBar pov={context.pov} /> : undefined}
+    notice={!context.pov && scope.tenant_kind === "sandbox" ? <div className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-950" role="status">DEMO / SANDBOX · {scope.school_name} · Datos de prueba</div> : undefined}>
+    {children}
+  </AdministrativeShell>;
 }

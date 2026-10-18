@@ -1408,3 +1408,127 @@ sandbox-operator membership. No role mapping was changed.
   - the missing team handle added for the existing audit Platform Admin fixture.
 
   The sandbox-only fixture is unchanged. No production identity was touched.
+
+## 25. UX Wave C — unified administrative shell (local)
+
+**Scope.** Shell, navigation, page hierarchy, shared states and responsive consistency for
+PIKAS Admin, Account, School and Cafeteria administration. Not changed: business logic,
+authority, financial calculations, database/schema/RLS, POS, and the frozen Foundation B
+Demo (workspace, `DemoEnvironmentBar`, switcher, `/switch`, stale-tab behavior).
+
+### Architecture
+
+- **`AdministrativeShell`** (`components/administrative-shell.tsx`, client, presentation only):
+  - Props: tone (navy for Platform/School/Account, teal for Cafeteria), area label,
+    context, optional context switcher, navigation items, account, `logout`, `demo`, `notice`.
+  - Desktop: sidebar with PIKAS Admin identity, area label and navigation, plus an account
+    block (name, role, **Cerrar sesión**) at the bottom. A 56 px top bar shows the context
+    ("Escuela · {nombre}", "Cafetería · {nombre} · {escuela}", "PIKAS Admin · Plataforma
+    PIKAS"); the context switcher appears only with more than one option.
+  - Mobile: a 56 px top bar (logo, context, **Cuenta y sesión** menu holding name, role,
+    switcher and Cerrar sesión) and a bottom navigation. Up to five destinations fit;
+    beyond that, four plus **Más**, whose label becomes the current overflow destination.
+  - Active state: `isCurrent(path, item)` (prefix match, `exact` for homes), so detail and
+    sub-pages keep their parent current: Clientes → cliente / Nuevo cliente; Estudiantes →
+    PIKAS Cash del estudiante; Menús → Turnos.
+- **Callers decide authority.** The Platform layout builds its items on the server from
+  Platform capabilities and passes only serializable data (icon keys). The School and
+  Cafeteria shells keep their existing capability filters (`walletNav`, `reportsNav`).
+  Every page still enforces its own guard, so direct URLs remain protected (a School Admin
+  opening `/platform/clientes` is redirected to `/backoffice/login?error=platform`).
+- **Account Admin** is identified only from the server-validated school read
+  (`scope.role`): "Administración de cuenta" / "Administrador de cuenta", with the account
+  name in the context. Without a validated read (for example the student PIKAS Cash page)
+  the label stays neutral; nothing is inferred.
+- **Demo:** with an active POV the shell renders the unchanged `DemoEnvironmentBar` under a
+  non-sticky top bar; there is no logout and no switcher, and the account shows the real
+  operator ("Operador de PIKAS · Demo"). Exactly one Demo indicator; the non-POV sandbox
+  tenant strip is unchanged. Measured: top bar 56 px + bar 45 px.
+- **POS** is not in the shell (verified: no `admin-shell`, one Demo bar).
+
+### Pattern components
+
+- **`AppPageHeader`**: the `h1` equals the nav label; optional description, action, meta
+  and back link (detail pages only); no eyebrow repeating the shell; no breadcrumbs.
+  - Platform: Inicio (B.1 title "PIKAS Admin" kept), Clientes, cliente detail (← Clientes),
+    Nuevo cliente (← Clientes), Equipo.
+  - School/Account: Resumen, Estudiantes, Administradores, Cafeterías conectadas,
+    Actividad, student PIKAS Cash (← Estudiantes).
+  - Cafeteria: Resumen, Productos, Menús/Turnos, Personal POS, Cajas, Transacciones,
+    Reportes, PIKAS Cash, Configuración.
+- **`EmptyState` / `ErrorState`**: status vs alert, retry only where safe. Adopted in the
+  Platform reads (`ReadFailure`), Clientes empty/invalid filters, Equipo, and the School and
+  Cafeteria section load failures (retry to the same section). Specialized financial and
+  report errors keep their own copy.
+- **`MetricCard`**: existing counts only (School and Cafeteria Resumen; Reportes metrics
+  reuse it with identical markup). No new reads.
+- **`DataList`**: a captioned table at ≥ 1024 px and compact rows below, adopted for
+  **Clientes**. Students, products, staff and registers keep their specialized lists:
+  they carry inline actions and editors whose migration belongs with Wave D task windows.
+- **Dashboards:** consistent header plus metric cards; the "1 sesiones" grammar fixed.
+  No new summaries.
+
+### Session states (presentation only)
+
+- The session boundary's masked state is now a branded `SessionStatePanel`:
+  - **Verificando tu sesión**, with a secondary sign-in link;
+  - **Tu sesión terminó**, which explains why and gives one action to the correct entrance
+    (`/login`, or `/backoffice/login` on Platform routes), stating that no operation is
+    repeated and recovery information is kept.
+- The warning dialog shows a live `m:ss` countdown instead of a static "2 minutos".
+- `/login?error=school_authority` now explains itself.
+- Timeouts, reconciliation, logout and journals are unchanged.
+
+### Dialog layering
+
+- Admin dialogs (`AdminDialog`, for example Crear estudiante) are native `showModal()`
+  dialogs: top layer, background inert. The audit's H19 "nav above scrim" was a full-page
+  screenshot artifact for these.
+- The div-based modals (wallet correction/reversal, `aria-modal="true"`, `z-50`) sat above
+  the `z-40` nav but left it visible.
+- Wave C sets the nav to `z-30` and adds `body:has([aria-modal="true"], dialog[open])
+  .mobile-nav { visibility: hidden }`.
+- Verified at 390 px for both kinds: the nav is hidden and the bottom of the screen hits
+  the overlay, not the nav.
+
+### Terminology and copy
+
+- Eyebrows that repeated the shell were removed.
+- Cafeteria home title "Resumen", School "Resumen", Platform "Equipo", Configuración.
+- The Estudiantes description stays neutral, so PIKAS Cash is not mentioned to roles
+  without wallet authority (a test caught the first draft).
+
+### Validation (local, fictional)
+
+- **241 focused tests / 23 files** pass: shells, primitives, session panel, login messages,
+  platform pages, School/Cafeteria pages, Reportes, operations, wallet authority, and the
+  Foundation B Demo/switch/launcher/proxy suites.
+- TypeScript, affected ESLint, production build and `git diff --check` pass.
+- Production-mode browser (Foundation B stage, loopback adapter) at 390/768/1440:
+  - Platform: Inicio, Clientes (table ≥ 1024, rows below), cliente detail, Demo.
+  - School: Inicio, Estudiantes, student PIKAS Cash.
+  - Account: Inicio, Cafeterías conectadas.
+  - Cafeteria: Inicio, Productos, Cajas, Transacciones, Reportes; mobile Más lists PIKAS
+    Cash, Productos, Menús, Personal POS, Configuración.
+  - Demo: School persona → Caja / POS → Salir del demo, at 1440 and 390.
+  - Session ended across tabs; unauthorized direct URLs.
+  - Every page: top bar 56 px, no horizontal overflow, the expected navigation item
+    current, new controls ≥ 44 px, no page errors.
+  - `h1` begins at 72 px (390) / 80 px (≥ 768); detail pages at 120/128 px (back link);
+    Demo at 117–125 px. The audit measured 181–215 px of sticky chrome, plus ≈250 px in Demo.
+
+### Deferred (unchanged ownership)
+
+- **Wave D:**
+  - TaskWindow and drafts;
+  - the Corregir saldo focus behavior (H11);
+  - the permanent recarga form and native confirm (H13/F17);
+  - the students `FilterBar` (H17), wallet history disclosure (H18) and provisioning stepper
+    (H23);
+  - `DataList` adoption for students/products/staff/registers;
+  - student name as the PIKAS Cash title (needs the wallet read).
+- **Wave E / 5D.4:** POS (H07–H09, H27), Transacciones filters (H25).
+- **Wave F:** contrast and keyboard sweep, the remaining copy (Cajas "Horas de Santo
+  Domingo", POS "Volver a Backoffice"), and H31–H35.
+- **Also deferred:** platform staff single entrance (OD-B6), and returning to the original
+  destination after re-login (OD6, security review).

@@ -5,6 +5,8 @@ import { sessionFetch } from '../lib/auth/session-fetch';
 import { customRangeError, latestGate, maxReportDays, reportErrors, reportResultSchema, type ReportKind, type ClosedSession, type OpenSession, type Reconciliation, type ReportPeriod, type SalesSummary, type TopProducts } from '../lib/cafeteria/reports';
 import { moneyToneClass } from '../lib/money-semantics';
 import { MoneyValue } from './money-value';
+import { MetricCard } from './metric-card';
+import { AppPageHeader } from './app-page-header';
 
 // Phase 5D Reportes: sales summary (5D.1), top products (5D.2) and register reconciliation (5D.3) for
 // ONE selected period.
@@ -19,9 +21,7 @@ type Range = { from: string; to: string } | null;
 type Section<T> = { loading: boolean; error: string; report: T | null };
 type Results = { sales_summary: SalesSummary; top_products: TopProducts; reconciliation: Reconciliation };
 
-function Metric({ label, help, children }: { label: string; help: string; children: React.ReactNode }) {
-  return <div className="card min-w-0 p-4"><dt className="text-sm font-bold text-slate-600">{label}</dt><dd className="mt-1 break-words text-2xl font-black">{children}</dd><p className="mt-1 text-xs text-slate-500">{help}</p></div>;
-}
+const Metric = MetricCard;
 
 // Only the latest request of a section may update it, so a slow earlier period never replaces a newer one.
 function useReport<K extends ReportKind>(cafeteriaId: string, kind: K) {
@@ -62,9 +62,9 @@ export function CafeteriaReports({ cafeteriaId, sandbox, reconciliation = false 
   useEffect(() => { if (summary.report) queueMicrotask(() => setToday(summary.report?.today)); }, [summary.report]);
   const loading = summary.loading || products.loading || cash.loading;
 
-  if (sandbox) return <section className="mt-5"><h1 className="text-3xl font-black">Reportes</h1><p className="card mt-5 p-5">Los reportes financieros no están disponibles en el entorno sandbox.</p></section>;
+  if (sandbox) return <section className="space-y-5"><AppPageHeader title="Reportes" /><p className="card p-5">Los reportes financieros no están disponibles en el entorno sandbox.</p></section>;
   return <section className="space-y-5">
-    <header><h1 className="text-3xl font-black">Reportes</h1><p className="mt-1 text-sm text-slate-600">{reconciliation ? 'Ventas, productos y conciliación de caja' : 'Resumen de ventas'} de esta cafetería. Para buscar una venta concreta usa Transacciones.</p></header>
+    <AppPageHeader title="Reportes" description={`${reconciliation ? 'Ventas, productos y conciliación de caja' : 'Resumen de ventas'} de esta cafetería. Para buscar una venta concreta usa Transacciones.`} />
     <div className="flex flex-wrap gap-2" role="group" aria-label="Período del reporte">
       {periods.map(([value, label]) => <button key={value} type="button" aria-pressed={period === value} className={`min-h-11 ${period === value ? 'btn' : 'btn-secondary'}`}
         onClick={() => { setPeriod(value); setRangeError(''); if (value === 'custom') { clearSummary(); clearProducts(); clearCash(); if (range) loadAll('custom', range); } }}>{label}</button>)}

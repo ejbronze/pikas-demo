@@ -5,6 +5,7 @@ import { teamCommandSchema,type TeamCommand,type TeamRead } from '../../../lib/p
 import { restoreTeam,prepareTeam,confirmTeam,teamJournalKey,type TeamPending } from '../../../lib/platform/team-journal';
 import { InvitationButton } from './invitation-button';
 import { AdminStatus } from '../../../components/admin-interactions';
+import { AppPageHeader } from '../../../components/app-page-header';
 const labels:Record<string,string>={active:'Activo',suspended:'Suspendido',inactive:'Inactivo',none:'Sin acceso',pending:'Activación pendiente',completed:'Acceso completado',expired:'Preparación vencida'};
 export function TeamWorkspace({data}:{data:TeamRead}) {
  const router=useRouter(),storageKey=teamJournalKey(data.actor_handle);
@@ -24,7 +25,7 @@ export function TeamWorkspace({data}:{data:TeamRead}) {
   finally{inFlight.current=false;setBusy(false);}
  }
  return <>
- <header><h1 className="text-2xl font-bold">Equipo de PIKAS</h1><p className="mt-2 text-slate-600">Operadores internos de plataforma. Cada persona utiliza su propia cuenta.</p></header>
+ <AppPageHeader title="Equipo" description="Operadores internos de PIKAS. Cada persona utiliza su propia cuenta." />
  {message&&<p role="status" className="card p-4">{message}</p>}
  {pending&&<button className="btn" disabled={!ready||busy||waitingForPassword(pending.command)} onClick={()=>void execute(pending.command)}>{waitingForPassword(pending.command)?'Esperando activación y contraseña':busy?'Confirmando…':'Confirmar solicitud pendiente'}</button>}
  <fieldset className="min-w-0 space-y-6 border-0 p-0" disabled={!ready||busy||pending!==null}>

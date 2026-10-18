@@ -1,4 +1,5 @@
 "use client";
+import { AppPageHeader } from './app-page-header';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { CafeteriaMenu, MenuEditSnapshot, ServiceShift } from '@pikas/data-access';
@@ -18,8 +19,7 @@ export function CafeteriaMenusEditor({ shifts = false }: { shifts?: boolean }) {
   if (menuEditor) return <MenuEditor key={menuEditor.id} {...menuEditor} close={close} />;
   if (shiftEditor) return <ShiftEditor key={shiftEditor.id} {...shiftEditor} close={close} />;
   return <>
-    <p className="label">Administración de cafetería</p><h1 ref={heading} tabIndex={-1} className="text-3xl font-black">{shifts ? 'Turnos de servicio' : 'Menús'}</h1>
-    <p className="mt-2 text-slate-600">{shifts ? timeZone ? `Organiza los horarios de atención en ${timeZone}.` : 'Organiza los horarios de atención en la hora de Santo Domingo.' : 'Agrupa productos del catálogo sin duplicarlos.'}</p>
+    <AppPageHeader headingRef={heading} title={shifts ? 'Turnos de servicio' : 'Menús'} description={shifts ? timeZone ? `Organiza los horarios de atención en ${timeZone}.` : 'Organiza los horarios de atención en la hora de Santo Domingo.' : 'Agrupa productos del catálogo sin duplicarlos.'} />
     <nav aria-label="Menús y servicio" className="my-5 flex gap-2"><Link className={shifts ? 'btn-secondary' : 'btn'} aria-current={!shifts ? 'page' : undefined} href={connected ? `/admin/cafeteria/menus?cafeteria=${scope.locationId}` : "/admin/cafeteria/menus"}>Menús</Link><Link className={shifts ? 'btn' : 'btn-secondary'} aria-current={shifts ? 'page' : undefined} href={connected ? `/admin/cafeteria/menus/turnos?cafeteria=${scope.locationId}` : "/admin/cafeteria/menus/turnos"}>Turnos de servicio</Link></nav>
     {notice ? <p role="status" className="my-3 rounded-xl bg-emerald-50 p-3 text-emerald-900">{notice}</p> : null}
     {error ? <p role="alert" className="my-3 rounded-xl bg-red-50 p-3 text-red-800">{error}</p> : null}

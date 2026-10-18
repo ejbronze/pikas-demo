@@ -1,12 +1,16 @@
 import Link from "next/link";
+import { AppPageHeader } from "../../components/app-page-header";
+import { ErrorState } from "../../components/state-panels";
 import { statusLabel, type CustomerOverview } from "../../lib/platform/customer-contracts";
 
 export function ReadFailure({ kind }: { kind: string }) {
-  return <div role="alert" className="card p-5">{kind === "forbidden" ? "No tienes permiso para consultar clientes." : kind === "missing" ? "No encontramos este cliente." : "No pudimos cargar la información. Actualiza la página para volver a intentarlo."}</div>;
+  if (kind === "forbidden") return <ErrorState title="No tienes permiso para consultar clientes." description="Este destino requiere acceso de administración de clientes." />;
+  if (kind === "missing") return <ErrorState title="No encontramos este cliente." retry={<Link className="btn-secondary" href="/platform/clientes">Ver clientes</Link>} />;
+  return <ErrorState title="No pudimos cargar la información." description="Puede ser un problema temporal. Vuelve a intentarlo." retryHref="/platform/clientes" />;
 }
 export function CustomerHeading({ name, code, status, kind }: { name: string; code: string; status: string; kind: string }) {
-  return <div><h1 className="text-2xl font-bold">{name}</h1><p className="mt-2 text-slate-600">{code} · {statusLabel[status]}</p>
-    <span className={`chip mt-2 ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></div>;
+  return <AppPageHeader back={{ href: "/platform/clientes", label: "Clientes" }} title={name}
+    meta={<span className="flex flex-wrap items-center gap-2">{code} · {statusLabel[status]}<span className={`chip ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></span>} />;
 }
 export function CustomerHierarchy({ customer }: { customer: CustomerOverview }) {
   return <section aria-label="Estructura del cliente" className="space-y-4"><h2 className="text-lg font-semibold">Estructura del cliente</h2>

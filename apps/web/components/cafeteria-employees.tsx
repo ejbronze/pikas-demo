@@ -1,4 +1,5 @@
 'use client';
+import { AppPageHeader } from './app-page-header';
 import { useState } from 'react';
 import { hasScopedPermission, employeeInScope, employeeSnapshot, type PosEmployeeInput } from '@pikas/data-access';
 import { useDemo } from './demo-provider';
@@ -46,7 +47,7 @@ export function CafeteriaEmployees() {
   const manager = state.administration.users.find(u => u.id === 'ca-1');
   if (!manager || !hasScopedPermission(manager, state.administration.memberships, { kind: 'cafeteria', ...scope }, 'pos_users:manage')) return <p role="alert">No tienes acceso al personal de esta cafetería.</p>;
   return <div className="space-y-5">
-    <header className="flex flex-wrap items-start justify-between gap-3"><div><p className="label">Administración de cafetería</p><h1 className="text-3xl font-black">Personal POS</h1><p className="mt-2 text-slate-600">Identidad, estado y acceso a cajas de los empleados.</p></div><button className="btn" disabled={connection !== 'Online' || !!editing} onClick={() => { setEditing({ creating: true, initial: { id: crypto.randomUUID(), name: '', email: '', posRole: 'cashier', status: 'active', allowedRegisterIds: [] } }); }}>Agregar empleado</button></header>
+    <AppPageHeader title="Personal POS" description="Identidad, estado y acceso a cajas de los empleados." action={<button className="btn" disabled={connection !== 'Online' || !!editing} onClick={() => { setEditing({ creating: true, initial: { id: crypto.randomUUID(), name: '', email: '', posRole: 'cashier', status: 'active', allowedRegisterIds: [] } }); }}>Agregar empleado</button>}/>
     <p className="rounded-xl bg-amber-50 p-3 text-sm">Demo local: no se envían invitaciones ni se crean contraseñas. El acceso POS de esta demo usa la identidad Caja Demo (pos-1); su nombre, rol, estado y cajas se gestionan aquí.</p>
     {connection !== 'Online' ? <p role="alert">Confirma la conexión antes de guardar cambios.</p> : null}
     {editing ? <EmployeeEditor key={editing.initial.id} {...editing} onClose={() => setEditing(null)} /> : null}
