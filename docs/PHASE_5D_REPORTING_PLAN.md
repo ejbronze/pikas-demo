@@ -1,8 +1,9 @@
 # Phase 5D — Reporting & Reconciliation (plan)
 
 **Status:** owner decisions D1–D13 **RESOLVED** (§24). **5D.1 (reporting foundation +
-sales summary) implemented locally**; see the implementation status below. Slices
-5D.2–5D.5 are not started, and 5D.6 is deferred (D9). Nothing is deployed.
+sales summary) and 5D.2 (top products) implemented locally**; see the implementation
+status sections below. Slices 5D.3–5D.5 are not started, and 5D.6 is deferred (D9).
+Nothing is deployed.
 
 Established baseline:
 - Phase 5C closure: `efd668cb`.
@@ -118,13 +119,97 @@ range scan.
 - No concurrency suite: the report is a single read-only statement with no locks or
   writes, so no race can produce inconsistent totals.
 
-**Limitations / deferred.** Top products (5D.2), reconciliation (5D.3), Transacciones
+**Limitations / deferred.** Reconciliation (5D.3), Transacciones
 filters and refund badge (5D.4), PIKAS Cash reporting (5D.5) and CSV (5D.6 / D9) are not
 implemented. Other limitations:
 - No "Ayer" preset (not in the approved 5D.1 set).
 - No register or staff filters (D12).
 - No multi-cafeteria roll-up.
 - No multi-currency support: rows outside the cafeteria's catalog currency are excluded.
+
+## 5D.2 implementation status (local)
+
+**Surface.** A "Productos principales" section on the same Reportes page.
+- It uses the **same selected period** as the sales summary: no second date picker and no
+  separate filters. "Últimos 30 días" remains the default report period (D4), not a
+  hardcoded window.
+- Shown per product, as a compact ranked list: name, net units, sold units and refunded
+  units. No revenue, charts or category analytics.
+- Units are period activity, **not inventory**; the help text says so.
+
+**Function and API.**
+- Migration `202610220001_cafeteria_top_products_report.sql` replaces
+  `public.cafeteria_report_read` with the identical signature, guard and period/time
+  resolution, and adds kind `top_products`.
+- The 5D.1 `sales_summary` statement is copied byte-for-byte. The 5D.1 migration is not
+  edited.
+- `POST /api/cafeteria/reports` now takes a required `kind`, and validates the result
+  schema for that kind. A response of another kind is rejected.
+- Authority is unchanged: the same Cafeteria Admin purchase-read guard covers both kinds.
+
+**Definitions (event period, consistent with 5D.1 / D3):**
+
+| Field | Definition |
+| --- | --- |
+| Unidades vendidas (gross) | Σ `purchase_items.quantity` where the purchase `business_date` is in the period |
+| Unidades reembolsadas | Σ `refund_items.quantity` where the refund's own `business_date` is in the period, from authoritative item rows only |
+| Unidades netas | vendidas − reembolsadas. May be negative (refund-only period); never clamped |
+
+- Eligible products have gross > 0 or refunded > 0 in the period, so a refund-only
+  product appears with negative net.
+- A refund on a later day never moves units back to the sale day.
+- **Ranking:** net units descending, then `product_id` ascending (deterministic). At
+  most 10 rows. `product_count` reports how many products had activity
+  ("Mostrando 10 de N").
+
+**G2 (refunds without item detail).** A refund with no `refund_items` rows is reliably
+detectable: 5C.1 writes item rows atomically, and the legacy amount-only
+`create_purchase_refund` writes none.
+- Such refunds are never allocated to products: no proportional split and no inference
+  from the amount.
+- Their amounts remain in 5D.1 Reembolsos.
+- The report returns `refunds_without_item_detail` for the period, and the UI shows a
+  one-line note when it is > 0.
+
+**G5 (product names).** Activity is grouped by the authoritative `product_id`.
+- Same-named products stay separate, and a renamed product is never split.
+- The name shown is the `product_name_snapshot` of the most recent purchase line
+  contributing to the period (sold or refunded line). There is no name-history table
+  and no rewrite.
+
+**Index: NO INDEX ADDED — RECHECK WITH PILOT-SCALE DATA.** Local EXPLAIN shows every new
+join is index-backed:
+- purchases via the cafeteria prefix (as 5D.1);
+- `purchase_items` by `purchase_id`;
+- refunds by `refunds_business_date`;
+- `refund_items` by its primary key (`refund_id`);
+- the refunded line by `purchase_items_pkey`.
+
+**Validation (local, fictional).**
+- pgTAP `phase5d2_top_products.test.sql`: **42/42**. It covers:
+  - authority (all roles) and cross-cafeteria isolation;
+  - ranking by net, not gross;
+  - deterministic ties;
+  - the 10-row cap;
+  - partial, multiple and full item refunds;
+  - legacy amount-only refund not fabricated, and detected;
+  - cross-period refund (original day unchanged; refund-only day −2; spanning range nets);
+  - empty period;
+  - same-name and renamed products;
+  - period presets / >92 / business-date boundary;
+  - `sales_summary` regression through the replaced function.
+- 5D.1 suite rerun: **52/52**.
+- Focused web tests 81/81 (7 files). TypeScript, ESLint and `supabase db lint` are clean;
+  the production build succeeds.
+- Production-mode browser at 390/768/1440, existing fictional data (no new data):
+  - 30 days: 1. Sándwich 3/0/3; 2. Fruta 1/0/1; 3. Agua 2 sold · 1 refunded, net 1.
+    Fruta precedes Agua on the product_id tie.
+  - Hoy (refund-only): Agua −1 neta.
+  - The empty period is explicit.
+  - Both sections request the same period on every change; rapid 30 días → Hoy ends on
+    Hoy in both.
+  - No overflow.
+- No concurrency suite: single read-only statement, no locks or writes.
 
 ## 1. Objective
 
@@ -421,25 +506,22 @@ Phase 5A accounting is reused verbatim; nothing is reinterpreted.
 
 ## 14. Top products (Beta definition)
 
-- **Population:** purchase lines whose purchase `business_date` falls in the selected
-  range, one cafeteria.
-- **Ranking metric:** **net units** = units sold on those lines − units refunded on
-  those same lines (`refund_items`, cumulative up to report time). This is sale-cohort
-  attribution: product performance answers "what sold", so refunds attach to the
-  original sale, and net units are never negative. The money totals in §5 use the
-  event-date basis; the help text states the difference. Confirmed by **D4**.
-- **Tie-breakers:** net revenue (Σ line totals − Σ refunded line amounts) descending,
-  then the latest product name snapshot (locale order), then `product_id`.
-- **Columns:** product, net units, units sold, units refunded, net revenue (`amount`
-  intent).
+*Superseded by the owner's 5D.2 instruction, as implemented (see "5D.2 implementation
+status"). The earlier sale-cohort and revenue tie-breaker proposal is withdrawn.*
+
+- **Units:** event period, like the money totals. Gross units follow the purchase
+  business date; refunded units follow the refund business date (item rows only). Net
+  units may be negative and are never clamped.
+- **Ranking:** net units descending, then `product_id` ascending.
+- **Columns:** product, net units, units sold, units refunded. No revenue in 5D.2.
 - **Size:** top 10 (a small prioritized list, consistent with the earlier Top-5
   direction). No full-catalog table in 5D.
 - **Range (D4, resolved):** follows the selected report period. "Últimos 30 días" is the
   default report period, not a hardcoded top-products window.
-- **Product identity:** group by `product_id`; display the most recent
-  `product_name_snapshot` in range (gap G5).
-- **Legacy amount-only refunds** have no unit allocation: those lines count as fully
-  sold, and a note shows the unallocated refund amount (gap G2).
+- **Product identity:** group by `product_id`; display the most recent contributing
+  `product_name_snapshot` (gap G5).
+- **Legacy amount-only refunds** have no unit allocation. They are counted
+  (`refunds_without_item_detail`) and explained, never allocated (gap G2).
 
 ## 15. Date / time semantics
 
@@ -508,7 +590,7 @@ Phase 5A accounting is reused verbatim; nothing is reinterpreted.
 | Ventas netas | brutas − reembolsos | derived server-side | — | date | event-date | Cafeteria Admin | D3 | same RPC call, one transaction snapshot |
 | Transacciones | count purchases | `purchases` | `id` | date | refunded still counted | Cafeteria Admin | — | — |
 | Refund status | total vs cumulative refunds | `refunds` (latest `remaining_after_minor`) | `purchase_id`, `refund_ordinal` | — | as of now | Cafeteria Admin | legacy refunds | add to `operation_purchase`-style read, not a new write |
-| Units sold / refunded / net | Σ quantities | `purchase_items`, `refund_items` | `quantity`, `product_id`, `line_total_minor` | date (purchase) | cohort (§14) | Cafeteria Admin | G2, G5 | `purchase_items_product_idx` exists |
+| Units sold / refunded / net | Σ quantities | `purchase_items`, `refund_items` | `quantity`, `product_id`, `line_total_minor` | purchase date (sold) / refund date (refunded) | event period (§14) | Cafeteria Admin | G2, G5 | `purchase_items_product_idx` exists |
 | Session reconciliation | 5A formula | `register_close_reconciliations` (closed), `register_cash_summary` (open / pre-5A) | summary JSON, `difference_minor` | `opened_business_date` | refunds by paying session | Cafeteria Admin | attribution caveat (§13) | never recompute closed captures |
 | Wallet movements | Σ ledger by `entry_type` | `wallet_ledger_entries` | `amount_minor`, `entry_type`, `occurred_at`, `school_id` | date (derived) | reversals/adjustments separate | School / Account Admin | G1 | typed joins only for labels |
 | Total / negative balances | point-in-time | `student_wallets` | `current_balance_minor`, `status` | none | — | School / Account Admin | — | label "ahora" |
@@ -600,8 +682,8 @@ the report it exports.
   capabilities, plus denial tests for every non-authorized role and POV.
 - **Domain conflation:** recargas shown as sales, or PIKAS Cash sales counted as cash.
   Mitigated by §4, labels and tests.
-- **Event-date vs cohort confusion:** refunds and net vs top products. Mitigated by
-  explicit help text and D3/D4.
+- **Negative period values misread as balances or inventory.** Mitigated by help text
+  ("actividad del período, no inventario") and explicit signs.
 - **Blind-count leakage:** totals exposing expected cash. Mitigated by §11; no POS
   change.
 - **Timezone errors at midnight boundaries.** Mitigated by stored business dates and
@@ -660,7 +742,7 @@ None reopens frozen 5A–5C behavior.
 - Surfaces: a Reportes section.
 - Data: kind `products`.
 - Authority: as 5D.1.
-- Focused tests: cohort refunds, ties, product rename, legacy refunds, empty state.
+- Focused tests: event-period refunds, ties, product rename, legacy refunds, empty state.
 - Dependencies: 5D.1, D4. Owner acceptance: yes. Docker: yes.
 
 **5D.3 — Reconciliation**

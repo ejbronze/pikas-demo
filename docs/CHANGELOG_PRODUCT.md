@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Phase 5D.2: productos principales (local)
+
+- Reportes de cafetería → **Productos principales**: hasta 10 productos por unidades netas (vendidas − reembolsadas) del mismo período seleccionado. Los reembolsos cuentan en su propia fecha, así que un período solo con reembolsos puede mostrar unidades netas negativas.
+- Desempate por identificador de producto. Los reembolsos sin detalle por artículo (anteriores a 5C.1) no se asignan a productos y se señalan. Se muestra el nombre del producto registrado en la compra más reciente del período.
+- Nuevo tipo `top_products` en `cafeteria_report_read` (migración aditiva `202610220001_cafeteria_top_products_report.sql`), con la misma autoridad y sin índice nuevo. Sin push ni despliegue. Detalle en el [plan Phase 5D](PHASE_5D_REPORTING_PLAN.md).
+
 ## Phase 5D.1: base de reportes + resumen de ventas (local)
 
 - Decisiones D1–D13 del propietario resueltas en el [plan Phase 5D](PHASE_5D_REPORTING_PLAN.md). Escuela y cuenta no ven ventas de cafetería; los reembolsos se reportan en la fecha en que ocurren.

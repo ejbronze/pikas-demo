@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh() {} }), usePathname: () => '/admin/cafeteria/reportes', redirect: vi.fn() }));
 vi.mock('./product-image-picker', () => ({ ProductImagePicker: () => null }));
 (globalThis as { React?: typeof React }).React = React;
-import { CafeteriaReports, ReportBody } from './cafeteria-reports';
+import { CafeteriaReports, ReportBody, TopProductsBody } from './cafeteria-reports';
 import { ConnectedCafeteriaPages } from './connected-cafeteria-pages';
 import { ConnectedCafeteriaProvider } from './connected-cafeteria-provider';
 import { cafeteriaRead } from '../lib/cafeteria/test-fixtures';
-import { salesSummarySchema } from '../lib/cafeteria/reports';
-import { summary } from '../lib/cafeteria/report-fixtures';
+import { salesSummarySchema, topProductsSchema } from '../lib/cafeteria/reports';
+import { summary, topProducts } from '../lib/cafeteria/report-fixtures';
 const body = (data: Record<string, unknown> = {}) => renderToStaticMarkup(<ReportBody loading={false} error="" report={salesSummarySchema.parse(summary(data))} onRetry={() => {}} />);
 const zeroTenders = [{ tender: 'cash', transaction_count: 0, gross_sales_minor: '0' }, { tender: 'student_wallet', transaction_count: 0, gross_sales_minor: '0' }, { tender: 'staff_credit', transaction_count: 0, gross_sales_minor: '0' }];
 describe('Reportes sales summary', () => {
@@ -64,5 +64,44 @@ describe('Reportes sales summary', () => {
       expect(html.includes('Período del reporte')).toBe(visible);
       expect(html.includes('Tu rol no tiene acceso a reportes')).toBe(!visible);
     }
+  });
+  it('top products share the single period selector (no second picker or filters)', () => {
+    const html = renderToStaticMarkup(<CafeteriaReports cafeteriaId="5d100000-0000-4000-8000-000000000001" sandbox={false} />);
+    expect(html.match(/Período del reporte/g)).toHaveLength(1);
+    expect(html).toContain('Productos principales');
+    expect(html).not.toContain('type="date"');
+  });
+});
+const top = (products?: Parameters<typeof topProducts>[0], extra?: Record<string, number>) =>
+  renderToStaticMarkup(<TopProductsBody loading={false} error="" report={topProductsSchema.parse(topProducts(products, extra))} onRetry={() => {}} />);
+describe('Productos principales', () => {
+  it('renders the server ranking in order with gross, refunded and net units', () => {
+    const html = top();
+    expect(html.indexOf('Agua ficticia')).toBeLessThan(html.indexOf('Sándwich ficticio'));
+    expect(html).toContain('18 netas'); expect(html).toContain('20 vendidas · 2 reembolsadas');
+    expect(html).toContain('12 netas'); expect(html).toContain('12 vendidas · 0 reembolsadas');
+    expect(html).not.toContain('RD$');
+  });
+  it('refund-only product shows signed negative units with text, not color alone', () => {
+    const html = top([{ name: 'Agua ficticia', gross: 0, refunded: 2 }]);
+    expect(html).toContain('class="font-black text-red-700">−2 netas'); expect(html).toContain('0 vendidas · 2 reembolsadas');
+    expect(html).toContain('no inventario');
+  });
+  it('shows at most the ten rows returned and how many products had activity', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => ({ name: `Producto ${i + 1}`, gross: 20 - i, refunded: 0 }));
+    const html = top(ten, { product_count: 14 });
+    expect(html.match(/<li /g)).toHaveLength(10); expect(html).toContain('Mostrando 10 de 14 productos con actividad');
+  });
+  it('empty period is explicit and distinct from failure', () => {
+    const empty = top([]);
+    expect(empty).toContain('Sin ventas ni reembolsos de productos en este período'); expect(empty).not.toContain('<li');
+    const failed = renderToStaticMarkup(<TopProductsBody loading={false} error="No se pudo cargar el reporte con tus permisos actuales." report={null} onRetry={() => {}} />);
+    expect(failed).toContain('role="alert"'); expect(failed).toContain('Reintentar'); expect(failed).not.toContain('Sin ventas');
+    const loading = renderToStaticMarkup(<TopProductsBody loading error="" report={null} onRetry={() => {}} />);
+    expect(loading).toContain('Cargando productos'); expect(loading).not.toContain('<li');
+  });
+  it('explains refunds without item detail instead of inventing units', () => {
+    expect(top(undefined, { refunds_without_item_detail: 1 })).toContain('1 reembolso del período no tiene detalle por producto');
+    expect(top()).not.toContain('detalle por producto');
   });
 });

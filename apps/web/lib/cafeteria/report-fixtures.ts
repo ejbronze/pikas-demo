@@ -7,3 +7,10 @@ export const summary = (data: Partial<Record<string, unknown>> = {}) => ({
     refunds_by_tender: { cash: '5000', student_wallet: '5000' },
     tenders: [{ tender: 'cash', transaction_count: 1, gross_sales_minor: '10000' }, { tender: 'student_wallet', transaction_count: 1, gross_sales_minor: '5000' }, { tender: 'staff_credit', transaction_count: 1, gross_sales_minor: '5000' }], ...data },
 });
+
+// Fictional Phase 5D.2 top-products response; rows arrive ranked by the database.
+export const topProducts = (products: { name: string; gross: number; refunded: number }[] = [{ name: 'Agua ficticia', gross: 20, refunded: 2 }, { name: 'Sándwich ficticio', gross: 12, refunded: 0 }], extra: Record<string, number> = {}) => ({
+  ...summary(), kind: 'top_products',
+  data: { products: products.map((p, i) => ({ rank: i + 1, product_id: `5d200000-0000-4000-8000-${String(101 + i).padStart(12, '0')}`, product_name: p.name,
+    gross_units: p.gross, refunded_units: p.refunded, net_units: p.gross - p.refunded })), product_count: products.length, refunds_without_item_detail: 0, ...extra },
+});
