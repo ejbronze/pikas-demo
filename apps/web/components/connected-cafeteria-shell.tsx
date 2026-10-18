@@ -4,13 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BrandLogo } from './brand-logo';
 import { Home,Users,Utensils,ReceiptText,ShieldCheck,LogOut,WalletCards } from './icons';
-import { MoreHorizontal } from 'lucide-react';
+import { BarChart3,MoreHorizontal } from 'lucide-react';
 import type { CafeteriaContext } from '../lib/cafeteria/contracts';
-const allItems=[['','Resumen',Home],['/productos','Productos',Utensils],['/menus','Menús',Utensils],['/personal','Personal POS',Users],['/cajas','Cajas',ReceiptText],['/transacciones','Transacciones',ReceiptText],['/escuelas','PIKAS Cash',WalletCards],['/configuracion','Configuración',ShieldCheck]] as const;
-// PIKAS Cash (balances/scoped adjustments on /escuelas) is listed only when the server-derived read grants cafeteria:wallets:read.
-export function ConnectedCafeteriaShell({context,cafeteriaId,walletNav=false,children}:{context:CafeteriaContext;cafeteriaId:string;walletNav?:boolean;children:React.ReactNode}) {
+const allItems=[['','Resumen',Home],['/productos','Productos',Utensils],['/menus','Menús',Utensils],['/personal','Personal POS',Users],['/cajas','Cajas',ReceiptText],['/transacciones','Transacciones',ReceiptText],['/reportes','Reportes',BarChart3],['/escuelas','PIKAS Cash',WalletCards],['/configuracion','Configuración',ShieldCheck]] as const;
+// PIKAS Cash (balances/scoped adjustments on /escuelas) is listed only when the server-derived read grants cafeteria:wallets:read;
+// Reportes only with cafeteria:pos:purchases:read on a customer tenant (the report RPC enforces both).
+export function ConnectedCafeteriaShell({context,cafeteriaId,walletNav=false,reportsNav=false,children}:{context:CafeteriaContext;cafeteriaId:string;walletNav?:boolean;reportsNav?:boolean;children:React.ReactNode}) {
  const path=usePathname(),root='/admin/cafeteria',scope=context.cafeterias.find(c=>c.cafeteria_id===cafeteriaId)!;
- const items=allItems.filter(([suffix])=>walletNav||suffix!=='/escuelas');
+ const items=allItems.filter(([suffix])=>(walletNav||suffix!=='/escuelas')&&(reportsNav||suffix!=='/reportes'));
  const extraItems=items.slice(4),extraCurrent=extraItems.find(([suffix])=>path.startsWith(root+suffix));
  const href=(suffix:string)=>`${root}${suffix}?cafeteria=${cafeteriaId}`;
  const links=(mobile=false, destinations:readonly (typeof allItems)[number][]=items, light=false)=>destinations.map(([suffix,label,Icon])=>{const target=root+suffix,current=path===target||(suffix!==''&&path.startsWith(target));return <Link key={target} href={href(suffix)} aria-current={current?'page':undefined} className={mobile?`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold ${current?'bg-teal-50 text-teal-950':'text-slate-600'}`:`nav-link ${light?(current?'bg-teal-50 text-teal-950':'text-slate-700 hover:bg-slate-50'):(current?'bg-white text-pikas-navy':'text-white/80 hover:bg-white/10')}`}><Icon size={18}/><span className={mobile?'max-w-full break-words text-center leading-tight':undefined}>{label}</span></Link>;});

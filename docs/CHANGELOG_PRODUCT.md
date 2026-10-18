@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Phase 5D.1: base de reportes + resumen de ventas (local)
+
+- Decisiones D1–D13 del propietario resueltas en el [plan Phase 5D](PHASE_5D_REPORTING_PLAN.md). Escuela y cuenta no ven ventas de cafetería; los reembolsos se reportan en la fecha en que ocurren.
+- Administración de cafetería → **Reportes**: Ventas brutas, Reembolsos, Ventas netas (puede ser negativa), Transacciones, Ticket promedio (bruto) y Método de pago. Períodos Hoy, 7 días, 30 días (predeterminado) y personalizado de hasta 92 días, en fechas de operación de la escuela.
+- Función de solo lectura `cafeteria_report_read`, con la autoridad existente de lectura de compras. Migración aditiva `202610210001_cafeteria_sales_report.sql`, sin índice nuevo. PIKAS Cash y el efectivo de caja no se mezclan con ventas. 5D.2–5D.6 no implementados. Sin push ni despliegue.
+
 ## UX Foundation A: fundamentos UX previos a Phase 5D (local)
 
 - F01 resuelto: la administración de cafetería llega a **PIKAS Cash** (saldos de clientes compartidos y ajustes administrativos acotados ya aceptados) desde la navegación lateral y el menú móvil "Más". Visible solo con la lectura `cafeteria:wallets:read` derivada del servidor en tenants de cliente; misma ruta, sin cambios de autoridad, RLS, RPC ni reglas financieras.
