@@ -1,5 +1,9 @@
 # Línea base del producto PIKAS
 
+## Phase 5C.3 — aceptación de producción (capa de correcciones Phase 5C completa)
+
+**PHASE 5C.3 — COMPLETE / PRODUCTION ACCEPTED** y congelado. Source `07a1b928096fbc1f5731a2e7b1847dfe5ae8f238`; migración `202610200001_administrative_wallet_adjustments.sql`. Reglas finales y evidencia (un ajuste +RD$25.00, RD$0.00 → RD$25.00, actor/rol/motivo/explicación preservados) en [Phase 5C.3](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md). Con 5C.1, 5C.2 y 5C.3 aceptados y congelados, la capa de correcciones definida para Phase 5C está completa; aprobaciones, notificaciones, soporte PIKAS autorizado y analítica siguen diferidos.
+
 ## Phase 5C.2 — aceptación de producción
 
 **PHASE 5C.2 — COMPLETE / PRODUCTION ACCEPTED** y congelado como línea base Beta de reversión de recargas. Source `9f228dc97de268c01d45290fa8adeb488ef48b8e`; migración `202610190001_replenishment_reversals.sql`. Reglas finales y evidencia (reversión de la recarga de aceptación Phase 5B, saldo RD$0.00, original intacta) en [Phase 5C.2](PHASE_5C2_REPLENISHMENT_REVERSALS.md). 5C.3 diferido.

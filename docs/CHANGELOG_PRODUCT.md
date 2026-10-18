@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## Cierre de aceptación productiva Phase 5C.3 — capa de correcciones Phase 5C completa
+
+- **PHASE 5C.3 — COMPLETE / PRODUCTION ACCEPTED**, congelado. Source `07a1b928096fbc1f5731a2e7b1847dfe5ae8f238`; migración `202610200001_administrative_wallet_adjustments.sql`. [Evidencia y reglas finales](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md).
+- Un único ajuste +RD$25.00 "Corrección administrativa" por Administrador Ficticio Beta (Administración de cuenta) sobre Sol Ficticia Beta: RD$0.00 → RD$25.00, explicación y atribución preservadas; sin operación de caja ni movimientos adicionales.
+- 5C.1, 5C.2 y 5C.3 aceptados y congelados: la capa de correcciones definida para Phase 5C está completa. Diferidos: soporte PIKAS autorizado por el cliente, aprobaciones, umbrales, alertas, notificaciones y analítica de ajustes.
+- Observaciones de producción del monedero añadidas a la auditoría UX/UI del [roadmap](MVP.md). Cierre exclusivamente documental; sin despliegue.
+
 ## Phase 5C.3: ajustes administrativos de monedero (local)
 
 - Ajustes positivos y negativos para correcciones excepcionales, como nuevo movimiento inmutable del ledger; nunca se sobrescribe un saldo. Motivo y explicación escrita obligatorios; se registran actor, rol real, alcance, saldo antes/después y evidencia idempotente.

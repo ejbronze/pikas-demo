@@ -29,7 +29,7 @@ La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo com
 
 [Modelo financiero, autoridad, contratos y validación](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md). Sin reembolsos/reversiones, pasarela de pago ni reportes.
 
-## Phase 5C.3 — Ajustes administrativos de monedero (local, no desplegado)
+## Phase 5C.3 — Ajustes administrativos de monedero (completo, aceptado en producción)
 
 - "Corregir saldo" en el monedero del estudiante (administración de cuenta/escolar) y en la consulta de saldos de cafetería (solo estudiantes conectados): guía Reembolso / Revertir recarga / ajuste excepcional, monto con signo, motivo, explicación obligatoria, vista previa, advertencia de saldo negativo y confirmación permanente.
 - Movimientos positivos (+, verde) y negativos (−, rojo) con motivo, rol y saldo anterior visibles. [Detalle](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md).

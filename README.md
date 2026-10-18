@@ -1,12 +1,22 @@
 # PIKAS
 
-## Estado actual — Phase 5C.2
+## Estado actual — Phase 5C completa (capa de correcciones)
+
+**PHASE 5C.3 — COMPLETE / PRODUCTION ACCEPTED** (ajustes administrativos de monedero). Source
+`07a1b928096fbc1f5731a2e7b1847dfe5ae8f238`, migración `202610200001_administrative_wallet_adjustments.sql`.
+Ajuste controlado +RD$25.00 "Corrección administrativa" sobre Sol Ficticia Beta (RD$0.00 → RD$25.00)
+con actor, rol, motivo y explicación preservados. [Reglas y evidencia](docs/PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md).
+Con 5C.1, 5C.2 y 5C.3 aceptados en producción, la capa de correcciones definida para Phase 5C está completa.
+Diferidos: ajustes de soporte PIKAS autorizados por el cliente, aprobaciones configurables, umbrales, alertas,
+notificaciones y analítica de ajustes.
+
+## Línea base anterior — Phase 5C.2
 
 **PHASE 5C.2 — COMPLETE / PRODUCTION ACCEPTED** (reversión de recargas). Source
 `9f228dc97de268c01d45290fa8adeb488ef48b8e`, migración `202610190001_replenishment_reversals.sql`.
 Reversión controlada de la recarga de aceptación Phase 5B (RD$25.00): original intacta y marcada
 "Revertida", reversión enlazada de −RD$25.00, saldo RD$0.00. [Reglas y evidencia](docs/PHASE_5C2_REPLENISHMENT_REVERSALS.md).
-Phase 5C no está completa: 5C.3 (ajustes, reglas de aprobación y notificaciones) sigue diferido.
+En ese checkpoint 5C.3 aún no estaba implementado.
 
 ## Línea base anterior — Phase 5C.1
 

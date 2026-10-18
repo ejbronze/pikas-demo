@@ -10,11 +10,11 @@ El alcance probado cubre onboarding de cliente nuevo, organización, activación
 
 1. **5.1 Transaction & Register History** — implementado y aceptado en producción con un seguimiento documentado en [Phase 5A](PHASE_5A_TRANSACTION_REGISTER_OPERATIONS.md), junto con la base de conciliación de cierre de 5.4.
 2. **5.2 Wallet / PIKAS Cash Replenishments** — completo y aceptado en producción en [Phase 5B](PHASE_5B_PIKAS_CASH_WALLET_OPERATIONS.md) (2026-10-17), con la política Beta de autoridad PIKAS Cash.
-3. **5.3 Refunds / correcciones** — 5C.1 reembolsos de compras y 5C.2 reversión de recargas completos y aceptados en producción ([5C.1](PHASE_5C1_REFUNDS.md), [5C.2](PHASE_5C2_REPLENISHMENT_REVERSALS.md)); 5C.3 ajustes administrativos implementado localmente ([5C.3](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md)), pendiente de checkpoint productivo. Los hitos de corrección definidos para Phase 5C están implementados localmente; aprobaciones configurables, umbrales, alertas, notificaciones y ajustes de soporte PIKAS autorizados por el cliente siguen diferidos.
+3. **5.3 Refunds / correcciones** — capa de correcciones Phase 5C completa y aceptada en producción: 5C.1 reembolsos de compras ([5C.1](PHASE_5C1_REFUNDS.md)), 5C.2 reversión de recargas ([5C.2](PHASE_5C2_REPLENISHMENT_REVERSALS.md)) y 5C.3 ajustes administrativos ([5C.3](PHASE_5C3_ADMINISTRATIVE_ADJUSTMENTS.md)). Diferidos (no implementados): ajustes de soporte PIKAS autorizados por el cliente, aprobaciones configurables, umbrales, alertas, notificaciones y analítica/reportes de ajustes.
 4. **5.4 Reporting & Reconciliation**
 5. **5.5 Platform Analytics**
 
-Phase 5A es el único milestone implementado en este trabajo; la aceptación productiva Phase 5A pasó con un único seguimiento de re-verificación POS pendiente por acceso al cajero ficticio (ver la línea base canónica). Phase 5B (5.2) está completo y aceptado en producción. Phase 5C.1 (reembolsos de compras) está completo y aceptado en producción; Phase 5C.2 (reversión de recargas) está completo y aceptado en producción; Phase 5C.3 (ajustes administrativos) está implementado localmente, pendiente de checkpoint productivo; Phase 5C no está aceptada en producción en su totalidad. Phase 5 no está completa. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
+Phase 5A es el único milestone implementado en este trabajo; la aceptación productiva Phase 5A pasó con un único seguimiento de re-verificación POS pendiente por acceso al cajero ficticio (ver la línea base canónica). Phase 5B (5.2) está completo y aceptado en producción. Phase 5C.1 (reembolsos de compras) está completo y aceptado en producción; Phase 5C.2 (reversión de recargas) está completo y aceptado en producción; Phase 5C.3 (ajustes administrativos) está completo y aceptado en producción; la capa de correcciones definida para Phase 5C está completa. Reportes y conciliación (5.4) y analítica de plataforma (5.5) siguen pendientes. Phase 5 no está completa. El soporte de venta en efectivo No Usuario ya existe y no es trabajo futuro. Los comportamientos financieros del demo histórico no constituyen aceptación productiva de Phase 5.
 
 ## Después de Phase 5
 
@@ -54,6 +54,24 @@ Formato de hallazgos: Tarea · Recorrido actual · Número de interacciones · N
 Prioridad: **P0** riesgo financiero/de usabilidad · **P1** fricción relevante del flujo · **P2** jerarquía visual/pulido · **P3** mejora futura.
 
 La auditoría es **primero análisis**: no autoriza un rediseño amplio autónomo.
+
+#### Observaciones de producción — monedero PIKAS Cash (cierre de Phase 5C.3)
+
+El uso en producción de la página de monedero del estudiante reforzó las preocupaciones anteriores:
+
+1. La página combina demasiados trabajos distintos en una sola página larga: saldo actual, formulario de recarga, acciones correctivas e historial de movimientos.
+2. El formulario permanente de recarga ocupa mucho espacio aunque el administrador no esté recargando.
+3. Evaluar reemplazar formularios transaccionales permanentes por acciones contextuales y modales guiados donde corresponda.
+4. Evaluar un resumen compacto con acciones: saldo/estado actual, Recargar, Corregir saldo, Ver movimientos.
+5. Evaluar divulgación progresiva en el historial: la línea de tiempo principal muestra el evento financiero y el monto; IDs, referencias, explicaciones y evidencia de auditoría quedan en un detalle.
+6. El modal de propósito de corrección va en la dirección deseada, pero su jerarquía visual debe evaluarse.
+7. Evaluar opciones de corrección orientadas a la tarea que expliquen el resultado, no solo la terminología financiera interna: compra → reembolso; recarga incorrecta → reversión; corrección excepcional de saldo → ajuste administrativo.
+8. En escritorio queda mucho espacio horizontal sin usar mientras se genera mucho desplazamiento vertical.
+9. Evaluar el uso responsive del ancho disponible sin volver la interfaz densa.
+10. Se mantiene el lenguaje visual financiero ya establecido (aditivo verde, deductivo rojo, saldo negativo rojo, nunca solo color) y los objetivos ya registrados: menos recorridos, affordance clara, modales contextuales, acciones rápidas por rol, navegación por tareas, menos saltos de página y mejor uso del espacio.
+11. Evidencia a 390 px: el diálogo de ajuste de 5C.3 se desplaza y su acción es alcanzable, pero la captura de página completa mostró recorte en el borde del viewport. Es evidencia para la auditoría UX/responsive, no un bloqueo de 5C.3.
+
+Nada de esto se implementa ahora. Secuencia: **análisis primero → revisión del propietario → rediseño controlado**.
 
 
 Phase 6: hardening financiero, autoridad, concurrencia y casos operativos. Phase 7: paquete de operación/preparación del piloto Beta 1. No se implementan en Phase 5A.

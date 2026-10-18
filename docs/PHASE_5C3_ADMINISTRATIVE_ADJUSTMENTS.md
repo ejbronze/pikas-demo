@@ -1,9 +1,41 @@
 # Phase 5C.3 — Administrative Wallet Adjustments
 
-Implemented and verified locally on 2026-10-20. Not yet applied to production. With
-5C.3, the defined Phase 5C correction milestones (5C.1 refunds, 5C.2 replenishment
-reversals, 5C.3 administrative adjustments) are implemented. 5C.1 and 5C.2 are
-production accepted and frozen; 5C.3 still needs a controlled production checkpoint.
+**STATUS: COMPLETE / PRODUCTION ACCEPTED — FROZEN.** Implemented locally on 2026-10-20
+(`07a1b928`), then accepted in production. With 5C.1 refunds, 5C.2 replenishment
+reversals and 5C.3 administrative adjustments all accepted in production, the defined
+Phase 5C correction layer is complete. The rules below are the accepted Beta baseline.
+Change them only for a confirmed defect or an approved later milestone, with targeted
+regression.
+
+## Production acceptance
+
+**PHASE 5C.3 PRODUCTION ACCEPTANCE PASS.**
+- Production source: `07a1b928096fbc1f5731a2e7b1847dfe5ae8f238`.
+- Migration: `202610200001_administrative_wallet_adjustments.sql`, applied to pikas-pilot.
+
+Controlled acceptance used Academia Piloto PIKAS · Aceptación 4D.8, Escuela Ficticia
+Beta 4D.8, student Sol Ficticia Beta (BETA-4D8-001), and actor Administrador Ficticio
+Beta (tenant administrator).
+- The wallet started at RD$0.00, and "Corregir saldo" was available.
+- The guidance offered "Una compra", "Una recarga incorrecta" and "Otra corrección
+  excepcional de saldo"; the exceptional-correction path was used.
+- Exactly one +RD$25.00 "Corrección administrativa" adjustment was created, with a
+  written explanation.
+- The balance became RD$25.00. The adjustment appears as a separate permanent movement,
+  shown as green "+RD$25.00".
+- The movement shows the actor, Administración de cuenta, the reason, the explanation,
+  and balance before RD$0.00 / after RD$25.00.
+- The state persisted. Earlier Phase 5B/5C.2 history stayed intact.
+- No register operation and no other production financial movement occurred. No
+  Platform Admin authority was used.
+- Negative adjustments and balances, cafeteria scoping, unauthorized roles, idempotency
+  and concurrency were intentionally not reproduced in production. They are covered by
+  the focused local validation below.
+
+**Still deferred** (not implemented): customer-authorized PIKAS employee support
+adjustments; configurable approvals, amount thresholds and alerts; parent/customer
+notifications; adjustment analytics and reporting; a dedicated adjustment-reversal
+workflow unless later required.
 
 ## Purpose and distinction
 
