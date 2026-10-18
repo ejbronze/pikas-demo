@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { customRangeError, latestGate, reportDays, reportRequestSchema, salesSummarySchema, topProductsSchema } from './reports';
-import { summary, topProducts } from './report-fixtures';
+import { customRangeError, latestGate, reconciliationSchema, reportDays, reportRequestSchema, salesSummarySchema, topProductsSchema } from './reports';
+import { closedSession, openSession, reconciliation, summary, topProducts } from './report-fixtures';
 const id = '5d100000-0000-4000-8000-000000000001';
 describe('sales report contract', () => {
   it('counts both ends of a custom range and enforces the 92-day maximum', () => {
@@ -27,7 +27,7 @@ describe('sales report contract', () => {
   it('requires an approved report kind', () => {
     expect(reportRequestSchema.safeParse({ cafeteria_id: id, kind: 'top_products', period: 'today', from: null, to: null }).success).toBe(true);
     expect(reportRequestSchema.safeParse({ cafeteria_id: id, period: 'today', from: null, to: null }).success).toBe(false);
-    expect(reportRequestSchema.safeParse({ cafeteria_id: id, kind: 'reconciliation', period: 'today', from: null, to: null }).success).toBe(false);
+    expect(reportRequestSchema.safeParse({ cafeteria_id: id, kind: 'transactions', period: 'today', from: null, to: null }).success).toBe(false);
   });
   it('top products: at most 10 ranked rows, negative net allowed, net must equal gross − refunded', () => {
     expect(topProductsSchema.safeParse(topProducts([{ name: 'Agua', gross: 0, refunded: 2 }])).success).toBe(true);
@@ -41,5 +41,31 @@ describe('sales report contract', () => {
   it('latest-request gate rejects stale responses', () => {
     const gate = latestGate(); const first = gate.next(); const second = gate.next();
     expect(gate.isCurrent(first)).toBe(false); expect(gate.isCurrent(second)).toBe(true);
+  });
+});
+describe('reconciliation report contract', () => {
+  it('accepts the authoritative closed and open sessions', () => {
+    expect(reconciliationSchema.safeParse(reconciliation()).success).toBe(true);
+    expect(reportRequestSchema.safeParse({ cafeteria_id: id, kind: 'reconciliation', period: 'today', from: null, to: null }).success).toBe(true);
+  });
+  it('status must match the sign of the stored difference (counted − expected)', () => {
+    for (const [difference, status, ok] of [['0', 'balanced', true], ['-2500', 'shortage', true], ['2500', 'overage', true], ['-2500', 'overage', false], ['2500', 'balanced', false], ['0', 'shortage', false]] as const)
+      expect(reconciliationSchema.safeParse(reconciliation([closedSession(1, '300000', '300000', difference, status)], [], { closed_count: 1, balanced_count: 0, shortage_count: 0, overage_count: 0, [`${status === 'balanced' ? 'balanced' : status}_count`]: 1 })).success).toBe(ok);
+  });
+  it('a close without capture carries only counted cash, never a derived expected or difference', () => {
+    const uncaptured = closedSession(1, '300000', '297500', '-2500', 'uncaptured', { captured: false, opening_minor: null, cash_sales_minor: null, cash_settlements_minor: null, cash_refunds_minor: null, expected_minor: null, difference_minor: null });
+    expect(reconciliationSchema.safeParse(reconciliation([uncaptured], [], { closed_count: 1, balanced_count: 0, shortage_count: 0, overage_count: 0, uncaptured_count: 1 })).success).toBe(true);
+    expect(reconciliationSchema.safeParse(reconciliation([{ ...uncaptured, difference_minor: '-2500' }], [], { closed_count: 1, balanced_count: 0, shortage_count: 0, overage_count: 0, uncaptured_count: 1 })).success).toBe(false);
+    expect(reconciliationSchema.safeParse(reconciliation([{ ...uncaptured, captured: true }], [], { closed_count: 1, balanced_count: 0, shortage_count: 0, overage_count: 0, uncaptured_count: 1 })).success).toBe(false);
+  });
+  it('open sessions cannot carry counted cash, a difference or a status', () => {
+    for (const extra of [{ counted_minor: '75000' }, { difference_minor: '0' }, { status: 'balanced' }])
+      expect(reconciliationSchema.safeParse(reconciliation(undefined, [{ ...openSession(4), ...extra }])).success).toBe(false);
+  });
+  it('summary is counts only and must add up; no net discrepancy field is accepted', () => {
+    expect(reconciliationSchema.safeParse(reconciliation(undefined, undefined, { closed_count: 4 })).success).toBe(false);
+    const net = reconciliation(); (net.data.summary as Record<string, unknown>).net_difference_minor = '0';
+    expect(reconciliationSchema.safeParse(net).success).toBe(false);
+    expect(reconciliationSchema.safeParse(reconciliation([closedSession(1, '300000', '297500', '-2500.5', 'shortage')], [], { closed_count: 1, balanced_count: 0, overage_count: 0 })).success).toBe(false);
   });
 });

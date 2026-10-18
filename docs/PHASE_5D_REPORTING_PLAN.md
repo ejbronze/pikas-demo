@@ -1,9 +1,9 @@
 # Phase 5D — Reporting & Reconciliation (plan)
 
 **Status:** owner decisions D1–D13 **RESOLVED** (§24). **5D.1 (reporting foundation +
-sales summary) and 5D.2 (top products) implemented locally**; see the implementation
-status sections below. Slices 5D.3–5D.5 are not started, and 5D.6 is deferred (D9).
-Nothing is deployed.
+sales summary), 5D.2 (top products) and 5D.3 (reconciliation) implemented locally**; see
+the implementation status sections below. Slices 5D.4–5D.5 are not started, and 5D.6 is
+deferred (D9). Nothing is deployed.
 
 Established baseline:
 - Phase 5C closure: `efd668cb`.
@@ -210,6 +210,166 @@ join is index-backed:
     Hoy in both.
   - No overflow.
 - No concurrency suite: single read-only statement, no locks or writes.
+
+## 5D.3 implementation status (local)
+
+**Surface.** Two sections on the same Reportes page, after Productos principales:
+- **Conciliación de caja** (period-scoped): four counts, then the closed sessions, newest
+  close first, at most 50 ("Mostrando las 50 más recientes de N").
+  - Each row shows register, close time, operator, Esperado, Contado and the labelled
+    discrepancy.
+  - The full 5A breakdown sits behind a native "Ver desglose" disclosure: Fondo inicial,
+    Ventas en efectivo, Cobros de cuentas de personal, Reembolsos en efectivo, esperado,
+    contado, diferencia, apertura, and cierre (type and closer). No modal.
+- **Cajas abiertas ahora** (current state), in a separate card. Each open register is
+  labelled "Abierta · sin conciliar", with "Abierta desde", the operator, "Efectivo
+  esperado ahora" and the same breakdown.
+- Same single period selector; no second date picker. No mutation actions; a link points
+  to Cajas.
+- Shown only when the server-derived read grants `cafeteria:pos:sessions:read`. The RPC
+  enforces it again.
+
+**Phase 5A source reused (never recomputed).**
+- Closed session:
+  - `pikas_private.register_close_reconciliations.summary` (captured at close by the 5A
+    trigger): `opening_minor`, `cash_sales_minor`, `cash_settlements_minor`,
+    `cash_refunds_minor`, `expected_minor`;
+  - `.difference_minor`;
+  - `register_sessions.counted_cash_minor`.
+- Open session: the live `pikas_private.register_cash_summary(session)`. This is the same
+  function, and the same expected value, that the admin Caja read already shows.
+- Expected is the frozen 5A formula: opening + cash sales + cash staff-receivable
+  settlements − cash refund outflows. PIKAS Cash and staff-credit sales, recargas,
+  reversals and wallet adjustments are not register cash.
+
+**Discrepancy sign: no normalization needed.** 5A stores
+`difference_minor = counted − expected`, the required convention.
+- 0 → **Cuadrada** (neutral).
+- > 0 → **Sobrante**, with an explicit `+` amount.
+- < 0 → **Faltante**, with an explicit `−` amount.
+- Status is classified in SQL from the stored difference. The client only checks that the
+  status matches the sign.
+- Rendered with the shared `MoneyValue` `movement` intent (signed, toned) next to the text
+  label, so meaning never depends on color.
+- This supersedes the §13 note on the `balance` intent, because the owner's 5D.3
+  instruction requires an explicit `+` for overages.
+
+**Period membership (closed sessions).** A closed session belongs to the period by its close
+business date, `(closed_at at time zone business_timezone_snapshot)::date`.
+- 5A stores no closing business date. This is the same convention 5A enforces for
+  `opened_business_date`, applied to the immutable `closed_at` and the session's own
+  snapshotted zone.
+- This supersedes the earlier §13/§15 "`opened_business_date`" proposal, per the owner's
+  5D.3 instruction ("authoritative close/business date").
+- A session open across midnight belongs to the day it closed.
+- Rows outside the cafeteria's catalog currency are excluded, as in 5D.1.
+
+**Summary definitions (closed sessions in the period).**
+- Sesiones cerradas = all of them.
+- Cuadradas: difference = 0.
+- Con faltante: difference < 0.
+- Con sobrante: difference > 0.
+- Sin captura al cierre: closes with no 5A capture (pre-5A). They show counted cash only
+  and are never classified, derived or recomputed.
+- Sesiones cerradas = the sum of the four.
+- **Counts only.** No net discrepancy and no money aggregate: a −RD$500 and a +RD$500 are
+  two exceptions, never "RD$0".
+
+**Open vs closed.**
+- Open sessions are never counted in the summary and carry no counted cash, difference or
+  status. The response schema rejects such keys.
+- They are listed whatever the selected period, because they are current state.
+- When no session closed in the period and no register is open, a single "Sin actividad
+  de caja" message replaces both sections. Each section otherwise has its own empty
+  message.
+- A failure shows an alert with "Reintentar" and no figures. The sales and products
+  sections load and fail independently.
+
+**Function and API.**
+- Migration `202610230001_cafeteria_reconciliation_report.sql` replaces
+  `public.cafeteria_report_read`, keeping the identical signature, period/time resolution,
+  grants and byte-identical `sales_summary` / `top_products` statements. It adds kind
+  `reconciliation`.
+- The guard capability now follows the kind, as in the 5A operations read:
+  `cafeteria:pos:purchases:read` for sales and products, `cafeteria:pos:sessions:read`
+  for reconciliation. Both go through `require_financial_admin` and are revalidated after
+  reading.
+- The current-state open section comes from the same response (one call), reusing the 5A
+  live summary rather than the paginated Caja list, which could omit an old open session.
+- `POST /api/cafeteria/reports` accepts `kind: reconciliation`, with a strict Zod result
+  schema. Closes and wall times are formatted from server-provided school-local strings;
+  the browser does no timezone conversion.
+
+**Authority.**
+- Allowed: Cafeteria Admin of that cafeteria. This includes a person who is also a POS
+  Supervisor, through the admin membership.
+- Denied: unrelated Cafeteria Admin, School Admin, Account Admin, cashier, POS
+  Supervisor without an admin membership (D7), Platform Admin, the sandbox Cafeteria
+  Admin POV (the frozen allowlist excludes session reads), and customer admins reading a
+  sandbox cafeteria.
+- Cashiers get nothing new: no page, route result or POS total; the blind close is
+  unchanged (D6/D8).
+
+**Index: NO INDEX ADDED.** Local EXPLAIN:
+- the session scan is bounded by the existing cafeteria-prefixed
+  `register_sessions_purchase_scope_key`, plus an `opened_at < to+3d` bound
+  (`closed_at ≥ opened_at`);
+- operator and closer use `persons_pkey`; the capture is read by its primary key;
+- open sessions are at most one per register.
+
+Volume is about one session per register per day. Recheck with pilot-scale data.
+
+**Validation (local, fictional).**
+- pgTAP `phase5d3_reconciliation.test.sql`: **68/68**. It covers:
+  - authority for every role, the sandbox POV and cross-cafeteria isolation;
+  - presets, custom, 92/93-day, reversed, future and preset-with-dates ranges;
+  - the business-date boundary: a close at 23:30 local is on its local date, not its UTC
+    date;
+  - exact equality with the stored 5A captures;
+  - the A/B/C/D fixture (below);
+  - a pre-5A close with no derived values;
+  - a historical close not rewritten by later refunds and sales;
+  - `sales_summary` / `top_products` regression and their authority.
+
+  The A/B/C/D fixture:
+  - A: cash sales, PIKAS Cash, staff credit, a cash collection, a cash refund, and a
+    recarga plus a wallet adjustment during the session. Expected 15500, counted 15000:
+    Faltante −500.
+  - B: balanced.
+  - C: a later session paying a cash refund of A's sale. Sobrante +500, opposing A without
+    netting.
+  - D: open, live expected 8000, nothing fabricated.
+
+  Back-dated and pre-5A sessions are inserted through the frozen guard's single closed
+  transition inside the rolled-back test.
+- 5D.1 suite rerun **52/52**; 5D.2 suite rerun **42/42**.
+- Focused web tests 90/90 (8 files: reporting contract/route/UI, admin shell, 5A Caja
+  operations route/contract/UI, shared money semantics). TypeScript, ESLint and `supabase db lint` are clean; the
+  production build succeeds.
+- Production-mode browser (isolated UX-audit stage, loopback adapter) at 390/768/1440,
+  "Cafetería Ficticia Auditoría":
+  - counts 3/1/1/1;
+  - Faltante −RD$ 25.00 (3,000 / 2,975), Sobrante +RD$ 25.00 (3,000 / 3,025), Cuadrada
+    (0 / 0), matching the stored captures;
+  - open Caja Principal shown separately with expected RD$ 3,425.00 and no status;
+  - a custom empty period still shows the open register;
+  - rapid 30 días → Hoy ends on Hoy in every section;
+  - sales and products still update;
+  - no overflow; 44px disclosure;
+  - cashier, POS Supervisor and School Admin get 403 from the route, and the cashier POS
+    shows no expected cash.
+- Local fictional data added for the browser check: the supervisor closed its existing open
+  "Caja Patio" session (0/0), then opened and closed two more (3,000/2,975 and
+  3,000/3,025). "Caja Principal" was left open.
+- No concurrency suite: single read-only statement, no locks or writes.
+
+**Deferred.** 5D.4 (Transacciones filters / refund status), 5D.5 (PIKAS Cash reporting)
+and 5D.6 (CSV) are untouched. Also not implemented:
+- the 5D.3 "live open-session summary in admin Caja" bullet (§25): Caja already shows
+  live expected for open sessions;
+- a register filter;
+- cashier or supervisor views;
+- alerts, explanations or approval of discrepancies.
 
 ## 1. Objective
 

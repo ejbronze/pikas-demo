@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ create: vi.fn(), access: vi.fn(), rpc: vi.fn()
 vi.mock('../../../../lib/supabase/server', () => ({ createSupabaseServerClient: mocks.create }));
 vi.mock('../../../../lib/auth/cafeteria-access', () => ({ resolveCafeteriaAccess: mocks.access }));
 import { POST } from './route';
-import { summary, topProducts } from '../../../../lib/cafeteria/report-fixtures';
+import { reconciliation, summary, topProducts } from '../../../../lib/cafeteria/report-fixtures';
 const id = '5d100000-0000-4000-8000-000000000001';
 const body = { cafeteria_id: id, kind: 'sales_summary', period: 'last_30_days', from: null, to: null };
 const request = (payload: unknown = body, origin = 'http://localhost') => new Request('http://localhost/api/cafeteria/reports', { method: 'POST', headers: { origin, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -37,5 +37,17 @@ describe('sales report server boundary', () => {
   it('a result of another kind is never accepted', async () => {
     mocks.rpc.mockResolvedValue({ data: summary(), error: null }); expect((await POST(request({ ...body, kind: 'top_products' }))).status).toBe(502);
     mocks.rpc.mockResolvedValue({ data: topProducts(), error: null }); expect((await POST(request())).status).toBe(502);
+  });
+  it('reconciliation uses the same route, period and strict validation', async () => {
+    mocks.rpc.mockResolvedValue({ data: reconciliation(), error: null });
+    const response = await POST(request({ ...body, kind: 'reconciliation' })); expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith('cafeteria_report_read', { p_cafeteria_id: id, p_kind: 'reconciliation', p_period: 'last_30_days', p_from: null, p_to: null });
+    const result = (await response.json()).result; expect(result.data.summary.shortage_count).toBe(1); expect(result.data.open_sessions[0]).not.toHaveProperty('difference_minor');
+  });
+  it('reconciliation denial, kind mismatch and fabricated open-session values are never accepted', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'financial_admin_authority_required' } }); expect((await POST(request({ ...body, kind: 'reconciliation' }))).status).toBe(403);
+    mocks.rpc.mockResolvedValue({ data: summary(), error: null }); expect((await POST(request({ ...body, kind: 'reconciliation' }))).status).toBe(502);
+    const fabricated = reconciliation(); (fabricated.data.open_sessions[0] as Record<string, unknown>).counted_minor = '75000';
+    mocks.rpc.mockResolvedValue({ data: fabricated, error: null }); expect((await POST(request({ ...body, kind: 'reconciliation' }))).status).toBe(502);
   });
 });

@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Phase 5D.3: conciliación de caja (local)
+
+- Reportes de cafetería → **Conciliación de caja** en el mismo período: sesiones cerradas, cuadradas, con faltante y con sobrante (solo conteos; faltantes y sobrantes nunca se compensan), y la lista de sesiones cerradas con esperado, contado y diferencia (contado − esperado), con desglose bajo "Ver desglose".
+- Los valores son la captura inmutable de Phase 5A al cierre; nada se recalcula. Un cierre anterior a la captura se marca "Sin captura al cierre". **Cajas abiertas ahora** se muestra aparte, como estado actual sin conciliar.
+- Nuevo tipo `reconciliation` en `cafeteria_report_read` (migración aditiva `202610230001_cafeteria_reconciliation_report.sql`), con la autoridad existente de lectura de sesiones de Caja y sin índice nuevo. Sin cambios en POS ni en el cierre ciego. Sin push ni despliegue. Detalle en el [plan Phase 5D](PHASE_5D_REPORTING_PLAN.md).
+
 ## Phase 5D.2: productos principales (local)
 
 - Reportes de cafetería → **Productos principales**: hasta 10 productos por unidades netas (vendidas − reembolsadas) del mismo período seleccionado. Los reembolsos cuentan en su propia fecha, así que un período solo con reembolsos puede mostrar unidades netas negativas.

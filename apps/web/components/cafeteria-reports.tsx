@@ -1,11 +1,13 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { sessionFetch } from '../lib/auth/session-fetch';
-import { customRangeError, latestGate, maxReportDays, reportErrors, reportResultSchema, type ReportKind, type ReportPeriod, type SalesSummary, type TopProducts } from '../lib/cafeteria/reports';
+import { customRangeError, latestGate, maxReportDays, reportErrors, reportResultSchema, type ReportKind, type ClosedSession, type OpenSession, type Reconciliation, type ReportPeriod, type SalesSummary, type TopProducts } from '../lib/cafeteria/reports';
 import { moneyToneClass } from '../lib/money-semantics';
 import { MoneyValue } from './money-value';
 
-// Phase 5D Reportes: sales summary (5D.1) and top products (5D.2) for ONE selected period.
+// Phase 5D Reportes: sales summary (5D.1), top products (5D.2) and register reconciliation (5D.3) for
+// ONE selected period.
 // Every number is authoritative server output; each section loads and fails independently.
 const periods: [ReportPeriod, string][] = [['today', 'Hoy'], ['last_7_days', 'Últimos 7 días'], ['last_30_days', 'Últimos 30 días'], ['custom', 'Personalizado']];
 const tenderLabel = { cash: 'Efectivo', student_wallet: 'PIKAS Cash', staff_credit: 'Crédito de personal' } as const;
@@ -15,7 +17,7 @@ const transactions = (n: number) => `${n} ${n === 1 ? 'transacción' : 'transacc
 const failure = 'No se pudo cargar el reporte con tus permisos actuales.';
 type Range = { from: string; to: string } | null;
 type Section<T> = { loading: boolean; error: string; report: T | null };
-type Results = { sales_summary: SalesSummary; top_products: TopProducts };
+type Results = { sales_summary: SalesSummary; top_products: TopProducts; reconciliation: Reconciliation };
 
 function Metric({ label, help, children }: { label: string; help: string; children: React.ReactNode }) {
   return <div className="card min-w-0 p-4"><dt className="text-sm font-bold text-slate-600">{label}</dt><dd className="mt-1 break-words text-2xl font-black">{children}</dd><p className="mt-1 text-xs text-slate-500">{help}</p></div>;
@@ -42,7 +44,8 @@ function useReport<K extends ReportKind>(cafeteriaId: string, kind: K) {
   return [state, load, clear] as const;
 }
 
-export function CafeteriaReports({ cafeteriaId, sandbox }: { cafeteriaId: string; sandbox: boolean }) {
+// reconciliation: the server-derived cafeteria:pos:sessions:read grant (the RPC enforces it again).
+export function CafeteriaReports({ cafeteriaId, sandbox, reconciliation = false }: { cafeteriaId: string; sandbox: boolean; reconciliation?: boolean }) {
   const [period, setPeriod] = useState<ReportPeriod>('last_30_days');
   const [range, setRange] = useState<Range>(null);
   const [draft, setDraft] = useState({ from: '', to: '' });
@@ -50,18 +53,21 @@ export function CafeteriaReports({ cafeteriaId, sandbox }: { cafeteriaId: string
   const [today, setToday] = useState<string | undefined>();
   const [summary, loadSummary, clearSummary] = useReport(cafeteriaId, 'sales_summary');
   const [products, loadProducts, clearProducts] = useReport(cafeteriaId, 'top_products');
-  // Both sections always request the same selected period.
-  const loadAll = useCallback((selected: ReportPeriod, custom: Range) => { void loadSummary(selected, custom); void loadProducts(selected, custom); }, [loadSummary, loadProducts]);
+  const [cash, loadCash, clearCash] = useReport(cafeteriaId, 'reconciliation');
+  // Every section always requests the same selected period.
+  const loadAll = useCallback((selected: ReportPeriod, custom: Range) => {
+    void loadSummary(selected, custom); void loadProducts(selected, custom); if (reconciliation) void loadCash(selected, custom);
+  }, [loadSummary, loadProducts, loadCash, reconciliation]);
   useEffect(() => { if (sandbox) return; if (period !== 'custom') queueMicrotask(() => loadAll(period, null)); }, [sandbox, period, loadAll]);
   useEffect(() => { if (summary.report) queueMicrotask(() => setToday(summary.report?.today)); }, [summary.report]);
-  const loading = summary.loading || products.loading;
+  const loading = summary.loading || products.loading || cash.loading;
 
   if (sandbox) return <section className="mt-5"><h1 className="text-3xl font-black">Reportes</h1><p className="card mt-5 p-5">Los reportes financieros no están disponibles en el entorno sandbox.</p></section>;
   return <section className="space-y-5">
-    <header><h1 className="text-3xl font-black">Reportes</h1><p className="mt-1 text-sm text-slate-600">Resumen de ventas de esta cafetería. Para buscar una venta concreta usa Transacciones.</p></header>
+    <header><h1 className="text-3xl font-black">Reportes</h1><p className="mt-1 text-sm text-slate-600">{reconciliation ? 'Ventas, productos y conciliación de caja' : 'Resumen de ventas'} de esta cafetería. Para buscar una venta concreta usa Transacciones.</p></header>
     <div className="flex flex-wrap gap-2" role="group" aria-label="Período del reporte">
       {periods.map(([value, label]) => <button key={value} type="button" aria-pressed={period === value} className={`min-h-11 ${period === value ? 'btn' : 'btn-secondary'}`}
-        onClick={() => { setPeriod(value); setRangeError(''); if (value === 'custom') { clearSummary(); clearProducts(); if (range) loadAll('custom', range); } }}>{label}</button>)}
+        onClick={() => { setPeriod(value); setRangeError(''); if (value === 'custom') { clearSummary(); clearProducts(); clearCash(); if (range) loadAll('custom', range); } }}>{label}</button>)}
     </div>
     {period === 'custom' && <form className="card flex flex-wrap items-end gap-3 p-4" noValidate onSubmit={event => {
       event.preventDefault(); const problem = customRangeError(draft.from, draft.to); setRangeError(problem ?? '');
@@ -74,6 +80,7 @@ export function CafeteriaReports({ cafeteriaId, sandbox }: { cafeteriaId: string
     </form>}
     <ReportBody loading={summary.loading} error={summary.error} report={summary.report} onRetry={() => void loadSummary(period, period === 'custom' ? range : null)} />
     <TopProductsBody loading={products.loading} error={products.error} report={products.report} onRetry={() => void loadProducts(period, period === 'custom' ? range : null)} />
+    {reconciliation && <ReconciliationBody cafeteriaId={cafeteriaId} loading={cash.loading} error={cash.error} report={cash.report} onRetry={() => void loadCash(period, period === 'custom' ? range : null)} />}
   </section>;
 }
 
@@ -100,7 +107,7 @@ export function ReportBody({ loading, error, report, onRetry }: { loading: boole
         <ul className="mt-3 divide-y">{d.tenders.filter(t => t.tender !== 'staff_credit' || t.transaction_count > 0).map(t => <li key={t.tender} className="flex flex-wrap items-center justify-between gap-2 py-3">
           <span className="font-bold">{tenderLabel[t.tender]}</span>
           {t.transaction_count === 0 ? <span className="text-slate-500">Sin ventas en este período</span> : <span className="flex flex-wrap gap-3"><span>{transactions(t.transaction_count)}</span><MoneyValue minor={t.gross_sales_minor} intent="amount" className="font-bold" /></span>}</li>)}</ul></section>
-      <p className="text-xs text-slate-500">Incluye ventas de cajas abiertas. Las recargas y ajustes de PIKAS Cash no son ventas. El efectivo de caja se concilia en Cajas.</p>
+      <p className="text-xs text-slate-500">Incluye ventas de cajas abiertas. Las recargas y ajustes de PIKAS Cash no son ventas. El efectivo físico se concilia por sesión de caja.</p>
     </>}
   </>;
 }
@@ -124,4 +131,93 @@ export function TopProductsBody({ loading, error, report, onRetry }: { loading: 
     {d && d.product_count > d.products.length && <p className="text-xs text-slate-500">Mostrando {d.products.length} de {d.product_count} productos con actividad.</p>}
     {d && d.refunds_without_item_detail > 0 && <p className="text-xs text-slate-600">{d.refunds_without_item_detail === 1 ? '1 reembolso' : `${d.refunds_without_item_detail} reembolsos`} del período no tiene detalle por producto (registro anterior a los reembolsos por artículo). Su monto sí está en Reembolsos, pero no en las unidades reembolsadas.</p>}
   </section>;
+}
+
+// 5D.3 Conciliación de caja. Closed sessions show the immutable Phase 5A close capture as returned;
+// nothing is recalculated here. Open registers are current state: no count, difference or status.
+const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+// School-local wall time from the server ("YYYY-MM-DDTHH:MM"); never converted by the browser.
+const wallTime = (local: string) => {
+  const [date, time] = local.split('T'); const [, m, d] = date.split('-').map(Number); const [h, min] = time.split(':').map(Number);
+  return `${d} ${months[m - 1]}, ${h % 12 || 12}:${String(min).padStart(2, '0')} ${h < 12 ? 'a. m.' : 'p. m.'}`;
+};
+const outflow = (minor: string) => (minor === '0' ? '0' : `-${minor}`);
+const sessions = (n: number) => `${n} ${n === 1 ? 'sesión' : 'sesiones'}`;
+
+export function Discrepancy({ session: s }: { session: ClosedSession }) {
+  if (s.status === 'uncaptured') return <span className="font-bold text-slate-600">Sin captura al cierre</span>;
+  if (s.status === 'balanced') return <span className="font-bold">Cuadrada</span>;
+  return <span className="font-bold">{s.status === 'shortage' ? 'Faltante' : 'Sobrante'} <MoneyValue minor={s.difference_minor!} intent="movement" /></span>;
+}
+
+function CashBreakdown({ s, live }: { s: Pick<OpenSession, 'opening_minor' | 'cash_sales_minor' | 'cash_settlements_minor' | 'cash_refunds_minor' | 'expected_minor'>; live: boolean }) {
+  const row = (label: string, value: React.ReactNode) => <div key={label} className="flex flex-wrap justify-between gap-x-3"><dt className="text-slate-600">{label}</dt><dd className="font-bold">{value}</dd></div>;
+  return <>{[
+    row('Fondo inicial', <MoneyValue minor={s.opening_minor} intent="amount" />),
+    row('Ventas en efectivo', <MoneyValue minor={s.cash_sales_minor} intent="amount" />),
+    row('Cobros de cuentas de personal', <MoneyValue minor={s.cash_settlements_minor} intent="amount" />),
+    row('Reembolsos en efectivo', <MoneyValue minor={outflow(s.cash_refunds_minor)} intent="movement" />),
+    row(live ? 'Efectivo esperado ahora' : 'Efectivo esperado', <MoneyValue minor={s.expected_minor} intent="balance" />),
+  ]}</>;
+}
+
+function ClosedRow({ s }: { s: ClosedSession }) {
+  return <li className="min-w-0 space-y-1 py-3">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3"><span className="break-words font-bold">{s.register_name}</span><Discrepancy session={s} /></div>
+    <p className="text-sm text-slate-600">Cerrada {wallTime(s.closed_local)} · {s.operator_name}</p>
+    <p className="flex flex-wrap gap-x-3 text-sm">{s.expected_minor !== null && <span>Esperado <MoneyValue minor={s.expected_minor} intent="balance" className="font-bold" /></span>}
+      <span>Contado <MoneyValue minor={s.counted_minor} intent="amount" className="font-bold" /></span></p>
+    <details className="text-sm"><summary className="flex min-h-11 cursor-pointer items-center font-bold text-teal-800">Ver desglose</summary>
+      <dl className="space-y-1 pb-2">
+        {s.captured ? <CashBreakdown s={s as Parameters<typeof CashBreakdown>[0]['s']} live={false} /> : <p className="text-slate-600">Cierre anterior a la captura de conciliación: no hay esperado ni diferencia guardados al cierre.</p>}
+        <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-slate-600">Efectivo contado</dt><dd className="font-bold"><MoneyValue minor={s.counted_minor} intent="amount" /></dd></div>
+        {s.difference_minor !== null && <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-slate-600">Diferencia (contado − esperado)</dt><dd><Discrepancy session={s} /></dd></div>}
+        <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-slate-600">Apertura</dt><dd>{wallTime(s.opened_local)}</dd></div>
+        <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-slate-600">Cierre</dt><dd className="break-words">{wallTime(s.closed_local)} · {s.close_type === 'exceptional' ? 'Excepcional' : 'Normal'} · {s.closed_by_name}</dd></div>
+      </dl><p className="break-all text-xs text-slate-500">Sesión {s.session_id}</p></details>
+  </li>;
+}
+
+function OpenRow({ s }: { s: OpenSession }) {
+  return <li className="min-w-0 space-y-1 py-3">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3"><span className="break-words font-bold">{s.register_name}</span><span className="rounded-full bg-amber-100 px-2 text-sm font-bold text-amber-900">Abierta · sin conciliar</span></div>
+    <p className="text-sm text-slate-600">Abierta desde {wallTime(s.opened_local)} · {s.operator_name}</p>
+    <p className="text-sm">Efectivo esperado ahora <MoneyValue minor={s.expected_minor} intent="balance" className="font-bold" /></p>
+    <details className="text-sm"><summary className="flex min-h-11 cursor-pointer items-center font-bold text-teal-800">Ver desglose</summary>
+      <dl className="space-y-1 pb-2"><CashBreakdown s={s} live /></dl><p className="break-all text-xs text-slate-500">Sesión {s.session_id}</p></details>
+  </li>;
+}
+
+export function ReconciliationBody({ cafeteriaId, loading, error, report, onRetry }: { cafeteriaId: string; loading: boolean; error: string; report: Reconciliation | null; onRetry: () => void }) {
+  const d = report?.data;
+  const none = d && d.summary.closed_count === 0 && d.open_sessions.length === 0;
+  return <>
+    <section className="card space-y-3 p-4" aria-labelledby="report-reconciliation">
+      <div><h2 id="report-reconciliation" className="text-xl font-black">Conciliación de caja</h2>
+        <p className="text-xs text-slate-500">Sesiones cerradas en el período, por fecha de cierre. Valores guardados al cerrar cada caja; diferencia = contado − esperado. Solo efectivo físico: PIKAS Cash, crédito de personal y recargas no entran.</p></div>
+      {loading && <p role="status">Cargando conciliación…</p>}
+      {error && <div role="alert" className="space-y-3"><p className="font-bold">{error}</p><button type="button" className="btn-secondary min-h-11" onClick={onRetry}>Reintentar</button></div>}
+      {report && d && <>
+        <p className="text-sm font-bold text-slate-700">{report.from === report.to ? `Cerradas el ${day(report.from)}` : `Cerradas del ${day(report.from)} al ${day(report.to)}`} · {report.business_timezone}</p>
+        {none ? <p role="status">Sin actividad de caja: no se cerraron sesiones en este período y no hay cajas abiertas ahora.</p> : <>
+          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Metric label="Sesiones cerradas" help="En el período.">{d.summary.closed_count}</Metric>
+            <Metric label="Cuadradas" help="Contado igual al esperado.">{d.summary.balanced_count}</Metric>
+            <Metric label="Con faltante" help="Contado menor que el esperado.">{d.summary.shortage_count}</Metric>
+            <Metric label="Con sobrante" help="Contado mayor que el esperado.">{d.summary.overage_count}</Metric>
+          </dl>
+          {d.summary.uncaptured_count > 0 && <p className="text-xs text-slate-600">{sessions(d.summary.uncaptured_count)} sin captura al cierre (anteriores a la conciliación guardada): sin esperado ni diferencia.</p>}
+          {d.summary.closed_count === 0 ? <p role="status">No se cerraron sesiones de caja en este período.</p> : <ul className="divide-y" aria-label="Sesiones cerradas">{d.closed_sessions.map(s => <ClosedRow key={s.session_id} s={s} />)}</ul>}
+          {d.summary.closed_count > d.closed_sessions.length && <p className="text-xs text-slate-500">Mostrando las {d.closed_sessions.length} más recientes de {sessions(d.summary.closed_count)}.</p>}
+          <p className="text-xs text-slate-500">Un reembolso en efectivo resta de la sesión que lo pagó, que puede no ser la de la venta original; por eso puede no coincidir con los Reembolsos del resumen de ventas.</p>
+        </>}
+        <p className="text-sm"><Link className="font-bold text-teal-800 underline" href={`/admin/cafeteria/cajas?cafeteria=${cafeteriaId}`}>Ver sesiones y cierres en Cajas</Link></p>
+      </>}
+    </section>
+    {report && d && !none && <section className="card space-y-3 p-4" aria-labelledby="report-open-registers">
+      <div><h2 id="report-open-registers" className="text-xl font-black">Cajas abiertas ahora</h2>
+        <p className="text-xs text-slate-500">Estado actual, no depende del período. Una caja abierta no está conciliada: no tiene efectivo contado ni diferencia hasta su cierre.</p></div>
+      {d.open_sessions.length === 0 ? <p role="status">No hay cajas abiertas ahora.</p> : <ul className="divide-y" aria-label="Cajas abiertas">{d.open_sessions.map(s => <OpenRow key={s.session_id} s={s} />)}</ul>}
+    </section>}
+  </>;
 }

@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
-// Phase 5D reporting contract (public.cafeteria_report_read): 5D.1 sales summary and 5D.2 top
-// products. Totals are computed by the database; the browser only validates and formats them.
+// Phase 5D reporting contract (public.cafeteria_report_read): 5D.1 sales summary, 5D.2 top
+// products and 5D.3 register reconciliation. Totals are computed by the database; the browser only
+// validates and formats them.
 export const reportPeriods = ['today', 'last_7_days', 'last_30_days', 'custom'] as const;
 export type ReportPeriod = (typeof reportPeriods)[number];
 export const maxReportDays = 92;
-export const reportKinds = ['sales_summary', 'top_products'] as const;
+export const reportKinds = ['sales_summary', 'top_products', 'reconciliation'] as const;
 export type ReportKind = (typeof reportKinds)[number];
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const amount = z.string().regex(/^(0|[1-9][0-9]*)$/);
@@ -47,7 +48,40 @@ export const topProductsSchema = salesSummarySchema.omit({ kind: true, data: tru
     .refine(d => d.products.every((p, i) => p.rank === i + 1) && d.product_count >= d.products.length),
 }).strict();
 export type TopProducts = z.infer<typeof topProductsSchema>;
-export const reportResultSchema = { sales_summary: salesSummarySchema, top_products: topProductsSchema } as const;
+
+// 5D.3: closed sessions are the immutable Phase 5A close capture (difference = counted − expected);
+// a close without capture (pre-5A) carries only its counted cash. Open sessions are live state and
+// structurally cannot carry counted cash, a difference or a status.
+const localTime = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+// Sign from the text (the signed pattern excludes "-0"); refinements may run on invalid input, so never throw.
+const sign = (minor: string) => (minor === '0' ? 'balanced' : minor.startsWith('-') ? 'shortage' : 'overage');
+const cashParts = { opening_minor: amount, cash_sales_minor: amount, cash_settlements_minor: amount, cash_refunds_minor: amount, expected_minor: signed };
+const capturedParts = ['opening_minor', 'cash_sales_minor', 'cash_settlements_minor', 'cash_refunds_minor', 'expected_minor', 'difference_minor'] as const;
+const closedSession = z.object({
+  session_id: z.guid(), register_id: z.guid(), register_name: z.string().min(1), register_code: z.string(), operator_name: z.string(), closed_by_name: z.string(),
+  close_type: z.enum(['normal', 'exceptional']), opened_at: z.string(), closed_at: z.string(), opened_local: localTime, closed_local: localTime, closed_business_date: isoDate,
+  captured: z.boolean(), status: z.enum(['balanced', 'shortage', 'overage', 'uncaptured']),
+  opening_minor: amount.nullable(), cash_sales_minor: amount.nullable(), cash_settlements_minor: amount.nullable(), cash_refunds_minor: amount.nullable(),
+  expected_minor: signed.nullable(), counted_minor: amount, difference_minor: signed.nullable(),
+}).strict().refine(r => r.captured
+  ? capturedParts.every(k => r[k] !== null) && r.status === sign(r.difference_minor!)
+  : capturedParts.every(k => r[k] === null) && r.status === 'uncaptured');
+const openSession = z.object({
+  session_id: z.guid(), register_id: z.guid(), register_name: z.string().min(1), register_code: z.string(), operator_name: z.string(),
+  opened_at: z.string(), opened_local: localTime, ...cashParts,
+}).strict();
+export const reconciliationSchema = salesSummarySchema.omit({ kind: true, data: true }).extend({
+  kind: z.literal('reconciliation'),
+  data: z.object({
+    summary: z.object({ closed_count: count, balanced_count: count, shortage_count: count, overage_count: count, uncaptured_count: count }).strict()
+      .refine(s => s.closed_count === s.balanced_count + s.shortage_count + s.overage_count + s.uncaptured_count),
+    closed_sessions: z.array(closedSession).max(50), open_sessions: z.array(openSession),
+  }).strict().refine(d => d.closed_sessions.length <= d.summary.closed_count),
+}).strict();
+export type Reconciliation = z.infer<typeof reconciliationSchema>;
+export type ClosedSession = Reconciliation['data']['closed_sessions'][number];
+export type OpenSession = Reconciliation['data']['open_sessions'][number];
+export const reportResultSchema = { sales_summary: salesSummarySchema, top_products: topProductsSchema, reconciliation: reconciliationSchema } as const;
 
 // Latest-request gate: only the most recent request for a report section may update it.
 export function latestGate() { let current = 0; return { next: () => ++current, isCurrent: (token: number) => token === current }; }

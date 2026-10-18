@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 import { resolveCafeteriaAccess } from '../../../../lib/auth/cafeteria-access';
 import { reportErrors, reportRequestSchema, reportResultSchema } from '../../../../lib/cafeteria/reports';
-// Phase 5D read-only reports (sales_summary, top_products). Authority and all totals come from cafeteria_report_read.
+// Phase 5D read-only reports (sales_summary, top_products, reconciliation). Authority and all totals come from cafeteria_report_read.
 export async function POST(request: Request) {
   const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
   if (request.headers.get('origin') !== new URL(request.url).origin) return json({ error: 'same_origin_required' }, 403);
