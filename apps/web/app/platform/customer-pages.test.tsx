@@ -16,6 +16,8 @@ const id = "00000000-0000-4000-8000-000000000001";
 const session = { identity: { user: { id: "real-operator" }, person: { displayName: "Operador" } }, supabase: {}, capabilities: ["platform:tenant:lifecycle:read", "platform:tenant:provision", "platform:customer_admin:provision", "platform:identity:link", "platform:sandbox:pov:enter"] };
 const customer = { account: { id, name: "Cliente real", code: "CLIENTE", status: "active" }, tenant_kind: "customer", schools: [], administrators: [], customer_admin_onboarding: [], administrator_intents: [{ id, email: "admin@example.invalid", status: "pending", expires_at: "2026-10-17T00:00:00Z", role_code: "account_admin", scope_kind: "account", display_name: null }] };
 beforeEach(() => { vi.clearAllMocks(); mocks.requirePlatform.mockResolvedValue(session); });
+// Detail reads: the overview plus (Platform lifecycle) the history read.
+const detail = (value: unknown, events: unknown[] = []) => mocks.readPlatform.mockImplementation(async (_s: unknown, _c: unknown, rpc: string) => ({ kind: "ready", value: rpc === "platform_customer_lifecycle_history" ? { events } : value }));
 describe("customer server screens", () => {
   it("list denies sandbox-only operators before reading customer records", async () => {
     mocks.requirePlatform.mockResolvedValue({ ...session, capabilities: ["platform:sandbox:pov:enter"] });
@@ -34,13 +36,13 @@ describe("customer server screens", () => {
     expect(renderToStaticMarkup(await NewCustomerPage())).toContain("No tienes permiso");
   });
   it("detail presents pending/setup state without showing technical identity values", async () => {
-    mocks.readPlatform.mockImplementation(async (_session, _cap, rpc) => ({ kind: "ready", value: rpc === "platform_customer_activation_status" ? {intent_id:id,account_id:id,identity_state:"missing",link_state:"none",expires_at:null} : customer }));
+    mocks.readPlatform.mockImplementation(async (_session, _cap, rpc) => ({ kind: "ready", value: rpc === "platform_customer_activation_status" ? {intent_id:id,account_id:id,identity_state:"missing",link_state:"none",expires_at:null} : rpc === "platform_customer_lifecycle_history" ? { events: [] } : customer }));
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
     expect(html).toContain("Acceso preparado"); expect(html).toContain("Activación pendiente"); expect(html).toContain("No se envía correo"); expect(html).toContain("Verificar identidad y completar acceso"); expect(html).toContain("Generar enlace de activación");
     expect(html.replace(/<[^>]*>/g, "")).not.toContain(id);
   });
   it.each([['linked','Listo para completar'],['granted','Acceso completado']])('presents authoritative %s state without introducing invitation actions',async(status,label)=>{
-    mocks.readPlatform.mockResolvedValue({kind:'ready',value:{...customer,administrator_intents:[{...customer.administrator_intents[0],status}]}});
+    detail({...customer,administrator_intents:[{...customer.administrator_intents[0],status}]});
     const html=renderToStaticMarkup(await CustomerPage({params:Promise.resolve({accountId:id})}));expect(html).toContain(label);expect(html).not.toContain('Crear enlace de invitación');
   });
   it("sandbox details do not expose customer-admin completion actions", async () => {
@@ -49,7 +51,7 @@ describe("customer server screens", () => {
     expect(html).toContain("Sandbox · Demostración"); expect(html).not.toContain("Verificar identidad y completar acceso");
   });
   it("existing administrator prevents initial-admin provisioning UI", async () => {
-    mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { ...customer, administrators: [{ display_name: "Ana", status: "active", person_status: "active" }] } });
+    detail({ ...customer, administrators: [{ display_name: "Ana", status: "active", person_status: "active" }] });
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
     expect(html).toContain("Ana"); expect(html).not.toContain("Verificar identidad y completar acceso"); expect(html).not.toContain("Preparar administrador");
   });
@@ -70,5 +72,25 @@ describe("customer server screens", () => {
     expect(html).toContain("Explorar PIKAS"); expect(html).toContain("Sigues actuando como Operador");
     for (const label of ["Administración", "Operaciones", "Caja / POS", "Próximamente"]) expect(html).toContain(label);
     expect(mocks.launcher).toHaveBeenCalledWith({ rpc }, session.identity);
+  });
+  it("lifecycle: status, history and only the valid actions for operators with the manage capability; none without it", async () => {
+    mocks.requirePlatform.mockResolvedValue({ ...session, capabilities: [...session.capabilities, "platform:tenant:lifecycle:manage"] });
+    detail({ ...customer, account: { ...customer.account, status: "suspended" } }, [{ occurred_at: "2026-10-19T15:00:00Z", action: "customer_suspended", from: "active", to: "suspended", reason: "Pago pendiente", actor_name: "Operador" }]);
+    let html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+    expect(html).toContain("Estado del cliente"); expect(html).toContain("Suspendido"); expect(html).toContain("Cliente suspendido · Activo → Suspendido"); expect(html).toContain("Motivo: Pago pendiente");
+    expect(html).toContain(">Reactivar<"); expect(html).toContain(">Cerrar cliente<"); expect(html).not.toContain(">Suspender<"); expect(html).not.toContain("Reabrir cliente");
+    expect(html).not.toContain("Verificar identidad y completar acceso"); expect(html).toContain("no se preparan nuevos accesos");
+    detail({ ...customer, account: { ...customer.account, status: "closed" } });
+    html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+    expect(html).toContain("Cerrado"); expect(html).toContain(">Reabrir cliente<"); expect(html).not.toContain(">Reactivar<");
+    mocks.requirePlatform.mockResolvedValue(session);
+    html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+    expect(html).toContain("Estado del cliente"); expect(html).not.toContain(">Reabrir cliente<");
+  });
+  it("list shows lifecycle badges and offers the Cerrados filter", async () => {
+    mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { customers: [{ id, name: "Cliente cerrado", code: "CC", status: "closed", tenant_kind: "customer", school_count: 1, location_count: 1, cafeteria_count: 1 }], next_cursor: null } });
+    const html = renderToStaticMarkup(await CustomersPage({ searchParams: Promise.resolve({ status: "closed" }) }));
+    expect(html).toContain("Cliente cerrado"); expect(html).toContain(">Cerrado<"); expect(html).toContain('<option value="closed" selected="">Cerrados</option>');
+    expect(mocks.readPlatform).toHaveBeenCalledWith(session, "platform:tenant:lifecycle:read", "platform_list_customers", expect.objectContaining({ p_status: "closed" }), expect.anything());
   });
 });

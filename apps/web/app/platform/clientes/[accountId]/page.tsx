@@ -6,6 +6,8 @@ import { AdminStatus } from "../../../../components/admin-interactions";
 import { CustomerActivationAction } from "./activation-action";
 import { customerActivationStatusSchema } from "../../../../lib/platform/customer-activation";
 import { AdministratorAction } from "./administrator-action";
+import { CustomerLifecyclePanel } from "./lifecycle-panel";
+import { LIFECYCLE_MANAGE, lifecycleHistorySchema } from "../../../../lib/platform/customer-lifecycle";
 export default async function CustomerPage({ params }: { params: Promise<{ accountId: string }> }) {
   const session = await requirePlatform();
   const id = z.guid().safeParse((await params).accountId);
@@ -21,9 +23,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
     const read = await readPlatform(session, "platform:customer_admin:provision", "platform_customer_activation_status", { p_intent_id: intent.id }, customerActivationStatusSchema);
     return read.kind === "ready" && read.value.intent_id === intent.id && read.value.account_id === customer.account.id ? read.value : null;
   }));
+  const history = customer.tenant_kind === "customer" ? await readPlatform(session, "platform:tenant:lifecycle:read", "platform_customer_lifecycle_history", { p_account_id: customer.account.id }, lifecycleHistorySchema) : null;
   const hasCurrent = customer.administrators.length > 0 || customer.customer_admin_onboarding.some((intent) => intent.role === "account_admin" && intent.scope === "account" && intent.status === "granted") || initialIntents.some((intent) => ["pending", "linked", "granted"].includes(intent.status));
   return <>
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
+    {customer.tenant_kind === "customer" && <CustomerLifecyclePanel accountId={customer.account.id} name={customer.account.name} status={customer.account.status}
+      canManage={session.capabilities.includes(LIFECYCLE_MANAGE)} history={history?.kind === "ready" ? history.value.events : null} />}
     <CustomerHierarchy customer={customer} />
     <section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Administrador inicial</h2>
       {customer.administrators.map((admin, index) => <p key={index}>{admin.display_name} · Acceso completado · {statusLabel[admin.status]} · Persona {statusLabel[admin.person_status]?.toLowerCase()}</p>)}
@@ -36,6 +41,6 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
       </article>)}
       {canPrepare && !hasCurrent && <><p>Prepara el correo del primer administrador. Después genera su enlace privado de activación. Preparar no concede acceso.</p><AdministratorAction actor={session.identity.user.id} accountId={customer.account.id} /></>}
     </section>
-    <p className="text-sm text-slate-600">Los estados se muestran tal como están registrados. La gestión de cambios de estado y los portales del cliente se conectarán en los siguientes pasos.</p>
+    {customer.tenant_kind === "customer" && customer.account.status !== "active" && <p className="text-sm text-slate-600">Mientras el cliente no esté activo no se preparan nuevos accesos.</p>}
   </>;
 }

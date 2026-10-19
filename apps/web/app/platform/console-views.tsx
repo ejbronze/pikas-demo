@@ -8,9 +8,13 @@ export function ReadFailure({ kind }: { kind: string }) {
   if (kind === "missing") return <ErrorState title="No encontramos este cliente." retry={<Link className="btn-secondary" href="/platform/clientes">Ver clientes</Link>} />;
   return <ErrorState title="No pudimos cargar la información." description="Puede ser un problema temporal. Vuelve a intentarlo." retryHref="/platform/clientes" />;
 }
+const badgeTone: Record<string, string> = { active: "bg-emerald-100 text-emerald-900", suspended: "bg-amber-100 text-amber-950", closed: "bg-slate-200 text-slate-900", inactive: "bg-slate-200 text-slate-900" };
+export function LifecycleBadge({ status }: { status: string }) {
+  return <span className={`chip ${badgeTone[status] ?? "bg-slate-100"}`}>{statusLabel[status] ?? status}</span>;
+}
 export function CustomerHeading({ name, code, status, kind }: { name: string; code: string; status: string; kind: string }) {
   return <AppPageHeader back={{ href: "/platform/clientes", label: "Clientes" }} title={name}
-    meta={<span className="flex flex-wrap items-center gap-2">{code} · {statusLabel[status]}<span className={`chip ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></span>} />;
+    meta={<span className="flex flex-wrap items-center gap-2">{code}<LifecycleBadge status={status} /><span className={`chip ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></span>} />;
 }
 export function CustomerHierarchy({ customer }: { customer: CustomerOverview }) {
   return <section aria-label="Estructura del cliente" className="space-y-4"><h2 className="text-lg font-semibold">Estructura del cliente</h2>

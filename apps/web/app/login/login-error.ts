@@ -22,6 +22,14 @@ const messages: Record<string, LoginErrorMessage> = {
     title: "No se pudo verificar tu cuenta",
     body: "Comunícate con el administrador de tu institución para revisar el acceso.",
   },
+  organization_suspended: {
+    title: "Acceso de la organización suspendido",
+    body: "El acceso de esta organización está temporalmente suspendido. Comunícate con el administrador de tu organización o con PIKAS para más información.",
+  },
+  organization_closed: {
+    title: "Organización cerrada",
+    body: "Esta cuenta de organización está cerrada y ya no tiene acceso operativo a PIKAS.",
+  },
   pilot_email_required: {
     title: "Revisa tu correo electrónico",
     body: "Ingresa el correo electrónico asociado a tu cuenta de PIKAS.",

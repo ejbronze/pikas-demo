@@ -78,6 +78,10 @@ Nada de esto se implementa ahora. Secuencia: **análisis primero → revisión d
 
 Phase 6: hardening financiero, autoridad, concurrencia y casos operativos. Phase 7: paquete de operación/preparación del piloto Beta 1. No se implementan en Phase 5A.
 
+### Data Retention & Customer Offboarding Policy (futuro, sin decidir)
+
+Hoy, cerrar un cliente conserva todos sus datos (ver [ciclo de vida del cliente](CUSTOMER_LIFECYCLE.md)). **Aún no se ha elegido ningún plazo de retención.** La política futura deberá distinguir datos financieros/contables, liquidaciones, compras/reembolsos/ajustes, auditoría y seguridad, configuración operativa, identidad del personal, información de estudiantes y de padres/tutores, autenticación/contacto y analítica agregada/anonimizada; y considerar necesidad operativa legítima, obligaciones legales o regulatorias aplicables (con evidencia), privacidad, seguridad, minimización y anonimización. Incluirá cómo se resuelven saldos y obligaciones pendientes al desvincular un cliente.
+
 ## Referencia histórica — milestone 0.6.0
 
 El alcance siguiente corresponde al demo local de ese milestone, no a la línea base productiva actual.

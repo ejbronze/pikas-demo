@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## Clientes: ciclo de vida del cliente (local)
+
+- **Clientes** muestra el estado de cada cliente (**Activo**, **Suspendido**, **Cerrado**) y permite filtrarlos; los clientes cerrados siguen visibles.
+- En el detalle del cliente, la Plataforma puede **suspender**, **reactivar**, **cerrar** o **reabrir** con motivo obligatorio y confirmación en una tarea; cerrar y reabrir piden una confirmación deliberada. Cada cambio queda en un historial inmutable con el operador real y el motivo.
+- Un cliente suspendido o cerrado pierde el acceso operativo de inmediato (también sesiones abiertas y enlaces guardados); sus usuarios ven un mensaje claro de organización suspendida o cerrada, sin motivos internos. Sus datos, personas, accesos, saldos e historial se conservan; reabrir devuelve el mismo cliente.
+- No es la suspensión individual de identidad. No elimina, anonimiza ni liquida nada. La política de retención de datos tras el cierre queda como trabajo futuro sin plazos definidos. Migración `202610280001`. Sin push ni despliegue.
+
 ## Phase 6A: identidad, credenciales y usuarios (local)
 
 - **Inicio de sesión con «Correo / Usuario»**: cada persona puede tener un usuario PIKAS único (minúsculas, números y `. _ -`) además de su correo; ambos abren la misma cuenta y la misma persona. Los errores son genéricos y no revelan si un usuario existe.

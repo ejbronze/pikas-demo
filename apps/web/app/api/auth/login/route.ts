@@ -5,6 +5,7 @@ import { isDemoMode } from "@/lib/env";
 import { resolvePikasIdentity, pilotHome } from "@/lib/auth/pikas-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { invitationProvider } from "@/lib/auth/activation";
+import { organizationDenial } from "../../../../lib/auth/tenant-lifecycle";
 import { isEmailIdentifier, isValidUsername, normalizeUsername } from "../../../../lib/identity/username";
 
 const schema = z.object({
@@ -91,11 +92,12 @@ export async function POST(request: NextRequest) {
   const identity = await resolvePikasIdentity(supabase);
   const target = pilotHome(identity);
   if (!target) {
+    const organization = identity.status === "ready" ? await organizationDenial(supabase) : null;
     const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
     if (signOutError) throw signOutError;
     return fail(
       request,
-      identity.status === "unlinked" ? "identity" : "membership",
+      organization ?? (identity.status === "unlinked" ? "identity" : "membership"),
     );
   }
 

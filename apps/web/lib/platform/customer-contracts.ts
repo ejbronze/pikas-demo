@@ -1,9 +1,9 @@
 import { provisioningUsername } from "../identity/provisioning";
 import { z } from "zod";
 
-export const lifecycleStatus = z.enum(["active", "suspended", "inactive"]);
+export const lifecycleStatus = z.enum(["active", "suspended", "inactive", "closed"]);
 export const statusLabel: Record<string, string> = {
-  active: "Activo", suspended: "Suspendido", inactive: "Inactivo",
+  active: "Activo", suspended: "Suspendido", inactive: "Inactivo", closed: "Cerrado",
   pending: "Identidad pendiente", linked: "Identidad vinculada", granted: "Acceso otorgado",
   expired: "Solicitud vencida", revoked: "Solicitud revocada",
 };

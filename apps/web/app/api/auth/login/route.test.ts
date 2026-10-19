@@ -175,4 +175,13 @@ describe("public tenant login route", () => {
     expect(rpc).toHaveBeenCalledWith("pikas_session_start");
     expect(resolvePikasIdentity).not.toHaveBeenCalled();
   });
+
+  it("customer lifecycle: an authenticated user of a suspended organization sees that, not a credentials or role error", async () => {
+    resolvePikasIdentity.mockResolvedValue({ ...activeTenantIdentity, memberships: [] }); pilotHome.mockReturnValue(null);
+    rpc.mockImplementation(async (name: string) => ({ data: name === "tenant_lifecycle_state" ? "suspended" : {}, error: null }));
+    const response = await login("tenant@example.com");
+    expect(response.headers.get("location")).toBe("https://pikas-pikas.app/login?error=organization_suspended"); expect(signOut).toHaveBeenCalledOnce();
+    rpc.mockImplementation(async (name: string) => ({ data: name === "tenant_lifecycle_state" ? "closed" : {}, error: null }));
+    expect((await login("tenant@example.com")).headers.get("location")).toBe("https://pikas-pikas.app/login?error=organization_closed");
+  });
 });

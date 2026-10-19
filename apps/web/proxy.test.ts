@@ -95,3 +95,19 @@ describe("Demo stale-tab recovery", () => {
   expect((await proxy(request("/pos"))).headers.get("location")).toContain("/login?next="); expect(mocks.identity).not.toHaveBeenCalled();
  });
 });
+
+describe("customer lifecycle at the proxy (suspended/closed organization)", () => {
+  const client = (state: string | null) => ({ rpc: vi.fn(async (name: string) => ({ data: name === "tenant_lifecycle_state" ? state : null, error: null })) });
+  it.each([["suspended", "organization_suspended"], ["closed", "organization_closed"]])("bookmarked tenant routes explain a %s organization", async (state, code) => {
+    mocks.createClient.mockReturnValue(client(state));
+    mocks.cafeteria.mockResolvedValue({ status: "forbidden" }); mocks.school.mockResolvedValue({ status: "forbidden" }); mocks.access.mockResolvedValue({ status: "forbidden" });
+    for (const path of ["/admin/cafeteria/personal", "/admin/escuela/estudiantes", "/pos"]) expect((await proxy(request(path))).headers.get("location")).toBe(`http://localhost/login?error=${code}`);
+  });
+  it("without a lifecycle block the original denial is kept; authorized requests never ask", async () => {
+    const c = client(null); mocks.createClient.mockReturnValue(c);
+    mocks.cafeteria.mockResolvedValue({ status: "forbidden" });
+    expect((await proxy(request("/admin/cafeteria"))).headers.get("location")).toBe("http://localhost/login?error=cafeteria_authority");
+    mocks.cafeteria.mockResolvedValue({ status: "authorized", context: {} }); c.rpc.mockClear();
+    expect((await proxy(request("/admin/cafeteria"))).headers.get("location")).toBeNull(); expect(c.rpc).not.toHaveBeenCalled();
+  });
+});

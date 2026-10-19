@@ -7,6 +7,7 @@ import { resolveCafeteriaAccess } from "@/lib/auth/cafeteria-access";
 import { resolveSchoolAccess } from "@/lib/auth/school-access";
 import { canUseSandboxPov } from "./lib/platform/sandbox-launcher";
 import { resolvePosAccess } from "@/lib/auth/pos-access";
+import { organizationDenial } from "./lib/auth/tenant-lifecycle";
 
 const requiredRole = (path: string) =>
   path.startsWith("/familias")
@@ -85,6 +86,12 @@ export async function proxy(request: NextRequest) {
     try { return canUseSandboxPov(await resolvePikasIdentity(supabase)); }
     catch { return false; } // Keep the original denial if operator lookup is unavailable.
   };
+  // A suspended/closed organization (Platform customer lifecycle) is explained as such after
+  // authentication; otherwise the original denial is kept. Grants nothing.
+  const deny = async (fallback: string) => {
+    const organization = await organizationDenial(supabase);
+    return redirectWithCookies(new URL(organization ? `/login?error=${organization}` : fallback, request.url));
+  };
   if (needed === "pos_operator") {
     const access = await resolvePosAccess(supabase);
     if (access.status === "authorized") return response;
@@ -92,24 +99,23 @@ export async function proxy(request: NextRequest) {
       return redirectWithCookies(new URL(`/login?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url));
     }
     if (await demoRecovery()) return redirectWithCookies(new URL("/platform/demostracion/cambio", request.url));
-    return redirectWithCookies(new URL(
-      access.status === "forbidden" ? "/login?error=pos_authority" : "/login?error=pos_unavailable",
-      request.url,
-    ));
+    return deny(access.status === "forbidden" ? "/login?error=pos_authority" : "/login?error=pos_unavailable");
   }
 
   if (needed === "school_admin") {
     const access = await resolveSchoolAccess(supabase);
     if (access.status === "authorized") return response;
     if (access.status !== "unauthenticated" && await demoRecovery()) return redirectWithCookies(new URL("/platform/demostracion/cambio", request.url));
-    return redirectWithCookies(new URL(access.status === "unauthenticated" ? "/login?next=%2Fadmin%2Fescuela" : "/login?error=school_authority", request.url));
+    if (access.status === "unauthenticated") return redirectWithCookies(new URL("/login?next=%2Fadmin%2Fescuela", request.url));
+    return deny("/login?error=school_authority");
   }
 
   if (needed === "cafeteria_admin") {
     const access = await resolveCafeteriaAccess(supabase);
     if (access.status === "authorized") return response;
     if (access.status !== "unauthenticated" && await demoRecovery()) return redirectWithCookies(new URL("/platform/demostracion/cambio", request.url));
-    return redirectWithCookies(new URL(access.status === "unauthenticated" ? "/login?next=%2Fadmin%2Fcafeteria" : "/login?error=cafeteria_authority", request.url));
+    if (access.status === "unauthenticated") return redirectWithCookies(new URL("/login?next=%2Fadmin%2Fcafeteria", request.url));
+    return deny("/login?error=cafeteria_authority");
   }
 
   const identity = await resolvePikasIdentity(supabase);
@@ -130,11 +136,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (connectionPage) {
-    if (identity.memberships.length === 0) {
-      return redirectWithCookies(
-        new URL("/login?error=membership", request.url),
-      );
-    }
+    if (identity.memberships.length === 0) return deny("/login?error=membership");
     return response;
   }
 

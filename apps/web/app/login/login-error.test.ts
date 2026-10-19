@@ -26,3 +26,9 @@ describe("public login error messages", () => {
 });
 
 it('explains explicit cafeteria authority without suggesting login grants roles',()=>{expect(getLoginErrorMessage('cafeteria_authority')?.body).toContain('Administración escolar');});
+
+it('organization lifecycle messages are distinct from credentials and reveal no reason', () => {
+  expect(getLoginErrorMessage('organization_suspended')?.body).toContain('temporalmente suspendido');
+  expect(getLoginErrorMessage('organization_closed')?.body).toContain('cerrada');
+  expect(getLoginErrorMessage('organization_suspended')).not.toEqual(getLoginErrorMessage('credentials'));
+});
