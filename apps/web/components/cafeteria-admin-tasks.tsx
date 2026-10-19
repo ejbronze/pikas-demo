@@ -6,6 +6,8 @@ import { useCatalogEditor } from './cafeteria-editor-context';
 import { CommandTask, type CommandResult } from './command-task';
 import { TaskSummary } from './task-window';
 import { useSessionDraft } from '../lib/session-draft';
+import { ProvisioningUsernameField, usernameProblem } from './provisioning-username-field';
+import { normalizeUsername } from '../lib/identity/username';
 
 const statusLabel = (s: string) => ({ active: 'Activo', inactive: 'Inactivo', suspended: 'Suspendido' })[s] ?? s;
 export const roleLabel = (s: string) => s === 'pos_supervisor' ? 'Supervisor' : 'Cajero';
@@ -28,16 +30,18 @@ function useCafeteriaCommand() {
 
 export function StaffPrepareTask({ data, onClose }: { data: CafeteriaRead; onClose: (message?: string) => void }) {
   const command = useCafeteriaCommand();
-  const [email, setEmail] = useState(''), [role, setRole] = useState('pos_cashier');
+  const [email, setEmail] = useState(''), [role, setRole] = useState('pos_cashier'), [username, setUsername] = useState('');
   return <CommandTask title="Agregar empleado POS" context={data.scope.cafeteria_name}
     pages={[{ label: 'Acceso', content: <>
-      <label className="block font-bold">Correo *<input className="field mt-1 w-full" type="email" required maxLength={254} data-autofocus value={email} onChange={e => setEmail(e.target.value)} /></label>
+      {data.scope.tenant_kind !== 'sandbox' && <ProvisioningUsernameField value={username} onChange={setUsername} autoFocus />}
+      <label className="block font-bold">Correo *<input className="field mt-1 w-full" type="email" required maxLength={254} data-autofocus={data.scope.tenant_kind === 'sandbox' || undefined} value={email} onChange={e => setEmail(e.target.value)} /></label>
       <label className="block font-bold">Rol POS<select className="field mt-1 w-full" value={role} onChange={e => setRole(e.target.value)}><option value="pos_cashier">Cajero</option><option value="pos_supervisor">Supervisor</option></select></label>
       <p className="text-sm text-slate-600">Supervisor es un rol operativo y no concede administración. Las cajas se asignan después en Cajas.</p></> }]}
-    review={<><TaskSummary rows={[['Correo', email.trim()], ['Rol POS', roleLabel(role)], ['Cafetería', data.scope.cafeteria_name]]} />
+    validate={() => data.scope.tenant_kind === 'sandbox' ? null : usernameProblem(username)}
+    review={<><TaskSummary rows={[...(data.scope.tenant_kind === 'sandbox' ? [] : [['Usuario', normalizeUsername(username)] as [string, React.ReactNode]]), ['Correo', email.trim()], ['Rol POS', roleLabel(role)], ['Cafetería', data.scope.cafeteria_name]]} />
       <p className="text-sm text-slate-600">{data.scope.tenant_kind === 'sandbox' ? 'No se emiten enlaces de activación en sandbox. Solo puede completarse acceso para una identidad elegible ya existente.' : 'Preparar no concede acceso ni envía correo. Después generas un enlace privado de activación y confirmas este mismo acceso.'}</p></>}
-    finalLabel="Preparar acceso" sendingLabel="Preparando acceso…" blocked={command.blocked} submit={() => command.submit('staff_prepare', { email: email.trim(), role })}
-    dirty={!!email || role !== 'pos_cashier'} success={{ title: 'Acceso preparado', body: <p>Aparece en Accesos preparados. No se ha concedido acceso.</p>, closeMessage: 'Acceso POS preparado.' }} onClose={onClose} />;
+    finalLabel="Preparar acceso" sendingLabel="Preparando acceso…" blocked={command.blocked} submit={() => command.submit('staff_prepare', data.scope.tenant_kind === 'sandbox' ? { email: email.trim(), role } : { email: email.trim(), role, username: normalizeUsername(username) })}
+    dirty={!!email || !!username || role !== 'pos_cashier'} success={{ title: 'Acceso preparado', body: <p>Aparece en Accesos preparados con el usuario reservado. No se ha concedido acceso.</p>, closeMessage: 'Acceso POS preparado.' }} onClose={onClose} />;
 }
 
 export function StaffStatusTask({ member, onClose }: { member: Staff; onClose: (message?: string) => void }) {

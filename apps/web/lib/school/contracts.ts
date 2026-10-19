@@ -1,3 +1,4 @@
+import { provisioningUsername } from "../identity/provisioning";
 import { z } from "zod";
 import { sandboxPovSchema } from "../platform/sandbox-pov";
 const id = z.uuid();
@@ -11,14 +12,14 @@ export const sectionSchema = z.enum(["summary", "students", "administrators", "c
 export type SchoolSection = z.infer<typeof sectionSchema>;
 export const commandSchema = z.discriminatedUnion("operation", [
   z.object({schoolId:id,operation:z.literal("cafeteria_admin_self"),payload:z.object({cafeteria_id:id}).strict()}).strict(),
-  z.object({schoolId:id,operation:z.literal("cafeteria_admin_prepare"),payload:z.object({cafeteria_id:id,email:z.email().trim()}).strict()}).strict(),
+  z.object({schoolId:id,operation:z.literal("cafeteria_admin_prepare"),payload:z.object({cafeteria_id:id,email:z.email().trim(),username:provisioningUsername.optional()}).strict()}).strict(),
   z.object({schoolId:id,operation:z.literal("cafeteria_admin_complete"),payload:z.object({cafeteria_id:id,invitation_id:id,display_name:z.string().trim().min(1).max(200)}).strict()}).strict(),
   z.object({ schoolId: id, operation: z.literal("student_create"), payload: z.object({ ...studentNames, ...placement }).strict() }).strict(),
   z.object({ schoolId: id, operation: z.literal("student_update"), payload: z.object({ student_id: id, ...studentNames }).strict() }).strict(),
   z.object({ schoolId: id, operation: z.literal("student_status"), payload: z.object({ student_id: id, status: z.enum(["active", "suspended", "inactive"]) }).strict() }).strict(),
   ...(["student_enroll", "student_transfer"] as const).map(operation => z.object({ schoolId: id, operation: z.literal(operation), payload: z.object({ student_id: id, ...placement }).strict() }).strict()),
   z.object({ schoolId: id, operation: z.literal("student_withdraw"), payload: z.object({ student_id: id, ends_on: z.iso.date() }).strict() }).strict(),
-  z.object({ schoolId: id, operation: z.literal("admin_prepare"), payload: z.object({ email: z.email().trim().max(254) }).strict() }).strict(),
+  z.object({ schoolId: id, operation: z.literal("admin_prepare"), payload: z.object({ email: z.email().trim().max(254), username: provisioningUsername.optional() }).strict() }).strict(),
   z.object({ schoolId: id, operation: z.literal("admin_complete"), payload: z.object({ invitation_id: id, display_name: z.string().trim().min(1).max(200) }).strict() }).strict(),
   z.object({ schoolId: id, operation: z.literal("admin_status"), payload: z.object({ membership_id: id, status: z.enum(["active", "suspended"]) }).strict() }).strict(),
   z.object({ schoolId: id, operation: z.literal("sharing_set"), payload: z.object({ cafeteria_id: id, status: z.enum(["active", "revoked"]), categories: z.array(z.enum(["basic_identification", "student_code", "placement", "dietary_restrictions"])).max(4) }).strict() }).strict(),

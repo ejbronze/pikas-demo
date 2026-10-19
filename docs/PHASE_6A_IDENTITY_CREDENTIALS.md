@@ -1,6 +1,7 @@
 # Phase 6A: identity, credentials and user provisioning
 
-Status: implemented and verified locally (migration `202610260001_identity_credentials.sql`).
+Status: implemented and verified locally (migrations `202610260001_identity_credentials.sql` and
+`202610270001_provisioning_username_reservation.sql`).
 Not pushed or deployed, and nothing is provisioned. No CEPOINT data and no production identities
 exist in this milestone. This document is separate from `PHASE_6A_BOOTSTRAP.md` (Platform
 bootstrap), which is an earlier milestone that shares the "6A" label.
@@ -19,6 +20,78 @@ Phase 6A adds one optional credential row per Person in `pikas_private.login_ide
 
 A credential operation never creates a Person and never creates or changes a membership. It
 does not create a second Auth user. No synthetic email addresses are used.
+
+## Provisioning lifecycle (username chosen at preparation)
+
+The intended workflow for new staff and administrators is:
+
+1. **Provision.** The administrator enters the username, email and intended role/scope. The
+   username follows the same normalization and rules as active identities.
+2. **Reserve.** The username is reserved on the EXISTING pending provisioning record:
+   `public.invitations.intended_username`, or
+   `pikas_private.platform_customer_admin_intents.intended_username`. No Person, Auth user or
+   membership is created, and the reservation grants no authority.
+3. **Activate.** The existing activation link flow is unchanged.
+4. **Complete.** The existing completion creates or reuses the Person exactly as before. In the
+   same transaction, a trigger attaches the reserved username to that Person and audits
+   `username_set` with source `provisioning` and the operator who prepared it.
+5. **Log in.** The person can log in immediately with the username OR the email; both reach the
+   same Auth user and Person.
+
+### Where it applies
+
+- **Supported surfaces:**
+  - Personal POS → Agregar empleado (cashier/supervisor);
+  - school administrators;
+  - cafeteria-administrator delegation;
+  - the Platform new-customer wizard and the initial customer administrator.
+- **Not used:**
+  - Platform Equipo, because Platform identities sign in through Backoffice by email;
+  - sandbox, where usernames are not reserved.
+
+### Mechanics
+
+- `provisioning_prepare_with_username` and `platform_prepare_customer_admin_with_username` call
+  the unchanged prepare commands and reserve in the same transaction. Authority, scope and
+  request journals are those of the original commands, and any rejection rolls everything back.
+- A request key bound to one username cannot be reused with another (`request_key_reused`).
+
+### Uniqueness and concurrency
+
+- A username is unavailable when another Person holds it, when a live reservation exists for a
+  different email, or when it is in `reserved_usernames`. Case variants normalize to the same
+  value.
+- One transaction-scoped advisory lock per username serializes provisioning reservations and
+  Person username changes. This was observed with `pg_blocking_pids`.
+- A trigger on `login_identities` stops support or correction tools from taking a live-reserved
+  username.
+- The same intended person (same email) may reuse their reservation for another access. They
+  cannot hold two different usernames: `email_has_other_username`, or `identity_has_username`
+  when an existing Person already has one, which is never renamed.
+
+### Release behavior
+
+A reservation is live only while its record is live:
+- an invitation that is `pending` and not past `expires_at`;
+- an intent that is `pending` or `linked` and not past `expires_at`.
+
+Revoked, expired, accepted or time-expired records release the username automatically. No
+cleanup job is needed, and nothing stays trapped.
+
+### Reissue and pending change
+
+- Reissuing an activation link keeps the same pending record, so the username is kept.
+- Re-preparing the same access (same cafeteria, role and email) reuses the pending invitation and
+  keeps its username. With a different username, the reservation is replaced atomically and the
+  previous name is released.
+- Re-preparing after expiry creates a new record that reserves the name again.
+
+### Legacy
+
+- Identities and invitations created before this change keep working without a username.
+- Requests saved before this change (without a username) still replay through the original
+  commands.
+- Credenciales stays available for support, correction and legacy users.
 
 ## Login: "Correo / Usuario"
 
@@ -153,8 +226,6 @@ local fixtures only, never production, and never mixed with the Platform Demo.
 
 These are recorded future work and are NOT implemented:
 
-- **Username at activation:** an optional username at staff activation. Today it is assigned
-  afterwards in Credenciales.
 - **POS cash payment:** a focused cash-payment modal/task in the POS (amount received, change).
 - **Clientes lifecycle:** customer lifecycle management (suspend, archive, reactivate) in Platform
   Clientes.

@@ -22,3 +22,20 @@ describe("authenticated cafeteria adapter", () => {
 
 it.each(["23505","40001","40P01"])("first attempt definitive DB rollback %s reports rejection without exposing internals",async code=>{mocks.rpc.mockResolvedValue({data:null,error:{code,message:"secret-internals"}});const response=await POST(request());expect(response.status).toBe(422);expect(await response.text()).not.toContain("secret-internals");});
 it("an authoritative result must match both the original key and operation",async()=>{mocks.rpc.mockResolvedValue({data:{request_id:id,operation:"register_save",target_id:id},error:null});expect((await POST(request())).status).toBe(502);});
+
+describe("Phase 6A username at provisioning", () => {
+  const withUser = { ...body, payload: { ...body.payload, username: " Jeanne.Norte " } };
+  it("reserves through the transactional wrapper with the normalized username; the command payload is unchanged", async () => {
+    mocks.rpc.mockResolvedValue({ data: { request_id: id, operation: "staff_prepare", target_id: id, username: "jeanne.norte" }, error: null });
+    const response = await POST(request(withUser)); expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("provisioning_prepare_with_username", { p_flow: "cafeteria_staff", p_request_id: id, p_school_id: null, p_cafeteria_id: id, p_payload: { email: "admin@example.invalid", role: "pos_cashier" }, p_username: "jeanne.norte" });
+    expect((await response.json()).result).toEqual({ request_id: id, operation: "staff_prepare", target_id: id });
+  });
+  it.each(["username_unavailable", "username_reserved", "identity_has_username", "email_has_other_username", "invalid_username"])("%s is a definite, explained rejection", async code => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: code.startsWith("username_un") || code.includes("has") ? "23505" : "22023", message: code } });
+    const response = await POST(request(withUser)); expect(response.status).toBe(422); expect(await response.json()).toEqual({ error: code });
+  });
+  it.each(["a..b", "x@y.com", "ab"])("malformed username %s never reaches the database", async username => {
+    expect((await POST(request({ ...body, payload: { ...body.payload, username } }))).status).toBe(400); expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+});

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import type { CafeteriaRead, Operation } from '../lib/cafeteria/contracts';
 import { commandSchema } from '../lib/cafeteria/contracts';
 import { load, prepare, recoveryKey, send, mustPreserve, type Pending } from '../lib/cafeteria/command';
+import { outcomeMessage } from '../lib/identity/provisioning';
 import { CatalogEditorContext, type CatalogWorkspace } from './cafeteria-editor-context';
 type Result = { ok:true } | { ok:false; message:string; pending?: boolean };
 type Execute = (operation:Operation,payload:unknown)=>Promise<Result>;
@@ -27,7 +28,7 @@ export function ConnectedCafeteriaProvider({data,children,recoveryActorId}:{data
    }
    sessionStorage.removeItem(storageKey);setPending(null);
    if(outcome==='success'){setMessage('Cambio confirmado.');router.refresh();return {ok:true};}
-   const message=outcome==='pending-identity'?'Identidad pendiente: activa la identidad y guarda su contraseña mediante el enlace privado antes de confirmar. No se ha concedido acceso.':'No se realizó el cambio. Revisa los datos, versiones y permisos actuales.';
+   const message=outcomeMessage(outcome)??(outcome==='pending-identity'?'Identidad pendiente: activa la identidad y guarda su contraseña mediante el enlace privado antes de confirmar. No se ha concedido acceso.':'No se realizó el cambio. Revisa los datos, versiones y permisos actuales.');
    setMessage(message);return {ok:false,message};
   } catch { const message='No se pudo completar la preparación o confirmación. Revisa la solicitud pendiente antes de continuar.';setMessage(message);return {ok:false,message,pending:true}; }
   finally {inFlight.current=false;setBusy(false);}

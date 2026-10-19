@@ -1,3 +1,4 @@
+import { provisioningUsername } from "../identity/provisioning";
 import { z } from "zod";
 
 export const lifecycleStatus = z.enum(["active", "suspended", "inactive"]);
@@ -31,6 +32,8 @@ export const customerDraftSchema = z.object({
     try { new Intl.DateTimeFormat("es", { timeZone: value }); return true; } catch { return false; }
   }), locationCode: code, locationName: name, cafeteriaCode: code, cafeteriaName: name,
   administratorName: name, administratorEmail: z.email().trim().max(254),
+  // Phase 6A: reserved at preparation; optional only so journeys saved before it still restore.
+  administratorUsername: provisioningUsername.optional(),
 }).strict();
 export const provisionResultSchema = z.object({ account_id: z.uuid(), school_id: z.uuid(), location_id: z.uuid(), cafeteria_id: z.uuid() });
 export const prepareResultSchema = z.object({ intent_id: z.uuid(), status: z.literal("pending") });

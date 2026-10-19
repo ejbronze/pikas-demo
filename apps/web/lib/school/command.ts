@@ -1,6 +1,7 @@
 import { sessionFetch } from "../auth/session-fetch";
 import { z } from "zod";
 import { commandSchema, commandResultSchema, type SchoolCommand } from "./contracts";
+import { isUsernameRejection, usernameOutcome, type UsernameOutcome } from "../identity/provisioning";
 export const pendingCommandSchema = z.object({ key: z.uuid(), command: commandSchema }).strict();
 export type PendingCommand = z.infer<typeof pendingCommandSchema>;
 export function recoveryKey(actor: string, school: string, form: string) { return `pikas:school:request:${actor}:${school}:${form}`; }
@@ -15,12 +16,13 @@ export function prepareCommand(storage: Pick<Storage, "getItem" | "setItem">, st
   storage.setItem(storageKey, JSON.stringify(pending));
   return pending;
 }
-export async function sendCommand(pending: PendingCommand, send: typeof fetch = sessionFetch): Promise<"success" | "rejected" | "pending-identity" | "uncertain"> {
+export async function sendCommand(pending: PendingCommand, send: typeof fetch = sessionFetch): Promise<"success" | "rejected" | "pending-identity" | "uncertain" | UsernameOutcome> {
   try {
     const response = await send("/api/school", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": pending.key }, body: JSON.stringify(pending.command) });
     const body = await response.json();
     if (!response.ok) {
       if (response.status === 422 && body.error === "confirmed_identity_pending") return "pending-identity";
+      if (response.status === 422 && isUsernameRejection(body.error)) return usernameOutcome(body.error);
       return [400, 401, 403, 422].includes(response.status) ? "rejected" : "uncertain";
     }
     const result = commandResultSchema.safeParse(body.result);

@@ -21,3 +21,21 @@ describe("authenticated school adapter", () => {
 });
 
 it('dispatches explicit delegation to its separate scoped RPC',async()=>{const payload={cafeteria_id:id};mocks.rpc.mockResolvedValue({data:{membership_id:id,status:'accepted'},error:null});expect((await POST(request({schoolId:id,operation:'cafeteria_admin_self',payload}))).status).toBe(200);expect(mocks.rpc).toHaveBeenCalledWith('cafeteria_delegation_command',{p_school_id:id,p_cafeteria_id:id,p_request_id:id,p_operation:'cafeteria_admin_self',p_payload:payload});});
+
+describe("Phase 6A username at provisioning", () => {
+  const caf = "4d200000-0000-4000-8000-000000000003";
+  it("school admin preparation reserves through the wrapper", async () => {
+    mocks.rpc.mockResolvedValue({ data: { invitation_id: id, status: "pending", username: "escuela.admin" }, error: null });
+    const response = await POST(request({ ...body, payload: { email: "admin@example.invalid", username: "Escuela.Admin" } })); expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("provisioning_prepare_with_username", { p_flow: "school_admin", p_request_id: id, p_school_id: id, p_cafeteria_id: null, p_payload: { email: "admin@example.invalid" }, p_username: "escuela.admin" });
+    expect((await response.json()).result).toEqual({ invitation_id: id, status: "pending" });
+  });
+  it("cafeteria admin delegation reserves through the wrapper", async () => {
+    await POST(request({ schoolId: id, operation: "cafeteria_admin_prepare", payload: { cafeteria_id: caf, email: "caf@example.invalid", username: "caf.admin" } }));
+    expect(mocks.rpc).toHaveBeenCalledWith("provisioning_prepare_with_username", { p_flow: "cafeteria_admin", p_request_id: id, p_school_id: id, p_cafeteria_id: caf, p_payload: { cafeteria_id: caf, email: "caf@example.invalid" }, p_username: "caf.admin" });
+  });
+  it("a taken username is a definite, explained rejection", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: "23505", message: "username_unavailable" } });
+    const response = await POST(request({ ...body, payload: { email: "admin@example.invalid", username: "taken" } })); expect(response.status).toBe(422); expect(await response.json()).toEqual({ error: "username_unavailable" });
+  });
+});

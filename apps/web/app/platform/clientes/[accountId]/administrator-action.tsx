@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { completeAdminResultSchema, completeAdminSchema, prepareResultSchema } from "../../../../lib/platform/customer-contracts";
 import { postPlatform } from "../../../../lib/platform/customer-journey";
+import { provisioningUsername, usernameRejectionMessage } from "../../../../lib/identity/provisioning";
+import { ProvisioningUsernameField } from "../../../../components/provisioning-username-field";
 
-const requestSchema = z.object({ key: z.uuid(), body: z.union([completeAdminSchema, z.object({ accountId: z.uuid(), scopeKind: z.literal("account"), schoolId: z.null(), cafeteriaId: z.null(), roleCode: z.literal("account_admin"), intendedEmail: z.email(), expiresAt: z.iso.datetime() }).strict()]) });
+const requestSchema = z.object({ key: z.uuid(), body: z.union([completeAdminSchema, z.object({ accountId: z.uuid(), scopeKind: z.literal("account"), schoolId: z.null(), cafeteriaId: z.null(), roleCode: z.literal("account_admin"), intendedEmail: z.email(), expiresAt: z.iso.datetime(), intendedUsername: provisioningUsername.optional() }).strict()]) });
 export function AdministratorAction({ accountId, intentId, actor, identityReady = true }: { accountId: string; intentId?: string; actor: string; identityReady?: boolean }) {
   const router = useRouter();
   const [value, setValue] = useState("");
@@ -13,6 +15,7 @@ export function AdministratorAction({ accountId, intentId, actor, identityReady 
   const [busy, setBusy] = useState(false);
   const [locked, setLocked] = useState(false);
   const [done, setDone] = useState(false);
+  const [username, setUsername] = useState("");
   const pending = useRef(false);
   const storageKey = `pikas:initial-admin:v1:${actor}:${intentId ?? accountId}`;
   async function submit(recoverOnly = false) {
@@ -21,7 +24,7 @@ export function AdministratorAction({ accountId, intentId, actor, identityReady 
     try {
       const saved = sessionStorage.getItem(storageKey);
       if (recoverOnly && saved === null) { setMessage("No hay una solicitud pendiente en este navegador."); return; }
-      const body = saved ? requestSchema.parse(JSON.parse(saved)).body : intentId ? completeAdminSchema.parse({ intentId, displayName: value }) : requestSchema.shape.body.parse({ accountId, scopeKind: "account", schoolId: null, cafeteriaId: null, roleCode: "account_admin", intendedEmail: z.email().parse(value.trim()), expiresAt: new Date(Date.now() + 7 * 86400000).toISOString() });
+      const body = saved ? requestSchema.parse(JSON.parse(saved)).body : intentId ? completeAdminSchema.parse({ intentId, displayName: value }) : requestSchema.shape.body.parse({ accountId, scopeKind: "account", schoolId: null, cafeteriaId: null, roleCode: "account_admin", intendedEmail: z.email().parse(value.trim()), intendedUsername: provisioningUsername.parse(username), expiresAt: new Date(Date.now() + 7 * 86400000).toISOString() });
       const request = saved ? requestSchema.parse(JSON.parse(saved)) : { key: crypto.randomUUID(), body };
       if ((intentId && (!("intentId" in request.body) || request.body.intentId !== intentId)) || (!intentId && (!("accountId" in request.body) || request.body.accountId !== accountId))) throw new Error("invalid_recovery");
       // A saved request is used exactly as written, irrespective of edits to display fields.
@@ -34,10 +37,12 @@ export function AdministratorAction({ accountId, intentId, actor, identityReady 
       router.refresh();
     } catch (failure) {
       const reason = failure instanceof Error ? failure.message : "unavailable";
-      setMessage(reason === "authorization" ? "No tienes permiso para completar esta operación." : reason === "conflict" ? "La solicitud encontró un conflicto. Actualiza el cliente para consultar su estado." : failure instanceof z.ZodError && !locked ? "Revisa el nombre o correo antes de continuar." : "No pudimos confirmar la operación. Verifica que la identidad esté registrada con correo confirmado y reintenta la misma solicitud; no prepares otra en paralelo.");
+      if (reason.startsWith("username:")) { sessionStorage.removeItem(storageKey); setLocked(false); setMessage(usernameRejectionMessage(reason.slice(9))); return; }
+      setMessage(reason === "authorization" ? "No tienes permiso para completar esta operación." : reason === "conflict" ? "La solicitud encontró un conflicto. Actualiza el cliente para consultar su estado." : failure instanceof z.ZodError && !locked ? "Revisa el nombre, el usuario o el correo antes de continuar." : "No pudimos confirmar la operación. Verifica que la identidad esté registrada con correo confirmado y reintenta la misma solicitud; no prepares otra en paralelo.");
     } finally { pending.current = false; setBusy(false); }
   }
   return <form className="mt-4 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+    {!intentId && !locked && !done && <ProvisioningUsernameField value={username} onChange={setUsername} />}
     <label className="block">{intentId ? "Nombre del administrador" : "Correo del primer administrador"}<input className="field mt-1 w-full" required={!locked} disabled={locked || done} maxLength={intentId ? 200 : 254} type={intentId ? "text" : "email"} value={value} onChange={(event) => setValue(event.target.value)} /></label>
     <button className="btn" disabled={busy || done || (Boolean(intentId) && !identityReady && !locked)}>{busy ? "Procesando…" : locked ? "Reintentar la misma solicitud" : intentId ? "Verificar identidad y completar acceso" : "Preparar administrador"}</button>
     {!locked && !done && <button type="button" className="btn-secondary ml-3" disabled={busy} onClick={() => void submit(true)}>Recuperar solicitud pendiente</button>}

@@ -9,7 +9,7 @@ type SupabaseServerClient = Awaited<
 
 type PlatformRpcResponse = {
   data: unknown;
-  error: { code: string } | null;
+  error: { code: string; message?: string } | null;
 };
 
 type PlatformRpcPostOptions<TPayload, TResult> = {
@@ -21,6 +21,8 @@ type PlatformRpcPostOptions<TPayload, TResult> = {
     payload: TPayload,
     requestId: string,
   ) => PromiseLike<PlatformRpcResponse>;
+  // Definite, user-correctable rejections returned as 422 with their code (never secrets).
+  rejections?: (message: string | undefined) => boolean;
 };
 
 function hasSameOrigin(request: NextRequest): boolean {
@@ -48,6 +50,7 @@ export function createPlatformRpcPostHandler<TPayload, TResult>({
   schema,
   resultSchema,
   invoke,
+  rejections,
 }: PlatformRpcPostOptions<TPayload, TResult>) {
   return async function POST(request: NextRequest) {
     if (!hasSameOrigin(request)) {
@@ -119,6 +122,9 @@ export function createPlatformRpcPostHandler<TPayload, TResult>({
       console.error("Platform RPC rejected the request", {
         code: rpcResponse.error.code,
       });
+      if (rejections?.(rpcResponse.error.message)) {
+        return NextResponse.json({ error: rpcResponse.error.message }, { status: 422 });
+      }
       if (rpcResponse.error.code === "42501") {
         return NextResponse.json(
           { error: "platform_authorization_required" },

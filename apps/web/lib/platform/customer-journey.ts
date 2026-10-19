@@ -1,6 +1,7 @@
 import { sessionFetch } from "../auth/session-fetch";
 import { z } from "zod";
 import { customerDraftSchema, provisionResultSchema, prepareResultSchema, type CustomerDraft } from "./customer-contracts";
+import { isUsernameRejection } from "../identity/provisioning";
 
 export const journeySchema = z.object({
   draft: customerDraftSchema, tenantKey: z.uuid(), adminKey: z.uuid(), expiresAt: z.iso.datetime(),
@@ -13,6 +14,7 @@ export const journeyStorageKey = (actor: string) => `pikas:customer-provisioning
 
 export async function postPlatform(path: string, key: string, body: unknown): Promise<unknown> {
   const response = await sessionFetch(path, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(body) });
+  if (response.status === 422) { const body = await response.json().catch(() => ({})); if (isUsernameRejection(body.error)) throw new Error(`username:${body.error}`); }
   if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "authorization" : response.status === 409 ? "conflict" : "unavailable");
   return response.json();
 }
@@ -37,7 +39,7 @@ export class CustomerJourney {
     this.busy = true;
     try {
       if (!this.state.tenant) {
-        const tenantPayload = customerDraftSchema.omit({ administratorName: true, administratorEmail: true }).strip().parse(this.state.draft);
+        const tenantPayload = customerDraftSchema.omit({ administratorName: true, administratorEmail: true, administratorUsername: true }).strip().parse(this.state.draft);
         const response = z.object({ result: provisionResultSchema }).parse(await this.send("/api/platform/tenants", this.state.tenantKey, tenantPayload));
         this.state = { ...this.state, tenant: response.result };
         this.storage.setItem(this.storageKey, JSON.stringify(this.state));
@@ -46,6 +48,7 @@ export class CustomerJourney {
         const response = z.object({ result: prepareResultSchema }).parse(await this.send("/api/platform/customer-admins/prepare", this.state.adminKey, {
           accountId: this.state.tenant!.account_id, scopeKind: "account", schoolId: null, cafeteriaId: null, roleCode: "account_admin",
           intendedEmail: this.state.draft.administratorEmail, expiresAt: this.state.expiresAt,
+          ...(this.state.draft.administratorUsername ? { intendedUsername: this.state.draft.administratorUsername } : {}),
         }));
         this.state = { ...this.state, administrator: response.result };
         this.storage.setItem(this.storageKey, JSON.stringify(this.state));

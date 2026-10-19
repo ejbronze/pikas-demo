@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { commandSchema, type SchoolCommand } from '../lib/school/contracts';
 import { loadCommand, prepareCommand, recoveryKey, sendCommand, type PendingCommand } from '../lib/school/command';
+import { outcomeMessage } from '../lib/identity/provisioning';
 import type { CommandResult } from './command-task';
 
 const placementOps = ['student_enroll', 'student_transfer'];
@@ -41,7 +42,7 @@ export function useSchoolCommand(actorId: string, schoolId: string, formId: stri
       if (outcome === 'uncertain') return { kind: 'uncertain', message: 'Resultado incierto. No crees otra solicitud: reintenta con la misma clave.' };
       sessionStorage.removeItem(storageKey); setPending(null);
       if (outcome === 'success') { router.refresh(); return { kind: 'success' }; }
-      return { kind: 'rejected', message: outcome === 'pending-identity' ? 'Pendiente: la identidad debe registrarse y confirmar su correo antes de conceder acceso. No se ha otorgado autoridad.' : 'Revisa los datos, la matrícula, el estado y los permisos actuales.' };
+      return { kind: 'rejected', message: outcomeMessage(outcome) ?? (outcome === 'pending-identity' ? 'Pendiente: la identidad debe registrarse y confirmar su correo antes de conceder acceso. No se ha otorgado autoridad.' : 'Revisa los datos, la matrícula, el estado y los permisos actuales.') };
     } catch {
       return request ? { kind: 'uncertain', message: 'No se pudo confirmar la solicitud. Reintenta la misma solicitud; no crees otra.' } : { kind: 'rejected', message: 'No se pudo preparar la solicitud. No se ha enviado ninguna operación. Revisa los datos.' };
     } finally { inFlight.current = false; }

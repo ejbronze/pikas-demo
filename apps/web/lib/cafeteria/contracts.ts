@@ -1,3 +1,4 @@
+import { provisioningUsername } from '../identity/provisioning';
 import { sandboxPovSchema } from "../platform/sandbox-pov";
 import { z } from 'zod';
 // PostgreSQL UUID entity columns also accept legacy deterministic GUIDs.
@@ -15,7 +16,7 @@ const payloads = {
  menu_save: z.object({ ...base, name, description, active: z.boolean(), product_ids: z.array(id).max(10000) }).strict(),
  shift_save: z.object({ ...base, menu_id: id, name, start_time: z.string().regex(/^\d{2}:\d{2}$/), end_time: z.string().regex(/^\d{2}:\d{2}$/), enabled: z.boolean(), weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7) }).strict(),
  settings_save: z.object({ version, scheduling_enabled: z.boolean() }).strict(),
- staff_prepare: z.object({ email: z.email().trim().max(254), role: posRole }).strict(),
+ staff_prepare: z.object({ email: z.email().trim().max(254), role: posRole, username: provisioningUsername.optional() }).strict(),
  staff_complete: z.object({ invitation_id: id, display_name: z.string().trim().min(1).max(200) }).strict(),
  staff_status: z.object({ membership_id: id, status: memberStatus }).strict(),
  register_save: z.object({ ...base, code: z.string().trim().min(1).max(32), name, status: z.enum(['active','inactive']) }).strict(),

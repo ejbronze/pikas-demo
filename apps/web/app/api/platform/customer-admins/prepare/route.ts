@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createPlatformRpcPostHandler } from "../../../../../lib/auth/platform-rpc-route";
+import { isUsernameRejection, provisioningUsername } from "../../../../../lib/identity/provisioning";
 
 const prepareSchema = z
   .object({
@@ -15,6 +16,8 @@ const prepareSchema = z
       .max(254)
       .refine((value) => value.indexOf("@") > 0),
     expiresAt: z.iso.datetime({ offset: true }),
+    // Phase 6A: optional for legacy saved requests; new UI always sends it.
+    intendedUsername: provisioningUsername.optional(),
   })
   .strict()
   .refine(
@@ -42,8 +45,9 @@ export const POST = createPlatformRpcPostHandler({
   capability: "platform:customer_admin:provision",
   schema: prepareSchema,
   resultSchema,
+  rejections: isUsernameRejection,
   invoke: (supabase, payload, requestId) =>
-    supabase.rpc("platform_prepare_customer_admin", {
+    supabase.rpc(payload.intendedUsername === undefined ? "platform_prepare_customer_admin" : "platform_prepare_customer_admin_with_username", {
       p_request_id: requestId,
       p_account_id: payload.accountId,
       p_scope_kind: payload.scopeKind,
@@ -52,5 +56,6 @@ export const POST = createPlatformRpcPostHandler({
       p_role_code: payload.roleCode,
       p_intended_email: payload.intendedEmail,
       p_expires_at: payload.expiresAt,
+      ...(payload.intendedUsername === undefined ? {} : { p_username: payload.intendedUsername }),
     }),
 });

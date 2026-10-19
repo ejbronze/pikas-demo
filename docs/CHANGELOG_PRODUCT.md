@@ -4,6 +4,7 @@
 
 - **Inicio de sesión con «Correo / Usuario»**: cada persona puede tener un usuario PIKAS único (minúsculas, números y `. _ -`) además de su correo; ambos abren la misma cuenta y la misma persona. Los errores son genéricos y no revelan si un usuario existe.
 - **Identidades** (PIKAS Admin, capacidad nueva `platform:identity:support`): búsqueda exacta por correo o usuario, asignar o cambiar usuario, corregir el correo de la misma cuenta, emitir contraseña temporal (se muestra una sola vez y nunca se guarda) y suspender o reactivar el inicio de sesión. No otorga roles ni acceso a datos del cliente.
+- **El usuario se elige al preparar el acceso** (Personal POS, administradores escolares, delegación de cafetería y administrador inicial del cliente): queda reservado mientras el acceso está pendiente, nadie más puede tomarlo y, al completarse, la persona entra de inmediato con su usuario o su correo. Si el acceso se revoca o vence, el usuario se libera (migración `202610270001`).
 - **Personal POS → Credenciales**: el administrador gestiona usuario y contraseña temporal solo de personas cuyos accesos administra por completo.
 - Tras una contraseña temporal, la persona debe crear su propia contraseña antes de entrar. Cada cambio queda en un historial inmutable con el operador real, sin contraseñas ni enlaces.
 - Migración aditiva `202610260001`. Sin cambios financieros ni en el POS. Sin aprovisionar CEPOINT ni crear identidades de producción. Sin push ni despliegue. Detalle: `docs/PHASE_6A_IDENTITY_CREDENTIALS.md`.

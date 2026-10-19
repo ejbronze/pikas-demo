@@ -1,6 +1,7 @@
 import { sessionFetch } from "../auth/session-fetch";
 import { commandSchema, commandResultSchema, type CafeteriaCommand } from './contracts';
 import { z } from 'zod';
+import { isUsernameRejection, usernameOutcome, type UsernameOutcome } from '../identity/provisioning';
 export const pendingSchema = z.object({ key: z.uuid(), command: commandSchema }).strict();
 export type Pending = z.infer<typeof pendingSchema>;
 export const recoveryKey = (actor: string, cafeteria: string) => `pikas:cafeteria:request:${actor}:${cafeteria}`;
@@ -12,12 +13,13 @@ export function prepare(storage: Pick<Storage,'getItem'|'setItem'>, key: string,
  const pending = { key: crypto.randomUUID(), command: commandSchema.parse(command) };
  storage.setItem(key,JSON.stringify(pending)); return pending;
 }
-export async function send(pending: Pending, fetcher: typeof fetch = sessionFetch): Promise<'success'|'rejected'|'pending-identity'|'uncertain'> {
+export async function send(pending: Pending, fetcher: typeof fetch = sessionFetch): Promise<'success'|'rejected'|'pending-identity'|'uncertain'|UsernameOutcome> {
  try {
   const response = await fetcher('/api/cafeteria',{ method:'POST', headers:{'Content-Type':'application/json','Idempotency-Key':pending.key},body:JSON.stringify(pending.command) });
   const body = await response.json();
   if (!response.ok) {
    if (response.status === 422 && body.error === 'confirmed_identity_pending') return 'pending-identity';
+   if (response.status === 422 && isUsernameRejection(body.error)) return usernameOutcome(body.error);
    return [400,401,403,422].includes(response.status) ? 'rejected' : 'uncertain';
   }
   const result = commandResultSchema.safeParse(body.result);

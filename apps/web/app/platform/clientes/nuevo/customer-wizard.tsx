@@ -5,17 +5,19 @@ import { customerDraftSchema, type CustomerDraft } from "../../../../lib/platfor
 import { CustomerJourney, journeyStorageKey, type CustomerJourneyState } from "../../../../lib/platform/customer-journey";
 import { ConfirmAction } from "../../../../components/confirm-action";
 import { TaskOutcome, TaskSummary } from "../../../../components/task-window";
+import { usernameRejectionMessage } from "../../../../lib/identity/provisioning";
 
 const steps = ["Cliente", "Escuela", "Ubicación", "Cafetería", "Administrador inicial", "Revisar"];
 const initialDraft: CustomerDraft = { accountName: "", accountCode: "", schoolName: "", schoolCode: "", businessTimezone: "America/Santo_Domingo",
-  locationName: "", locationCode: "", cafeteriaName: "", cafeteriaCode: "", administratorName: "", administratorEmail: "" };
+  locationName: "", locationCode: "", cafeteriaName: "", cafeteriaCode: "", administratorName: "", administratorUsername: "", administratorEmail: "" };
 const stepFields: Array<Array<keyof CustomerDraft>> = [["accountName", "accountCode"], ["schoolName", "schoolCode", "businessTimezone"],
-  ["locationName", "locationCode"], ["cafeteriaName", "cafeteriaCode"], ["administratorName", "administratorEmail"]];
+  ["locationName", "locationCode"], ["cafeteriaName", "cafeteriaCode"], ["administratorName", "administratorUsername", "administratorEmail"]];
 const labels: Record<keyof CustomerDraft, string> = { accountName: "Nombre del cliente", accountCode: "Código del cliente", schoolName: "Nombre de la escuela",
   schoolCode: "Código de la escuela", businessTimezone: "Zona horaria", locationName: "Nombre de la ubicación", locationCode: "Código de la ubicación",
-  cafeteriaName: "Nombre de la cafetería", cafeteriaCode: "Código de la cafetería", administratorName: "Nombre del administrador", administratorEmail: "Correo del administrador" };
+  cafeteriaName: "Nombre de la cafetería", cafeteriaCode: "Código de la cafetería", administratorName: "Nombre del administrador", administratorUsername: "Usuario PIKAS del administrador", administratorEmail: "Correo del administrador" };
 const hints: Partial<Record<keyof CustomerDraft, string>> = { businessTimezone: "Identificador IANA, por ejemplo America/Santo_Domingo.", accountCode: "Identificador corto y único.",
-  administratorEmail: "El correo por sí solo no concede acceso." };
+  administratorEmail: "El correo por sí solo no concede acceso.",
+  administratorUsername: "3 a 40 caracteres: minúsculas, números y . _ -. Queda reservado; al activar su acceso podrá entrar con el usuario o con su correo." };
 const stepNotes = ["La organización que contrata PIKAS.", "Su primera escuela y la zona horaria de operación.", "Sede o campus de la escuela.", "La cafetería que operará en esa ubicación.",
   "Se preparará su acceso de administrador del cliente. Preparar no envía correo ni concede acceso: después generas su enlace privado de activación desde el cliente."];
 // Browser-session draft (Wave D.3): typed values only, scoped to the real operator, never sent.
@@ -59,7 +61,7 @@ export function CustomerWizard({ actor }: { actor: string }) {
   const discard = () => { dropDraft(); setDraft(initialDraft); setStep(0); setFieldErrors({}); setNotice(""); setError(""); };
   function next() {
     const problems: Partial<Record<keyof CustomerDraft, string>> = {};
-    for (const field of stepFields[step]) if (!customerDraftSchema.shape[field].safeParse(draft[field]).success) problems[field] = draft[field].trim() ? field === "administratorEmail" ? "Correo no válido." : field === "businessTimezone" ? "Zona horaria no reconocida." : "Revisa este campo." : "Obligatorio.";
+    for (const field of stepFields[step]) if (!customerDraftSchema.shape[field].safeParse(draft[field]).success) problems[field] = (draft[field] ?? "").trim() ? field === "administratorEmail" ? "Correo no válido." : field === "administratorUsername" ? "Usuario no válido." : field === "businessTimezone" ? "Zona horaria no reconocida." : "Revisa este campo." : "Obligatorio.";
     setFieldErrors(problems); if (Object.keys(problems).length) return;
     setError(""); setStep(step + 1);
   }
@@ -82,6 +84,11 @@ export function CustomerWizard({ actor }: { actor: string }) {
     } catch (failure) {
       if (journey.current) setState({ ...journey.current.state });
       const reason = failure instanceof Error ? failure.message : "unavailable";
+      if (reason.startsWith("username:") && journey.current?.state.tenant) {
+        // A definite username rejection: the customer exists; prepare its administrator from the customer page.
+        try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
+        setError(`El cliente se creó, pero el administrador no se preparó: ${usernameRejectionMessage(reason.slice(9))} Prepáralo desde el cliente con otro usuario.`); return;
+      }
       setError(reason === "authorization" ? "Tu sesión no permite esta operación. Inicia sesión con un operador autorizado y recupera la solicitud." : reason === "conflict" ? "La solicitud encontró un conflicto. Consulta Clientes antes de intentar una nueva creación." : reason === "recovery_required" ? "Hay una creación pendiente. Usa Revisar solicitud pendiente antes de continuar." : "No pudimos confirmar todos los pasos. Conservamos la solicitud: reintenta con los mismos datos o recupérala al volver. No inicies otra creación.");
     } finally { pending.current = false; setBusy(false); }
   }
@@ -99,14 +106,14 @@ export function CustomerWizard({ actor }: { actor: string }) {
     <h2 id="provisioning-step" className="text-xl font-bold">{state?.administrator ? "Cliente creado" : steps[step]}</h2>
     {error && <p role="alert" className="rounded-lg bg-amber-50 p-3">{error}</p>}
     {state?.administrator ? <TaskOutcome kind="success" title="Cliente creado">
-      <p className="font-bold">Cliente y estructura inicial creados.</p><ul className="list-disc space-y-1 pl-5 text-sm"><li>{state.draft.accountName}: cliente, escuela, ubicación y cafetería registrados.</li><li>Solicitud de administrador preparada para {state.draft.administratorEmail}.</li></ul>
+      <p className="font-bold">Cliente y estructura inicial creados.</p><ul className="list-disc space-y-1 pl-5 text-sm"><li>{state.draft.accountName}: cliente, escuela, ubicación y cafetería registrados.</li><li>Solicitud de administrador preparada para {state.draft.administratorEmail}{state.draft.administratorUsername ? ` con el usuario reservado «${state.draft.administratorUsername}»` : ""}.</li></ul>
       <p>No se ha enviado una invitación ni otorgado acceso. Desde el cliente, genera su enlace privado de activación. Después de que guarde su contraseña, completa el mismo acceso preparado.</p>
       <Link className="btn" href={`/platform/clientes/${state.tenant!.account_id}`} onClick={() => { try { journey.current?.finish(); } catch { /* Keep recovery available. */ } }}>Ver cliente y completar administrador</Link>
     </TaskOutcome> : <>
       {!review ? <form className="space-y-4" noValidate onSubmit={(event) => { event.preventDefault(); next(); }}>
         <p className="text-sm text-slate-600">{stepNotes[step]}</p>
-        {stepFields[step].map((field, index) => <label className="block font-bold" key={field}>{labels[field]} *<input required autoFocus={index === 0} className="field mt-1 w-full" type={field === "administratorEmail" ? "email" : "text"} aria-invalid={!!fieldErrors[field] || undefined}
-          maxLength={field.endsWith("Code") ? 64 : field === "administratorEmail" ? 254 : field === "businessTimezone" ? 100 : 200} value={draft[field]}
+        {stepFields[step].map((field, index) => <label className="block font-bold" key={field}>{labels[field]} *<input required autoFocus={index === 0} className="field mt-1 w-full" type={field === "administratorEmail" ? "email" : "text"} {...(field === "administratorUsername" ? { autoCapitalize: "none", spellCheck: false, autoComplete: "off" } : {})} aria-invalid={!!fieldErrors[field] || undefined}
+          maxLength={field.endsWith("Code") ? 64 : field === "administratorUsername" ? 40 : field === "administratorEmail" ? 254 : field === "businessTimezone" ? 100 : 200} value={draft[field]}
           onChange={(event) => edit(field, event.target.value)} />{hints[field] && <span className="mt-1 block text-sm font-normal text-slate-600">{hints[field]}</span>}{fieldErrors[field] && <span role="alert" className="mt-1 block text-sm text-red-800">{fieldErrors[field]}</span>}</label>)}
         <div className="flex flex-wrap gap-3 border-t pt-4">{step > 0 ? <button type="button" className="btn-secondary" onClick={() => setStep(step - 1)}>Anterior</button> : <Link className="btn-secondary" href="/platform/clientes">Cancelar</Link>}<button className="btn">Continuar</button></div>
         <p className="text-xs text-slate-500">Lo que escribes se conserva solo en esta sesión del navegador hasta crear el cliente o descartarlo.</p>

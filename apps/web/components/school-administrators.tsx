@@ -8,6 +8,8 @@ import { useSchoolCommand } from "./school-command-task";
 import { Input } from "./student-fields";
 import { TaskSummary } from "./task-window";
 import type { SchoolRead } from "../lib/school/contracts";
+import { ProvisioningUsernameField, usernameProblem } from "./provisioning-username-field";
+import { normalizeUsername } from "../lib/identity/username";
 
 const statusLabel = (status: string) => ({ active: "Activo", suspended: "Suspendido", inactive: "Inactivo", pending: "Pendiente", accepted: "Completado", expired: "Vencido", revoked: "Revocado" })[status] ?? "No disponible";
 const value = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -31,14 +33,15 @@ export function SchoolAdministrators({ data, actorId }: { data: SchoolRead; acto
 
 function PrepareAdministratorTask({ data, actorId, onClose }: { data: SchoolRead; actorId: string; onClose: (message?: string) => void }) {
   const command = useSchoolCommand(actorId, data.scope.school_id, "admin-prepare", "admin_prepare");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(""), [username, setUsername] = useState("");
   if (!command.loaded) return null;
   const stored = command.pending?.command.operation === "admin_prepare" ? command.pending.command.payload : null;
-  const rows = (address: string): [string, React.ReactNode][] => [["Correo", address], ["Acceso", "Administrador de escuela"], ["Escuela", data.scope.school_name]];
+  const rows = (address: string, user?: string): [string, React.ReactNode][] => [...(user ? [["Usuario", user] as [string, React.ReactNode]] : []), ["Correo", address], ["Acceso", "Administrador de escuela"], ["Escuela", data.scope.school_name]];
   return <CommandTask title="Preparar administrador" context={data.scope.school_name}
-    pages={[{ label: "Correo", content: <><label className="block font-bold">Correo del administrador *<input className="field mt-1 w-full" type="email" required maxLength={254} data-autofocus value={email} onChange={e => setEmail(e.target.value)} /></label><p className="text-sm text-slate-600">Se prepara acceso exclusivamente a esta escuela. No se envía un correo ni se crean contraseñas.</p></> }]}
-    review={<><TaskSummary rows={rows(email.trim())} /><p className="text-sm text-slate-600">Preparar no concede acceso. La persona debe tener su correo confirmado; después completas el acceso en Accesos preparados.</p></>}
-    recovery={stored && <TaskSummary rows={rows(stored.email)} />}
-    finalLabel="Preparar acceso" sendingLabel="Preparando acceso…" blocked={command.blocked} submit={() => command.submit(() => ({ email: email.trim() }))}
-    dirty={!!email} success={{ title: "Acceso preparado", body: <p>No se envió correo ni se concedió autoridad.</p>, closeMessage: "Acceso de administrador preparado." }} onClose={onClose} />;
+    pages={[{ label: "Acceso", content: <><ProvisioningUsernameField value={username} onChange={setUsername} autoFocus /><label className="block font-bold">Correo del administrador *<input className="field mt-1 w-full" type="email" required maxLength={254} value={email} onChange={e => setEmail(e.target.value)} /></label><p className="text-sm text-slate-600">Se prepara acceso exclusivamente a esta escuela. No se envía un correo ni se crean contraseñas.</p></> }]}
+    validate={() => usernameProblem(username)}
+    review={<><TaskSummary rows={rows(email.trim(), normalizeUsername(username))} /><p className="text-sm text-slate-600">Preparar no concede acceso. La persona debe tener su correo confirmado; después completas el acceso en Accesos preparados.</p></>}
+    recovery={stored && <TaskSummary rows={rows(stored.email, "username" in stored ? stored.username : undefined)} />}
+    finalLabel="Preparar acceso" sendingLabel="Preparando acceso…" blocked={command.blocked} submit={() => command.submit(() => ({ email: email.trim(), username: normalizeUsername(username) }))}
+    dirty={!!email || !!username} success={{ title: "Acceso preparado", body: <p>No se envió correo ni se concedió autoridad.</p>, closeMessage: "Acceso de administrador preparado." }} onClose={onClose} />;
 }
