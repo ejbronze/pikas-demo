@@ -93,4 +93,16 @@ describe("customer server screens", () => {
     expect(html).toContain("Cliente cerrado"); expect(html).toContain(">Cerrado<"); expect(html).toContain('<option value="closed" selected="">Cerrados</option>');
     expect(mocks.readPlatform).toHaveBeenCalledWith(session, "platform:tenant:lifecycle:read", "platform_list_customers", expect.objectContaining({ p_status: "closed" }), expect.anything());
   });
+  it("Agregar sede appears per active school only for active customers and operators with tenant provisioning", async () => {
+    const withSchool = { ...customer, schools: [{ id, code: "ESC", name: "Escuela Ficticia", status: "active", business_timezone: "America/Santo_Domingo", locations: [{ id, code: "SEDE-1", name: "Sede Uno", status: "active", cafeterias: [{ id, code: "CAF-1", name: "Cafetería Uno", status: "active" }] }] }] };
+    detail(withSchool);
+    let html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+    expect(html).toContain(">Agregar sede<"); expect(html).toContain("Sede Uno"); expect(html).toContain("Cafetería Uno");
+    detail({ ...withSchool, account: { ...customer.account, status: "suspended" } });
+    html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) })); expect(html).not.toContain("Agregar sede");
+    detail({ ...withSchool, tenant_kind: "sandbox" });
+    html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) })); expect(html).not.toContain("Agregar sede");
+    mocks.requirePlatform.mockResolvedValue({ ...session, capabilities: session.capabilities.filter(c => c !== "platform:tenant:provision") }); detail(withSchool);
+    html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) })); expect(html).not.toContain("Agregar sede");
+  });
 });

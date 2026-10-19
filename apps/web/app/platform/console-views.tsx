@@ -16,11 +16,11 @@ export function CustomerHeading({ name, code, status, kind }: { name: string; co
   return <AppPageHeader back={{ href: "/platform/clientes", label: "Clientes" }} title={name}
     meta={<span className="flex flex-wrap items-center gap-2">{code}<LifecycleBadge status={status} /><span className={`chip ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></span>} />;
 }
-export function CustomerHierarchy({ customer }: { customer: CustomerOverview }) {
+export function CustomerHierarchy({ customer, schoolAction }: { customer: CustomerOverview; schoolAction?: (school: CustomerOverview["schools"][number]) => React.ReactNode }) {
   return <section aria-label="Estructura del cliente" className="space-y-4"><h2 className="text-lg font-semibold">Estructura del cliente</h2>
     {customer.schools.length === 0 && <p>No hay escuelas registradas.</p>}
     {customer.schools.map((school) => <article key={school.id} className="card space-y-3 p-5">
-      <h3 className="font-bold">{school.name}</h3><p className="text-sm text-slate-600">{school.code} · {statusLabel[school.status]} · {school.business_timezone}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{school.name}</h3><p className="text-sm text-slate-600">{school.code} · {statusLabel[school.status]} · {school.business_timezone}</p></div>{schoolAction?.(school)}</div>
       {school.locations.length === 0 && <p>Sin ubicaciones.</p>}
       {school.locations.map((location) => <div key={location.id} className="border-l-2 border-slate-200 pl-4">
         <h4 className="font-semibold">{location.name}</h4><p className="text-sm text-slate-600">{location.code} · {statusLabel[location.status]}</p>

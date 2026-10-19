@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Clientes: agregar sede (local)
+
+- En el detalle del cliente, la Plataforma puede **Agregar sede** a una escuela de un cliente **Activo**: indica el código y nombre de la sede y de su cafetería. Una sola operación crea la sede (ubicación) y su cafetería, que aparecen de inmediato en la estructura del cliente.
+- Solo operadores con la capacidad existente de aprovisionamiento de clientes (`platform:tenant:provision`); ningún rol del cliente. Clientes suspendidos o cerrados y entornos sandbox no reciben sedes.
+- No crea cajas, administradores, personal ni productos: esos pasos siguen en sus flujos (Cajas, delegación y Personal POS). Reintentar la misma solicitud no duplica la sede. Usa el comando existente `platform_add_school_location`; sin migraciones. Sin push ni despliegue.
+
 ## Clientes: ciclo de vida del cliente (local)
 
 - **Clientes** muestra el estado de cada cliente (**Activo**, **Suspendido**, **Cerrado**) y permite filtrarlos; los clientes cerrados siguen visibles.

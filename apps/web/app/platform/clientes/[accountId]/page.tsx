@@ -7,6 +7,8 @@ import { CustomerActivationAction } from "./activation-action";
 import { customerActivationStatusSchema } from "../../../../lib/platform/customer-activation";
 import { AdministratorAction } from "./administrator-action";
 import { CustomerLifecyclePanel } from "./lifecycle-panel";
+import { AddLocationAction } from "./add-location-action";
+import { ADD_LOCATION_CAPABILITY } from "../../../../lib/platform/school-location";
 import { LIFECYCLE_MANAGE, lifecycleHistorySchema } from "../../../../lib/platform/customer-lifecycle";
 export default async function CustomerPage({ params }: { params: Promise<{ accountId: string }> }) {
   const session = await requirePlatform();
@@ -29,7 +31,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
     {customer.tenant_kind === "customer" && <CustomerLifecyclePanel accountId={customer.account.id} name={customer.account.name} status={customer.account.status}
       canManage={session.capabilities.includes(LIFECYCLE_MANAGE)} history={history?.kind === "ready" ? history.value.events : null} />}
-    <CustomerHierarchy customer={customer} />
+    <CustomerHierarchy customer={customer} schoolAction={customer.tenant_kind === "customer" && customer.account.status === "active" && session.capabilities.includes(ADD_LOCATION_CAPABILITY)
+      ? (school) => school.status === "active" ? <AddLocationAction accountId={customer.account.id} schoolId={school.id} schoolName={school.name} /> : null : undefined} />
     <section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Administrador inicial</h2>
       {customer.administrators.map((admin, index) => <p key={index}>{admin.display_name} · Acceso completado · {statusLabel[admin.status]} · Persona {statusLabel[admin.person_status]?.toLowerCase()}</p>)}
       {initialIntents.length === 0 && customer.administrators.length === 0 && <p>No hay solicitudes de administrador inicial visibles.</p>}

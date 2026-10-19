@@ -4,6 +4,7 @@
 
 - Estados del cliente: **Activo**, **Suspendido** y **Cerrado** (`accounts.status`). Solo la Plataforma (`platform:tenant:lifecycle:manage`, rol `platform_admin`) puede suspender, reactivar, cerrar o reabrir; siempre con motivo, estado esperado y auditoría inmutable. Ningún rol del cliente tiene esta autoridad.
 - Mientras el cliente no está Activo, sus membresías se conservan pero no conceden acceso (bloqueo central en la base de datos, también para sesiones abiertas y rutas guardadas). No es la suspensión individual de identidad de Phase 6A y no la modifica.
+- Agregar sede (Plataforma, `platform:tenant:provision`): crea una ubicación y su cafetería en una escuela existente de un cliente Activo, mediante `platform_add_school_location`. No crea cajas, administradores, personal ni productos.
 - Suspender o cerrar no elimina ni anonimiza datos, no cambia saldos ni transacciones y no liquida nada. Reabrir devuelve el mismo cliente. Detalle: `docs/CUSTOMER_LIFECYCLE.md`.
 
 ## Identidad y credenciales (Phase 6A, local)
