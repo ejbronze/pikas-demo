@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## UX Wave E + Phase 5D.4: POS y búsqueda de transacciones (local)
+
+- **Transacciones** (Administración de cafetería): filtros del servidor por período (Hoy, 7 o 30 días, personalizado hasta 92 días), método de pago y estado de reembolso; búsqueda exacta por número de recibo; paginación con el total real. Cada venta muestra **Sin reembolso / Reembolso parcial / Reembolsada** calculado por PIKAS, y el detalle incluye artículos con cantidades reembolsadas, el historial de reembolsos y los reembolsos antiguos por monto sin asignarlos a artículos. Indica cómo reembolsar en el POS (Reembolsos → recibo #N).
+- Nueva lectura aditiva `cafeteria_transactions_read` / `cafeteria_transaction_detail` (migración `202610240001`), de solo lectura y con la misma autoridad que el historial de compras. Sin índice nuevo.
+- **POS**: encabezado con cajero y rol; cambiar de cliente ya no vacía la venta sin avisar; la venta actual muestra precio unitario, total por línea y «Quitar», y en móvil el total y «Continuar al pago» quedan siempre visibles; el pago muestra el disponible de PIKAS Cash, lo que falta o el cambio, y el botón dice exactamente «Cobrar RD$ X en efectivo / con PIKAS Cash». Una venta pendiente muestra su monto y método, y solo permite reintentar la misma venta. Al terminar: recibo, cambio a entregar y acceso directo para reembolsar; ventas recientes de esta pestaña.
+- Sin cambios en cálculos, métodos de pago, reembolsos, caja, cierre ciego (D8 sigue diferido) ni en el Demo. Sin push ni despliegue.
+
 ## UX Wave D.3: flujos administrativos restantes (local)
 
 - **Estudiantes**: búsqueda y filtros del servidor más claros, conteo, «Limpiar filtros», estados distintos para «sin estudiantes» y «sin resultados», y lista responsiva. Crear, editar información, matrícula, retiro y estado son tareas enfocadas con revisión y acción final explícita; los borradores de creación y edición se conservan solo en esta sesión del navegador y nunca se envían solos.

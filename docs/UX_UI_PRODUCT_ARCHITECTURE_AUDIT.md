@@ -2056,3 +2056,247 @@ No identity was created or relinked, and activation-link issuance is unchanged.
 Wave D's administrative scope is complete with D.3. Deferred items are listed above. Wave E
 (POS, Cashier close, Option B, 5D.4) and Wave F (broad accessibility and polish) remain
 untouched.
+
+## 29. UX Wave E + Phase 5D.4 — POS experience and transaction discovery (local)
+
+**Scope.**
+- Wave E: POS usability on the unchanged sale engine.
+- Phase 5D.4: an additive, server-authoritative transaction read for Cafeteria Admin
+  Transacciones.
+
+**Owner gate.** The first pass returned **BLOCKED — 5D.4 BACKEND CONTRACT REQUIRED**. The
+Phase 5A Transacciones read had no filters and no refund state, and refund state existed
+only in the POS single-receipt lookup. The owner approved the additive contract.
+
+Not changed:
+- money movement or financial calculations;
+- tenders and the no-split rule;
+- the sale and register journals (idempotency);
+- Phase 5A register semantics and `cafeteria_operations_read`;
+- Phase 5C refund mechanics and authority;
+- 5D.1–5D.3 math;
+- cashier close and D8;
+- the Demo / sandbox POV;
+- Wave D administration.
+
+### Phase 5D.4 backend (migration `202610240001_cafeteria_transactions_read.sql`)
+
+- **New reads** (additive; nothing existing altered):
+  - `cafeteria_transactions_read(cafeteria, period, from, to, tender, refund_status, receipt, offset)`;
+  - `cafeteria_transaction_detail(cafeteria, purchase)`;
+  - the private pure helper `pikas_private.transaction_refund_state`.
+- **Authority:** identical to the Phase 5A purchase history.
+  - `begin_sandbox_admin_command` + `require_financial_admin(.., 'cafeteria:pos:purchases:read')`,
+    revalidated after reading. Execute is granted to `authenticated` only.
+  - Denied: other cafeterias, School/Account Admin, cashier, POS Supervisor without an admin
+    membership, Platform Admin, and the sandbox Cafeteria Admin POV.
+- **Dates:** the 5D periods (Hoy, últimos 7/30 días, custom ≤ 92 days, no future end) on
+  `purchases.business_date` in the school's time zone, with "today" from the server.
+- **Filters:**
+  - tender: `cash` / `student_wallet` / `staff_credit`;
+  - refund status: `none` / `partial` / `full`;
+  - exact receipt number across the cafeteria's history (not combined with other filters).
+
+  No cashier/staff filter (D12 stays deferred).
+- **Paging:** 25 per page. `total_count`, `has_more` and the page come from one statement over
+  the same filtered set.
+- **Refund state** (server only):
+  - refunded = Σ `refunds.amount_minor` of the purchase, covering every Phase 5C refund,
+    itemized or historical amount-only;
+  - the status is none, partial or full against `total_minor`;
+  - rows return `refunded_minor`, `remaining_minor` and `refund_status`;
+  - full agrees with the stored `remaining_after_minor` = 0.
+- **Legacy amount-only refunds:** they count at transaction level but are never assigned to
+  items.
+  - Item `refunded_quantity` comes only from `refund_items`.
+  - Each refund event reports `itemized` and `unallocated_minor`, and the detail returns
+    `unallocated_refund_minor`.
+  - Phase 5C itself rejects item refunds after an amount-only refund, so a mixed purchase is
+    always item-first.
+- **Detail:** the 5A purchase detail plus business date, items with refunded quantity and
+  amount, and the refund history (amount, tender, reason, notes, authorization, actor,
+  approver, register, remaining after, item lines).
+- **Read-only:** no table, index, grant scope or financial write. A test confirms row counts
+  are unchanged after reads.
+- **Index: NO INDEX ADDED.** Evidence comes from local EXPLAIN (ANALYZE) of a rolled-back
+  fixture with 3,000 sales in one day, the generic plan:
+  - candidates are one of two `UNION ALL` branches gated by a one-time filter:
+    - the exact receipt branch uses `purchases_cafeteria_id_purchase_number_key`;
+    - the period branch uses `purchases_cafeteria_time_idx`, with the `purchased_at` bound as
+      the index condition;
+  - refunds are summed through `refunds_purchase_id_refund_ordinal_key`, and item refunds
+    through `refund_items_pkey` / `refund_items_purchase_item`;
+  - full calls took 12–76 ms.
+
+  An initial `CASE`-in-`WHERE` form defeated both indexes and was rewritten before acceptance.
+- **Tests:**
+  - pgTAP `phase5d4_transactions.test.sql`: **86/86**. It covers:
+    - privileges and authority for every role, the sandbox POV and cross-cafeteria isolation;
+    - presets, custom, 92/93-day, reversed, future and invalid filter combinations;
+    - the business-date boundary (02:30 UTC = the previous local day) and a three-days-later
+      window;
+    - each tender, each refund status and combined filters;
+    - exact receipt search scoped to the cafeteria;
+    - none / partial item / cumulative full / PIKAS Cash full / staff credit / amount-only
+      partial / mixed full;
+    - pagination with a non-overlapping, ordered second page;
+    - detail items, events, unallocated amount-only refunds, and detail denial;
+    - read-only behaviour, and the 5A read unchanged.
+  - Regressions on the same local DB (rolled back): 5C.1 refunds 60/60, 5D.1 52/52, 5D.2
+    42/42, 5D.3 68/68.
+  - Phase 5A operations 46/47. The one failure counts all purchases in fixture cafeteria 111,
+    which holds a pre-existing local stage purchase from 2026-10-17; that is local data, not
+    this change.
+  - `supabase db lint` (public, pikas_private): no schema errors.
+
+### Transacciones (Cafeteria Admin)
+
+- **Filters:** a server-backed filter bar with period chips (custom dates validated to 92 days
+  before any request), Método de pago, Reembolso, and exact "Buscar recibo" (a leading # is
+  accepted).
+  - Receipt mode states that other filters do not apply and offers "Volver a los filtros".
+  - "N transacciones · from – to" comes from the server count.
+  - Limpiar filtros resets to Últimos 7 días.
+- **States:** distinct "No hay transacciones en este período", "No encontramos transacciones
+  con estos filtros" and "No encontramos el recibo #N"; errors use ErrorState with Reintentar.
+  Only the latest request may update the page.
+- **List:** the shared DataList.
+  - Desktop table and an intentional stacked list on mobile.
+  - Shows recibo + date/time, client, method, total, refund chip (Sin reembolso / Reembolso
+    parcial / Reembolsada) with the refunded amount, and caja · cajero.
+  - Server pagination (Anterior / Página N de M / Siguiente).
+- **Detail:** a read-only TaskWindow.
+  - Chip, total, refunded and remaining amounts; business date, client, method, caja,
+    registrada por, cash received and change.
+  - Items with "k de n reembolsado".
+  - A note for amount-only refunds ("no se asigna a ningún artículo").
+  - Refund history.
+  - "Actualizar" refetches the detail and the list (the authoritative post-refund refresh).
+- **Refund discovery:** refunds remain a POS action (Phase 5C: an operator with an open
+  register; approvals per policy). The detail says so plainly with the exact path
+  (Reembolsos → recibo #N) and a copy-receipt action. Fully refunded and staff-credit sales
+  explain why no refund is offered. Nothing is refunded from the admin UI.
+- **Sandbox:** the sandbox admin POV keeps "no financial access" and sends no request.
+
+### POS (Wave E)
+
+- **Strengths kept:** the guided Cliente → Productos → Confirmar venta → Cobrar → result flow,
+  the gallery/list view, categories and search, the Usuario PIKAS / No Usuario split,
+  explicit tender, and the exact-request sale and register journals.
+- **Header:** names operator and role ("José Ramírez · Cajero"; Supervisor where held) in both
+  the Demo POV and real headers.
+- **Customer change:** "Cambiar cliente" and "Buscar usuario PIKAS" no longer silently discard
+  an order.
+  - An in-app prompt states the item count, total and client, says nothing is charged, and
+    says the new client brings their own balance, limits and restrictions with the tender
+    chosen again.
+  - "Seguir con esta venta" changes nothing.
+  - Engine semantics are unchanged: a new client always starts a clean order.
+- **Products:** a result count and a distinct no-match state with "Ver todos los productos".
+  - Connected POS has no Popular/Frecuentes sections and no per-product restriction metadata.
+    None was added, since that would need new analytics or data.
+  - Client restrictions remain the existing alert.
+- **Current order:**
+  - each line shows name, unit price ("c/u"), line total, −/+ and Quitar;
+  - item count and total;
+  - on screens < 1024 px a fixed order bar keeps the total and "Continuar al pago" reachable
+    above the status bar.
+  - The amounts are display arithmetic over the authoritative catalog, as before; checkout
+    still sends `expected_total_minor`, and the server validates prices, versions and total.
+- **Payment:**
+  - no preselected tender;
+  - tender cards: PIKAS Cash shows "Disponible hoy" from the server purchase context (or
+    Congelado / No disponible); Efectivo; No Usuario offers only Efectivo;
+  - PIKAS Cash shows balance, available today, daily limit + spent, and per-purchase limit
+    from the server context, re-verified at checkout;
+  - cash shows "Faltan RD$ X" or "Cambio RD$ X";
+  - the existing `paymentIssue` limit and balance messages are unchanged.
+  - Staff credit is not a connected POS tender (unchanged).
+- **Cobrar:** "Cobrar RD$ X en efectivo" / "Cobrar RD$ X con PIKAS Cash", disabled as "Elige
+  un método de pago" until a tender is chosen. The page itself is the focused task, so there
+  is no extra confirmation window.
+- **Pending/uncertain:** "Venta pendiente de confirmar" shows the journaled amount, tender and
+  items. It explains that the retry resends exactly the same sale with the same key, and
+  offers only "Reintentar la misma venta". Everything else stays blocked by the engine.
+- **Success:** "Venta completada" with receipt #, total, tender and client; for cash,
+  "Recibido" and a prominent "Cambio a entregar"; for PIKAS Cash, the server's balance after.
+  - "Nueva venta" and "Ver recibo".
+  - Print stays unavailable, now stated.
+  - "Reembolsar esta venta" (real operator with an open register) opens Reembolsos with the
+    receipt pre-filled. The lookup still waits for the explicit search.
+- **Recent sales:** "Ventas recientes en esta pestaña" lists up to five authoritative receipts
+  this tab has already shown, with "Reembolsar" (pre-fill only). It disappears on reload. The
+  cashier gets no history read, and the Transacciones tab stays disabled.
+
+### D8 owner-decision note (review only — not implemented)
+
+- **Today:** the cashier counts blind and sees only "Caja cerrada y efectivo contado
+  registrado". `close_my_register_session` returns session, status and version; expected cash
+  and the difference are visible only to Cafeteria Admin (Cajas, Reportes → Conciliación).
+- **Possible change:** after a successful close, show the cashier their own Cuadrada /
+  Faltante / Sobrante from the stored 5A capture.
+- **Implications:**
+  - a new read (or extended result) letting the operator read their own closed session's
+    capture;
+  - an authority change (today only `cafeteria:pos:sessions:read` admins see it);
+  - pgTAP for own-session-only access and post-close-only timing.
+- **Risks:** it teaches expected-cash patterns that weaken future blind counts; it creates
+  social pressure at the till; and disputes would move to the cashier without the admin's
+  context.
+- **Benefits:** immediate feedback while the count is fresh, and fewer admin follow-ups for
+  simple miscounts.
+- **Recommendation:** keep D8 deferred for Beta 1.
+  - If wanted later, start with a supervisor/admin-visible post-close result.
+  - Or show the cashier only the status, without amounts.
+  - Gate it on pilot data about discrepancy frequency.
+
+### Validation (local, fictional)
+
+- **Browser-component tests** `components/pos-transactions.browser.test.tsx` (real Chromium,
+  unchanged sale engine, scripted transport): **11/11**. They cover:
+  - POS: header role, order lines and Quitar, the mobile order bar, catalog no-match, customer
+    change keep/discard with no request, explicit tender, PIKAS Cash availability,
+    cash shortfall/change and the Cobrar labels;
+  - POS recovery and result: a double-press sending one checkout, the uncertain pending state
+    and a same-key retry, the success result, and tab-local recent sales with refund pre-fill
+    and no lookup;
+  - Transacciones: the exact server request for each filter, combined filters and clear, the
+    92-day guard, exact receipt and no-match, server pagination, detail (refunded quantities,
+    amount-only unallocated, history, refund path, refresh), the failure state, sandbox with
+    no request, and mobile list markup.
+- **Route and engine tests:**
+  - `app/api/cafeteria/transactions/route.test.ts` **8/8**: parameters, echo checks, strict
+    input, authority and origin, error mapping.
+  - POS engine `lib/pos/connected-sale.test.tsx` **44/44**. Five expectations were updated to
+    the new copy; the behaviours are unchanged.
+- **The 4 `route-demo-provider` POS-header baseline failures now pass**, because the header
+  shows "José Ramírez · Cajero" again.
+- **Broad regression:** components, platform/admin apps, all API routes and lib — **1042/1042**
+  tests. Two browser files hit a joint-run hook timeout and pass alone (24/24).
+- TypeScript, ESLint on the changed files, the production build and `git diff --check` pass.
+- **Production-mode browser** (Foundation B stage, fictional Cajera and Cafeteria Admin) at
+  1440, 768 and 390:
+  - **POS:** header with role, Sol Auditoría selected, add/remove/Quitar, the change-client
+    prompt (kept), the Elige → PIKAS Cash → Faltan → exact-cash Cobrar labels, and No Usuario
+    offering cash only.
+  - **Transacciones:** 5 in the last 7 days; PIKAS Cash = 1; Reembolso parcial = 1;
+    Reembolsada → no-match; Hoy = 1; receipt #99999 not found; receipt #1 detail with
+    "1 de 1 reembolsado" and its refund event; receipt #2 detail with the refund path.
+  - Every check passed: no overflow, controls ≥ 44 px (POS category chips and the view toggle
+    raised to 44 px), detail full screen at 390 with the mobile nav hidden, no native dialogs,
+    no page errors.
+  - **Committed once at 1440:** fictional sale **#5** (RD$ 100.00 cash, Sol Auditoría,
+    Caja Principal). The result shown was "Recibo #5 · Efectivo · Cambio a entregar
+    RD$ 0.00"; then the recent sale and the refund pre-fill (no refund created).
+- No refunds were created. The other widths sent no sale.
+
+### Deferred
+
+- Cashier/staff filter (D12).
+- Student or customer transaction search (a new product decision).
+- POS print and reprint (not available in the connected POS).
+- Popular/Frecuentes for connected POS (needs analytics).
+- Per-product restriction badges (no product restriction data).
+- D8.
+- 5D.5 and 5D.6.
+- Split payment and offline queueing.

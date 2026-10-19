@@ -1,9 +1,10 @@
 # Phase 5D — Reporting & Reconciliation (plan)
 
 **Status:** owner decisions D1–D13 **RESOLVED** (§24). **5D.1 (reporting foundation +
-sales summary), 5D.2 (top products) and 5D.3 (reconciliation) implemented locally**; see
-the implementation status sections below. Slices 5D.4–5D.5 are not started, and 5D.6 is
-deferred (D9). Nothing is deployed.
+sales summary), 5D.2 (top products), 5D.3 (reconciliation) and 5D.4 (Transacciones lookup)
+implemented locally**; see the implementation status sections below and, for 5D.4, the
+Wave E + 5D.4 record in `UX_UI_PRODUCT_ARCHITECTURE_AUDIT.md` §29. Slice 5D.5 is not
+started, and 5D.6 is deferred (D9). Nothing is deployed.
 
 Established baseline:
 - Phase 5C closure: `efd668cb`.

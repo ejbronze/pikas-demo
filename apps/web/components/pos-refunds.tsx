@@ -26,10 +26,11 @@ async function post(body: object, key?: string, path = "/api/pos") {
   return { status: response.status, payload };
 }
 
-export function PosRefunds({ actorId, currency }: { actorId: string; currency: string }) {
+// initialReceipt (Wave E) only pre-fills the receipt number; the lookup still waits for an explicit search.
+export function PosRefunds({ actorId, currency, initialReceipt }: { actorId: string; currency: string; initialReceipt?: string }) {
   const journalKey = `pikas:pos-refund:${actorId}`;
   const money = (n: string | bigint) => formatMinor(n, currency);
-  const [number, setNumber] = useState("");
+  const [number, setNumber] = useState(initialReceipt ?? "");
   const [purchase, setPurchase] = useState<Refundability | null>(null);
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState<Record<string, number>>({});

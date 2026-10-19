@@ -28,7 +28,7 @@
 .pos-dark .pos-calculator-launcher { background:#14243a; color:#5eead4; border-color:#41536a; }
 .pos-tool-actions { display:flex; align-items:center; gap:.55rem; }
 .pos-customer-search-action { min-height:2.75rem; }
-.pos-filter,.pos-filter-active { min-height:2.5rem; flex:none; padding:.45rem .85rem; border:1px solid var(--border); border-radius:.7rem; background:var(--surface); color:var(--foreground-muted); font-size:.875rem; font-weight:800; }
+.pos-filter,.pos-filter-active { min-height:2.75rem; flex:none; padding:.45rem .85rem; border:1px solid var(--border); border-radius:.7rem; background:var(--surface); color:var(--foreground-muted); font-size:.875rem; font-weight:800; }
 .pos-filter-active { border-color:var(--primary); background:var(--primary); color:var(--primary-foreground); }
 .pos-catalog-panel { min-width:0; }
 .pos-catalog-header { position:relative; z-index:2; background:var(--surface); }
@@ -57,7 +57,7 @@
 .pos-product-state-unavailable { background:#fee2e2; color:#991b1b; }
 .pos-product-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.65rem; }
 .pos-view-toggle { display:inline-flex; gap:.15rem; padding:.2rem; border:1px solid var(--border); border-radius:.65rem; background:var(--surface); }
-.pos-view-toggle-button,.pos-view-toggle-active { display:grid; min-width:2.4rem; min-height:2.4rem; place-items:center; border:0; border-radius:.45rem; background:transparent; color:var(--foreground-muted); }
+.pos-view-toggle-button,.pos-view-toggle-active { display:grid; min-width:2.75rem; min-height:2.75rem; place-items:center; border:0; border-radius:.45rem; background:transparent; color:var(--foreground-muted); }
 .pos-view-toggle-active { background:var(--primary); color:var(--primary-foreground); }
 .pos-product-list { display:grid; gap:.35rem; }
 .pos-letter-group { display:grid; gap:.35rem; }
@@ -179,3 +179,5 @@
   .admin-ux .btn:focus-visible, .admin-ux .btn-secondary:focus-visible { outline: 2px solid #4338ca; outline-offset: 3px; }
   .admin-dialog button:focus-visible, .admin-dialog summary:focus-visible { outline: 2px solid #4338ca; outline-offset: 3px; }
 }
+/* Wave E: mobile running order (below lg), above the fixed POS status bar. */
+.pos-order-bar { position:fixed; z-index:34; inset:auto 0 2.1rem; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.6rem 1rem; border-top:1px solid var(--border); background:var(--surface); box-shadow:0 -4px 12px rgb(2 26 57 / .08); }
