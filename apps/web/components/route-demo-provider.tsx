@@ -9,9 +9,9 @@ const DemoProvider = lazy(() => import("./demo-provider").then((module) => ({ de
 
 export function RouteDemoProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  // Demo state exists only in demo mode. Outside it (pilot/production) the provider never mounts,
+  // so it makes no demo requests (e.g. the intentionally unavailable /api/menu).
+  if (!isDemoMode()) return children;
   if (pathname === "/platform" || pathname?.startsWith("/platform/")) return children;
-  if (!isDemoMode() && (pathname === null || pathname === "/pos" || pathname.startsWith("/pos/") || pathname === "/admin/escuela" || pathname.startsWith("/admin/escuela/") || pathname === "/admin/cafeteria" || pathname.startsWith("/admin/cafeteria/"))) {
-    return children;
-  }
   return <Suspense fallback={null}><DemoProvider>{children}</DemoProvider></Suspense>;
 }

@@ -78,6 +78,13 @@ Nada de esto se implementa ahora. Secuencia: **análisis primero → revisión d
 
 Phase 6: hardening financiero, autoridad, concurrencia y casos operativos. Phase 7: paquete de operación/preparación del piloto Beta 1. No se implementan en Phase 5A.
 
+### Familias y estudiantes (presentación lista; conexión pendiente)
+
+- La presentación de familia y estudiante usa contratos de lectura seguros para familias (`apps/web/lib/family/contracts.ts`) alimentados hoy solo por escenarios de demostración.
+- Decisiones fijadas: las familias **consultan** límites, alergias y restricciones pero **no los editan** (los administra la escuela); la conexión de **familias va antes** que la de estudiantes.
+- Pendiente antes de conectar: elegir el modelo autoritativo de tutores (`student_guardians` o `families` + `family_guardians` + `family_student_relationships`), lecturas del servidor limitadas a la propia persona o a estudiantes vinculados, e incorporación de tutores con la activación y usuarios existentes. La política de acceso de estudiantes se decidirá después.
+- «Recargar» y el desglose de la comisión del 3% (pagado, comisión, acreditado) tendrán su lugar por estudiante cuando exista la recarga gestionada por PIKAS; hoy no se muestran.
+
 ### Data Retention & Customer Offboarding Policy (futuro, sin decidir)
 
 Hoy, cerrar un cliente conserva todos sus datos (ver [ciclo de vida del cliente](CUSTOMER_LIFECYCLE.md)). **Aún no se ha elegido ningún plazo de retención.** La política futura deberá distinguir datos financieros/contables, liquidaciones, compras/reembolsos/ajustes, auditoría y seguridad, configuración operativa, identidad del personal, información de estudiantes y de padres/tutores, autenticación/contacto y analítica agregada/anonimizada; y considerar necesidad operativa legítima, obligaciones legales o regulatorias aplicables (con evidencia), privacidad, seguridad, minimización y anonimización. Incluirá cómo se resuelven saldos y obligaciones pendientes al desvincular un cliente.

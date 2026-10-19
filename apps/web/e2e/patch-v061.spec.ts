@@ -12,11 +12,8 @@ async function seed(page:Page,change:(state:any)=>void){const state=await snapsh
 async function persist(page:Page){expect((await invoke(page,'voidPos',['audit fixture','fixture-void-key'])).ok).toBe(true)}
 
 test('duplicate codes fail at creation and regeneration; ambiguous lookup fails and name selection uses stable ID',async({page,context})=>{
-  await login(context);await page.goto('/familias/estudiantes');await page.getByRole('button',{name:'Añadir',exact:true}).click();
-  const form=page.locator('form').filter({has:page.getByRole('heading',{name:'Añadir estudiante'})});
-  for(const [name,value] of [['first','Audit'],['last','Demo'],['preferred','Audit'],['grade','4A'],['code','PK-10982'],['daily','350'],['purchase','250']])await form.locator(`[name="${name}"]`).fill(value);
-  await form.getByRole('button',{name:'Guardar',exact:true}).click();await expect(form.getByRole('alert')).toContainText('duplicado');
-  // Use the mutation boundary directly too; no duplicate may be persisted.
+  // Families no longer add students (school-managed); the demo mutation boundary still refuses duplicates.
+  await login(context);await page.goto('/familias');
   const record={firstName:'Audit',lastName:'Demo',preferredName:'Audit',grade:'4A',code:'PK-10982',dailyLimit:350,perPurchaseLimit:250,allergies:[],blocked:[]};
   expect((await invoke(page,'addStudent',[record])).ok).toBe(false);
   await login(context,'school_admin');await page.goto('/admin/escuela/estudiantes');
@@ -56,11 +53,6 @@ for(const scopes of [['eligibility'],['eligibility','transactions'],['eligibilit
   const result=await invoke(page,'checkoutPos',['sofia',[{itemId:'menu-pasta',quantity:1}],'scope-checkout','student_wallet']);expect(result.ok).toBe(scopes.length===5);expect((await snapshot(page)).purchases).toHaveLength(scopes.length===5?1:0);
 });
 
-test('parent removes and adds a canonical restriction visible to POS',async({page,context})=>{
-  await login(context);await page.goto('/familias/estudiantes/sofia');await page.getByLabel('Productos bloqueados',{exact:true}).fill('');await page.getByRole('button',{name:'Guardar controles'}).click();await expect(page.getByRole('status')).toContainText('Controles de alimentación guardados');
-  expect((await snapshot(page)).students[0].blockedProductIds).toEqual([]);await pos(page,context);await identify(page);await expect(page.getByRole('article').filter({hasText:'Bebidas energéticas'}).getByRole('button',{name:'Añadir al carrito'})).toBeEnabled();
-  await login(context);await page.goto('/familias/estudiantes/sofia');await page.getByLabel('Productos bloqueados',{exact:true}).fill('Bebidas energéticas');await page.getByRole('button',{name:'Guardar controles'}).click();await expect(page.getByRole('status')).toContainText('Controles de alimentación guardados');await pos(page,context);await identify(page);await expect(page.getByRole('article').filter({hasText:'Bebidas energéticas'}).getByRole('button',{name:'Añadir al carrito'})).toBeDisabled();
-});
 
 test('session HTTP failure blocks checkout, shows Sync Issue and explicitly recovers',async({page,context})=>{
   await pos(page,context);await page.getByRole('button',{name:'No usuario',exact:true}).click();await add(page);await page.getByRole('button',{name:'Continuar al pago'}).click();await page.getByRole('button',{name:'Monto exacto'}).click();
@@ -75,7 +67,6 @@ test('mixed cash events reconcile and cash refund summaries show amount and dest
   expect((await invoke(page,'refundPos',[purchase.id,10000,'Entrega parcial','refund-once'])).ok).toBe(true);expect((await invoke(page,'refundPos',[purchase.id,10000,'Entrega parcial','refund-once'])).ok).toBe(true);
   state=await snapshot(page);expect(state.events.filter((e:any)=>e.type==='replenishment')).toHaveLength(1);expect(state.events.filter((e:any)=>e.type==='refund')).toHaveLength(1);expect(state.students[0]).toMatchObject({balance:2950,spentToday:240});expect(state.purchases[0]).toEqual(purchase);
   for(const [label,value]of [['Ventas brutas en efectivo','RD$180.00'],['Recargas recibidas en efectivo','RD$500.00'],['Reembolsos en efectivo','RD$100.00'],['Cierre esperado','RD$580.00']])await expect(page.getByText(label,{exact:true}).locator('..')).toContainText(value);
-  await login(context);await page.goto('/familias/transacciones');await expect(page.getByText('Devuelto en efectivo',{exact:true})).toBeVisible();await expect(page.getByText('Devuelto en efectivo',{exact:true}).locator('..')).toContainText('RD$100.00');
 });
 
 test('refund integration rejects cumulative excess, invalid status, unauthorized callers and changed policy',async({page,context})=>{

@@ -24,7 +24,7 @@ export default function Home() {
           <div>
             <span className="chip bg-blue-50 text-blue-700">La vida escolar, mejor conectada</span>
             <h1 className="mt-4 text-4xl font-black leading-tight text-blue-950 sm:text-5xl">Más autonomía para estudiantes. Más tranquilidad para familias.</h1>
-            <p className="mt-4 max-w-xl text-lg leading-7 text-slate-600">PIKAS reúne compras escolares sin efectivo, controles de alimentación, preórdenes y hábitos de presupuesto en un solo lugar.</p>
+            <p className="mt-4 max-w-xl text-lg leading-7 text-slate-600">PIKAS reúne compras escolares sin efectivo con PIKAS Cash, controles de alimentación y la actividad de compras de cada estudiante en un solo lugar.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/login" className="btn">Entrar a PIKAS <ArrowRight size={18}/></Link>
               <a href="#experiencias" className="btn-secondary">Conocer la experiencia</a>

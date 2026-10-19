@@ -55,11 +55,16 @@ describe("root route demo boundary", () => {
     expect(await render()).not.toContain("data-demo-provider");
     expect(mocks.initialize).not.toHaveBeenCalled();
   });
-  it.each(["/familias", "/estudiante", "/pos-other"])("preserves the provider for existing %s routes", async (pathname) => {
+  it.each(["/", "/login", "/familias", "/estudiante", "/pilot/connected", "/pos-other"])("never loads demo state outside demo mode (%s): no demo requests such as /api/menu", async (pathname) => {
     vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "false");
     mocks.pathname = pathname;
+    expect(await render()).not.toContain("data-demo-provider");
+    expect(mocks.load).not.toHaveBeenCalled(); expect(mocks.initialize).not.toHaveBeenCalled();
+  });
+  it.each(["/familias", "/estudiante", "/"])("keeps the provider in demo mode for %s", async (pathname) => {
+    vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "true");
+    mocks.pathname = pathname;
     expect(await render()).toContain("data-demo-provider");
-    expect(mocks.initialize).toHaveBeenCalledOnce();
   });
   it.each(["/pos", "/pos/caja", "/admin/escuela", "/admin/escuela/estudiantes", "/admin/cafeteria"])("preserves the provider for demo-mode %s", async (pathname) => {
     vi.stubEnv("NEXT_PUBLIC_PIKAS_DEMO_MODE", "true");

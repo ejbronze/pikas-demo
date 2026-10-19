@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## Familias y estudiantes: nueva presentación (solo demostración, local)
+
+- Las experiencias de **familia** y **estudiante** se rediseñaron para el móvil con los conceptos reales de PIKAS: saldo **PIKAS Cash** por estudiante, **Compras** (recibo, cafetería, artículos, total, forma de pago y reembolsos) y **movimientos de PIKAS Cash** en lenguaje sencillo, con el saldo después de cada uno.
+- Navegación: familia **Inicio · Actividad · Perfil** (una tarjeta por estudiante, sin saldo familiar combinado; selector de estudiante); estudiante **Inicio · Compras · Perfil**.
+- Límites diarios y por compra, alergias y restricciones se muestran **solo para consulta**: los administra la escuela.
+- Se eliminaron de estas experiencias los conceptos que PIKAS no tiene: preórdenes y pedidos, menú para ordenar, QR rotativo, «Mi plan», recarga de demostración y la gestión de estudiantes por la familia.
+- Siguen siendo **solo de demostración** (escenarios ficticios); no hay acceso conectado para familias ni estudiantes. La conexión de familias se hará antes que la de estudiantes, tras definir el modelo de tutores y la autoridad. En modo piloto ya no se monta el estado de demostración (desaparece la solicitud innecesaria a `/api/menu`). Sin cambios de base de datos. Sin push ni despliegue.
+
 ## Clientes: agregar sede (local)
 
 - En el detalle del cliente, la Plataforma puede **Agregar sede** a una escuela de un cliente **Activo**: indica el código y nombre de la sede y de su cafetería. Una sola operación crea la sede (ubicación) y su cafetería, que aparecen de inmediato en la estructura del cliente.

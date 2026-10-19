@@ -5,13 +5,11 @@ import {usePathname} from "next/navigation";
 import type {ComponentType} from "react";
 import {
   Home,
-  Users,
   ReceiptText,
-  Utensils,
   UserRound,
-  WalletCards,
   LogOut,
 } from "./icons";
+import {isDemoMode} from "@/lib/env";
 import {BrandLogo} from "./brand-logo";
 
 type ShellRole = "parent" | "student";
@@ -20,24 +18,19 @@ type NavItem = {
   label: string;
   icon: ComponentType<{size?: number; className?: string}>;
   match: "exact" | "prefix";
-  mobile: boolean;
 };
 
+// Consumer navigation: three destinations each, identical on desktop and on the mobile bar.
 const navigation: Record<ShellRole, readonly NavItem[]> = {
   parent: [
-    {href: "/familias", label: "Inicio", icon: Home, match: "exact", mobile: true},
-    {href: "/familias/estudiantes", label: "Estudiantes", icon: Users, match: "prefix", mobile: true},
-    {href: "/familias/transacciones", label: "Movimientos", icon: ReceiptText, match: "prefix", mobile: true},
-    {href: "/familias/preordenes", label: "Preórdenes", icon: Utensils, match: "prefix", mobile: true},
-    {href: "/familias/perfil", label: "Perfil", icon: UserRound, match: "prefix", mobile: true},
+    {href: "/familias", label: "Inicio", icon: Home, match: "exact"},
+    {href: "/familias/actividad", label: "Actividad", icon: ReceiptText, match: "prefix"},
+    {href: "/familias/perfil", label: "Perfil", icon: UserRound, match: "prefix"},
   ],
   student: [
-    {href: "/estudiante", label: "Inicio", icon: Home, match: "exact", mobile: true},
-    {href: "/estudiante/menu", label: "Menú", icon: Utensils, match: "prefix", mobile: true},
-    {href: "/estudiante/preordenes", label: "Pedidos", icon: ReceiptText, match: "prefix", mobile: true},
-    {href: "/estudiante/transacciones", label: "Mis compras", icon: ReceiptText, match: "prefix", mobile: true},
-    {href: "/estudiante/presupuesto", label: "Mi plan", icon: WalletCards, match: "prefix", mobile: false},
-    {href: "/estudiante/perfil", label: "Perfil", icon: UserRound, match: "prefix", mobile: true},
+    {href: "/estudiante", label: "Inicio", icon: Home, match: "exact"},
+    {href: "/estudiante/compras", label: "Compras", icon: ReceiptText, match: "prefix"},
+    {href: "/estudiante/perfil", label: "Perfil", icon: UserRound, match: "prefix"},
   ],
 };
 
@@ -56,7 +49,7 @@ function NavigationLink({item, pathname, studentMode, mobile = false}: {
   return <Link
     aria-current={current ? "page" : undefined}
     className={mobile
-      ? `flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-bold leading-tight ${current ? studentMode ? "bg-violet-50 text-violet-800" : "bg-blue-50 text-blue-800" : "text-slate-600"}`
+      ? `flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-xs font-bold leading-tight ${current ? studentMode ? "bg-violet-50 text-violet-800" : "bg-blue-50 text-blue-800" : "text-slate-600"}`
       : `nav-link ${current ? studentMode ? "bg-white text-violet-900 shadow-sm" : "nav-active" : "text-white/80 hover:bg-white/10"}`}
     data-nav-label={item.label}
     href={item.href}
@@ -69,7 +62,6 @@ function NavigationLink({item, pathname, studentMode, mobile = false}: {
 export function AppShell({role, children}: {role: ShellRole; children: React.ReactNode}) {
   const pathname = usePathname();
   const items = navigation[role];
-  const mobileItems = items.filter(item => item.mobile);
   const studentMode = role === "student";
   const home = studentMode ? "/estudiante" : "/familias";
 
@@ -98,12 +90,9 @@ export function AppShell({role, children}: {role: ShellRole; children: React.Rea
     <div className="min-w-0" data-testid="shell-content">
       <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
         <Link href={home} className="flex min-h-11 items-center md:hidden" aria-label="PIKAS, inicio"><BrandLogo compact className="size-9"/></Link>
-        <div className="hidden min-w-0 md:block">
-          <span className="label">{studentMode ? "Mi espacio" : "Portal familiar"}</span>
-          <p className="truncate text-sm font-bold">{studentMode ? "¡Hola, Sofi!" : "Familia Rosa"}</p>
-        </div>
+        <p className="hidden min-w-0 truncate text-sm font-bold md:block">{studentMode ? "Mi espacio PIKAS" : "PIKAS para familias"}</p>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-950">Modo demo</span>
+          {isDemoMode() && <span className="whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-950">Modo demo</span>}
           <form action="/api/auth/logout" method="post" className="md:hidden">
             <button aria-label="Cerrar sesión" className="grid size-11 place-items-center rounded-xl text-slate-600 hover:bg-slate-100">
               <LogOut size={19}/>
@@ -111,9 +100,9 @@ export function AppShell({role, children}: {role: ShellRole; children: React.Rea
           </form>
         </div>
       </header>
-      <main className="app-main mx-auto min-w-0 max-w-7xl p-4 sm:p-5 md:p-6" data-testid="shell-main">{children}</main>
-      <nav className="mobile-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-1 pt-1 backdrop-blur md:hidden" aria-label="Navegación móvil" data-testid="mobile-navigation">
-        {mobileItems.map(item => <NavigationLink key={item.href} item={item} pathname={pathname} studentMode={studentMode} mobile/>) }
+      <main className="app-main mx-auto min-w-0 max-w-5xl p-4 sm:p-5 md:p-8" data-testid="shell-main">{children}</main>
+      <nav className="mobile-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-slate-200 bg-white/95 px-1 pt-1 backdrop-blur md:hidden" aria-label="Navegación móvil" data-testid="mobile-navigation">
+        {items.map(item => <NavigationLink key={item.href} item={item} pathname={pathname} studentMode={studentMode} mobile/>) }
       </nav>
     </div>
   </div>;
