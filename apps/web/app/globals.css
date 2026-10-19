@@ -181,3 +181,5 @@
 }
 /* Wave E: mobile running order (below lg), above the fixed POS status bar. */
 .pos-order-bar { position:fixed; z-index:34; inset:auto 0 2.1rem; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.6rem 1rem; border-top:1px solid var(--border); background:var(--surface); box-shadow:0 -4px 12px rgb(2 26 57 / .08); }
+/* Wave F: in-page anchors and focused detail headings clear the sticky shell header. */
+[id^="report-"], h3[tabindex="-1"] { scroll-margin-top: 5rem; }

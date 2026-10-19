@@ -1,6 +1,7 @@
 'use client';
 import { sessionFetch } from '../../../lib/auth/session-fetch';
 import { useRef,useState } from 'react';
+import { ConfirmAction } from '../../../components/confirm-action';
 export function InvitationButton({handle}:{handle:string}) {
  const [busy,setBusy]=useState(false),[link,setLink]=useState(''),[message,setMessage]=useState('');
  const [copyFeedback,setCopyFeedback]=useState<{link:string;message:string}|null>(null);
@@ -22,6 +23,6 @@ export function InvitationButton({handle}:{handle:string}) {
   try {await navigator.clipboard.writeText(currentLink);setCopyFeedback({link:currentLink,message:'Enlace copiado'});}
   catch {setCopyFeedback({link:currentLink,message:'No se pudo copiar. Selecciona el enlace privado y cópialo manualmente.'});}
  }
- return <div className="min-w-0 space-y-3"><button type="button" className={link?'btn-destructive':'btn'} disabled={busy} onClick={()=>{if(!link||confirm('¿Reemplazar el enlace? El enlace anterior dejará de funcionar.'))void prepare();}}>{busy?'Preparando…':link?'Reemplazar enlace':'Crear enlace de invitación'}</button>
+ return <div className="min-w-0 space-y-3"><ConfirmAction className={link?'btn-destructive':'btn'} disabled={busy} ask={!!link} question="¿Reemplazar el enlace? El enlace anterior dejará de funcionar." label={busy?'Preparando…':link?'Reemplazar enlace':'Crear enlace de invitación'} onConfirm={()=>void prepare()}/>
  {message&&<p role="status">{message}</p>}{link&&<div className="min-w-0 space-y-3"><label className="block">Enlace privado de activación<input className="field mt-1 w-full" readOnly value={link} onFocus={event=>event.currentTarget.select()}/></label><button type="button" className="btn-secondary" onClick={()=>void copy()}>Copiar enlace</button>{copyFeedback?.link===link&&<p role="status">{copyFeedback.message}</p>}</div>}</div>;
 }

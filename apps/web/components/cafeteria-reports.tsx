@@ -69,6 +69,11 @@ export function CafeteriaReports({ cafeteriaId, sandbox, reconciliation = false 
       {periods.map(([value, label]) => <button key={value} type="button" aria-pressed={period === value} className={`min-h-11 ${period === value ? 'btn' : 'btn-secondary'}`}
         onClick={() => { setPeriod(value); setRangeError(''); if (value === 'custom') { clearSummary(); clearProducts(); clearCash(); if (range) loadAll('custom', range); } }}>{label}</button>)}
     </div>
+    {/* Wave F (H35): on narrow screens the report is long; jump links reach each section. */}
+    <nav aria-label="Secciones del reporte" className="flex flex-wrap gap-x-4 lg:hidden">
+      {([['#report-tenders', 'Método de pago'], ['#report-top-products', 'Productos principales'], ...(reconciliation ? [['#report-reconciliation', 'Conciliación de caja']] : [])] as const).map(([href, label]) =>
+        <a key={href} href={href} className="inline-flex min-h-11 items-center text-sm font-bold text-teal-800 underline">{label}</a>)}
+    </nav>
     {period === 'custom' && <form className="card flex flex-wrap items-end gap-3 p-4" noValidate onSubmit={event => {
       event.preventDefault(); const problem = customRangeError(draft.from, draft.to); setRangeError(problem ?? '');
       if (!problem) { setRange(draft); loadAll('custom', draft); } }}>

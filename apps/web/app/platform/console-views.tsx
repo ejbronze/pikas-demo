@@ -27,5 +27,5 @@ export function CustomerHierarchy({ customer }: { customer: CustomerOverview }) 
   </section>;
 }
 export function CustomerLink({ id, name }: { id: string; name: string }) {
-  return <Link className="font-semibold text-emerald-700 underline" href={`/platform/clientes/${id}`}>{name}</Link>;
+  return <Link className="inline-flex min-h-11 items-center font-semibold text-emerald-700 underline" href={`/platform/clientes/${id}`}>{name}</Link>;
 }

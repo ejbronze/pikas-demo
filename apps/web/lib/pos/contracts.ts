@@ -87,7 +87,7 @@ export function paymentIssue(context: PurchaseContext | null, total: bigint, ten
   if (!anonymous && context!.per_transaction_limit.enabled && total > BigInt(context!.per_transaction_limit.limit_minor!)) return "Límite por compra excedido.";
   if (!anonymous && context!.daily_limit.enabled && total + BigInt(context!.spent_today_minor) > BigInt(context!.daily_limit.limit_minor!)) return "Límite diario excedido.";
   if (tender === "student_wallet") {
-    if (!context?.wallet || context.wallet.status !== "active") return "Saldo PIKAS no disponible.";
+    if (!context?.wallet || context.wallet.status !== "active") return "PIKAS Cash no disponible.";
     if (total === 0n) return "El pago con saldo debe ser mayor que cero.";
     if (total > BigInt(context.available_today_minor)) return "Saldo disponible insuficiente.";
   } else {

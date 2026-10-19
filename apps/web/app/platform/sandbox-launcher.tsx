@@ -25,7 +25,7 @@ export function SandboxLauncher({ state }: { state: SandboxLauncherState }) {
         <p className="mt-1 text-slate-700">
           {active.accountName} · {active.cafeteriaName}
         </p>
-        <p className="mt-2 text-sm">Operador: {active.operatorName} · Vence: {new Date(active.expiresAt).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" })}</p>
+        <p className="mt-2 text-sm">Operador: {active.operatorName} · Vence: {new Date(active.expiresAt).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", dateStyle: "medium", timeStyle: "short" })}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
           <div>
             {active.canOpenExperience ? <Link className="btn w-full sm:w-auto" href={active.destination}>{active.povCode === "cashier" ? "Abrir POS" : "Abrir administración"}</Link> : <><button className="btn w-full sm:w-auto" disabled>{active.povCode === "cashier" ? "Abrir POS" : "Abrir administración"}</button><p className="mt-1 text-xs text-slate-600">Acceso sin confirmar. Actualiza la página.</p></>}

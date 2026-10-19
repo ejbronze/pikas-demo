@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## UX Wave F: accesibilidad, diseño adaptable y pulido final (local)
+
+- Revisión automática (axe) y por teclado de 26 páginas en móvil, tableta y escritorio: ahora sin errores de accesibilidad, sin desbordes y con todos los controles de al menos 44 px (incluidas las filas de sesiones en **Cajas**, el acceso a inicio en móvil y los enlaces de inicio de sesión).
+- **Cajas**: sesiones más fáciles de tocar, sin identificadores técnicos en las listas, horas sin segundos y el detalle recibe el foco al abrirse. **Reportes** en móvil: enlaces para saltar a Método de pago, Productos principales y Conciliación de caja.
+- Sin diálogos nativos del navegador en los flujos conectados: reemplazar enlaces de activación, cerrar caja en el POS (muestra solo el monto contado; el conteo sigue a ciegas) y salir del demo con trabajo sin enviar ahora se confirman dentro de PIKAS.
+- Mensajes del POS con la terminología PIKAS Cash. Sin cambios en base de datos, autoridad, cálculos, cobros, reembolsos, reportes ni en el Demo. Sin push ni despliegue.
+
 ## Phase 5D.5: reporte de PIKAS Cash de la escuela (local)
 
 - Nueva sección **PIKAS Cash** en Administración escolar (y para la Administración de cuenta, por escuela): saldo PIKAS Cash total de los estudiantes **ahora**, monederos activos y congelados, y saldos negativos.

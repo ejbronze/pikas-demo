@@ -16,7 +16,7 @@ export function SandboxAdminContext({ pov }: { pov?: SandboxPov }) {
   if (!pov) return null;
   return <aside role="status" className="border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
     <p className="font-bold">Modo demostración · {experienceLabel[pov.pov_code]}</p>
-    <p>Operador: {pov.operator_name} · {expired ? "Demostración vencida" : `Vence: ${new Date(pov.expires_at).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" })}`}</p>
+    <p>Operador: {pov.operator_name} · {expired ? "Demostración vencida" : `Vence: ${new Date(pov.expires_at).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", dateStyle: "medium", timeStyle: "short" })}`}</p>
     <div className="mt-2 flex flex-wrap items-center gap-3"><Link className="btn-secondary" href="/platform/demostracion">Volver a demostración / cambiar experiencia</Link><ExitDemoButton returnToPlatform /></div>
   </aside>;
 }

@@ -28,7 +28,7 @@ export default async function PlatformHomePage() {
       {available.map((d) => <Link key={d.href} className="card p-5" href={d.href}><h2 className="font-bold">{d.title}</h2><p>{d.text}</p></Link>)}
     </div>}
     {activity && <section className="card p-5"><h2 className="text-lg font-bold">Actividad reciente</h2>
-      {activity.kind !== "ready" ? <ReadFailure kind={activity.kind} /> : activity.value.length === 0 ? <p className="mt-3">Todavía no hay actividad registrada.</p> : <ul className="mt-3 space-y-3">{activity.value.map((event) => <li key={event.id}>{activityLabels[event.action] ?? "Actividad de plataforma"}<span className="ml-2 text-sm text-slate-600">{new Date(event.occurred_at).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" })}</span></li>)}</ul>}
+      {activity.kind !== "ready" ? <ReadFailure kind={activity.kind} /> : activity.value.length === 0 ? <p className="mt-3">Todavía no hay actividad registrada.</p> : <ul className="mt-3 space-y-3">{activity.value.map((event) => <li key={event.id}>{activityLabels[event.action] ?? "Actividad de plataforma"}<span className="ml-2 text-sm text-slate-600">{new Date(event.occurred_at).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", dateStyle: "medium", timeStyle: "short" })}</span></li>)}</ul>}
     </section>}
   </>;
 }

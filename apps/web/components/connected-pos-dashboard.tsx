@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Grid2X2, List } from "lucide-react";
 import type { PosAccessContext } from "@/lib/pos/access-context";
 import { ConnectedSale, type SaleState } from "../lib/pos/connected-sale";
@@ -36,6 +36,9 @@ export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { s
   const [demoLeaving, setDemoLeaving] = useState(false);
   const [registerDraft, setRegisterDraft] = useState("");
   const [departureNotice, setDepartureNotice] = useState("");
+  const departureArmed = useRef(false);
+  // Any change to the unsent work re-arms the departure warning.
+  useEffect(() => { departureArmed.current = false; }, [state.cart, state.tender, state.cash, registerDraft]);
   const [workspace, setWorkspace] = useState<"sale" | "register" | "refunds">(initialWorkspace);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -80,7 +83,9 @@ export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { s
             setDepartureNotice("Hay una operación pendiente de confirmar. Resuélvela antes de cambiar de experiencia o salir del demo."); return false;
           }
           const dirty = (!current.receipt && (current.cart.length > 0 || current.tender !== null || current.cash !== "")) || registerDraft !== "";
-          if (dirty && !window.confirm("Se descartará el trabajo financiero sin enviar: venta, pago o conteo de caja. ¿Continuar?")) return false;
+          // Wave F: in-app two-step warning (was window.confirm). The first attempt only warns; repeating it discards.
+          if (dirty && !departureArmed.current) { departureArmed.current = true; setDepartureNotice("Tienes trabajo sin enviar (venta, pago o conteo de caja). Si cambias de experiencia o sales del demo se descartará; no se envía nada. Vuelve a elegir la opción para continuar."); return false; }
+          departureArmed.current = false;
           if (!sale.discardForDemoDeparture()) { setDepartureNotice("No se pudo cerrar el seguimiento de la venta. Resuelve la operación antes de continuar."); return false; }
           setRegisterDraft(""); setDemoLeaving(true); return true;
         }} /></> : <>        <header className="flex flex-wrap items-center justify-between gap-3 bg-pikas-navy px-4 py-3 text-white">
@@ -151,6 +156,7 @@ export function CommittedReceipt({ receipt }: { receipt: Receipt }) {
 
 function ConnectedRegister({ sale, state, cash, setCash }: { sale: ConnectedSale; state: SaleState; cash: string; setCash: (value: string) => void }) {
   const [registerId, setRegisterId] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
   const session = state.bootstrap?.session;
   const registers = state.bootstrap?.registers ?? [];
   const selected = registerId || registers[0]?.register_id || "";
@@ -161,11 +167,13 @@ function ConnectedRegister({ sale, state, cash, setCash }: { sale: ConnectedSale
     {!state.bootstrap ? <p role="status">Estado de caja sin confirmar.</p> : session ? <><p className="font-bold">Caja abierta · {session.register_name_snapshot}</p><p>Fondo inicial: {formatMinor(session.opening_cash_minor, session.currency_code)}</p><p className="text-sm">La sesión existente se recuperó automáticamente.</p></> : <p>{registers.length ? "Abre una caja asignada para comenzar a vender." : "No tienes cajas operables asignadas. Solicita una asignación antes de vender."}</p>}
     {pending ? <><p role="alert">Operación de caja pendiente de confirmar. Reintentar conserva la misma clave y los mismos importes.</p><button className="btn" disabled={state.busy || state.recoveryBlocked} onClick={() => void sale.retryRegister()}>Reintentar misma operación de caja</button></> : null}
     {!session ? <label className="block font-bold">Caja asignada<select className="field mt-2" value={selected} disabled={blocked} onChange={(e) => setRegisterId(e.target.value)}>{registers.map((r) => <option key={r.register_id} value={r.register_id}>{r.display_name} · {r.register_code}</option>)}</select></label> : null}
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (session && !window.confirm("¿Confirmar el cierre permanente de esta caja con el efectivo contado?")) return; const operation = session ? sale.closeRegister(cash) : sale.openRegister(selected, cash); void operation.then(() => { if (!sale.getSnapshot().registerPending) setCash(""); }); }}>
-      <label className="block font-bold">{session ? "Efectivo contado al cierre" : "Fondo inicial de efectivo"}<input className="field mt-2" inputMode="decimal" value={cash} disabled={blocked} onChange={(e) => setCash(e.target.value)} /></label>
+    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (session && !confirmClose) { setConfirmClose(true); return; } setConfirmClose(false); const operation = session ? sale.closeRegister(cash) : sale.openRegister(selected, cash); void operation.then(() => { if (!sale.getSnapshot().registerPending) setCash(""); }); }}>
+      <label className="block font-bold">{session ? "Efectivo contado al cierre" : "Fondo inicial de efectivo"}<input className="field mt-2" inputMode="decimal" value={cash} disabled={blocked} onChange={(e) => { setConfirmClose(false); setCash(e.target.value); }} /></label>
       <p className="text-sm">{session ? "Cuenta el efectivo real en caja. Cerrar impide nuevas ventas en esta sesión." : "Registra el efectivo real antes de abrir."}</p>
       {state.cart.length || state.receipt || state.pending ? <p role="alert">Finaliza o cancela la venta antes de cambiar el estado de caja.</p> : null}
-      <button className="btn w-full" disabled={blocked || !state.bootstrap || parseCash(cash) === null || (!session && !selected)}>{session ? "Cerrar caja y registrar conteo" : "Abrir caja"}</button>
+      {/* Wave F: in-app confirmation (was window.confirm). The blind count is unchanged: only the typed amount is shown. */}
+      {confirmClose && session && parseCash(cash) !== null ? <div role="alertdialog" aria-label="Confirmar cierre de caja" className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3"><p className="font-bold">¿Cerrar la caja de forma permanente con {formatMinor(parseCash(cash)!, session.currency_code)} contados?</p><p className="text-sm">Después no podrás registrar más ventas en esta sesión.</p><button type="button" className="btn-secondary w-full" onClick={() => setConfirmClose(false)}>Seguir contando</button></div> : null}
+      <button className="btn w-full" disabled={blocked || !state.bootstrap || parseCash(cash) === null || (!session && !selected)}>{session ? confirmClose && parseCash(cash) !== null ? `Cerrar caja con ${formatMinor(parseCash(cash)!, session.currency_code)}` : "Cerrar caja y registrar conteo" : "Abrir caja"}</button>
     </form>
   </section>;
 }

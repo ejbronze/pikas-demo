@@ -9,7 +9,7 @@ export class PosRequestError extends Error {
 }
 const messages: Record<string, string> = {
   PRODUCT_STALE: "El precio o producto cambió. Actualiza la venta.", TOTAL_STALE: "El total cambió. Actualiza la venta.",
-  INSUFFICIENT_BALANCE: "Saldo PIKAS insuficiente.", WALLET_FROZEN: "Saldo PIKAS no disponible.",
+  INSUFFICIENT_BALANCE: "Saldo PIKAS Cash insuficiente.", WALLET_FROZEN: "PIKAS Cash no disponible.",
   TRANSACTION_LIMIT_EXCEEDED: "Límite por compra excedido.", DAILY_LIMIT_EXCEEDED: "Límite diario excedido.",
   SESSION_CLOSED: "La caja ya está cerrada.", NO_ACTIVE_SERVICE: "No hay servicio de venta activo.",
   pos_access_required: "El acceso POS ya no está disponible. Verifica tu sesión.", pos_authority_required: "No tienes autoridad para esta operación.",

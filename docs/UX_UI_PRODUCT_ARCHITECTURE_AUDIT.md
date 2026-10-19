@@ -2352,3 +2352,108 @@ semantics, D8, the Demo, and the Wave D/E surfaces.
   - no overflow, controls ≥ 44 px, no native dialogs, no page errors, nothing written.
 - **Deferred:** the 5D.5b account roll-up, historical balances and trends, and export
   (5D.6).
+
+## 31. UX Wave F — final accessibility, responsive and product polish (local)
+
+**Scope.** Presentation and interaction polish only, measured before and after rather than
+re-audited.
+
+Not changed: database, migrations, RPCs, authority, financial calculations, the POS sale
+engine and its journals, refund/wallet/register behaviour, report contracts, Demo authority,
+and every frozen workflow (Foundations A/B, Waves C–E, 5D.1–5D.5).
+
+**Method.**
+- **Automated scan:** axe-core 4.13 plus checks for target size (< 44 px), horizontal
+  overflow, tabbable-but-hidden elements and page errors, run on the production build
+  (Foundation B stage, fictional data).
+- **Pages:** 26 representative pages at 390, 768 and 1440 (78 audits):
+  - Platform: Inicio, Clientes, Nuevo cliente, Equipo, Demo;
+  - School: Resumen, Estudiantes, PIKAS Cash, a student's PIKAS Cash, Administradores,
+    Cafeterías, Actividad;
+  - Cafeteria: Resumen, Transacciones, Cajas, Reportes, Productos, Menús, Turnos,
+    Personal POS, PIKAS Cash, Configuración;
+  - POS;
+  - login, backoffice login and password recovery.
+- **Keyboard-only journeys** (Tab, Shift+Tab, Enter, Space, typing and Escape; no pointer) at
+  1440 and 390.
+
+**Baseline (before Wave F).**
+- No overflow on any page, no hidden tabbable elements, no page errors, and no axe
+  color-contrast violations.
+- One axe rule failed: `definition-list` (serious) on the PIKAS Cash report and Reportes.
+- Sub-44 px controls:
+  - the mobile shell home link (32 px);
+  - the Cajas session rows (24 px — the deferred 5A item);
+  - the "Elegibilidad de estudiantes" and "Categorías" disclosures;
+  - the login "¿Olvidaste tu contraseña?" and recovery "← Volver" links;
+  - the Clientes table links (17 px at 1440).
+
+**Fixes.**
+- **Accessibility:**
+  - `MetricCard` help text is now a `<dd>`, so definition lists are valid everywhere (axe
+    `definition-list` → 0).
+  - Cajas session buttons carry a full accessible name (caja, estado, apertura).
+  - The Cajas session and receipt details receive focus when they open, scrolled clear of the
+    sticky header. Before, they rendered below a long list, out of view on mobile.
+- **Touch targets:** every control listed above is now ≥ 44 px through padding/hit area, not
+  a visual redesign. The Cajas 5A item is resolved.
+- **Cajas (H31/H34):**
+  - raw UUIDs removed from the session and sale lists and cash movements;
+  - the session detail keeps "ID de sesión (soporte)" in small text;
+  - timestamps without seconds.
+- **Reportes (H35):** on screens < 1024 px, section links (Método de pago · Productos
+  principales · Conciliación de caja) reach each part of the long report.
+- **Timestamps (H34):** platform activity, school activity, Demo expiry and Cajas use date +
+  hour:minute. The fixed "Santo Domingo" zone in these reads is unchanged (G4; it needs a
+  server time zone in those contracts).
+- **Native dialogs replaced** (presentation only; the same requests, keys and semantics):
+  - Activation-link replacement in all four places (staff POS, cafeteria-admin delegation,
+    Platform initial admin, Platform Equipo) uses the in-app `ConfirmAction`. It asks only
+    when a live link would be replaced, and the activation backend contract is unchanged.
+  - **POS cashier close:** an inline confirmation shows only the typed counted amount (the
+    blind count is preserved), with "Seguir contando" and "Cerrar caja con RD$ X". Nothing is
+    sent before it.
+  - **POS Demo departure with unsent work:** an in-app two-step warning (the first attempt
+    only warns; repeating it continues). It re-arms when the work changes. DemoEnvironmentBar
+    and its synchronous guard contract are unchanged.
+- **Terminology:** POS messages "Saldo PIKAS …" now read "Saldo PIKAS Cash insuficiente" /
+  "PIKAS Cash no disponible" (message strings only).
+
+**After Wave F.**
+- 78/78 audits: **0 axe violations, 0 controls under 44 px, 0 overflow, 0 hidden tabbable
+  elements, 0 page errors**.
+- Keyboard journeys at 1440 and 390:
+  - **Product TaskWindow:** opened with Enter; focus starts in the first field; 40 Tabs and
+    10 Shift+Tabs stay inside; Escape with typed data opens the in-app discard prompt focused
+    on "Seguir editando"; Descartar returns focus to "Agregar producto".
+  - **Transacciones:** periods and selects by keyboard; detail opened with Enter; Escape
+    closes and returns focus to "Ver detalle".
+  - **Cajas:** Enter on a session moves focus to "Detalle de sesión".
+  - **Reportes:** a period chosen with Space.
+  - **Crear estudiante:** the page and mobile navigation are unreachable behind the task;
+    Escape returns focus.
+  - **PIKAS Cash report:** custom dates by keyboard.
+  - **POS:** Usuario PIKAS → search → student → product search → add/reduce → Continuar al
+    pago → Efectivo → amount → focus reaches "Cobrar RD$ 50.00 en efectivo" (not pressed) →
+    cancel.
+
+**Already correct (no change).**
+- TaskWindow focus entry, containment, discard and return (D.1).
+- Mobile navigation inert behind modal tasks.
+- MoneyValue sign/tone semantics and Cuadrada/Sobrante/Faltante wording.
+- Empty vs no-match vs error distinctions (Waves C–E, 5D).
+- Status announcements for uncertain/recovery states (`role=alert`/`status`).
+- Color contrast of the existing palette in the audited states.
+
+**Deferred / outside presentation scope.**
+- Legacy demo-mode routes (`/familias`, `/estudiante`, `isDemoMode` admin pages, the demo
+  register sessions) still use native dialogs (H33; retirement is OD-B9).
+- Server-provided time zones for the 5A history copy (G4).
+- POS printing (Beta Hardening).
+- A manual VoiceOver pass remains recommended before pilot; automated checks cannot replace
+  it.
+
+**Validation.** Detailed counts are in the Wave F final report; the gates are focused tests,
+the broad Vitest regression, TypeScript, ESLint on the changed files, the production build
+and `git diff --check`. No fictional data was created or changed: the scans and keyboard
+journeys only read, and no sale was sent.

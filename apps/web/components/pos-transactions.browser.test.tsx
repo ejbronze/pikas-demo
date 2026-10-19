@@ -33,7 +33,7 @@ beforeAll(async () => {
       import { posContext } from "./lib/pos/access-context.test-fixtures";
       const w = window; w.ops = []; w.calls = []; w.next = []; w.txq = {};
       const id = n => "00000000-0000-4000-8000-" + String(n).padStart(12, "0");
-      const context = posContext(false);
+      let context = posContext(false);
       const session = { session_id: id(1), cafeteria_id: context.memberships[0].cafeteria_id, register_id: id(2), assignment_id: id(3), register_code_snapshot: "R1", register_name_snapshot: "Caja escolar", status: "open", version: 1, opening_cash_minor: "10000", currency_code: "DOP" };
       const product = (n, name, price, category = "Comida") => ({ product_id: id(n), name, description: null, category_id: null, category_name: category, price_minor: price, version: 7, currency_code: "DOP" });
       const products = [product(40, "Producto real", 12550), product(41, "Jugo ficticio", 5000, "Bebidas")];
@@ -49,7 +49,7 @@ beforeAll(async () => {
       w.fetch = async (input, init = {}) => { const u = String(input); const body = init.body ? JSON.parse(init.body) : null; w.calls.push({ url: u, body });
         const r = (w.txq[body?.operation] ?? []).shift() ?? w.txAuto(body); return new Response(JSON.stringify(r.body ?? {}), { status: r.status ?? 200, headers: { "Content-Type": "application/json" } }); };
       let root; const show = el => { root ??= createRoot(document.getElementById("root")); root.render(React.createElement(React.Fragment, { key: Math.random() }, el)); };
-      w.mountPos = () => show(<Pos />);
+      w.mountPos = (sandbox = false) => { context = posContext(sandbox); show(<Pos key={String(sandbox)} />); };
       w.mountTx = (sandbox = false) => show(<CafeteriaTransactions cafeteriaId="${"d4000000-0000-4000-8000-000000000001"}" sandbox={sandbox} />);
     ` } });
   const css = readFileSync(resolve("app/globals.css"), "utf8");
@@ -133,6 +133,26 @@ describe("POS sale", () => {
     expect(await page.getByRole("heading", { name: "Ventas recientes en esta pestaña" }).locator("..").innerText()).toContain("Recibo #42");
     const before = (await ops()).length; await page.getByRole("button", { name: "Reembolsar recibo 42" }).click();
     await page.waitForTimeout(150); expect(await page.locator('input[value="42"]').count()).toBe(1); expect((await ops()).slice(before).some(o => o.operation === "refund_lookup")).toBe(false);
+  });
+});
+
+describe("Wave F in-app confirmations (no native dialogs)", () => {
+  it("cashier register close asks in the app before sending; the blind count shows only the typed amount", async () => {
+    await win("w => w.mountPos()"); await page.getByRole("button", { name: "Caja", exact: true }).click(); await page.getByLabel("Efectivo contado al cierre").fill("100");
+    await page.getByRole("button", { name: "Cerrar caja y registrar conteo" }).click(); await page.getByRole("alertdialog", { name: "Confirmar cierre de caja" }).waitFor();
+    expect(await page.getByRole("alertdialog").innerText()).toContain("RD$ 100.00 contados"); expect(await page.getByRole("alertdialog").innerText()).not.toMatch(/Esperado|Diferencia/);
+    expect((await ops()).some(o => o.operation === "close_register")).toBe(false);
+    await page.getByRole("button", { name: "Seguir contando" }).click(); expect(await page.getByRole("alertdialog").count()).toBe(0);
+    await page.getByRole("button", { name: "Cerrar caja y registrar conteo" }).click(); await page.getByRole("button", { name: "Cerrar caja con RD$ 100.00" }).click();
+    await page.waitForTimeout(200); const closes = (await ops()).filter(o => o.operation === "close_register") as unknown as { counted_cash_minor: string }[];
+    expect(closes).toHaveLength(1); expect(closes[0].counted_cash_minor).toBe("10000");
+  });
+  it("Demo departure with unsent work warns in the app first; only a repeated choice proceeds", async () => {
+    await win("w => w.mountPos(true)"); await page.getByText("José Ramírez · Cajero").waitFor(); await toItems(); await page.getByRole("button", { name: "Añadir Producto real" }).click();
+    await page.getByRole("button", { name: "Salir del demo" }).click(); await page.getByText("Tienes trabajo sin enviar").waitFor();
+    expect((await calls()).some(c => c.url.includes("/api/platform/sandbox-pov/"))).toBe(false); expect(await win<number>("w => w.sale.getSnapshot().cart.length")).toBe(1);
+    await page.getByRole("button", { name: "Salir del demo" }).click(); await page.waitForTimeout(200);
+    expect((await calls()).filter(c => c.url.includes("/api/platform/sandbox-pov/exit"))).toHaveLength(1);
   });
 });
 

@@ -64,7 +64,7 @@ export function AdministrativeShell({ tone, area, homeHref, context, switcher, n
     </aside>
     <div className="min-w-0">
       <header className={`${demo ? "" : "sticky top-0 z-30 "}flex h-14 min-w-0 items-center gap-3 border-b bg-white/95 px-3 md:px-6`}>
-        <Link href={homeHref} aria-label="PIKAS Admin, inicio" className="shrink-0 md:hidden"><BrandLogo compact className="size-8" /></Link>
+        <Link href={homeHref} aria-label="PIKAS Admin, inicio" className="grid min-h-11 min-w-11 shrink-0 place-items-center md:hidden"><BrandLogo compact className="size-8" /></Link>
         {context && <div className="min-w-0 flex-1 leading-tight"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{context.label}</p><p className="truncate text-sm font-bold">{context.name}{context.detail && <span className="font-normal text-slate-500"> · {context.detail}</span>}</p></div>}
         {!context && <div className="flex-1" />}
         {canSwitch && <div className="hidden md:block"><ContextSwitcher switcher={switcher} /></div>}

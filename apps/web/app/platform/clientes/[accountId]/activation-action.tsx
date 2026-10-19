@@ -3,6 +3,7 @@ import { useRef,useState } from "react";
 import { useRouter } from "next/navigation";
 import { sessionFetch } from "../../../../lib/auth/session-fetch";
 import type { CustomerActivationStatus } from "../../../../lib/platform/customer-activation";
+import { ConfirmAction } from "../../../../components/confirm-action";
 export function CustomerActivationAction({intentId,status}:{intentId:string;status:CustomerActivationStatus|null}){
  const router=useRouter(),inFlight=useRef(false);
  const [busy,setBusy]=useState(false),[link,setLink]=useState(""),[message,setMessage]=useState("");
@@ -11,7 +12,7 @@ export function CustomerActivationAction({intentId,status}:{intentId:string;stat
  const replacement=!!link||status?.link_state==="active";
  async function issue(){
   if(inFlight.current)return;
-  if(replacement&&!window.confirm("¿Reemplazar el enlace de activación? El enlace anterior dejará de funcionar."))return;
+  // Replacement is confirmed in the app (ConfirmAction) before this runs.
   inFlight.current=true;setBusy(true);setLink("");setMessage("");setCopyFeedback(null);
   try{
    const response=await sessionFetch("/api/platform/customer-admins/activation",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({intentId})});
@@ -27,7 +28,7 @@ export function CustomerActivationAction({intentId,status}:{intentId:string;stat
  }
  return <div className="mt-3 min-w-0 space-y-3">
  <p className="text-sm">{ready?"Identidad lista para completar acceso. La activación por sí sola no concede permisos.":unavailable?"No se pudo establecer una identidad elegible. La solicitud vencida, una identidad ajena o una activación de otra solicitud no se reasocian automáticamente.":status?.identity_state==="missing"?"La persona necesita activar su identidad y crear su contraseña antes de completar acceso.":"Activación pendiente: la persona debe guardar su contraseña antes de completar acceso."}</p>
- {!ready&&!unavailable&&<><p className="text-sm">{status?.link_state==="active"?"Existe un enlace activo. Su contenido no se guarda y no puede recuperarse desde esta pantalla.":status?.link_state==="expired"?"El enlace anterior venció. Puedes generar otro para esta misma solicitud vigente.":"Genera un enlace privado para esta solicitud de administrador."}</p><button type="button" className={replacement?"btn-destructive":"btn"} disabled={busy} onClick={()=>void issue()}>{busy?"Preparando…":replacement?"Reemplazar enlace de activación":"Generar enlace de activación"}</button></>}
+ {!ready&&!unavailable&&<><p className="text-sm">{status?.link_state==="active"?"Existe un enlace activo. Su contenido no se guarda y no puede recuperarse desde esta pantalla.":status?.link_state==="expired"?"El enlace anterior venció. Puedes generar otro para esta misma solicitud vigente.":"Genera un enlace privado para esta solicitud de administrador."}</p><ConfirmAction className={replacement?"btn-destructive":"btn"} disabled={busy} ask={replacement} question="¿Reemplazar el enlace de activación? El enlace anterior dejará de funcionar." label={busy?"Preparando…":replacement?"Reemplazar enlace de activación":"Generar enlace de activación"} onConfirm={()=>void issue()}/></>}
  <button className="btn-secondary" type="button" disabled={busy} onClick={()=>router.refresh()}>Actualizar estado de activación</button>
  {message&&<p role="status" className="break-words text-sm">{message}</p>}
  {link&&!ready&&!unavailable&&<div className="min-w-0 space-y-3"><label className="block">Enlace privado de activación<input className="field mt-1 w-full" readOnly value={link} onFocus={e=>e.currentTarget.select()}/></label><button className="btn-secondary" type="button" onClick={async()=>{const current=link;try{await navigator.clipboard.writeText(current);setCopyFeedback({link:current,message:"Enlace copiado"});}catch{setCopyFeedback({link:current,message:"No se pudo copiar. Selecciona el enlace y cópialo manualmente."});}}}>Copiar enlace</button>{copyFeedback?.link===link&&<p role="status">{copyFeedback.message}</p>}</div>}
