@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## UX Wave D.3: flujos administrativos restantes (local)
+
+- **Estudiantes**: búsqueda y filtros del servidor más claros, conteo, «Limpiar filtros», estados distintos para «sin estudiantes» y «sin resultados», y lista responsiva. Crear, editar información, matrícula, retiro y estado son tareas enfocadas con revisión y acción final explícita; los borradores de creación y edición se conservan solo en esta sesión del navegador y nunca se envían solos.
+- **PIKAS Cash del estudiante**: el nombre del estudiante encabeza la página; Recargar, Corregir saldo y Revertir recarga no cambian. Cada movimiento muestra su contexto y un «Ver detalle» con los datos ya registrados.
+- **Personal POS, administradores escolares y Equipo**: preparar y cambiar accesos en tareas enfocadas, con los mismos roles y permisos. **Cajas**: crear y editar la configuración en una tarea; una caja con sesión abierta sigue sin poder editarse.
+- **Nuevo cliente**: pasos visibles, errores por campo, borrador en la sesión, revisión de lo que se creará y resultado honesto si el administrador inicial queda pendiente. Confirmaciones dentro de la app en lugar de `confirm()`. Sin cambios en base de datos, RPC, autoridad, POS ni Demo. Sin push ni despliegue.
+
 ## UX Wave D.2: cierre de caja y catálogo de cafetería (local)
 
 - **Cierre administrativo excepcional** en una tarea guiada: Detalles → Revisar (contado, esperado actual, diferencia estimada) → «Cerrar caja con RD$ X» → resultado guardado por PIKAS (Contado, Esperado, Diferencia: Cuadrada/Sobrante/Faltante). Se envía exactamente el esperado revisado, así que un esperado desactualizado sigue rechazándose. Por decisión del propietario (Opción A) se conserva la semántica de Phase 5A; el cierre ciego del POS no cambia y un cierre administrativo ciego queda para Wave E.

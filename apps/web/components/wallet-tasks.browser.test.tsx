@@ -13,6 +13,11 @@ type W = Window & { mountRecharge(balance: string): void; mountAdjust(balance: s
 
 beforeAll(async () => {
   const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", define: { "process.env.NODE_ENV": '"test"' },
+    // The wallet page header (Wave D.3) links back to Estudiantes; next/link is stubbed as a plain anchor.
+    plugins: [{ name: "stubs", setup(b) {
+      b.onResolve({ filter: /^next\/link$/ }, () => ({ path: "link", namespace: "stub" }));
+      b.onLoad({ filter: /^link$/, namespace: "stub" }, () => ({ resolveDir: process.cwd(), contents: "import React from 'react'; export default ({href, children, ...rest}) => React.createElement('a', {href, ...rest}, children)", loader: "js" }));
+    } }],
     stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `
       import React, { useState } from "react";
       import { createRoot } from "react-dom/client";

@@ -1867,3 +1867,192 @@ in Cajas. D.2 stopped with **BLOCKED — OWNER DECISION REQUIRED**. The owner ch
   - Option B blind admin close → Wave E.
 - **Wave E** (POS, Cashier close UX, 5D.4) and **Wave F** (broad accessibility/polish) are
   untouched. The targeted "Sol Ficticia Beta" POS search follow-up was not investigated.
+
+## 28. UX Wave D.3 — remaining administrative workflows (local)
+
+**Scope.** Applies the D.1/D.2 TaskWindow and non-financial draft patterns to Students, the
+student PIKAS Cash page, staff (school administrators, Personal POS, Platform Equipo), register
+configuration and customer provisioning. D.1 financial tasks and the D.2 workflows were not
+redesigned.
+
+Not changed: authority (platform, account, school, cafeteria, role grants, student, register),
+API routes, RPCs, schema, RLS, migrations, request journals and their keys, financial
+calculations, POS, Cashier close, the Foundation B Demo, Phase 5D.4–5D.6, Wave E and Wave F.
+No owner decision was needed.
+
+### Shared architecture
+
+- **`CommandTask`** (`components/command-task.tsx`): one non-financial task grammar on the
+  unchanged TaskWindow.
+  - Flow: detail page(s) → Revisar → explicit final action → authoritative outcome
+    (success, "No se realizó el cambio", or "Pendiente de confirmar").
+  - It owns no request identity. `submit` delegates to the existing exact-request journal; an
+    unconfirmed request is offered only as "Reintentar la misma solicitud" / "Confirmar
+    solicitud pendiente". Page-scoped native validation runs on Continuar.
+- **Adapters (no new journals):**
+  - `useSchoolCommand` reproduces `SchoolCommandForm` exactly: the same
+    `pikas:school:request:<actor>:<school>:<formId>` keys and formIds, operation
+    compatibility and outcome rules (a rejected retry keeps the original request).
+  - The cafeteria adapter uses the provider's single journal per operator and cafeteria. The
+    provider still locks the whole section and offers the one retry while any request is
+    unconfirmed.
+  - Platform tasks keep `CustomerJourney` and the team journal.
+- **Drafts:** `lib/session-draft.ts` (`useSessionDraft`) is the D.2 product-draft logic
+  extracted unchanged; the product task now uses it.
+  - A draft is keyed by operator + tenant + entity and carries the base version; a different
+    base discards it with a notice.
+  - It is written only for non-financial tasks, never submitted, and cleared on success or
+    explicit discard.
+- **`ConfirmAction`:** an inline in-app confirmation for single administrative actions.
+  `SchoolCommandForm` and the cafeteria `CommandForm` use the same inline pattern. The
+  confirmation step only replaces `window.confirm`; nothing is prepared before it.
+- **`DataList`** gains optional row actions: the last table column, and a button row in the
+  compact list.
+
+### Students
+
+- **Collection:**
+  - Search and filters stay server-side (`school_student_roster`: text, status, campus, grade;
+    50 per page). Selects apply immediately, and Buscar applies the text.
+  - The count reads "N estudiantes [con estos filtros] [en esta página]". There is no
+    "N de M": the roster returns no filtered total, and none is invented.
+  - Limpiar filtros, Primera página and Siguiente página.
+  - Distinct states: "Aún no hay estudiantes." (create action) vs "No encontramos estudiantes
+    con estos filtros." (clear action).
+- **Presentation:** `DataList` with columns Estudiante + código, Grado y sección, Campus,
+  Estado (chip) and the actions PIKAS Cash (only with server-derived wallet read) and Ver
+  perfil. No internal ids. Export moved under an "Exportar estudiantes" disclosure, unchanged.
+- **Section filter:** not added. The roster RPC filters grade only; a section filter would need
+  an RPC change.
+- **Create:** the AdminDialog wizard became a CommandTask: Estudiante → Matrícula → Revisar →
+  **Crear estudiante**.
+  - It uses the same `student-create` journal and `student_create` payload. Success offers
+    "Crear otro estudiante".
+  - A pending creation shows a banner on the list for explicit review.
+- **Edit:** the profile is a read-only TaskWindow (enrollment summary). Each change opens its
+  own focused task and returns to the profile:
+  - Editar información (`student_update`);
+  - Cambiar matrícula / Matricular (`student_transfer` / `student_enroll`);
+  - Retirar matrícula (`student_withdraw`, destructive);
+  - Cambiar estado (`student_status`).
+
+  The formIds are the same, so requests left pending by the old UI remain recoverable. The
+  profile marks actions that have a pending request.
+- **Drafts:** create (`pikas:student-draft:<actor>:<school>:new`) and info edit (base = saved
+  names and code). The actor includes the sandbox operator, as in the existing recovery keys.
+- **CSV:** semantics unchanged (it uses the D.2 shared parser). Only its native `confirm()`
+  became an in-app two-press confirmation.
+
+### PIKAS Cash student page
+
+- **Hierarchy:** back to Estudiantes → **student name** (h1, from the authoritative wallet
+  read) → "PIKAS Cash del estudiante". Sandbox POV and no-access branches keep "PIKAS Cash".
+- **D.1 tasks:** unchanged. The balance card holds Corregir saldo / Recargar with the same
+  triggers, gates and pending banners; Revertir recarga stays on eligible recargas.
+- **Movements:** one list on the page.
+  - Each row shows the type, date/time · actor, a one-line context (recibo + cafetería,
+    motivo, or referencia), a Revertida chip, the amount (`MoneyValue` movement) and the
+    balance after.
+  - **Ver detalle** (a native disclosure, not a TaskWindow) shows only existing fields:
+    receipt, items, reason, role, cafeteria, balance before, reference, note, recorded by,
+    date, and internal identifiers in small text.
+
+### Staff
+
+The scopes stay separate:
+- **Platform Equipo:** "Añadir persona" is a CommandTask on the same team journal. The demo
+  toggle and access completion use `ConfirmAction`.
+- **School administrators:** Preparar administrador is a CommandTask (`admin_prepare`,
+  "Preparar acceso", no email or grant claim). Completion and suspension keep
+  `SchoolCommandForm`, with in-app confirmation.
+- **Cafeteria Personal POS:**
+  - The collection is a `DataList` with search, role and status filters, "N de M empleados",
+    Limpiar filtros, and empty vs no-match states.
+  - Agregar empleado (`staff_prepare`) and Cambiar acceso (`staff_status`) are CommandTasks.
+  - The only roles offered are the existing POS roles (Cajero, Supervisor); the server
+    remains authoritative.
+  - Staff completion keeps its flow with an in-app confirmation.
+
+No identity was created or relinked, and activation-link issuance is unchanged.
+
+### Register configuration
+
+- Crear caja / Editar caja are CommandTasks (`register_save`) with a draft (base = register
+  version) and "Crear otra caja".
+- Rules carried over: Editar is disabled with a reason while a session is open; a used code
+  is read-only; the current version is sent. The task states that it never opens, closes or
+  changes sessions.
+- Assignments keep their command with in-app confirmation.
+- Session operations and the D.2 close task are unchanged.
+
+### Provisioning (Nuevo cliente)
+
+- **Semantics inspected and preserved:** one tenant request creates the cliente, escuela,
+  ubicación and cafetería. A second request prepares (does not grant) the initial
+  administrator.
+- **Steps:** Cliente → Escuela → Ubicación → Cafetería → Administrador inicial → Revisar.
+  - "Paso N de 6" and step chips; completed steps are editable until creation.
+  - Per-field errors (Obligatorio, invalid email, unrecognised time zone).
+- **Draft:** `pikas:customer-draft:v1:<operator>` holds typed values only. It is restored with
+  a notice and "Descartar borrador", and replaced by the existing journal at **Crear
+  cliente**.
+- **Review:** grouped sections with Editar, plus "Qué hará «Crear cliente»" (two steps; no
+  email, no access).
+- **Outcomes:** success lists what exists. A partial result reads "Creación incompleta":
+  cliente created, administrator unconfirmed, retried with the same keys.
+- **Journal:** an existing journal is detected on load and resent only via "Revisar solicitud
+  pendiente".
+- It stays a dedicated page (the route already exists and is linked from Inicio and Clientes).
+
+### Deferred and limitations
+
+- Student section filter and filtered totals (RPC).
+- Activation-link replacement keeps its native confirmation (4D-accepted and test-encoded).
+- Demo-only screens and POS keep theirs.
+- Product images, atomic product CSV, Option B blind admin close (Wave E), broad
+  accessibility (Wave F).
+
+### Validation (local, fictional)
+
+- **`components/admin-workflows.browser.test.tsx`** (real Chromium, scripted fetch): **15/15**.
+  It covers:
+  - students: filters, empty vs no-match, create/Atrás/create-another, draft restore and
+    operator isolation, same-key retry, profile edits, rejection;
+  - school administrators;
+  - the PIKAS Cash hierarchy, D.1 action authority, detail and `MoneyValue`;
+  - register configuration (open lock, draft, the exact command, sessions untouched,
+    read-only code, version);
+  - Personal POS (filters, roles, status, the lock while another request is pending);
+  - provisioning (steps, errors, Anterior, draft across reload, review, discard, partial
+    same-key retry, journal detection);
+  - Equipo.
+- **D.1/D.2 regressions:** the wallet tasks (16), register close (7) and catalog suites pass.
+- **Focused regression:** components, the platform and admin apps, school/cafeteria routes,
+  and the school/cafeteria/platform/wallet libs.
+  - 661 of 665 pass. The 4 failures are in `components/route-demo-provider.test.tsx`, a POS
+    header expectation. They fail identically at the accepted D.2 commit, untouched by D.3.
+  - Register close passes when run alone; the joint-run hook timeout was contention.
+- TypeScript, ESLint on the changed files, the production build and `git diff --check` pass.
+- **Production-mode browser** (Foundation B stage, loopback adapter, fictional School Admin,
+  Cafeteria Admin and Platform Admin) at 1440, 768 and 390:
+  - **Estudiantes:** search with no-match and clear, the state filter, create, profile and
+    status.
+  - **PIKAS Cash:** name title, D.1 actions, detail, the Recarga task.
+  - **Staff:** Administradores and Personal POS.
+  - **Cajas:** the open-register lock; sessions unchanged.
+  - **Platform:** Nuevo cliente (steps, errors, Anterior, draft across reload, review,
+    discard) and Equipo.
+  - Every check passed: no overflow, new controls ≥ 44 px, footers on screen, tasks full
+    screen at 390 with the mobile nav hidden, no native dialogs, no page errors.
+  - The Phase 5A session rows in Cajas ("Caja … · Abierta/Cerrada") are under 44 px. That is
+    pre-existing, untouched here and left for Wave F.
+- **Committed at 1440 only (local fictional data):**
+  - student "Río Ficticio D3" (D3-RIO-01, 5to · A), then renamed to "Río Editado";
+  - register "Caja Kiosco D3" (D3K), then renamed to "Caja Kiosco D3 Editada" (no sessions).
+- **768/390 created nothing:** drafts were discarded and the account count was unchanged.
+
+### Remaining Wave D work
+
+Wave D's administrative scope is complete with D.3. Deferred items are listed above. Wave E
+(POS, Cashier close, Option B, 5D.4) and Wave F (broad accessibility and polish) remain
+untouched.

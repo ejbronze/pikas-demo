@@ -24,7 +24,7 @@ const student={id,first_name:'Sol',last_name:'Ficticia',display_name:'Sol Fictic
 beforeEach(()=>{mocks.walletProps.length=0;mocks.wallet.mockClear();mocks.access.mockResolvedValue({status:'authorized',context:{person_id:id,display_name:'Admin',schools:[{school_id:id}]}});});
 describe('capability-aware wallet surfaces',()=>{
  it('roster shows PIKAS Cash only with server-derived read authority',()=>{
-  expect(renderToStaticMarkup(<ConnectedSchoolPages section="students" data={data} students={[student]} walletRead />)).toContain('PIKAS Cash de Sol Ficticia');
+  expect(renderToStaticMarkup(<ConnectedSchoolPages section="students" data={data} students={[student]} walletRead />)).toContain('PIKAS Cash<span class="sr-only"> de Sol Ficticia</span>');
   expect(renderToStaticMarkup(<ConnectedSchoolPages section="students" data={data} students={[student]} />)).not.toContain('PIKAS Cash');
  });
  it.each([[{read:false,replenish:false},false,null],[{read:true,replenish:false},true,false],[{read:true,replenish:true},true,true]])('wallet page for %j',async(access,mounted,canReplenish)=>{

@@ -9,6 +9,7 @@ import { ProductImagePicker, type ProductImageValue } from './product-image-pick
 import { EmptyState } from './state-panels';
 import { TaskActions, TaskCancelButton, TaskOutcome, TaskSummary, TaskWindow } from './task-window';
 import { ProductImportTask } from './product-import-task';
+import { listSessionDrafts, useSessionDraft } from '../lib/session-draft';
 
 const money = (minor: number) => new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(minor / 100);
 const normalized = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('es');
@@ -30,7 +31,7 @@ export function CafeteriaProductsEditor() {
   const products = state.menuItems.filter(item => normalized(`${item.name} ${item.description} ${item.category}`).includes(normalized(query.trim())) && (!category || item.category === category)
     && (!status || (status === 'active' ? item.active !== false : status === 'inactive' ? item.active === false : status === 'available' ? item.available : !item.available))).sort(sorts[sort][1]);
   const filtered = !!(query.trim() || category || status);
-  const refreshDrafts = () => { if (!draftScope) return; try { setDrafts(Object.keys(sessionStorage).filter(k => k.startsWith(`pikas:catalog-draft:${draftScope}:`)).map(k => k.split(':').pop()!)); } catch { setDrafts([]); } };
+  const refreshDrafts = () => { if (draftScope) setDrafts(listSessionDrafts(`pikas:catalog-draft:${draftScope}:`)); };
   useEffect(() => { queueMicrotask(refreshDrafts); }, [draftScope]); // eslint-disable-line react-hooks/exhaustive-deps -- read once per scope
   const openEditor = (product?: PosMenuItemRecord) => { setNotice(''); setEditor({ id: product?.id ?? crypto.randomUUID(), product: product && structuredClone(product) }); };
   const close = (message?: string) => { setEditor(null); setImporting(false); refreshDrafts(); if (message) setNotice(message); };
@@ -81,19 +82,11 @@ function ProductTask({ id, product, categories, close, reopen }: { id: string; p
     unit: product?.unit ?? 'Unidad', available: product?.available ?? true, active: product?.active !== false, description: product?.description ?? '', ingredients: product?.ingredients.join('\n') ?? '', allergens: product?.allergens.join('\n') ?? '', restrictionTags: product?.restrictionTags.join('\n') ?? '' };
   const key = draftScope ? productDraftKey(draftScope, product?.id ?? null) : null;
   const base = product?.catalogVersion ?? null;
-  const [restored] = useState<{ values: Values; note: string } | null>(() => {
-    if (!key) return null;
-    try { const raw = sessionStorage.getItem(key); if (!raw) return null; const draft = JSON.parse(raw) as { base: number | null; values: Values };
-      if (draft.base !== base) { sessionStorage.removeItem(key); return { values: initial, note: 'El producto cambió desde tu borrador; empezamos con la versión guardada.' }; }
-      return { values: { ...initial, ...draft.values }, note: 'Recuperamos cambios sin guardar de esta sesión del navegador. Revísalos antes de guardar.' }; } catch { return null; }
-  });
-  const [values, setValues] = useState<Values>(restored?.values ?? initial);
+  const { values, set, restored, drop: dropDraft, discard } = useSessionDraft<Values>(key, base, initial, 'El producto cambió desde tu borrador; empezamos con la versión guardada.');
   const [image, setImage] = useState<ProductImageValue>({ imageUrl: product?.imageUrl ?? null, imageAssetId: product?.imageAssetId ?? null }), [imageBusy, setImageBusy] = useState(false);
   const [phase, setPhase] = useState<Phase>('details'), [problem, setProblem] = useState(''), [failure, setFailure] = useState(''), [checked, setChecked] = useState<PosMenuItemRecord | null>(null);
   const submitting = useRef(false);
   const dirty = JSON.stringify(values) !== JSON.stringify(initial) || image.imageUrl !== (product?.imageUrl ?? null);
-  const set = <K extends keyof Values>(field: K, value: Values[K]) => setValues(v => { const next = { ...v, [field]: value }; if (key) try { sessionStorage.setItem(key, JSON.stringify({ base, values: next })); } catch { /* drafts are optional */ } return next; });
-  const dropDraft = () => { if (key) try { sessionStorage.removeItem(key); } catch { /* ignore */ } };
   const lines = (text: string) => text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const review = () => {
     try {
@@ -128,7 +121,7 @@ function ProductTask({ id, product, categories, close, reopen }: { id: string; p
     steps={phase === 'details' || phase === 'review' ? ['Detalles', 'Revisar'] : undefined} step={phase === 'review' ? 1 : 0}
     busy={phase === 'pending'} dirty={(phase === 'details' || phase === 'review') && dirty} onClose={() => { dropDraft(); close(); }} onKeepDraft={key ? () => close() : undefined} footer={<TaskActions>{footer}</TaskActions>}>
     {phase === 'details' && <>
-      {restored && <div role="status" className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><p className="flex-1 basis-56">{restored.note}</p>{restored.note.startsWith('Recuperamos') && <button type="button" className="btn-secondary" onClick={() => { dropDraft(); setValues(initial); }}>Descartar borrador</button>}</div>}
+      {restored && <div role="status" className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><p className="flex-1 basis-56">{restored.note}</p>{restored.recovered && <button type="button" className="btn-secondary" onClick={discard}>Descartar borrador</button>}</div>}
       <p className="text-sm text-slate-600">Los cambios se aplican a las ventas nuevas. Las compras anteriores conservan sus datos originales.</p>
       <label className="block font-bold">Nombre del producto *<input data-autofocus className="field mt-1" required maxLength={120} value={values.name} onChange={e => set('name', e.target.value)} /></label>
       {connected ? <><label className="block font-bold">Categoría *<select className="field mt-1" value={values.categoryChoice} onChange={e => set('categoryChoice', e.target.value)}><option value="" disabled>Seleccionar categoría</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}<option value="__new">Crear nueva categoría…</option></select></label>

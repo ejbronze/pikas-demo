@@ -6,6 +6,8 @@ vi.mock("react", async (importOriginal) => ({ ...await importOriginal<typeof imp
   useState: (initial: unknown) => { const index = mocks.cursor.state++; if (!(index in mocks.slots)) mocks.slots[index] = initial;
     return [mocks.slots[index], (value: unknown) => { mocks.slots[index] = typeof value === "function" ? value(mocks.slots[index]) : value; }]; },
   useRef: (initial: unknown) => { const index = mocks.cursor.ref++; return mocks.refs[index] ??= { current: initial }; },
+  // The wizard's draft/journal detection effect runs only in the browser.
+  useEffect: () => {},
 }));
 (globalThis as { React?: unknown }).React = ReactModule;
 import { CustomerWizard } from "./clientes/nuevo/customer-wizard";
