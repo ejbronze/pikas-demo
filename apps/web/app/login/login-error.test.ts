@@ -12,7 +12,7 @@ describe("public login error messages", () => {
   it("keeps invalid credentials distinct from missing tenant access", () => {
     expect(getLoginErrorMessage("credentials")).toEqual({
       title: "No se pudo iniciar sesión",
-      body: "Verifica tu correo electrónico y contraseña e inténtalo de nuevo.",
+      body: "Verifica tu correo o usuario y tu contraseña e inténtalo de nuevo.",
     });
     expect(getLoginErrorMessage("credentials")).not.toEqual(
       getLoginErrorMessage("membership"),

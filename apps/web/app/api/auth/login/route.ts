@@ -4,6 +4,8 @@ import type { UserRole } from "@pikas/shared-types";
 import { isDemoMode } from "@/lib/env";
 import { resolvePikasIdentity, pilotHome } from "@/lib/auth/pikas-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { invitationProvider } from "@/lib/auth/activation";
+import { isEmailIdentifier, isValidUsername, normalizeUsername } from "../../../../lib/identity/username";
 
 const schema = z.object({
   role: z.enum(["parent", "student", "pos_operator"]).optional(),
@@ -42,13 +44,28 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  if (!z.email().safeParse(identifier).success) {
-    return fail(request, "pilot_email_required");
+  // Phase 6A: "Correo / Usuario". A PIKAS username resolves server-side (service role only) to the
+  // SAME Auth email; malformed or unknown identifiers get the same generic error as a bad password.
+  let email: string | null = null;
+  if (isEmailIdentifier(identifier)) {
+    if (z.email().safeParse(identifier).success) email = identifier;
+  } else {
+    const username = normalizeUsername(identifier);
+    if (isValidUsername(username)) {
+      try {
+        const resolved = await invitationProvider().rpc("login_identifier_email", { p_username: username });
+        if (!resolved.error && typeof resolved.data === "string") email = resolved.data;
+        else if (resolved.error) return fail(request, "session");
+      } catch {
+        return fail(request, "session");
+      }
+    }
   }
+  if (!email) return fail(request, "credentials");
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: identifier,
+    email,
     password,
   });
   if (error || !data.user) return fail(request, "credentials");
@@ -57,6 +74,18 @@ export async function POST(request: NextRequest) {
   if (started.error) {
     await supabase.auth.signOut({ scope: "local" });
     return fail(request, "session");
+  }
+
+  // Phase 6A (after the application session exists; the pre-request guard requires it): a
+  // suspended login is signed out generically; a temporary password must be replaced first.
+  const credential = await supabase.rpc("identity_credential_state");
+  const state = (credential.data ?? {}) as { must_change_password?: boolean; login_suspended?: boolean };
+  if (credential.error || state.login_suspended) {
+    await supabase.auth.signOut({ scope: "local" });
+    return fail(request, credential.error ? "session" : "credentials");
+  }
+  if (state.must_change_password) {
+    return NextResponse.redirect(new URL("/actualizar-contrasena?motivo=temporal", request.url), 303);
   }
 
   const identity = await resolvePikasIdentity(supabase);

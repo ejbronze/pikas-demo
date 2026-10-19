@@ -12,7 +12,11 @@ const messages: Record<string, LoginErrorMessage> = {
   },
   credentials: {
     title: "No se pudo iniciar sesión",
-    body: "Verifica tu correo electrónico y contraseña e inténtalo de nuevo.",
+    body: "Verifica tu correo o usuario y tu contraseña e inténtalo de nuevo.",
+  },
+  session: {
+    title: "No se pudo iniciar sesión",
+    body: "El servicio no respondió. Inténtalo de nuevo en unos minutos.",
   },
   identity: {
     title: "No se pudo verificar tu cuenta",

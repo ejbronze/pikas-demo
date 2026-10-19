@@ -8,6 +8,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     { href: "/platform", label: "Inicio", icon: "home", match: "/platform", exact: true },
     ...(capabilities.includes("platform:tenant:lifecycle:read") ? [{ href: "/platform/clientes", label: "Clientes", icon: "clients", match: "/platform/clientes" } as const] : []),
     ...(capabilities.includes("platform:team:manage") ? [{ href: "/platform/equipo", label: "Equipo", icon: "team", match: "/platform/equipo" } as const] : []),
+    ...(capabilities.includes("platform:identity:support") ? [{ href: "/platform/identidades", label: "Identidades", icon: "shield", match: "/platform/identidades" } as const] : []),
     ...(capabilities.includes("platform:sandbox:pov:enter") ? [{ href: "/platform/demostracion", label: "Demo", icon: "demo", match: "/platform/demostracion" } as const] : []),
   ];
   return <AdministrativeShell tone="navy" area="Plataforma" homeHref="/platform" navLabel="Plataforma" nav={nav}

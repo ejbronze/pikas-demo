@@ -1,5 +1,12 @@
 # Administración y permisos
 
+## Identidad y credenciales (Phase 6A, local)
+
+- Usuario PIKAS opcional, único y sin distinguir mayúsculas; inicio de sesión con correo o usuario sobre la MISMA identidad Auth y la misma persona. Cambiar usuario, correo o contraseña nunca crea otra persona ni concede membresías.
+- Soporte de Plataforma con `platform:identity:support` (rol `platform_admin`): no concede roles de cliente ni lee datos del cliente; no hay suplantación; `tenant_identity_required` no cambia; identidades de Plataforma no son objetivo.
+- Alcance de cliente: solo si cada membresía activa o pendiente de la persona la administra quien actúa (Cuenta de la misma cuenta; Escuela de esa escuela; Cafetería solo para roles POS de esa cafetería). Corrección de correo y suspensión son solo de Plataforma.
+- Auditoría inmutable sin contraseñas, tokens ni enlaces. Detalle: `docs/PHASE_6A_IDENTITY_CREDENTIALS.md`.
+
 ## Política Beta de PIKAS Cash (vigente, 2026-10-17)
 
 Definida por el propietario durante la aceptación productiva de Phase 5B (migración `202610170001_beta_wallet_authority.sql`). Phase 4D.2 había excluido intencionalmente toda autoridad financiera de `account_admin`; esta política la sustituye solo en lo indicado.

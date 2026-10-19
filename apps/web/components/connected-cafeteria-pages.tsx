@@ -16,6 +16,7 @@ import { CashierRefundLimits } from './cashier-refund-limits';
 import { DataList } from './data-list';
 import { EmptyState } from './state-panels';
 import { RegisterTask, StaffPrepareTask, StaffStatusTask, roleLabel } from './cafeteria-admin-tasks';
+import { MemberCredentialsTask } from './identity-credentials';
 export type CafeteriaSection='summary'|'products'|'menus'|'shifts'|'staff'|'registers'|'settings'|'transactions'|'schools'|'reports';
 const statusLabel=(s:string)=>({active:'Activo',inactive:'Inactivo',suspended:'Suspendido',archived:'Archivado',pending:'Pendiente',accepted:'Completado',expired:'Vencido',revoked:'Revocado'})[s]??s;
 const value=(data:FormData,key:string)=>String(data.get(key)??'').trim();
@@ -30,10 +31,10 @@ function CommandForm({operation,payload,label,children,confirmation,onSuccess}:{
  {confirming?<div role="alertdialog" aria-label={label} className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3"><p className="font-bold">{confirmation}</p><div className="flex flex-wrap gap-2"><button type="button" className="btn-secondary" onClick={()=>setConfirming(false)}>Cancelar</button><button type="button" className="btn" onClick={e=>{confirmed.current=true;e.currentTarget.form?.requestSubmit();}}>{label}</button></div></div>:<button className="btn" type="submit">{label}</button>}</form>;
 }
 function Staff({data}:{data:CafeteriaRead}) {
- const [query,setQuery]=useState(''),[role,setRole]=useState(''),[status,setStatus]=useState(''),[task,setTask]=useState<{kind:'new'}|{kind:'status';id:string}|null>(null),[notice,setNotice]=useState('');
+ const [query,setQuery]=useState(''),[role,setRole]=useState(''),[status,setStatus]=useState(''),[task,setTask]=useState<{kind:'new'}|{kind:'status'|'credentials';id:string}|null>(null),[notice,setNotice]=useState('');
  const staff=data.staff.filter(m=>(!role||m.role===role)&&(!status||m.status===status)&&m.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
  const filtered=!!(query.trim()||role||status),clear=()=>{setQuery('');setRole('');setStatus('');};
- const member=task?.kind==='status'?data.staff.find(m=>m.id===task.id):undefined;
+ const member=task?.kind==='status'?data.staff.find(m=>m.id===task.id):undefined,credentials=task?.kind==='credentials'?data.staff.find(m=>m.id===task.id):undefined;
  const close=(message?:string)=>{setTask(null);if(message)setNotice(message);};
  return <div className="space-y-5"><AppPageHeader title="Personal POS" description="Identidad, estado y acceso a cajas de los empleados." action={<button className="btn" onClick={()=>{setNotice('');setTask({kind:'new'});}}>Agregar empleado</button>}/>
  {notice&&<p role="status" className="rounded-xl bg-emerald-50 p-3 font-bold text-emerald-900">{notice}</p>}
@@ -47,10 +48,11 @@ function Staff({data}:{data:CafeteriaRead}) {
   {header:'Estado',cell:m=><span className="chip">{statusLabel(m.status)}</span>},
   {header:'Cajas',cell:m=>data.assignments.filter(a=>a.membership_id===m.id&&a.status==='active').map(a=>data.registers.find(r=>r.id===a.register_id)?.name).join(', ')||'Sin asignación'},
   {header:'Sesión',cell:m=>m.open?'Sesión abierta':'Sin sesión abierta'},
- ]} actions={m=><button className="btn-secondary" aria-label={`Cambiar acceso de ${m.name}`} onClick={()=>{setNotice('');setTask({kind:'status',id:m.id});}}>Cambiar acceso</button>}/>}
+ ]} actions={m=><><button className="btn-secondary" aria-label={`Cambiar acceso de ${m.name}`} onClick={()=>{setNotice('');setTask({kind:'status',id:m.id});}}>Cambiar acceso</button>{data.scope.tenant_kind!=='sandbox'&&<button className="btn-secondary" aria-label={`Credenciales de ${m.name}`} onClick={()=>{setNotice('');setTask({kind:'credentials',id:m.id});}}>Credenciales</button>}</>}/>}
  <h2 className="text-xl font-black">Accesos preparados</h2>{data.invitations.map(i=><article className="card space-y-3 p-4" key={i.id}><p className="break-all font-bold">{i.email}</p><p>{roleLabel(i.role)} · {statusLabel(i.status)} · Vence {new Date(i.expires_at).toLocaleDateString('es-DO',{timeZone:'UTC'})}</p>{data.scope.tenant_kind==='sandbox'?(i.status==='pending'&&<CommandForm operation="staff_complete" label="Confirmar identidad y conceder acceso POS" confirmation="¿Conceder acceso operativo exclusivamente a esta cafetería?" payload={d=>({invitation_id:i.id,display_name:value(d,'display_name')})}><Input label="Nombre completo" name="display_name" maxLength={200}/></CommandForm>):<StaffActivationCard invitationId={i.id} pending={i.status==='pending'} sandbox={false}/>}</article>)}{!data.invitations.length&&<EmptyState title="No hay accesos preparados."/>}
  {task?.kind==='new'&&<StaffPrepareTask data={data} onClose={close}/>}
  {member&&<StaffStatusTask member={member} onClose={close}/>}
+ {credentials&&<MemberCredentialsTask membershipId={credentials.id} name={credentials.name} onClose={()=>setTask(null)}/>}
  </div>;
 }
 function Registers({data}:{data:CafeteriaRead}) {
