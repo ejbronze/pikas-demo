@@ -2,12 +2,13 @@
 import { DemoEnvironmentBar } from "./demo-environment-bar";
 import { AdministrativeShell, type ShellNavItem } from "./administrative-shell";
 import type { SchoolContext } from "../lib/school/contracts";
-const items = [["", "Resumen", "home"], ["/estudiantes", "Estudiantes", "users"], ["/administradores", "Administradores", "shield"], ["/cafeterias", "Cafeterías conectadas", "utensils"], ["/actividad", "Actividad", "receipt"]] as const;
+const items = [["", "Resumen", "home"], ["/estudiantes", "Estudiantes", "users"], ["/pikas-cash", "PIKAS Cash", "wallet"], ["/administradores", "Administradores", "shield"], ["/cafeterias", "Cafeterías conectadas", "utensils"], ["/actividad", "Actividad", "receipt"]] as const;
 const roles = { account_admin: { area: "Administración de cuenta", role: "Administrador de cuenta" }, school_admin: { area: "Administración escolar", role: "Administrador escolar" } } as const;
 // role comes from the server-validated school read when one exists; otherwise the label stays neutral.
-export function ConnectedSchoolShell({ context, schoolId, role, children }: { context: SchoolContext; schoolId: string; role?: keyof typeof roles; children: React.ReactNode }) {
+// PIKAS Cash (5D.5 report) is listed only when the server-derived wallet read grants school:wallets:read.
+export function ConnectedSchoolShell({ context, schoolId, role, walletNav = false, children }: { context: SchoolContext; schoolId: string; role?: keyof typeof roles; walletNav?: boolean; children: React.ReactNode }) {
   const scope = context.schools.find(s => s.school_id === schoolId)!;
-  const nav: ShellNavItem[] = items.map(([suffix, label, icon]) => ({ href: `/admin/escuela${suffix}?school=${schoolId}`, label, icon, match: `/admin/escuela${suffix}`, exact: suffix === "" }));
+  const nav: ShellNavItem[] = items.filter(([suffix]) => walletNav || suffix !== "/pikas-cash").map(([suffix, label, icon]) => ({ href: `/admin/escuela${suffix}?school=${schoolId}`, label, icon, match: `/admin/escuela${suffix}`, exact: suffix === "" }));
   const labels = role ? roles[role] : { area: "Administración escolar", role: "Administración" };
   return <AdministrativeShell tone="navy" area={labels.area} homeHref={`/admin/escuela?school=${schoolId}`} navLabel="Administración escolar" nav={nav}
     context={{ label: "Escuela", name: scope.school_name, detail: context.pov ? "Datos ficticios" : role === "account_admin" ? scope.account_name : undefined }}

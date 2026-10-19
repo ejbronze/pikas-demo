@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## Phase 5D.5: reporte de PIKAS Cash de la escuela (local)
+
+- Nueva sección **PIKAS Cash** en Administración escolar (y para la Administración de cuenta, por escuela): saldo PIKAS Cash total de los estudiantes **ahora**, monederos activos y congelados, y saldos negativos.
+- Movimientos del período (Hoy, 7 o 30 días, personalizado hasta 92 días, por fecha de operación de la escuela): **Recargas**, **Compras con PIKAS Cash**, **Reembolsos a PIKAS Cash**, y aparte **Reversiones de recarga**, **Ajustes administrativos** y el movimiento neto.
+- **¿Dónde se usó PIKAS Cash?**: compras y reembolsos con PIKAS Cash por cafetería. No son las ventas de la cafetería: no incluye efectivo, crédito de personal, totales de ventas ni datos de caja.
+- Lectura nueva `school_wallet_report` (migración `202610250001`), solo lectura y con la autoridad existente de PIKAS Cash. Sin cambios en recargas, compras, reembolsos, reversiones ni ajustes. Sin push ni despliegue.
+
 ## UX Wave E + Phase 5D.4: POS y búsqueda de transacciones (local)
 
 - **Transacciones** (Administración de cafetería): filtros del servidor por período (Hoy, 7 o 30 días, personalizado hasta 92 días), método de pago y estado de reembolso; búsqueda exacta por número de recibo; paginación con el total real. Cada venta muestra **Sin reembolso / Reembolso parcial / Reembolsada** calculado por PIKAS, y el detalle incluye artículos con cantidades reembolsadas, el historial de reembolsos y los reembolsos antiguos por monto sin asignarlos a artículos. Indica cómo reembolsar en el POS (Reembolsos → recibo #N).

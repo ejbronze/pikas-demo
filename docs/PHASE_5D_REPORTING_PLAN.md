@@ -1,10 +1,11 @@
 # Phase 5D — Reporting & Reconciliation (plan)
 
 **Status:** owner decisions D1–D13 **RESOLVED** (§24). **5D.1 (reporting foundation +
-sales summary), 5D.2 (top products), 5D.3 (reconciliation) and 5D.4 (Transacciones lookup)
-implemented locally**; see the implementation status sections below and, for 5D.4, the
-Wave E + 5D.4 record in `UX_UI_PRODUCT_ARCHITECTURE_AUDIT.md` §29. Slice 5D.5 is not
-started, and 5D.6 is deferred (D9). Nothing is deployed.
+sales summary), 5D.2 (top products), 5D.3 (reconciliation), 5D.4 (Transacciones lookup)
+and 5D.5 (School PIKAS Cash report) implemented locally**; see the implementation status
+sections below and, for 5D.4, the Wave E + 5D.4 record in
+`UX_UI_PRODUCT_ARCHITECTURE_AUDIT.md` §29. The optional account-wide roll-up (5D.5b) is not
+implemented, and 5D.6 is deferred (D9). Nothing is deployed.
 
 Established baseline:
 - Phase 5C closure: `efd668cb`.
@@ -371,6 +372,86 @@ and 5D.6 (CSV) are untouched. Also not implemented:
 - a register filter;
 - cashier or supervisor views;
 - alerts, explanations or approval of discrepancies.
+
+## 5D.5 implementation status (local)
+
+**Contract.** Migration `202610250001_school_wallet_report.sql` adds
+`public.school_wallet_report(p_school_id, p_period, p_from, p_to)`. It is read-only and
+additive (security definer, execute for `authenticated` only), with route
+`POST /api/school/wallet-report` and the School Admin page **PIKAS Cash**
+(`/admin/escuela/pikas-cash`).
+
+**Authority.**
+- Allowed: `require_school_admin(.., 'school:wallets:read')`, revalidated after reading.
+  That is the School Admin of the school, and the Account Admin of its account through the
+  existing Beta wallet policy.
+- Denied: the sandbox admin POV (explicitly, as `school_wallet_access` already reports),
+  Cafeteria Admin (D13), POS roles, Platform Admin, other schools and other accounts.
+- The nav item appears only with the server-derived wallet read.
+
+**Semantics (final, §12 / D10).**
+- **Ahora (point-in-time):**
+  - Σ `student_wallets.current_balance_minor` of the school's DOP wallets;
+  - wallet count, active and frozen (stored `status`);
+  - negative balances (count and total).
+
+  These never derive from period movements. "Monedero activo" means only the stored status.
+- **Period (event date):** ledger entries whose `occurred_at` falls on the school's business
+  dates (schools.business_timezone, gap G1), using local-day boundaries.
+  - **Recargas:** `replenishment` entries.
+  - **Reversiones de recarga:** `replenishment_reversal` entries. They are shown separately,
+    never as a purchase refund, and never re-dated.
+  - **Recargas netas:** Recargas − Reversiones.
+  - **Compras con PIKAS Cash:** |`purchase` entries|, wallet-paid only.
+  - **Reembolsos a PIKAS Cash:** `refund` entries on their refund date.
+  - **Ajustes administrativos:** 5C.3 adjustments (`actor_role` set), split into credits and
+    debits.
+  - **Ajustes históricos:** pre-5C.3 adjustments, as a net amount, shown only when present.
+  - **Movimiento neto:** Σ of all entries.
+- **¿Dónde se usó PIKAS Cash? (D10):** per cafeteria, PIKAS Cash purchases
+  (`wallet_purchase_debits.cafeteria_id`) and PIKAS Cash refunds
+  (`wallet_refund_credits.cafeteria_id`) with counts.
+  - Replenishments, reversals and adjustments are never attributed to a cafeteria.
+  - No net per cafeteria (not defined).
+- **Never returned:** cash or staff-credit sales, gross/net sales, all-tender transaction
+  counts, average ticket or register data. Wallet spending is labelled "not the
+  cafeteria's total sales".
+
+**Index: NO INDEX ADDED.** Local EXPLAIN on PostgreSQL 17.6, in a rolled-back fixture with
+10,000 ledger entries in one school:
+- `wallet_ledger_wallet_time_idx` carries the `occurred_at` bound as an index condition;
+- Hoy over all 10,000 entries took 37 ms; a past month with none of them took 11 ms.
+
+Recheck with pilot-scale history. A school-level `(account_id, school_id, occurred_at)` index
+is the candidate if needed.
+
+**Validation (local, fictional).**
+- pgTAP `phase5d5_school_wallet_report.test.sql`: **56/56**. It covers:
+  - privileges, RLS kept, and authority for every role, the sandbox POV, sibling school and
+    other account;
+  - presets, custom, 92/93-day, reversed, future and incomplete ranges, and the business-day
+    boundary;
+  - each event type (two replenishments, a reversal, credit and debit adjustments, PIKAS
+    Cash purchases at two cafeterias, a PIKAS Cash refund), with cash and staff-credit sales
+    excluded;
+  - the identity Σ movements = change in total balance;
+  - current balance independent of the period;
+  - cafeteria attribution and the breakdown summing to Compras;
+  - no sales, cash, register or all-tender fields;
+  - no leakage to the sibling school; the Account Admin sees the same report;
+  - read-only.
+- Route **12/12**; browser component **4/4**; production-mode browser at 390/768/1440 matched
+  an independent ledger query (see the audit §30).
+- 5C.1 60/60 and 5D.1–5D.4 52/42/68/86 pass.
+- The 5B, 5C.2 and 5C.3 suites show failures that assume a freshly seeded wallet 5201. Local
+  seed data from 2026-10-17 holds a balance there. They fail identically with the 5D.5
+  function dropped (the accepted 1fda44d state), so this is local data, not 5D.5.
+
+**Deferred.**
+- Account-wide roll-up across schools (5D.5b, optional).
+- Historical balance at a past date and trends.
+- Per-student rankings (not in 5D).
+- Export (5D.6 / D9).
 
 ## 1. Objective
 

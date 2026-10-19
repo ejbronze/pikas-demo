@@ -2300,3 +2300,55 @@ Not changed:
 - D8.
 - 5D.5 and 5D.6.
 - Split payment and offline queueing.
+
+## 30. Phase 5D.5 — School PIKAS Cash report (local)
+
+**Scope.**
+- Wallet reporting for School Admin, and for Account Admin per school through the existing
+  selector.
+- It answers "How is PIKAS Cash being used by students in my school?". It is not cafeteria
+  sales.
+- Full semantics are in `PHASE_5D_REPORTING_PLAN.md` "5D.5 implementation status".
+
+Not changed: wallet mutations (5B/5C), 5D.1–5D.4 reads, POS, Transacciones, register
+semantics, D8, the Demo, and the Wave D/E surfaces.
+
+- **Backend:** migration `202610250001_school_wallet_report.sql` adds the read-only
+  `school_wallet_report(school, period, from, to)` under `school:wallets:read`. The sandbox
+  POV is denied, and there is no index, grant or table change.
+- **Navigation:** the school shell lists **PIKAS Cash** (after Estudiantes) only with the
+  server-derived wallet read. The page is `/admin/escuela/pikas-cash`. The sandbox POV and
+  roles without the read see a plain explanation.
+- **Page:** AppPageHeader states "No incluye ventas en efectivo ni otras formas de pago".
+  - **Ahora:** "Saldo PIKAS Cash total" (labelled "ahora. No depende del período"), wallets
+    active/frozen, and negative balances when present.
+  - **Movimientos del período:** the 5D period chips and a custom range validated to 92 days
+    before any request.
+  - The date range shows the school's time zone.
+  - **Main metrics:** Recargas, Compras con PIKAS Cash and Reembolsos a PIKAS Cash, with
+    counts and signed MoneyValue.
+  - **"Correcciones y movimiento neto" disclosure:** Reversiones de recarga ("no son
+    reembolsos de compras"), Recargas netas, Ajustes administrativos up and down, Ajustes
+    históricos only when present, and Movimiento neto.
+  - **"¿Dónde se usó PIKAS Cash?":** a DataList of PIKAS Cash purchases and refunds per
+    cafeteria, labelled "No son las ventas totales de cada cafetería".
+- **States:**
+  - "Aún no hay monederos PIKAS Cash en esta escuela";
+  - "Sin movimientos de PIKAS Cash en este período";
+  - "No hubo compras con PIKAS Cash en este período";
+  - errors never render zeros.
+- **No client aggregation:** the browser only formats server totals.
+- **Validation:**
+  - pgTAP 56/56, route 12/12, component 4/4;
+  - vitest regression 602/602 (46 files);
+  - TypeScript, ESLint on the changed files, build and diff-check pass.
+- **Production-mode browser** (fictional School Admin "Director Ficticio Escuela", Escuela
+  Ficticia Auditoría) at 1440, 768 and 390:
+  - the last 30 days matched an independent ledger query: Recargas RD$ 330.00 (4),
+    Compras RD$ 85.00 (1), Reembolsos RD$ 50.00 (1), current balance RD$ 254.00;
+  - Hoy showed "Sin movimientos". The day's only sale was paid in cash, so no cash leakage;
+  - the 92-day guard held, and a custom range from 2026-10-01 matched;
+  - the Account Admin saw the same school report (1440), and the Cafeteria Admin was denied;
+  - no overflow, controls ≥ 44 px, no native dialogs, no page errors, nothing written.
+- **Deferred:** the 5D.5b account roll-up, historical balances and trends, and export
+  (5D.6).
