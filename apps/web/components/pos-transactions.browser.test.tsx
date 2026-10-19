@@ -107,16 +107,42 @@ describe("POS sale", () => {
     const cta = page.locator(".pos-payment-cta"); expect(await cta.innerText()).toBe("Elige un método de pago"); expect(await cta.isDisabled()).toBe(true);
     await page.getByRole("button", { name: /PIKAS Cash/ }).click(); expect(await page.locator("dl").first().innerText()).toMatch(/Disponible hoy\s*RD\$ 400\.00/);
     expect(await cta.innerText()).toBe("Cobrar RD$ 125.50 con PIKAS Cash");
-    await page.getByRole("button", { name: /^Efectivo/ }).click(); await page.getByLabel(/Efectivo recibido/).fill("100");
-    expect(await page.getByRole("status").filter({ hasText: "Faltan" }).innerText()).toMatch(/Faltan\s*RD\$ 25\.50/); expect(await cta.isDisabled()).toBe(true);
-    await page.getByLabel(/Efectivo recibido/).fill("200"); expect(await page.getByRole("status").filter({ hasText: "Cambio" }).innerText()).toMatch(/Cambio\s*RD\$ 74\.50/);
-    expect(await cta.innerText()).toBe("Cobrar RD$ 125.50 en efectivo");
+    // Cash is a focused task: the confirmation screen never grows a cash form.
+    await page.getByRole("button", { name: /^Efectivo/ }).click(); const task = page.getByRole("dialog", { name: "Cobro en efectivo" }); await task.waitFor();
+    expect(await page.locator(".pos-payment-review").innerText()).not.toMatch(/Monto recibido|Cambio|Monto exacto/);
+    expect(await page.evaluate(() => document.activeElement?.closest("label")?.textContent)).toContain("Monto recibido");
+    expect(await task.innerText()).toMatch(/Total a cobrar\s*RD\$ 125\.50/);
+    const shortcuts = await task.getByRole("group", { name: "Montos rápidos" }).getByRole("button").allInnerTexts();
+    expect(shortcuts[0]).toBe("Monto exacto"); expect(shortcuts).toHaveLength(5); expect(shortcuts.join("|")).not.toMatch(/RD\$ (50|100)\.00/);
+    expect(shortcuts.slice(1).map(t => Number(t.replace(/[^0-9.]/g, "")))).toEqual([200, 500, 1000, 2000]);
+    const charge = task.getByRole("button", { name: /^Cobrar|^Procesando/ }); expect(await charge.isDisabled()).toBe(true);
+    await task.getByRole("button", { name: "Monto exacto" }).click(); expect(await task.getByLabel("Monto recibido").inputValue()).toBe("125.50");
+    expect(await task.getByRole("status").filter({ hasText: "Cambio" }).innerText()).toMatch(/Cambio\s*RD\$ 0\.00/); expect(await charge.innerText()).toBe("Cobrar RD$ 125.50"); expect(await charge.isDisabled()).toBe(false);
+    await task.getByLabel("Monto recibido").fill("100"); expect(await task.getByRole("status").filter({ hasText: "Faltan" }).innerText()).toMatch(/Faltan\s*RD\$ 25\.50/); expect(await charge.isDisabled()).toBe(true);
+    await task.getByLabel("Monto recibido").press("Enter"); await page.waitForTimeout(100); expect((await ops()).some(o => o.operation === "checkout")).toBe(false);
+    await task.getByLabel("Monto recibido").fill("200"); expect(await task.getByRole("status").filter({ hasText: "Cambio" }).innerText()).toMatch(/Cambio\s*RD\$ 74\.50/);
+    // Focus stays in the task; dismissing with a typed amount asks first; cancelling creates no sale.
+    for (let i = 0; i < 8; i++) { await page.keyboard.press("Tab"); expect(await page.evaluate(() => !!document.activeElement?.closest("dialog"))).toBe(true); }
+    await page.keyboard.press("Escape"); await task.getByText("¿Descartar los datos ingresados?").waitFor(); await task.getByRole("button", { name: "Descartar" }).click();
+    await task.waitFor({ state: "detached" }); expect(await page.evaluate(() => document.activeElement?.textContent)).toMatch(/^Efectivo/);
+    expect(await win<string>("w => w.sale.getSnapshot().cash")).toBe(""); expect(await cta.innerText()).toBe("Cobrar RD$ 125.50 en efectivo");
+    await cta.click(); await task.waitFor(); await task.getByRole("button", { name: "Volver" }).click(); await task.waitFor({ state: "detached" });
     expect((await ops()).some(o => o.operation === "checkout")).toBe(false);
+  });
+  it("cash task: a useful shortcut charges once through the existing sale path and the existing receipt shows the change", async () => {
+    await win("w => w.mountPos()"); await toItems(); await page.getByRole("button", { name: "Añadir Producto real" }).click(); await page.getByRole("button", { name: "Continuar al pago" }).first().click();
+    await page.getByRole("button", { name: /^Efectivo/ }).click(); const task = page.getByRole("dialog", { name: "Cobro en efectivo" });
+    await task.getByRole("button", { name: /RD\$ 200\.00/ }).click(); await task.getByLabel("Monto recibido").press("Enter");
+    await page.getByText("Venta completada").waitFor(); expect(await task.count()).toBe(0);
+    const checkouts = (await ops()).filter(o => o.operation === "checkout") as unknown as { request: { tender: { type: string; cash_received_minor: string } } }[];
+    expect(checkouts).toHaveLength(1); expect(checkouts[0].request.tender).toEqual({ type: "cash", cash_received_minor: "20000" });
+    expect(await page.getByRole("region", { name: "Venta completada" }).innerText()).toMatch(/Cambio a entregar\s*RD\$ 74\.50/);
   });
   it("uncertain sale: pending with exact amount and tender, everything else blocked, explicit same-key retry, then an unmistakable result", async () => {
     await win("w => w.mountPos()"); await toItems(); await page.getByRole("button", { name: "Añadir Producto real" }).click(); await page.getByRole("button", { name: "Continuar al pago" }).first().click();
-    await page.getByRole("button", { name: /^Efectivo/ }).click(); await page.getByLabel(/Efectivo recibido/).fill("200");
-    await win("w => { w.next.push('throw'); }"); await page.evaluate(() => { const b = document.querySelector<HTMLButtonElement>(".pos-payment-cta")!; b.click(); b.click(); });
+    await page.getByRole("button", { name: /^Efectivo/ }).click(); await page.getByLabel("Monto recibido").fill("200");
+    // Double activation of the task's Cobrar sends one checkout.
+    await win("w => { w.next.push('throw'); }"); await page.evaluate(() => { const b = document.querySelector<HTMLButtonElement>("dialog .pos-payment-cta")!; b.click(); b.click(); });
     await page.getByText("Venta pendiente de confirmar").waitFor(); expect(await page.getByRole("alert").filter({ hasText: "Venta pendiente" }).innerText()).toContain("RD$ 125.50 · Efectivo · 1 artículos");
     expect(await page.getByRole("button", { name: "Buscar usuario PIKAS" }).isDisabled()).toBe(true);
     await page.waitForTimeout(150); const first = (await ops()).filter(o => o.operation === "checkout"); expect(first).toHaveLength(1);

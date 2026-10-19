@@ -60,7 +60,7 @@ describe("authoritative connected sale journey", () => {
   });
   it("supports cash without debiting wallet and uses committed change", async () => {
     await prepare(); sale.setTender("cash"); sale.setCash("200.00");
-    expect(html()).toMatch(/Cambio<\/span><span[^>]*>RD\$ 74\.50/); expect(html()).toContain("Cobrar RD$ 125.50 en efectivo");
+    expect(html()).toContain("Recibido RD$ 200.00"); expect(html()).toContain("Cobrar RD$ 125.50 en efectivo"); expect(html()).not.toContain("Monto recibido");
     await sale.checkout(); expect(sale.getSnapshot().receipt!.tender_type).toBe("cash");
     expect(sale.getSnapshot().receipt!.change_due_minor).toBe("7450"); expect(html()).toMatch(/Recibido<\/dt><dd[^>]*>RD\$ 200\.00/); expect(html()).toMatch(/Cambio a entregar<\/dt><dd[^>]*>RD\$ 74\.50/);
   });

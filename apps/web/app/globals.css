@@ -115,6 +115,7 @@
 .pos-payment-summary { border-block:1px solid var(--border); padding-block:.75rem; }
 .pos-payment-review .btn.w-full { min-height:3.25rem; font-size:1.05rem; }
 .pos-payment-cta { box-shadow:0 3px 0 #021a39; }
+.pos-tender-option { display:flex; width:100%; min-height:4.5rem; align-items:center; justify-content:flex-start; gap:.75rem; text-align:left; }
 .pos-payment-cta:not(:disabled) { font-size:1.05rem; }
 .pos-dark .pos-receipt-status-complete { background:#123c35; color:#a7f3d0; }
 .pos-dark .pos-receipt-status-partial { background:#4b3812; color:#fde68a; }
