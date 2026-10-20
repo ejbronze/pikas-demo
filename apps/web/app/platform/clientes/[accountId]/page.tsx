@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { customerOverviewSchema, statusLabel } from "../../../../lib/platform/customer-contracts";
 import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
-import { CustomerHeading, CustomerHierarchy, ReadFailure } from "../../console-views";
+import { ColegioProfile, CustomerHeading, CustomerHierarchy, ReadFailure } from "../../console-views";
 import { AdminStatus } from "../../../../components/admin-interactions";
 import { CustomerActivationAction } from "./activation-action";
 import { customerActivationStatusSchema } from "../../../../lib/platform/customer-activation";
@@ -31,6 +31,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
   const hasCurrent = customer.administrators.length > 0 || customer.customer_admin_onboarding.some((intent) => intent.role === "account_admin" && intent.scope === "account" && intent.status === "granted") || initialIntents.some((intent) => ["pending", "linked", "granted"].includes(intent.status));
   return <>
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
+    <ColegioProfile customer={customer} />
     {customer.tenant_kind === "customer" && session.capabilities.includes(CUSTOMER_OPERATIONS_READ) && <section aria-labelledby="ops-entry" className="card flex flex-wrap items-center justify-between gap-3 p-5">
       <div className="min-w-0 flex-1 basis-60"><h2 id="ops-entry" className="text-lg font-bold">Gestión del cliente</h2><p className="text-sm text-slate-600">Consulta sus cafeterías, productos, cajas, personal, transacciones y reportes como personal de PIKAS.</p></div>
       <Link className="btn" href={`/platform/clientes/${customer.account.id}/gestion`}>Administrar cliente</Link></section>}

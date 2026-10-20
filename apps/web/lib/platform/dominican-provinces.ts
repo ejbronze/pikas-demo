@@ -13,4 +13,5 @@ export const dominicanProvinces = [
 ] as const;
 export type DominicanProvinceCode = typeof dominicanProvinces[number][0];
 export const provinceCodes = dominicanProvinces.map(([code]) => code) as [DominicanProvinceCode, ...DominicanProvinceCode[]];
+export const countryName = (code: string | null | undefined) => code === DOMINICAN_REPUBLIC.code ? DOMINICAN_REPUBLIC.name : code ?? null;
 export const provinceName = (code: string) => dominicanProvinces.find(([value]) => value === code)?.[1] ?? code;

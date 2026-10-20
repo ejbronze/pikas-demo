@@ -45,6 +45,25 @@ describe("customer server screens", () => {
     detail({...customer,administrator_intents:[{...customer.administrator_intents[0],status}]});
     const html=renderToStaticMarkup(await CustomerPage({params:Promise.resolve({accountId:id})}));expect(html).toContain(label);expect(html).not.toContain('Crear enlace de invitación');
   });
+  it("Información del colegio shows the persisted profile read-only and never fabricates missing values", async () => {
+    const school = (over: Record<string, unknown>) => ({ id: "00000000-0000-4000-8000-0000000000b1", name: "Colegio Ficticio Atlántico", code: "COL-0A1B2C3D4E", status: "active", business_timezone: "America/Santo_Domingo", locations: [], ...over });
+    detail({ ...customer, schools: [school({ rnc: "131987654", address: "Av. Ficticia 12", country: "DO", province: "DO-25", province_name: "Santiago" })] });
+    let html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+    const profile = html.slice(html.indexOf('id="colegio-profile"'), html.indexOf("</section>", html.indexOf('id="colegio-profile"')));
+    expect(profile).toContain("Información del colegio");
+    for (const [label, value] of [["Nombre", "Colegio Ficticio Atlántico"], ["RNC", "131987654"], ["Dirección", "Av. Ficticia 12"], ["País", "República Dominicana"], ["Provincia", "Santiago"], ["Código del colegio", "COL-0A1B2C3D4E"]])
+      expect(profile).toMatch(new RegExp(`<dt[^>]*>${label}</dt><dd[^>]*>${value}</dd>`));
+    expect(profile).not.toMatch(/>DO</); expect(profile).not.toContain("DO-25"); expect(profile).not.toContain("account_admin");
+    expect(profile).not.toMatch(/<(input|select|textarea|button|form)\b/); expect(profile).not.toMatch(/Editar|Guardar/);
+    // A colegio provisioned before Agregar colegio: no profile fields, or explicit nulls.
+    for (const legacy of [school({}), school({ rnc: null, address: null, country: null, province: null, province_name: null })]) {
+      detail({ ...customer, schools: [legacy] });
+      html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+      expect(html.match(/No registrado/g)).toHaveLength(4); expect(html).toContain("COL-0A1B2C3D4E"); expect(html).toContain("Acceso preparado"); expect(html).toContain("Estructura del cliente");
+    }
+    detail(customer); html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+    expect(html).not.toContain("Información del colegio"); expect(html).toContain("No hay escuelas registradas.");
+  });
   it("sandbox details do not expose customer-admin completion actions", async () => {
     mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { ...customer, tenant_kind: "sandbox" } });
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));

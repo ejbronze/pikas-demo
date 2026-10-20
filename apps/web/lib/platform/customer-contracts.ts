@@ -19,7 +19,9 @@ export const customerListSchema = z.object({
 export const customerOverviewSchema = z.object({
   account: entity,
   tenant_kind: z.enum(["customer", "sandbox"]),
-  schools: z.array(entity.extend({ business_timezone: z.string(), locations: z.array(entity.extend({ cafeterias: z.array(entity) })) })),
+  // Colegio profile from Agregar colegio; colegios provisioned earlier have none (null).
+  schools: z.array(entity.extend({ business_timezone: z.string(), locations: z.array(entity.extend({ cafeterias: z.array(entity) })),
+    rnc: z.string().nullish(), address: z.string().nullish(), country: z.string().nullish(), province: z.string().nullish(), province_name: z.string().nullish() })),
   customer_admin_onboarding: z.array(z.object({ intent_id: z.uuid(), role: z.string(), scope: z.string(), status: z.string(), person: z.object({ id: z.guid(), display_name: z.string() }).nullable() })),
   administrators: z.array(z.object({ display_name: z.string(), status: lifecycleStatus, person_status: lifecycleStatus })),
   administrator_intents: z.array(z.object({ id: z.uuid(), email: z.string(), status: z.enum(["pending", "linked", "granted", "expired", "revoked"]),

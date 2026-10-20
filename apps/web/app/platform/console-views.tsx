@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppPageHeader } from "../../components/app-page-header";
 import { ErrorState } from "../../components/state-panels";
 import { statusLabel, type CustomerOverview } from "../../lib/platform/customer-contracts";
+import { countryName } from "../../lib/platform/dominican-provinces";
 
 export function ReadFailure({ kind }: { kind: string }) {
   if (kind === "forbidden") return <ErrorState title="No tienes permiso para consultar clientes." description="Este destino requiere acceso de administración de clientes." />;
@@ -15,6 +16,16 @@ export function LifecycleBadge({ status }: { status: string }) {
 export function CustomerHeading({ name, code, status, kind }: { name: string; code: string; status: string; kind: string }) {
   return <AppPageHeader back={{ href: "/platform/clientes", label: "Clientes" }} title={name}
     meta={<span className="flex flex-wrap items-center gap-2">{code}<LifecycleBadge status={status} /><span className={`chip ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></span>} />;
+}
+// Read-only colegio profile captured by Agregar colegio. Missing values are never inferred.
+export function ColegioProfile({ customer }: { customer: CustomerOverview }) {
+  if (customer.schools.length === 0) return null;
+  return <section aria-labelledby="colegio-profile" className="card space-y-4 p-5"><h2 id="colegio-profile" className="text-lg font-bold">Información del colegio</h2>
+    {customer.schools.map((school) => <dl key={school.id} className="divide-y rounded-xl border px-4" aria-label={`Información de ${school.name}`}>
+      {([["Nombre", school.name], ["RNC", school.rnc], ["Dirección", school.address], ["País", countryName(school.country)], ["Provincia", school.province_name ?? null], ["Código del colegio", school.code]] as const).map(([label, value]) =>
+        <div key={label} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"><dt className="text-sm text-slate-600">{label}</dt><dd className={`min-w-0 break-words text-right font-bold ${value ? "" : "text-slate-500"}`}>{value || "No registrado"}</dd></div>)}
+    </dl>)}
+  </section>;
 }
 export function CustomerHierarchy({ customer, schoolAction }: { customer: CustomerOverview; schoolAction?: (school: CustomerOverview["schools"][number]) => React.ReactNode }) {
   return <section aria-label="Estructura del cliente" className="space-y-4"><h2 className="text-lg font-semibold">Estructura del cliente</h2>
