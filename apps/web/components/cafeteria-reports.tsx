@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { sessionFetch } from '../lib/auth/session-fetch';
+import { postRead, type ReadSource } from '../lib/cafeteria/read-source';
 import { customRangeError, latestGate, maxReportDays, reportErrors, reportResultSchema, type ReportKind, type ClosedSession, type OpenSession, type Reconciliation, type ReportPeriod, type SalesSummary, type TopProducts } from '../lib/cafeteria/reports';
 import { moneyToneClass } from '../lib/money-semantics';
 import { MoneyValue } from './money-value';
@@ -24,36 +24,36 @@ type Results = { sales_summary: SalesSummary; top_products: TopProducts; reconci
 const Metric = MetricCard;
 
 // Only the latest request of a section may update it, so a slow earlier period never replaces a newer one.
-function useReport<K extends ReportKind>(cafeteriaId: string, kind: K) {
+function useReport<K extends ReportKind>(cafeteriaId: string, kind: K, source?: ReadSource) {
+  const endpoint = source?.endpoint, accountId = source?.accountId;
   const [state, setState] = useState<Section<Results[K]>>({ loading: false, error: '', report: null });
   const gate = useRef(latestGate());
   const load = useCallback(async (selected: ReportPeriod, custom: Range) => {
     const token = gate.current.next();
     setState({ loading: true, error: '', report: null });
     try {
-      const response = await sessionFetch('/api/cafeteria/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cafeteria_id: cafeteriaId, kind, period: selected, from: custom?.from ?? null, to: custom?.to ?? null }) });
+      const response = await postRead('/api/cafeteria/reports', { cafeteria_id: cafeteriaId, kind, period: selected, from: custom?.from ?? null, to: custom?.to ?? null }, endpoint && accountId ? { endpoint, accountId } : undefined);
       const payload = await response.json();
       if (!response.ok) throw Error(reportErrors[payload.error] ?? failure);
       const parsed = reportResultSchema[kind].safeParse(payload.result);
       if (!parsed.success || parsed.data.cafeteria_id !== cafeteriaId || parsed.data.period !== selected) throw Error(failure);
       if (gate.current.isCurrent(token)) setState({ loading: false, error: '', report: parsed.data as Results[K] });
     } catch (e) { if (gate.current.isCurrent(token)) setState({ loading: false, error: e instanceof Error && e.message ? e.message : failure, report: null }); }
-  }, [cafeteriaId, kind]);
+  }, [cafeteriaId, kind, endpoint, accountId]);
   const clear = useCallback(() => { gate.current.next(); setState({ loading: false, error: '', report: null }); }, []);
   return [state, load, clear] as const;
 }
 
 // reconciliation: the server-derived cafeteria:pos:sessions:read grant (the RPC enforces it again).
-export function CafeteriaReports({ cafeteriaId, sandbox, reconciliation = false }: { cafeteriaId: string; sandbox: boolean; reconciliation?: boolean }) {
+export function CafeteriaReports({ cafeteriaId, sandbox, reconciliation = false, source, cajasHref }: { cafeteriaId: string; sandbox: boolean; reconciliation?: boolean; source?: ReadSource; cajasHref?: string }) {
   const [period, setPeriod] = useState<ReportPeriod>('last_30_days');
   const [range, setRange] = useState<Range>(null);
   const [draft, setDraft] = useState({ from: '', to: '' });
   const [rangeError, setRangeError] = useState('');
   const [today, setToday] = useState<string | undefined>();
-  const [summary, loadSummary, clearSummary] = useReport(cafeteriaId, 'sales_summary');
-  const [products, loadProducts, clearProducts] = useReport(cafeteriaId, 'top_products');
-  const [cash, loadCash, clearCash] = useReport(cafeteriaId, 'reconciliation');
+  const [summary, loadSummary, clearSummary] = useReport(cafeteriaId, 'sales_summary', source);
+  const [products, loadProducts, clearProducts] = useReport(cafeteriaId, 'top_products', source);
+  const [cash, loadCash, clearCash] = useReport(cafeteriaId, 'reconciliation', source);
   // Every section always requests the same selected period.
   const loadAll = useCallback((selected: ReportPeriod, custom: Range) => {
     void loadSummary(selected, custom); void loadProducts(selected, custom); if (reconciliation) void loadCash(selected, custom);
@@ -85,7 +85,7 @@ export function CafeteriaReports({ cafeteriaId, sandbox, reconciliation = false 
     </form>}
     <ReportBody loading={summary.loading} error={summary.error} report={summary.report} onRetry={() => void loadSummary(period, period === 'custom' ? range : null)} />
     <TopProductsBody loading={products.loading} error={products.error} report={products.report} onRetry={() => void loadProducts(period, period === 'custom' ? range : null)} />
-    {reconciliation && <ReconciliationBody cafeteriaId={cafeteriaId} loading={cash.loading} error={cash.error} report={cash.report} onRetry={() => void loadCash(period, period === 'custom' ? range : null)} />}
+    {reconciliation && <ReconciliationBody cafeteriaId={cafeteriaId} cajasHref={cajasHref} loading={cash.loading} error={cash.error} report={cash.report} onRetry={() => void loadCash(period, period === 'custom' ? range : null)} />}
   </section>;
 }
 
@@ -193,7 +193,7 @@ function OpenRow({ s }: { s: OpenSession }) {
   </li>;
 }
 
-export function ReconciliationBody({ cafeteriaId, loading, error, report, onRetry }: { cafeteriaId: string; loading: boolean; error: string; report: Reconciliation | null; onRetry: () => void }) {
+export function ReconciliationBody({ cafeteriaId, cajasHref, loading, error, report, onRetry }: { cafeteriaId: string; cajasHref?: string; loading: boolean; error: string; report: Reconciliation | null; onRetry: () => void }) {
   const d = report?.data;
   const none = d && d.summary.closed_count === 0 && d.open_sessions.length === 0;
   return <>
@@ -216,7 +216,7 @@ export function ReconciliationBody({ cafeteriaId, loading, error, report, onRetr
           {d.summary.closed_count > d.closed_sessions.length && <p className="text-xs text-slate-500">Mostrando las {d.closed_sessions.length} más recientes de {sessions(d.summary.closed_count)}.</p>}
           <p className="text-xs text-slate-500">Un reembolso en efectivo resta de la sesión que lo pagó, que puede no ser la de la venta original; por eso puede no coincidir con los Reembolsos del resumen de ventas.</p>
         </>}
-        <p className="text-sm"><Link className="font-bold text-teal-800 underline" href={`/admin/cafeteria/cajas?cafeteria=${cafeteriaId}`}>Ver sesiones y cierres en Cajas</Link></p>
+        <p className="text-sm">{cajasHref ? <Link className="inline-flex min-h-11 items-center font-bold text-indigo-800 underline" href={cajasHref}>Ver cajas de esta cafetería</Link> : <Link className="font-bold text-teal-800 underline" href={`/admin/cafeteria/cajas?cafeteria=${cafeteriaId}`}>Ver sesiones y cierres en Cajas</Link>}</p>
       </>}
     </section>
     {report && d && !none && <section className="card space-y-3 p-4" aria-labelledby="report-open-registers">

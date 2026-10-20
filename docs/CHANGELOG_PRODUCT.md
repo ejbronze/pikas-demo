@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Backoffice: gestión de clientes, etapa 1 (solo consulta, local)
+
+- En **Clientes → cliente → Administrar cliente**, el personal de PIKAS con la nueva capacidad `platform:customer:operations:read` consulta la operación de las cafeterías del cliente: **Resumen**, **Productos**, **Cajas**, **Personal**, **Transacciones** (con detalle) y **Reportes**, eligiendo la cafetería entre las del cliente.
+- Siempre visible: «Gestionando {cliente}» y «Estás viendo la operación como personal de PIKAS». No hay suplantación ni membresías: la persona de PIKAS sigue siendo quien actúa y el cliente es solo el contexto, validado por el servidor en cada consulta.
+- Solo consulta: no hay cambios de catálogo, cajas, personal, transacciones ni dinero. Funciona también con clientes suspendidos o cerrados (consulta histórica). La gestión escolar (estudiantes, carga masiva, ubicación) y `operations:manage` vienen después. Migración `202610290001`. Sin push ni despliegue.
+
 ## Familias y estudiantes: nueva presentación (solo demostración, local)
 
 - Las experiencias de **familia** y **estudiante** se rediseñaron para el móvil con los conceptos reales de PIKAS: saldo **PIKAS Cash** por estudiante, **Compras** (recibo, cafetería, artículos, total, forma de pago y reembolsos) y **movimientos de PIKAS Cash** en lenguaje sencillo, con el saldo después de cada uno.

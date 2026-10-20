@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { sessionFetch } from '../lib/auth/session-fetch';
+import { postRead, type ReadSource } from '../lib/cafeteria/read-source';
 import { customRangeError, maxReportDays, type ReportPeriod } from '../lib/cafeteria/reports';
 import { authorizationLabel, detailResultSchema, refundReasonLabel, refundStatusLabel, tenderLabel, transactionsErrors, transactionsResultSchema,
   type RefundStatus, type TransactionDetail, type TransactionRow, type TransactionsRequest, type TransactionsResult, type TransactionTender } from '../lib/cafeteria/transactions';
@@ -22,7 +22,8 @@ export function RefundChip({ status }: { status: RefundStatus }) {
 
 // Phase 5D.4 Transacciones. Every filter, the count, the page and each refund state come from
 // cafeteria_transactions_read; the browser never filters a page or computes refund state.
-export function CafeteriaTransactions({ cafeteriaId, sandbox }: { cafeteriaId: string; sandbox: boolean }) {
+export function CafeteriaTransactions({ cafeteriaId, sandbox, source }: { cafeteriaId: string; sandbox: boolean; source?: ReadSource }) {
+  const endpoint = source?.endpoint, accountId = source?.accountId;
   const [filters, setFilters] = useState<Filters>(initial), [draft, setDraft] = useState({ from: '', to: '' }), [rangeError, setRangeError] = useState('');
   const [receipt, setReceipt] = useState(''), [receiptQuery, setReceiptQuery] = useState<string | null>(null), [receiptError, setReceiptError] = useState('');
   const [offset, setOffset] = useState(0), [result, setResult] = useState<TransactionsResult | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true);
@@ -40,7 +41,7 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox }: { cafeteriaId: s
     queueMicrotask(() => { if (id === latest.current) { setLoading(true); setError(''); } });
     void (async () => {
       try {
-        const response = await sessionFetch('/api/cafeteria/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const response = await postRead('/api/cafeteria/transactions', body, endpoint && accountId ? { endpoint, accountId } : undefined);
         const payload = await response.json().catch(() => ({}));
         if (id !== latest.current) return;
         if (!response.ok) { setResult(null); setError(transactionsErrors[payload.error] ?? (response.status === 403 ? 'Tu rol no puede consultar las transacciones de esta cafetería.' : 'No se pudieron cargar las transacciones.')); return; }
@@ -50,7 +51,7 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox }: { cafeteriaId: s
       } catch { if (id === latest.current) { setResult(null); setError('No se pudieron cargar las transacciones.'); } }
       finally { if (id === latest.current) setLoading(false); }
     })();
-  }, [request, revision, sandbox, cafeteriaId]);
+  }, [request, revision, sandbox, cafeteriaId, endpoint, accountId]);
   const set = (change: Partial<Filters>) => { setFilters(f => ({ ...f, ...change })); setOffset(0); };
   const filtered = receiptQuery !== null || filters.tender !== '' || filters.status !== '' || filters.period !== initial.period;
   const clear = () => { setFilters(initial); setReceipt(''); setReceiptQuery(null); setReceiptError(''); setRangeError(''); setOffset(0); };
@@ -102,28 +103,29 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox }: { cafeteriaId: s
       <button className="btn-secondary" disabled={loading || result.offset === 0} onClick={() => setOffset(Math.max(0, result.offset - result.page_size))}>Anterior</button>
       <span className="text-sm text-slate-600">Página {page} de {Math.max(1, Math.ceil(result.total_count / result.page_size))}</span>
       <button className="btn-secondary" disabled={loading || !result.has_more} onClick={() => setOffset(result.offset + result.page_size)}>Siguiente</button></nav>}
-    {selected && <TransactionDetailTask cafeteriaId={cafeteriaId} row={selected} onClose={() => setSelected(null)} onRefresh={() => setRevision(r => r + 1)} />}
+    {selected && <TransactionDetailTask cafeteriaId={cafeteriaId} source={source} row={selected} onClose={() => setSelected(null)} onRefresh={() => setRevision(r => r + 1)} />}
     </>}
   </section>;
 }
 
 // Read-only detail from cafeteria_transaction_detail. Refunds are registered only in the POS
 // (Phase 5C); this view states how to reach that workflow and never performs one.
-function TransactionDetailTask({ cafeteriaId, row, onClose, onRefresh }: { cafeteriaId: string; row: TransactionRow; onClose: () => void; onRefresh: () => void }) {
+function TransactionDetailTask({ cafeteriaId, source, row, onClose, onRefresh }: { cafeteriaId: string; source?: ReadSource; row: TransactionRow; onClose: () => void; onRefresh: () => void }) {
+  const endpoint = source?.endpoint, accountId = source?.accountId;
   const [detail, setDetail] = useState<TransactionDetail | null>(null), [error, setError] = useState(''), [revision, setRevision] = useState(0), [copied, setCopied] = useState('');
   useEffect(() => {
     let live = true;
     queueMicrotask(() => { if (live) { setDetail(null); setError(''); } });
     void (async () => {
       try {
-        const response = await sessionFetch('/api/cafeteria/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operation: 'detail', cafeteria_id: cafeteriaId, purchase_id: row.id }) });
+        const response = await postRead('/api/cafeteria/transactions', { operation: 'detail', cafeteria_id: cafeteriaId, purchase_id: row.id }, endpoint && accountId ? { endpoint, accountId } : undefined);
         const parsed = detailResultSchema.safeParse((await response.json()).result);
         if (!response.ok || !parsed.success || parsed.data.data.id !== row.id) throw Error();
         if (live) setDetail(parsed.data.data);
       } catch { if (live) setError('No se pudo cargar el detalle de la transacción.'); }
     })();
     return () => { live = false; };
-  }, [cafeteriaId, row.id, revision]);
+  }, [cafeteriaId, row.id, revision, endpoint, accountId]);
   const d = detail;
   const refundable = d && d.refund_status !== 'full' && d.tender !== 'staff_credit';
   return <TaskWindow title={`Recibo #${row.receipt_number}`} context={`${when(row.purchased_at)} · ${row.customer_name}`} onClose={onClose}

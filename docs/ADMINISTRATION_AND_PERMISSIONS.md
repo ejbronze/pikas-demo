@@ -1,5 +1,13 @@
 # Administración y permisos
 
+## Gestión de clientes desde Backoffice (local)
+
+- Propósito: que el personal de PIKAS apoye a sus clientes en la configuración y operación **sin** convertirse en administradores del cliente ni suplantar a nadie. Ruta: `/platform/clientes/{cliente}/gestion`.
+- Capacidad `platform:customer:operations:read` (rol `platform_admin`): consulta explícita de datos operativos de un cliente. No otorga roles del cliente, membresías, POV de sandbox ni acceso entre clientes. La persona de PIKAS sigue siendo el actor real; el cliente es contexto y el servidor valida en cada lectura que la cafetería pertenezca al cliente indicado (solo clientes, nunca sandbox).
+- Implementación: las lecturas existentes de cafetería se movieron sin cambios a funciones internas `*_core`; las RPC del cliente conservan exactamente su autoridad y los envoltorios `platform_support_*` usan una guarda propia de Plataforma. Ninguna orden del cliente, del POS, de dinero, credenciales o ciclo de vida acepta esta autoridad.
+- Etapa 1 (actual): solo consulta de cafeterías (resumen, productos, cajas, personal, transacciones con detalle y reportes), también para clientes suspendidos o cerrados. Las transacciones y reportes son de solo lectura; ningún movimiento de dinero forma parte de la gestión de clientes.
+- Próximo: apoyo escolar (revisión de la escuela, estudiantes, carga masiva, ubicación y relación escuela–cafetería) sin que el personal de PIKAS sea administrador escolar, y la futura capacidad `platform:customer:operations:manage` para configuración **no financiera** (catálogo, cajas, asignaciones; luego estudiantes), que **no** está implementada.
+
 ## Ciclo de vida del cliente (Clientes, local)
 
 - Estados del cliente: **Activo**, **Suspendido** y **Cerrado** (`accounts.status`). Solo la Plataforma (`platform:tenant:lifecycle:manage`, rol `platform_admin`) puede suspender, reactivar, cerrar o reabrir; siempre con motivo, estado esperado y auditoría inmutable. Ningún rol del cliente tiene esta autoridad.
