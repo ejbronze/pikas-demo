@@ -1,12 +1,25 @@
 # Administración y permisos
 
+## Límite Backoffice vs administración escolar (decisión del propietario, local)
+
+| Ámbito | Quién | Qué |
+| --- | --- | --- |
+| Alta del colegio | Plataforma, `platform:tenant:provision` | **Agregar colegio**: crea internamente el cliente, el colegio (nombre, RNC, dirección, República Dominicana, provincia canónica), su sede y cafetería principales; PIKAS genera los códigos. |
+| Administrador inicial del colegio | Plataforma, `platform:customer_admin:provision` + `platform:identity:link` | Flujo de identidad Phase 6A existente (intención → enlace de activación → contraseña → completar). Una identidad Auth por persona; usuario y correo reales. Hoy es el administrador de la cuenta (`account_admin`), que para un cliente de un solo colegio administra ese colegio. |
+| Configuración de soporte | Plataforma, `platform:customer:operations:manage` | Solo cafetería: catálogo, CSV de productos, menús, turnos, configuración, cajas y asignación de personal POS ya autorizado. |
+| Comunidad escolar | Administración escolar | Estudiantes (alta, edición, importación, matrícula, traslado, retiro), padres y profesores/personal. **No** es una superficie de Backoffice. |
+| Autoridad financiera | Roles del cliente según sus políticas | Nunca Plataforma. |
+
 ## Gestión de clientes desde Backoffice (local)
 
 - Propósito: que el personal de PIKAS apoye a sus clientes en la configuración y operación **sin** convertirse en administradores del cliente ni suplantar a nadie. Ruta: `/platform/clientes/{cliente}/gestion`.
-- Capacidad `platform:customer:operations:read` (rol `platform_admin`): consulta explícita de datos operativos de un cliente. No otorga roles del cliente, membresías, POV de sandbox ni acceso entre clientes. La persona de PIKAS sigue siendo el actor real; el cliente es contexto y el servidor valida en cada lectura que la cafetería pertenezca al cliente indicado (solo clientes, nunca sandbox).
-- Implementación: las lecturas existentes de cafetería se movieron sin cambios a funciones internas `*_core`; las RPC del cliente conservan exactamente su autoridad y los envoltorios `platform_support_*` usan una guarda propia de Plataforma. Ninguna orden del cliente, del POS, de dinero, credenciales o ciclo de vida acepta esta autoridad.
-- Etapa 1 (actual): solo consulta de cafeterías (resumen, productos, cajas, personal, transacciones con detalle y reportes), también para clientes suspendidos o cerrados. Las transacciones y reportes son de solo lectura; ningún movimiento de dinero forma parte de la gestión de clientes.
-- Próximo: apoyo escolar (revisión de la escuela, estudiantes, carga masiva, ubicación y relación escuela–cafetería) sin que el personal de PIKAS sea administrador escolar, y la futura capacidad `platform:customer:operations:manage` para configuración **no financiera** (catálogo, cajas, asignaciones; luego estudiantes), que **no** está implementada.
+- Capacidad `platform:customer:operations:read` (rol `platform_admin`): consulta explícita de datos operativos de las cafeterías de un cliente (resumen, catálogo, cajas, personal, transacciones y reportes); sigue disponible para clientes suspendidos o cerrados. No otorga roles del cliente, membresías, POV de sandbox ni acceso entre clientes.
+- Capacidad `platform:customer:operations:manage` (rol `platform_admin`): solo para clientes activos y solo mediante una lista no financiera. Permite catálogo (productos, precio, disponibilidad, categorías, menús, turnos, configuración e importación CSV), configuración de cajas y asignación de personal POS que ya tenga una membresía activa y una identidad confirmada. No existe ruta ni RPC de Plataforma para escuelas, padrón, importación de estudiantes ni relaciones escuela–cafetería; esas órdenes siguen siendo exclusivas de la administración escolar.
+- La persona de PIKAS sigue siendo el actor real; el cliente es contexto validado por el servidor. Cada mutación registra `actor_scope_kind=platform` y `actor_role=platform_support`, con la persona y el usuario Auth reales. No se crea una membresía del cliente ni se suplanta a un empleado.
+- Configurar un cliente no equivale a aprovisionar acceso. Esta capacidad no crea ni cambia administradores, personal POS, membresías, credenciales, Parent Access o autenticación estudiantil, ni permite **Agregar colegio**. Asignar una caja solo referencia personal POS ya autorizado; si no lo hay, se rechaza.
+- Configurar un cliente tampoco concede autoridad financiera. Venta, checkout, reembolso, edición o eliminación de transacciones, recarga/ajuste/reversión de PIKAS Cash, cierre excepcional, conciliación, liquidación, autoridad de reportes financieros, ciclo de vida e identidad quedan fuera de la lista y se rechazan en el servidor y la base de datos. Transacciones y reportes permanecen de solo lectura.
+- Implementación: `platform_support_cafeteria_command` revalida en cada operación la capacidad, el cliente explícito, la pertenencia de la cafetería, el tipo `customer` y el estado activo; después reutiliza el motor de cafetería existente. Las RPC normales del cliente conservan su autoridad y comportamiento.
+- Alta del colegio: `platform_onboard_school` valida nombre, RNC (9 u 11 dígitos), dirección, país `DO` y provincia ISO 3166-2:DO, y reutiliza en la misma transacción el aprovisionamiento existente; reintentos con la misma clave y datos devuelven el mismo resultado. La preparación del administrador es una segunda orden independiente con su propia clave; el asistente informa con honestidad si quedó pendiente.
 
 ## Ciclo de vida del cliente (Clientes, local)
 

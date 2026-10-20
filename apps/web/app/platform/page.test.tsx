@@ -10,7 +10,7 @@ const home = async (capabilities: string[]) => { mocks.require.mockResolvedValue
 const cards = (html: string) => [...html.matchAll(/<a class="card p-5" href="([^"]+)"/g)].map(m => m[1]);
 beforeEach(() => { vi.clearAllMocks(); mocks.read.mockResolvedValue({ kind: 'ready', value: [] }); });
 describe('PIKAS Admin Inicio', () => {
-  it('a full Platform Admin with Demo gets Clientes, Nuevo cliente, Equipo and Demo entry points', async () => {
+  it('a full Platform Admin with Demo gets Clientes, Agregar colegio, Equipo and Demo entry points', async () => {
     const html = await home([...admin, 'platform:sandbox:pov:enter']);
     expect(cards(html)).toEqual(['/platform/clientes', '/platform/clientes/nuevo', '/platform/equipo', '/platform/demostracion']);
     expect(html).toMatch(/<h1[^>]*>PIKAS Admin<\/h1>/);

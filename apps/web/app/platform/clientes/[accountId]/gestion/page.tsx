@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { z } from "zod";
 import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
-import { CUSTOMER_OPERATIONS_READ, operationsOverviewSchema } from "../../../../../lib/platform/customer-operations";
+import { CUSTOMER_OPERATIONS_MANAGE, CUSTOMER_OPERATIONS_READ, operationsOverviewSchema } from "../../../../../lib/platform/customer-operations";
 import { CustomerStructure, SupportContext } from "../../../../../components/platform/customer-operations";
 import { ErrorState } from "../../../../../components/state-panels";
 
@@ -15,9 +15,9 @@ export default async function CustomerManagementPage({ params }: { params: Promi
     retry={<Link className="btn-secondary" href="/platform/clientes">Volver a Clientes</Link>} />;
   const o = read.value;
   return <div className="space-y-5">
-    <SupportContext accountId={o.account.id} accountName={o.account.name} accountStatus={o.account.status} />
+    <SupportContext accountId={o.account.id} accountName={o.account.name} accountStatus={o.account.status} canManage={session.capabilities.includes(CUSTOMER_OPERATIONS_MANAGE)} />
     <header><h1 className="text-2xl font-black sm:text-3xl">Administrar cliente</h1>
-      <p className="text-sm text-slate-600">Elige una cafetería para consultar sus productos, cajas, personal, transacciones y reportes. La gestión de la escuela llegará en una próxima etapa.</p></header>
+      <p className="text-sm text-slate-600">Elige una cafetería para consultar su operación y, con permiso de gestión, actualizar su catálogo y cajas. Estudiantes, padres y personal los administra el colegio.</p></header>
     <CustomerStructure overview={o} />
   </div>;
 }

@@ -41,7 +41,7 @@ beforeAll(async () => {
         if (url === "/api/cafeteria") return { body: { result: { request_id: key, operation: body.operation, target_id: null } } };
         if (url === "/api/school") return { body: { result: body.operation.startsWith("student_e") || body.operation.startsWith("student_t") || body.operation === "student_withdraw" ? { enrollment_id: "${U(90)}" } : body.operation === "admin_prepare" ? { invitation_id: "${U(91)}", status: "pending" } : { student_id: "${U(92)}" } } };
         if (url === "/api/school/wallet") return { body: { result: w.walletHistory } };
-        if (url === "/api/platform/tenants") return { body: { result: { account_id: "${U(80)}", school_id: "${U(81)}", location_id: "${U(82)}", cafeteria_id: "${U(83)}" } } };
+        if (url === "/api/platform/schools/onboard") return { body: { result: { account_id: "${U(80)}", school_id: "${U(81)}", location_id: "${U(82)}", cafeteria_id: "${U(83)}", school_code: "COL-0A1B2C3D4E" } } };
         if (url === "/api/platform/customer-admins/prepare") return { body: { result: { intent_id: "${U(84)}", status: "pending" } } };
         if (url === "/api/platform/team") return { body: { result: { request_id: key, operation: body.operation, status: "confirmed" } } };
         return { status: 503 };
@@ -235,44 +235,49 @@ describe("Personal POS", () => {
   });
 });
 
-describe("Nuevo cliente provisioning", () => {
-  const fill = async (values: string[]) => { for (const [i, v] of values.entries()) await page.locator("form input").nth(i).fill(v); await page.getByRole("button", { name: "Continuar" }).click(); };
-  it("steps with progress, field errors, Anterior, session draft across reload, review, discard — nothing sent", async () => {
+describe("Agregar colegio onboarding", () => {
+  const fillSchool = async () => {
+    await page.getByLabel(/^Nombre \*/).fill("Colegio Ficticio D3"); await page.getByLabel("RNC *").fill("1-01-23456-7");
+    await page.getByLabel("Dirección *").fill("Calle Ficticia 3"); await page.getByLabel("Provincia *").selectOption("DO-25");
+  };
+  const fillAdmin = async () => {
+    await page.getByLabel("Nombre del administrador *").fill("Admin Ficticia"); await page.getByLabel("Usuario PIKAS del administrador *").fill("admin.d3");
+    await page.getByLabel("Correo del administrador *").fill("admin.d3@example.invalid");
+  };
+  it("one page: locked país, province select, no code fields, field errors, session draft across reload, review, discard — nothing sent", async () => {
     await page.evaluate(() => (window as unknown as { mountWizard(): void }).mountWizard());
-    await page.getByText("Paso 1 de 6").waitFor(); await page.getByRole("button", { name: "Continuar" }).click(); expect(await page.getByText("Obligatorio.").count()).toBe(2);
-    await fill(["Cliente Ficticio D3", "CF-D3"]); await page.getByText("Paso 2 de 6").waitFor();
-    await page.locator("form input").nth(2).fill("Mars/Base"); await fill(["Escuela Ficticia D3", "EF-D3"]); await page.getByText("Zona horaria no reconocida.").waitFor();
-    await page.locator("form input").nth(2).fill("America/Santo_Domingo"); await page.getByRole("button", { name: "Continuar" }).click();
-    await page.getByRole("button", { name: "Anterior" }).click(); expect(await page.locator("form input").nth(0).inputValue()).toBe("Escuela Ficticia D3");
+    const country = page.getByLabel("País"); expect(await country.inputValue()).toBe("República Dominicana"); expect(await country.getAttribute("readonly")).not.toBeNull();
+    expect(await page.getByLabel("Provincia *").locator("option").count()).toBe(33);
+    expect(await page.getByText(/Código del colegio|Código de la escuela|Zona horaria/).count()).toBe(0);
+    await page.getByRole("button", { name: "Revisar" }).click(); expect(await page.getByText("Obligatorio.").count()).toBe(7);
+    await fillSchool(); await page.getByLabel("RNC *").fill("123"); await fillAdmin(); await page.getByRole("button", { name: "Revisar" }).click(); await page.getByText("RNC no válido.").waitFor();
+    await page.getByLabel("RNC *").fill("1-01-23456-7");
     await page.reload(); await page.evaluate(() => (window as unknown as { mountWizard(): void }).mountWizard());
-    await page.getByText("Recuperamos datos sin enviar").waitFor(); await page.getByRole("button", { name: "Cliente (completado, editar)" }).waitFor({ state: "detached" }).catch(() => {});
-    await page.getByRole("button", { name: "Continuar" }).click(); await page.getByRole("button", { name: "Continuar" }).click();
-    await fill(["Campus Ficticio", "CA-D3"]); await fill(["Cafetería Ficticia D3", "CAF-D3"]); await fill(["Admin Ficticia", "admin.d3", "admin.d3@example.invalid"]);
-    await page.getByText("Paso 6 de 6").waitFor(); const review = await page.locator("section").first().innerText();
-    for (const t of ["Cliente Ficticio D3", "EF-D3", "America/Santo_Domingo", "Campus Ficticio", "CAF-D3", "Usuario PIKAS del administrador", "admin.d3@example.invalid", "No envía correo ni concede acceso"]) expect(review).toContain(t);
-    await page.getByRole("button", { name: "Editar Escuela" }).click(); await page.getByText("Paso 2 de 6").waitFor();
-    expect(await calls()).toHaveLength(0); expect(await storage("pikas:customer-provisioning")).toEqual([]);
+    await page.getByText("Recuperamos datos sin enviar").waitFor(); expect(await page.getByLabel("Provincia *").inputValue()).toBe("DO-25");
+    await page.getByRole("button", { name: "Revisar" }).click(); const review = await page.locator("section").first().innerText();
+    for (const t of ["Colegio Ficticio D3", "101234567", "Calle Ficticia 3", "República Dominicana", "Santiago", "Usuario PIKAS del administrador", "admin.d3@example.invalid", "No envía correo ni concede acceso"]) expect(review).toContain(t);
+    await page.getByRole("button", { name: "Editar Colegio" }).click(); await page.getByLabel("Dirección *").waitFor();
+    expect(await calls()).toHaveLength(0); expect(await storage("pikas:school-onboarding:v2")).toEqual([]);
     await page.getByRole("button", { name: "Descartar borrador" }).click(); await page.getByText("¿Descartar los datos escritos? No se ha creado nada.").waitFor(); await page.getByRole("button", { name: "Descartar borrador" }).click();
-    expect(await storage("pikas:customer-draft")).toEqual([]); await page.getByText("Paso 1 de 6").waitFor();
+    expect(await storage("pikas:school-onboarding-draft")).toEqual([]); expect(await page.getByLabel(/^Nombre \*/).inputValue()).toBe("");
   });
-  it("«Crear cliente» runs the existing journey once; a partial result is reported truthfully and retried with the same keys", async () => {
-    await page.evaluate(() => sessionStorage.setItem("pikas:customer-draft:v1:operator-1", JSON.stringify({ accountName: "Cliente D3", accountCode: "C-D3", schoolName: "Escuela D3", schoolCode: "E-D3", businessTimezone: "America/Santo_Domingo", locationName: "Campus D3", locationCode: "U-D3", cafeteriaName: "Cafetería D3", cafeteriaCode: "K-D3", administratorName: "Admin D3", administratorUsername: "admin.d3", administratorEmail: "a.d3@example.invalid" })));
+  it("«Agregar colegio» runs the journey once; a partial result is reported truthfully and retried with the same keys", async () => {
     await page.evaluate(() => (window as unknown as { next(u: string, r: unknown): void }).next("/api/platform/customer-admins/prepare", { status: 503 }));
-    await page.evaluate(() => (window as unknown as { mountWizard(): void }).mountWizard()); await page.getByText("Recuperamos datos sin enviar").waitFor();
-    for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Continuar" }).click();
-    await page.getByRole("button", { name: "Crear cliente" }).click(); await page.getByText("Creación incompleta").waitFor();
-    expect(await page.getByText("La solicitud del administrador inicial aún no está confirmada.").count()).toBe(1); expect(await page.getByText("Cliente creado", { exact: true }).count()).toBe(0);
-    expect(await storage("pikas:customer-draft")).toEqual([]); expect(await storage("pikas:customer-provisioning")).toHaveLength(1);
-    await page.getByRole("button", { name: "Reintentar la misma solicitud" }).click(); await page.getByText("Ver cliente y completar administrador").waitFor();
-    const sent = await calls(); expect(sent.map(c => c.url)).toEqual(["/api/platform/tenants", "/api/platform/customer-admins/prepare", "/api/platform/customer-admins/prepare"]);
-    expect(sent[2].key).toBe(sent[1].key); expect(sent[0].body).not.toHaveProperty("administratorEmail"); expect(sent[0].body).not.toHaveProperty("administratorUsername");
-    expect(sent[1].body).toMatchObject({ intendedEmail: "a.d3@example.invalid", intendedUsername: "admin.d3" }); expect(sent[2].body).toEqual(sent[1].body);
+    await page.evaluate(() => (window as unknown as { mountWizard(): void }).mountWizard()); await fillSchool(); await fillAdmin();
+    await page.getByRole("button", { name: "Revisar" }).click(); await page.getByRole("button", { name: "Agregar colegio" }).click(); await page.getByText("Creación incompleta").waitFor();
+    expect(await page.getByText("La solicitud de su administrador aún no está confirmada.", { exact: false }).count()).toBe(1); expect(await page.getByText("Colegio agregado", { exact: true }).count()).toBe(0);
+    expect(await storage("pikas:school-onboarding-draft")).toEqual([]); expect(await storage("pikas:school-onboarding:v2")).toHaveLength(1);
+    await page.getByRole("button", { name: "Reintentar la misma solicitud" }).click(); await page.getByText("Ver colegio y completar administrador").waitFor();
+    expect(await page.getByText("COL-0A1B2C3D4E").count()).toBe(1);
+    const sent = await calls(); expect(sent.map(c => c.url)).toEqual(["/api/platform/schools/onboard", "/api/platform/customer-admins/prepare", "/api/platform/customer-admins/prepare"]);
+    expect(sent[2].key).toBe(sent[1].key); expect(sent[0].body).toEqual({ schoolName: "Colegio Ficticio D3", taxId: "101234567", addressLine: "Calle Ficticia 3", countryCode: "DO", provinceCode: "DO-25" });
+    expect(sent[1].body).toMatchObject({ intendedEmail: "admin.d3@example.invalid", intendedUsername: "admin.d3" }); expect(sent[2].body).toEqual(sent[1].body);
   });
-  it("an existing creation journal is detected and only resent on explicit review", async () => {
-    await page.evaluate(() => sessionStorage.setItem("pikas:customer-provisioning:v1:operator-1", JSON.stringify({ draft: { accountName: "Cliente J", accountCode: "C-J", schoolName: "E", schoolCode: "E-J", businessTimezone: "America/Santo_Domingo", locationName: "U", locationCode: "U-J", cafeteriaName: "K", cafeteriaCode: "K-J", administratorName: "A", administratorEmail: "j@example.invalid" }, tenantKey: "d3000000-0000-4000-8000-000000000201", adminKey: "d3000000-0000-4000-8000-000000000202", expiresAt: "2026-10-25T00:00:00.000Z", tenant: null, administrator: null })));
+  it("an existing onboarding journal is detected and only resent on explicit review", async () => {
+    await page.evaluate(() => sessionStorage.setItem("pikas:school-onboarding:v2:operator-1", JSON.stringify({ draft: { schoolName: "Colegio J", taxId: "101234567", addressLine: "Calle J", countryCode: "DO", provinceCode: "DO-01", administratorName: "A", administratorEmail: "j@example.invalid", administratorUsername: "admin.j" }, tenantKey: "d3000000-0000-4000-8000-000000000201", adminKey: "d3000000-0000-4000-8000-000000000202", expiresAt: "2026-10-25T00:00:00.000Z", tenant: null, administrator: null })));
     await page.evaluate(() => (window as unknown as { mountWizard(): void }).mountWizard());
-    await page.getByText("Hay una creación de cliente pendiente de confirmar en este navegador.").waitFor(); await page.waitForTimeout(100); expect(await calls()).toHaveLength(0);
-    await page.getByRole("button", { name: "Revisar solicitud pendiente" }).click(); await page.getByRole("button", { name: "Reintentar la misma solicitud" }).click(); await page.getByText("Ver cliente y completar administrador").waitFor();
+    await page.getByText("Hay un colegio pendiente de confirmar en este navegador.").waitFor(); await page.waitForTimeout(100); expect(await calls()).toHaveLength(0);
+    await page.getByRole("button", { name: "Revisar solicitud pendiente" }).click(); await page.getByRole("button", { name: "Reintentar la misma solicitud" }).click(); await page.getByText("Ver colegio y completar administrador").waitFor();
     expect((await calls())[0].key).toBe("d3000000-0000-4000-8000-000000000201");
   });
 });

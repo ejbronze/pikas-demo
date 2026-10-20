@@ -41,7 +41,7 @@ const cafeteria = { cafeteria_id: id, cafeteria_name: z.string(), account_name: 
 export const contextSchema = z.object({ pov: sandboxPovSchema.optional(), person_id: id, display_name: z.string(), cafeterias: z.array(z.object(cafeteria).strict()) }).strict();
 export type CafeteriaContext = z.infer<typeof contextSchema>;
 export const readSchema = z.object({
- scope: z.object({ ...cafeteria, actor_id: id, membership_id: id, account_id: id, capabilities: z.array(z.string()) }).strict(),
+ scope: z.object({ ...cafeteria, actor_id: id, membership_id: id.nullable(), account_id: id, capabilities: z.array(z.string()), support: z.literal(true).optional(), account_status: z.string().optional(), cafeteria_status: z.string().optional() }).strict(),
  settings: z.object({ currency: z.literal('DOP'), scheduling_enabled: z.boolean(), version }),
  categories: z.array(z.object({ id, name: z.string(), status: z.enum(['active','archived']), display_order: z.number().int(), version })),
  products: z.array(z.object({ id, name: z.string(), description: z.string(), unit: z.string().trim().min(1).max(40).default('Unidad'), category_id: id.nullable(), price_minor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), active: z.boolean(), available: z.boolean(), ingredients: z.array(z.string()), allergens: z.array(z.string()), version })),

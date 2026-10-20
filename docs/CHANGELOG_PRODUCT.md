@@ -1,10 +1,20 @@
 # Registro de cambios del producto
 
+## Backoffice: Agregar colegio y configuración de clientes (local)
+
+- **Agregar colegio** reemplaza «Nuevo cliente». En una sola página: nombre, RNC, dirección, país República Dominicana (visible, no editable) y provincia de una lista canónica, más el administrador del colegio (nombre, usuario PIKAS y correo). El operador no escribe códigos: PIKAS genera el código del colegio (`COL-…`) y lo muestra como referencia. El cliente se crea internamente junto con el colegio, su sede y cafetería principales en una sola transacción; nunca queda un cliente sin colegio por este flujo.
+- El administrador del colegio usa el flujo Phase 6A existente (activación por enlace, contraseña, completar acceso; inicio con usuario o correo). Migración `202610310001`.
+- Decisión del propietario: Backoffice no es una segunda administración escolar. Estudiantes, padres y profesores/personal los gestiona el colegio.
+- La capacidad nueva `platform:customer:operations:manage` permite a PIKAS configurar cafeterías de clientes activos desde **Administrar cliente**, con el cliente siempre visible como contexto y el empleado real como actor.
+- Cafeterías: crear/editar productos, precio, disponibilidad, categorías, importación CSV, menús, turnos, configuración; crear/editar cajas y asignar o retirar personal POS que ya esté autorizado (con identidad confirmada). No prepara personal ni credenciales.
+- Lista de servidor y base de datos estrictamente no financiera. Ventas, checkout, reembolsos, transacciones, monederos, cierres excepcionales, conciliación, liquidación, ciclo de vida, identidad y autoridad del cliente quedan fuera. Clientes suspendidos/cerrados y soporte de solo lectura no pueden escribir.
+- La auditoría conserva la persona y usuario Auth reales de PIKAS con alcance `platform` y rol `platform_support`; no crea membresías ni suplanta al cliente. Migración `202610300001`. Implementación y verificación local; sin push ni despliegue.
+
 ## Backoffice: gestión de clientes, etapa 1 (solo consulta, local)
 
 - En **Clientes → cliente → Administrar cliente**, el personal de PIKAS con la nueva capacidad `platform:customer:operations:read` consulta la operación de las cafeterías del cliente: **Resumen**, **Productos**, **Cajas**, **Personal**, **Transacciones** (con detalle) y **Reportes**, eligiendo la cafetería entre las del cliente.
 - Siempre visible: «Gestionando {cliente}» y «Estás viendo la operación como personal de PIKAS». No hay suplantación ni membresías: la persona de PIKAS sigue siendo quien actúa y el cliente es solo el contexto, validado por el servidor en cada consulta.
-- Solo consulta: no hay cambios de catálogo, cajas, personal, transacciones ni dinero. Funciona también con clientes suspendidos o cerrados (consulta histórica). La gestión escolar (estudiantes, carga masiva, ubicación) y `operations:manage` vienen después. Migración `202610290001`. Sin push ni despliegue.
+- Esta etapa conserva la ruta de solo consulta, también para clientes suspendidos o cerrados. La gestión no financiera posterior se documenta arriba; transacciones y reportes continúan sin mutaciones. Migración `202610290001`. Sin push ni despliegue.
 
 ## Familias y estudiantes: nueva presentación (solo demostración, local)
 

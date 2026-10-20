@@ -5,12 +5,13 @@ import type { CafeteriaRead, Operation } from '../lib/cafeteria/contracts';
 import { commandSchema } from '../lib/cafeteria/contracts';
 import { load, prepare, recoveryKey, send, mustPreserve, type Pending } from '../lib/cafeteria/command';
 import { outcomeMessage } from '../lib/identity/provisioning';
+import { sessionFetch } from '../lib/auth/session-fetch';
 import { CatalogEditorContext, type CatalogWorkspace } from './cafeteria-editor-context';
 type Result = { ok:true } | { ok:false; message:string; pending?: boolean };
 type Execute = (operation:Operation,payload:unknown)=>Promise<Result>;
 const MutationContext = createContext<Execute|null>(null);
 export function useCafeteriaMutation() { const execute=useContext(MutationContext); if (!execute) throw new Error('Missing cafeteria mutation context'); return execute; }
-export function ConnectedCafeteriaProvider({data,children,recoveryActorId}:{data:CafeteriaRead;children:React.ReactNode;recoveryActorId?:string}) {
+export function ConnectedCafeteriaProvider({data,children,recoveryActorId,source}:{data:CafeteriaRead;children:React.ReactNode;recoveryActorId?:string;source?:{endpoint:string;accountId:string}}) {
  const router=useRouter(); const storageKey=recoveryKey(recoveryActorId ?? data.scope.actor_id,data.scope.cafeteria_id);
  const [ready,setReady]=useState(false),[pending,setPending]=useState<Pending|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  const inFlight=useRef(false);
@@ -22,7 +23,8 @@ export function ConnectedCafeteriaProvider({data,children,recoveryActorId}:{data
    const recovery=pending ?? load(sessionStorage,storageKey);
    const request=recovery ?? prepare(sessionStorage,storageKey,commandSchema.parse({cafeteriaId:data.scope.cafeteria_id,operation,payload}));
    setPending(request);
-   const outcome=await send(request);
+   const fetcher:typeof fetch=source ? async (_input,init) => sessionFetch(source.endpoint,{...init,body:JSON.stringify({account_id:source.accountId,request:JSON.parse(String(init?.body))})}) : sessionFetch;
+   const outcome=await send(request,fetcher);
    if(mustPreserve(!!recovery,outcome)) {
     const message='La operación anterior sigue sin confirmar. Conservamos la misma clave, operación y datos. Recupera el acceso y confirma la solicitud pendiente antes de editar.';setMessage(message);return {ok:false,message,pending:true};
    }

@@ -16,7 +16,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const result = await readPlatform(session, "platform:tenant:lifecycle:read", "platform_list_customers",
     { p_query: q, p_status: status || null, p_kind: kind || null, p_after: after ?? null, p_limit: 25 }, customerListSchema);
   return <><AppPageHeader title="Clientes" description="Administra las organizaciones que usan PIKAS."
-    action={session.capabilities.includes("platform:tenant:provision") && session.capabilities.includes("platform:customer_admin:provision") ? <Link className="btn" href="/platform/clientes/nuevo">Crear cliente</Link> : undefined} />
+    action={session.capabilities.includes("platform:tenant:provision") && session.capabilities.includes("platform:customer_admin:provision") ? <Link className="btn" href="/platform/clientes/nuevo">Agregar colegio</Link> : undefined} />
     <form action="/platform/clientes" className="card flex flex-wrap items-end gap-4 p-5">
       <label className="min-w-0 flex-1 basis-48">Nombre o código<input className="field mt-1" name="q" defaultValue={q} maxLength={80} /></label>
       <label className="min-w-0 flex-1 basis-32">Estado<select className="field mt-1" name="status" defaultValue={status}><option value="">Todos</option><option value="active">Activos</option><option value="suspended">Suspendidos</option><option value="closed">Cerrados</option></select></label>

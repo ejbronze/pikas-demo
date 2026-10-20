@@ -13,8 +13,8 @@ vi.mock("react", async (importOriginal) => ({ ...await importOriginal<typeof imp
 import { CustomerWizard } from "./clientes/nuevo/customer-wizard";
 import { AdministratorAction } from "./clientes/[accountId]/administrator-action";
 const id = "00000000-0000-4000-8000-000000000001";
-const tenant = { account_id: id, school_id: id, location_id: id, cafeteria_id: id };
-const draft = { accountCode: "TEST", accountName: "Cliente", schoolCode: "E", schoolName: "Escuela", businessTimezone: "America/Santo_Domingo", locationCode: "U", locationName: "Ubicación", cafeteriaCode: "C", cafeteriaName: "Cafetería", administratorName: "Administradora", administratorEmail: "admin@example.invalid" };
+const tenant = { account_id: id, school_id: id, location_id: id, cafeteria_id: id, school_code: "COL-0A1B2C3D4E" };
+const draft = { schoolName: "Colegio Ficticio", taxId: "101234567", addressLine: "Calle Ficticia 1", countryCode: "DO", provinceCode: "DO-01", administratorName: "Administradora", administratorEmail: "admin@example.invalid", administratorUsername: "admin.ficticia" };
 type El = { type?: unknown; props?: { children?: unknown; [key: string]: unknown } };
 function render(component: () => unknown) { mocks.cursor.state = 0; mocks.cursor.ref = 0; return component(); }
 function find(node: unknown, label: string): El | null {
@@ -30,25 +30,40 @@ function text(node: unknown): string {
   if (Array.isArray(node)) return node.map(text).join(" ");
   return node && typeof node === "object" ? text((node as El).props?.children) : "";
 }
+// Every string/number reachable through element props (shallow render: component props are not rendered).
+function deep(node: unknown, seen = new Set<unknown>()): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (!node || typeof node !== "object" || seen.has(node)) return "";
+  seen.add(node);
+  if (Array.isArray(node)) return node.map(n => deep(n, seen)).join(" ");
+  const props = (node as El).props; return props ? Object.values(props).map(v => deep(v, seen)).join(" ") : "";
+}
 beforeEach(() => {
   vi.clearAllMocks(); mocks.slots.length = 0; mocks.refs.length = 0;
   const values = new Map<string, string>();
   vi.stubGlobal("sessionStorage", { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); }, removeItem: (key: string) => { values.delete(key); } });
 });
 const wizard = () => CustomerWizard({ actor: "operator" });
-async function create() { mocks.slots[0] = draft; mocks.slots[1] = 5; const button = find(render(wizard), "Crear cliente")!; await (button.props!.onClick as () => Promise<void>)(); }
-describe("customer workflow UI", () => {
+async function create() { mocks.slots[0] = draft; mocks.slots[1] = true; const button = find(render(wizard), "Agregar colegio")!; await (button.props!.onClick as () => Promise<void>)(); }
+describe("Agregar colegio and administrator workflow UI", () => {
+  it("form shows locked República Dominicana, a canonical province selector and no school-code field", () => {
+    const all = deep(render(wizard));
+    expect(all).toContain("País"); expect(all).toContain("República Dominicana"); expect(all).toContain("Por ahora PIKAS opera en República Dominicana.");
+    expect(all).toContain("Provincia"); expect(all).toContain("Distrito Nacional"); expect(all).toContain("DO-32");
+    expect(all).not.toMatch(/Código del colegio|Código de la escuela|Código del cliente|Zona horaria/); expect(all).toContain("PIKAS genera el código del colegio");
+    expect(all).toContain("Administrador del colegio"); expect(all).not.toMatch(/Crear estudiante|Agregar padre/);
+  });
   it("does not show success after rejected provisioning", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403 })); await create();
-    const content = text(render(wizard)); expect(content).toContain("Tu sesión no permite"); expect(content).not.toContain("Cliente y estructura inicial creados");
+    const content = text(render(wizard)); expect(content).toContain("Tu sesión no permite"); expect(content).not.toContain("Colegio agregado");
   });
   it("shows authoritative success and honest pending identity without invitation success", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ result: tenant }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ result: { intent_id: id, status: "pending" } }) }));
-    await create(); const content = text(render(wizard)); expect(content).toContain("Cliente y estructura inicial creados"); expect(content).toContain("No se ha enviado una invitación ni otorgado acceso"); expect(content).toContain("Ver cliente y completar administrador");
+    await create(); const content = text(render(wizard)); expect(content).toContain("Colegio agregado"); expect(deep(render(wizard))).toContain("COL-0A1B2C3D4E"); expect(content).toContain("No se ha enviado una invitación ni otorgado acceso"); expect(content).toContain("Ver colegio y completar administrador");
   });
-  it("partial failure distinguishes created customer from unprepared administrator", async () => {
+  it("partial failure distinguishes the created colegio from its unprepared administrator", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ result: tenant }) }).mockRejectedValueOnce(new Error("network")));
-    await create(); const content = text(render(wizard)); expect(content).toContain("Cliente y estructura inicial creados"); expect(content).toContain("El cliente ya existe"); expect(content).not.toContain("Solicitud de administrador preparada");
+    await create(); const content = text(render(wizard)); expect(content).toContain("Colegio registrado"); expect(content).toContain("El colegio ya existe"); expect(content).not.toContain("Colegio agregado");
   });
   it("completion cannot display access granted on an uncertain response", async () => {
     mocks.slots[0] = "Administradora"; const fetch = vi.fn().mockRejectedValue(new Error("network")); vi.stubGlobal("fetch", fetch);

@@ -16,14 +16,14 @@ const weekday = ["", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 export const managementHref = (accountId: string) => `/platform/clientes/${accountId}/gestion`;
 export const cafeteriaHref = (accountId: string, cafeteriaId: string, section?: string) => `${managementHref(accountId)}/cafeterias/${cafeteriaId}${section && section !== "resumen" ? `?seccion=${section}` : ""}`;
 
-export function SupportContext({ accountId, accountName, accountStatus, cafeteriaName }: { accountId: string; accountName: string; accountStatus: string; cafeteriaName?: string }) {
+export function SupportContext({ accountId, accountName, accountStatus, cafeteriaName, canManage = false }: { accountId: string; accountName: string; accountStatus: string; cafeteriaName?: string; canManage?: boolean }) {
   return <section aria-label="Contexto de soporte" className="space-y-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-950">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <p className="min-w-0 flex-1 basis-60"><span className="block text-sm font-bold">Gestionando</span><span className="block break-words text-xl font-black">{accountName}</span>
         {cafeteriaName && <span className="block break-words font-bold">{cafeteriaName}</span>}</p>
       <LifecycleBadge status={accountStatus} />
     </div>
-    <p className="text-sm">Estás viendo la operación como personal de PIKAS. Solo consulta: no se realizan cambios desde aquí.</p>
+    <p className="text-sm">Estás gestionando el contexto del cliente como personal de PIKAS. {canManage && accountStatus === "active" ? "Puedes realizar únicamente la configuración no financiera permitida." : "Solo consulta: no se realizan cambios desde aquí."}</p>
     {lifecycleNotice[accountStatus] && <p className="text-sm font-bold">{lifecycleNotice[accountStatus]}</p>}
     <div className="flex flex-wrap gap-2">
       {cafeteriaName && <Link href={managementHref(accountId)} className="btn-secondary bg-white">Todas las cafeterías</Link>}
@@ -59,10 +59,12 @@ export function CafeteriaSwitcher({ overview, accountId, selected, section }: { 
   })}</ul></nav>;
 }
 
-export const sections = [["resumen", "Resumen"], ["productos", "Productos"], ["cajas", "Cajas"], ["personal", "Personal"], ["transacciones", "Transacciones"], ["reportes", "Reportes"]] as const;
+export const sections = [["resumen", "Resumen"], ["productos", "Productos"], ["menus", "Menús"], ["turnos", "Turnos"], ["configuracion", "Configuración"], ["cajas", "Cajas"], ["personal", "Personal"], ["transacciones", "Transacciones"], ["reportes", "Reportes"]] as const;
 export type Section = typeof sections[number][0];
-export function SectionNav({ accountId, cafeteriaId, current }: { accountId: string; cafeteriaId: string; current: Section }) {
-  return <nav aria-label="Secciones de la cafetería" className="overflow-x-auto"><ul className="flex w-max gap-1 rounded-2xl bg-slate-100 p-1">{sections.map(([key, label]) =>
+const manageOnly=new Set<Section>(["menus","turnos","configuracion"]);
+export function SectionNav({ accountId, cafeteriaId, current, canManage=false }: { accountId: string; cafeteriaId: string; current: Section; canManage?:boolean }) {
+  const visible=sections.filter(([key])=>canManage||!manageOnly.has(key));
+  return <nav aria-label="Secciones de la cafetería" className="overflow-x-auto"><ul className="flex w-max gap-1 rounded-2xl bg-slate-100 p-1">{visible.map(([key, label]) =>
     <li key={key}><Link href={cafeteriaHref(accountId, cafeteriaId, key)} aria-current={key === current ? "page" : undefined}
       className={`flex min-h-11 items-center rounded-xl px-4 text-sm font-bold ${key === current ? "bg-white text-slate-950 shadow-sm" : "text-slate-600"}`}>{label}</Link></li>)}</ul></nav>;
 }

@@ -1,5 +1,6 @@
 import { provisioningUsername } from "../identity/provisioning";
 import { z } from "zod";
+import { DOMINICAN_REPUBLIC, provinceCodes } from "./dominican-provinces";
 
 export const lifecycleStatus = z.enum(["active", "suspended", "inactive", "closed"]);
 export const statusLabel: Record<string, string> = {
@@ -36,8 +37,20 @@ export const customerDraftSchema = z.object({
   administratorUsername: provisioningUsername.optional(),
 }).strict();
 export const provisionResultSchema = z.object({ account_id: z.uuid(), school_id: z.uuid(), location_id: z.uuid(), cafeteria_id: z.uuid() });
+// Agregar colegio: the operator describes the colegio; PIKAS generates every code server-side.
+// RNC: 9 digits (persona jurídica) or 11 (cédula); separators are accepted and removed.
+export const schoolTaxId = z.string().trim().transform(v => v.replace(/[\s-]/g, "")).pipe(z.string().regex(/^(\d{9}|\d{11})$/));
+export const schoolOnboardingSchema = z.object({
+  schoolName: name, taxId: schoolTaxId, addressLine: z.string().trim().min(1).max(300),
+  countryCode: z.literal(DOMINICAN_REPUBLIC.code), provinceCode: z.enum(provinceCodes),
+}).strict();
+export const schoolOnboardingDraftSchema = schoolOnboardingSchema.extend({
+  administratorName: name, administratorEmail: z.email().trim().max(254), administratorUsername: provisioningUsername,
+}).strict();
+export const onboardResultSchema = provisionResultSchema.extend({ school_code: z.string().regex(/^COL-[0-9A-F]{10}$/) });
 export const prepareResultSchema = z.object({ intent_id: z.uuid(), status: z.literal("pending") });
 export const completeAdminSchema = z.object({ intentId: z.uuid(), displayName: name }).strict();
 export const completeAdminResultSchema = z.object({ intent_id: z.uuid(), membership_id: z.uuid(), person_id: z.uuid(), role_code: z.literal("account_admin"), scope_kind: z.literal("account"), status: z.literal("granted") });
 export type CustomerDraft = z.infer<typeof customerDraftSchema>;
+export type SchoolOnboardingDraft = z.input<typeof schoolOnboardingDraftSchema>;
 export type CustomerOverview = z.infer<typeof customerOverviewSchema>;

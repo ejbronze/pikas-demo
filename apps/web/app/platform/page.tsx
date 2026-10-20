@@ -13,7 +13,7 @@ const activityLabels: Record<string, string> = {
 // Each card appears only with the capability its destination requires, so none leads to a 403.
 const destinations = [
   { href: "/platform/clientes", title: "Clientes", text: "Consulta cuentas, su estructura y sus administradores.", allowed: (c: string[]) => c.includes("platform:tenant:lifecycle:read") },
-  { href: "/platform/clientes/nuevo", title: "Nuevo cliente", text: "Crea la estructura inicial y prepara su administrador.", allowed: (c: string[]) => c.includes("platform:tenant:provision") && c.includes("platform:customer_admin:provision") },
+  { href: "/platform/clientes/nuevo", title: "Agregar colegio", text: "Registra un colegio y prepara a su administrador.", allowed: (c: string[]) => c.includes("platform:tenant:provision") && c.includes("platform:customer_admin:provision") },
   { href: "/platform/equipo", title: "Equipo", text: "Operadores internos de PIKAS y sus accesos.", allowed: (c: string[]) => c.includes("platform:team:manage") },
   { href: "/platform/demostracion", title: "Demo", text: "Explora PIKAS en el entorno de demostración, separado de los clientes.", allowed: (c: string[]) => c.includes("platform:sandbox:pov:enter") },
 ];

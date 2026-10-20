@@ -4,6 +4,7 @@ import { readSchema } from "../cafeteria/contracts";
 // Backoffice Customer Management (M1: read-only cafeteria operations). PIKAS employees inspect an
 // explicitly selected customer's operations as themselves; the customer is context, never identity.
 export const CUSTOMER_OPERATIONS_READ = "platform:customer:operations:read";
+export const CUSTOMER_OPERATIONS_MANAGE = "platform:customer:operations:manage";
 const id = z.guid();
 const status = z.string().min(1);
 export const operationsOverviewSchema = z.object({
