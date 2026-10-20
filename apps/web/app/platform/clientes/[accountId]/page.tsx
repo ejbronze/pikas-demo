@@ -8,6 +8,8 @@ import { customerActivationStatusSchema } from "../../../../lib/platform/custome
 import { AdministratorAction } from "./administrator-action";
 import { CustomerLifecyclePanel } from "./lifecycle-panel";
 import { AddLocationAction } from "./add-location-action";
+import { EditProfileAction, RenameAction } from "./profile-actions";
+import { CUSTOMER_PROFILE_MANAGE, PROFILE_EDITABLE_STATUSES } from "../../../../lib/platform/customer-profile";
 import Link from "next/link";
 import { CUSTOMER_OPERATIONS_READ } from "../../../../lib/platform/customer-operations";
 import { ADD_LOCATION_CAPABILITY } from "../../../../lib/platform/school-location";
@@ -28,17 +30,22 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
     return read.kind === "ready" && read.value.intent_id === intent.id && read.value.account_id === customer.account.id ? read.value : null;
   }));
   const history = customer.tenant_kind === "customer" ? await readPlatform(session, "platform:tenant:lifecycle:read", "platform_customer_lifecycle_history", { p_account_id: customer.account.id }, lifecycleHistorySchema) : null;
+  // Profile edits: customers only, active or suspended (closed stays read-only); the database re-checks.
+  const canEditProfile = customer.tenant_kind === "customer" && PROFILE_EDITABLE_STATUSES.includes(customer.account.status) && session.capabilities.includes(CUSTOMER_PROFILE_MANAGE);
   const hasCurrent = customer.administrators.length > 0 || customer.customer_admin_onboarding.some((intent) => intent.role === "account_admin" && intent.scope === "account" && intent.status === "granted") || initialIntents.some((intent) => ["pending", "linked", "granted"].includes(intent.status));
   return <>
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
-    <ColegioProfile customer={customer} />
+    <ColegioProfile customer={customer} action={canEditProfile ? (school) => <EditProfileAction accountId={customer.account.id} schoolId={school.id} renamesAccount={customer.schools.length === 1}
+      current={{ name: school.name, rnc: school.rnc ?? null, address: school.address ?? null, province: school.province ?? null }} /> : undefined} />
     {customer.tenant_kind === "customer" && session.capabilities.includes(CUSTOMER_OPERATIONS_READ) && <section aria-labelledby="ops-entry" className="card flex flex-wrap items-center justify-between gap-3 p-5">
       <div className="min-w-0 flex-1 basis-60"><h2 id="ops-entry" className="text-lg font-bold">Gestión del cliente</h2><p className="text-sm text-slate-600">Consulta sus cafeterías, productos, cajas, personal, transacciones y reportes como personal de PIKAS.</p></div>
       <Link className="btn" href={`/platform/clientes/${customer.account.id}/gestion`}>Administrar cliente</Link></section>}
     {customer.tenant_kind === "customer" && <CustomerLifecyclePanel accountId={customer.account.id} name={customer.account.name} status={customer.account.status}
       canManage={session.capabilities.includes(LIFECYCLE_MANAGE)} history={history?.kind === "ready" ? history.value.events : null} />}
     <CustomerHierarchy customer={customer} schoolAction={customer.tenant_kind === "customer" && customer.account.status === "active" && session.capabilities.includes(ADD_LOCATION_CAPABILITY)
-      ? (school) => school.status === "active" ? <AddLocationAction accountId={customer.account.id} schoolId={school.id} schoolName={school.name} /> : null : undefined} />
+      ? (school) => school.status === "active" ? <AddLocationAction accountId={customer.account.id} schoolId={school.id} schoolName={school.name} /> : null : undefined}
+      locationAction={canEditProfile ? (location) => <RenameAction accountId={customer.account.id} kind="location" targetId={location.id} currentName={location.name} /> : undefined}
+      cafeteriaAction={canEditProfile ? (cafeteria) => <RenameAction accountId={customer.account.id} kind="cafeteria" targetId={cafeteria.id} currentName={cafeteria.name} /> : undefined} />
     <section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Administrador inicial</h2>
       {customer.administrators.map((admin, index) => <p key={index}>{admin.display_name} · Acceso completado · {statusLabel[admin.status]} · Persona {statusLabel[admin.person_status]?.toLowerCase()}</p>)}
       {initialIntents.length === 0 && customer.administrators.length === 0 && <p>No hay solicitudes de administrador inicial visibles.</p>}

@@ -1,5 +1,10 @@
 # Registro de cambios del producto
 
+## Backoffice: edición del perfil del cliente (local)
+
+- En el detalle del cliente, **Editar información** corrige nombre, RNC, dirección y provincia del colegio (País fijo en República Dominicana; RNC, dirección y provincia pueden quedar sin registrar). Si el cliente tiene un solo colegio, su nombre cambia junto con el del colegio. En **Estructura del cliente**, **Renombrar** cambia el nombre de una sede o cafetería; los códigos no cambian.
+- Capacidad nueva `platform:customer:profile:manage` (rol `platform_admin`). Solo clientes activos o suspendidos (cerrados: solo consulta), nunca sandbox, y no durante una sesión Demo vigente. Cada edición usa una clave de solicitud con reintento seguro, rechaza cambios hechos sobre datos desactualizados y queda auditada con el operador real. No cambia usuarios, membresías, operación, ventas ni saldos. Migración `202611030001`.
+
 ## Backoffice: Agregar colegio y configuración de clientes (local)
 
 - **Agregar colegio** reemplaza «Nuevo cliente». En una sola página: nombre, RNC, dirección, país República Dominicana (visible, no editable) y provincia de una lista canónica, más el administrador del colegio (nombre, usuario PIKAS y correo). El operador no escribe códigos: PIKAS genera el código del colegio (`COL-…`) y lo muestra como referencia. El cliente se crea internamente junto con el colegio, su sede y cafetería principales en una sola transacción; nunca queda un cliente sin colegio por este flujo.

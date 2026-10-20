@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | Alta del colegio | Plataforma, `platform:tenant:provision` | **Agregar colegio**: crea internamente el cliente, el colegio (nombre, RNC, dirección, República Dominicana, provincia canónica), su sede y cafetería principales; PIKAS genera los códigos. |
 | Administrador inicial del colegio | Plataforma, `platform:customer_admin:provision` + `platform:identity:link` | Flujo de identidad Phase 6A existente (intención → enlace de activación → contraseña → completar). Una identidad Auth por persona; usuario y correo reales. Hoy es el administrador de la cuenta (`account_admin`), que para un cliente de un solo colegio administra ese colegio. |
+| Perfil del cliente | Plataforma, `platform:customer:profile:manage` | Corregir nombre, RNC, dirección y provincia del colegio (País fijo) y renombrar sedes y cafeterías. Clientes activos o suspendidos; cerrados solo consulta. Un cliente con un solo colegio se renombra junto con él. Los códigos no cambian. |
 | Configuración de soporte | Plataforma, `platform:customer:operations:manage` | Solo cafetería: catálogo, CSV de productos, menús, turnos, configuración, cajas y asignación de personal POS ya autorizado. |
 | Comunidad escolar | Administración escolar | Estudiantes (alta, edición, importación, matrícula, traslado, retiro), padres y profesores/personal. **No** es una superficie de Backoffice. |
 | Autoridad financiera | Roles del cliente según sus políticas | Nunca Plataforma. |

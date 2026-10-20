@@ -64,6 +64,20 @@ describe("customer server screens", () => {
     detail(customer); html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
     expect(html).not.toContain("Información del colegio"); expect(html).toContain("No hay escuelas registradas.");
   });
+  it("profile editing: Editar información and Renombrar only with the profile capability, for active or suspended customers", async () => {
+    const school = { id: "00000000-0000-4000-8000-0000000000b1", name: "Colegio Ficticio", code: "COL-0A1B2C3D4E", status: "active", business_timezone: "America/Santo_Domingo", rnc: null, address: null, country: null, province: null, province_name: null,
+      locations: [{ id: "00000000-0000-4000-8000-0000000000c1", name: "Sede principal", code: "SEDE-PRINCIPAL", status: "active", cafeterias: [{ id: "00000000-0000-4000-8000-0000000000d1", name: "Cafetería principal", code: "CAF-PRINCIPAL", status: "active" }] }] };
+    const render = async (status: string, caps: string[], kind = "customer") => { mocks.requirePlatform.mockResolvedValue({ ...session, capabilities: [...session.capabilities, ...caps] });
+      detail({ ...customer, tenant_kind: kind, account: { ...customer.account, status }, schools: [school] }); return renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) })); };
+    const profile = ["platform:customer:profile:manage"];
+    for (const status of ["active", "suspended"]) {
+      const html = await render(status, profile);
+      expect(html).toContain("Editar información"); expect(html).toContain('aria-label="Renombrar sede Sede principal"'); expect(html).toContain('aria-label="Renombrar cafetería Cafetería principal"');
+    }
+    for (const [status, caps, kind] of [["closed", profile, "customer"], ["active", ["platform:customer:operations:manage", "platform:tenant:lifecycle:manage"], "customer"], ["active", profile, "sandbox"]] as const) {
+      const html = await render(status, [...caps], kind); expect(html).not.toContain("Editar información"); expect(html).not.toContain("Renombrar");
+    }
+  });
   it("sandbox details do not expose customer-admin completion actions", async () => {
     mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { ...customer, tenant_kind: "sandbox" } });
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
