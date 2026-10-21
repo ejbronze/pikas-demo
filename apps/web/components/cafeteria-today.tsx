@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { RefreshCw } from 'lucide-react';
 import { postRead } from '../lib/cafeteria/read-source';
 import { money } from '../lib/cafeteria/operations';
 import { latestGate, reportResultSchema, type Reconciliation, type SalesSummary, type TopProducts } from '../lib/cafeteria/reports';
@@ -16,7 +17,7 @@ export type TodayInputs = { today: Loaded<TodayRead>; summary: Loaded<SalesSumma
 const loading = { status: 'loading' } as const;
 const tenderLabel = { cash: 'Efectivo', student_wallet: 'PIKAS Cash', staff_credit: 'Crédito de personal' } as const;
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const percent = (n: number) => `${n.toLocaleString('es-DO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+const percent = (n: number) => `${n.toLocaleString('es-DO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
 async function read<T>(url: string, body: unknown, parse: (v: unknown) => T | null): Promise<Loaded<T>> {
   try {
@@ -53,10 +54,10 @@ export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data
   const firstSale = !!today && today.data.today_count > 0 && today.data.first_sale_date === today.today;
   const date = today?.today ?? data.service?.business_date;
   return <div className="hoy space-y-4">
-    <header className="flex flex-wrap items-end justify-between gap-3">
+    <header className="flex items-start justify-between gap-3">
       <div className="min-w-0"><h1 className="font-display text-3xl font-black text-[var(--primary)]">Hoy</h1>
         <p className="text-sm text-slate-600">{data.scope.cafeteria_name} · {data.scope.school_name}{date ? ` · ${longDate(date)}` : ''}</p></div>
-      {business && onRefresh && <button type="button" className="btn-secondary" onClick={onRefresh}>Actualizar</button>}
+      {business && onRefresh && <button type="button" className="hoy-refresh" onClick={onRefresh}><RefreshCw aria-hidden className="size-4" />Actualizar</button>}
     </header>
     {!business && <p className="hoy-note" role="status">{data.scope.tenant_kind === 'sandbox' ? 'Los datos financieros no están disponibles en el entorno sandbox. Aquí ves el estado operativo de la cafetería.' : 'Tu rol no tiene acceso a las ventas de esta cafetería. Aquí ves su estado operativo.'}</p>}
     {firstSale && <Milestone name={data.scope.cafeteria_name} />}
@@ -104,7 +105,7 @@ function Hero({ className, inputs }: { className: string; inputs: TodayInputs })
     <p className="num-display mt-1 break-words text-4xl sm:text-5xl">{money(d.gross_sales_minor, s.value.currency_code)}</p>
     {d.transaction_count === 0 ? <p className="mt-2 text-sm text-white/85">Aún no hay ventas hoy. La primera venta aparecerá aquí.</p>
       : c.kind === 'delta' ? <p className="hoy-delta mt-2" data-direction={c.percent > 0 ? 'up' : c.percent < 0 ? 'down' : 'flat'}>
-          <span aria-hidden>{c.percent > 0 ? '▲' : c.percent < 0 ? '▼' : '='}</span> {c.percent === 0 ? `Igual que el ${c.weekday} pasado a esta hora` : `${Math.abs(c.percent)} % ${c.percent > 0 ? 'más' : 'menos'} que el ${c.weekday} pasado a esta hora`}</p>
+          {c.percent === 0 ? `Igual que el ${c.weekday} pasado a esta hora` : <><span aria-hidden>{c.percent > 0 ? '↑' : '↓'}</span><span className="sr-only">{c.percent > 0 ? 'Sube' : 'Baja'}</span> {`${Math.abs(c.percent)}% vs. ${c.weekday} pasado a esta hora`}</>}</p>
       : c.kind === 'reference' ? <p className="mt-2 text-sm text-white/85">El {c.weekday} pasado a esta hora: <span className="num">{money(c.baselineMinor, s.value.currency_code)}</span></p> : null}
     {d.refund_count > 0 && <p className="mt-3 text-xs text-white/75">{plural(d.refund_count, 'reembolso', 'reembolsos')} hoy · <span className="num">{money(d.refunds_minor, s.value.currency_code)}</span> · Netas <span className="num">{money(d.net_sales_minor, s.value.currency_code)}</span></p>}
   </section>;
@@ -120,7 +121,7 @@ function Kpis({ className, summary }: { className: string; summary: Loaded<Sales
   </dl>;
 }
 
-// Hourly gross for today (bars) with last week's same weekday as a neutral reference mark. The
+// Hourly gross for today (bars) with last week's same weekday as a dashed neutral line. The
 // numbers are always available as text: a peak summary and a screen-reader table.
 export function HourlyChart({ today }: { today: TodayRead }) {
   const hours = chartWindow(today), hasBaseline = today.data.baseline.day_count > 0, now = Number(today.as_of_local.slice(11, 13));
@@ -131,13 +132,15 @@ export function HourlyChart({ today }: { today: TodayRead }) {
   return <figure className="m-0">
     <p className="text-sm text-slate-600">{peak ? <>Hora con más ventas: <b className="text-slate-900">{hourLabel(peak.hour)}</b> · <span className="num">{money(peak.today_gross_minor, cur)}</span></> : 'Aún no hay ventas hoy.'}</p>
     <div className="hoy-chart" aria-hidden>
-      {hours.map(h => <div key={h.hour} className="hoy-col" title={`${hourLabel(h.hour)} · hoy ${money(h.today_gross_minor, cur)}${hasBaseline ? ` · ${weekday} pasado ${money(h.baseline_gross_minor, cur)}` : ''}`}>
-        <div className="hoy-col-plot">
+      <div className="hoy-plot">
+        {hours.map(h => <div key={h.hour} className="hoy-col-plot" title={`${hourLabel(h.hour)} · hoy ${money(h.today_gross_minor, cur)}${hasBaseline ? ` · ${weekday} pasado ${money(h.baseline_gross_minor, cur)}` : ''}`}>
           {h.today_count > 0 && <span className="hoy-bar" data-current={h.hour === now} style={{ height: `${Math.max(pct(h.today_gross_minor), 3)}%` }} />}
-          {hasBaseline && h.baseline_count > 0 && <span className="hoy-ref" style={{ bottom: `${pct(h.baseline_gross_minor)}%` }} />}
-        </div>
-        <span className="hoy-col-label" data-sparse={hours.length > 10 && h.hour % 2 === 1}>{h.hour}</span>
-      </div>)}
+        </div>)}
+        {/* Columns have no gap, so hour i is centred at (i + ½) / n; hours without sales sit on the baseline. */}
+        {hasBaseline && <svg className="hoy-ref-line" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline fill="none" vectorEffect="non-scaling-stroke"
+          points={hours.map((h, i) => `${((i + 0.5) / hours.length) * 100},${100 - pct(h.baseline_gross_minor)}`).join(' ')} /></svg>}
+      </div>
+      <div className="hoy-labels">{hours.map(h => <span key={h.hour} className="hoy-col-label" data-sparse={hours.length > 10 && h.hour % 2 === 1}>{h.hour}</span>)}</div>
     </div>
     <figcaption className="hoy-legend"><span><i className="hoy-key-bar" aria-hidden />Hoy por hora</span>{hasBaseline ? <span><i className="hoy-key-ref" aria-hidden />{`El ${weekday} pasado`}</span> : <span className="text-slate-500">La comparación aparecerá cuando haya ventas del {weekday} pasado.</span>}</figcaption>
     {/* sr-only on a wrapper: a <table> ignores the 1px width and would widen the page. */}

@@ -110,15 +110,18 @@ select configure_staff_receivable_account('00000000-0000-0000-0000-000000000001'
 -- Expected = 10000 + 10000 + 500 − 5000 = 15500. Counted 15000 → Faltante −500.
 select pg_temp.as_user('00000000-0000-0000-0000-000000002011');
 select set_config('t.a',pg_temp.open('00000000-0000-0000-0000-000000009401','00000000-0000-0000-0000-000000009503',10000,'5d3-open-session-a-01'),true);
+-- Fund the student wallet inside session A before its PIKAS Cash sale; the test must not rely on a
+-- balance left by other local runs (a freshly reset wallet starts at zero).
+select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
+select school_wallet_replenish('00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201',100000,'5d300000-0000-4000-8000-000000000001','Fondos locales 5D.3','Verificado');
+select school_wallet_adjust('00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201',2500,'administrative_correction','Ajuste ficticio 5D.3','5d300000-0000-4000-8000-000000000002');
+select pg_temp.as_user('00000000-0000-0000-0000-000000002011');
 select set_config('t.a_cash',pg_temp.sale(current_setting('t.a'),'5d3-sale-a-cash-0001',2,'cash')::text,true);
 select pg_temp.sale(current_setting('t.a'),'5d3-sale-a-wallet-001',1,'student_wallet');
 select pg_temp.sale(current_setting('t.a'),'5d3-sale-a-staff-0001',1,'staff_credit','00000000-0000-0000-0000-000000006902');
 select settle_staff_receivable(current_setting('t.receivable')::uuid,'500','cash','00000000-0000-0000-0000-000000000111',
  '00000000-0000-0000-0000-000000004603',current_setting('t.a')::uuid,'Cobro ficticio 5D.3',null,'5d3-staff-collection-01');
 select pg_temp.refund(current_setting('t.a'),current_setting('t.a_cash')::uuid,1,'5d3-refund-a-cash-01');
-select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
-select school_wallet_replenish('00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201',100000,'5d300000-0000-4000-8000-000000000001','Fondos locales 5D.3','Verificado');
-select school_wallet_adjust('00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201',2500,'administrative_correction','Ajuste ficticio 5D.3','5d300000-0000-4000-8000-000000000002');
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
 select is(pg_temp.live(pg_temp.rec('today'),current_setting('t.a'))->>'expected_minor','15500','Open session A: live 5A expected (PIKAS Cash, staff credit, recarga, adjustment excluded)');
 select ok(pg_temp.closed(pg_temp.rec('today'),current_setting('t.a')) is null,'Open session A is not a closed-session record');

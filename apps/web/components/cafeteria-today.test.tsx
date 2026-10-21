@@ -33,8 +33,8 @@ describe('Cafetería Hoy', () => {
   it('normal day: hero gross in RD$, same-time comparison, KPIs, chart, products, cajas and tender mix', () => {
     const html = render(inputs());
     expect(html).toContain('Ventas de hoy'); expect(html).toContain('RD$ 200.00');
-    expect(html).toContain('11 % más que el martes pasado a esta hora');
-    expect(html).toContain('Ticket promedio'); expect(html).toContain('RD$ 33.33'); expect(html).toContain('25.0 %');
+    expect(html).toContain('11% vs. martes pasado a esta hora'); expect(html).toContain('<span class="sr-only">Sube</span>');
+    expect(html).toContain('Ticket promedio'); expect(html).toContain('RD$ 33.33'); expect(html).toContain('25.0%'); expect(html).not.toMatch(/\d %/);
     expect(html).toContain('Hora con más ventas: <b class="text-slate-900">12:00</b>');
     expect(html).toContain('Empanada ficticia'); expect(html).toContain('12 uds.');
     expect(html).toContain('Última venta 12:37 · Caja 5'); expect(html).toContain('1 caja abierta');
@@ -47,17 +47,17 @@ describe('Cafetería Hoy', () => {
   it('zero sales: invites the first sale, no fake comparison, no average ticket', () => {
     const html = render(inputs({ today: ready(todayRead()), summary: ready(reportResultSchema.sales_summary.parse({ ...zeroSummary, period: 'today' })), products: products([]) }));
     expect(html).toContain('Aún no hay ventas hoy. La primera venta aparecerá aquí.'); expect(html).toContain('RD$ 0.00');
-    expect(html).not.toContain('% más'); expect(html).not.toContain('% menos'); expect(html).not.toContain('martes pasado a esta hora');
+    expect(html).not.toContain('% vs.'); expect(html).not.toContain('martes pasado a esta hora');
     expect(html).toContain('con la primera venta'); expect(html).toContain('Los productos más vendidos aparecerán con las primeras ventas.');
     expect(html).toContain('Los medios de pago aparecerán con la primera venta.'); expect(html).toContain('pikas-logo-mark');
   });
   it('one sale with history: shows last week as a plain amount, never a percentage', () => {
     const html = render(inputs({ today: ready(todayRead({ today: { 9: [5000, 1] }, baseline: { 9: [40000, 7] }, cutoff: [40000, 7] })), summary: sales(summary({ gross_sales_minor: '5000', transaction_count: 1 })) }));
-    expect(html).toContain('El martes pasado a esta hora: <span class="num">RD$ 400.00</span>'); expect(html).not.toMatch(/\d+ % (más|menos)/);
+    expect(html).toContain('El martes pasado a esta hora: <span class="num">RD$ 400.00</span>'); expect(html).not.toContain('% vs.'); expect(html).toContain('hoy-ref-line');
   });
   it('no baseline: omits the comparison and explains the chart reference', () => {
     const html = render(inputs({ today: ready(todayRead({ today: { 9: [56000, 6] } })) }));
-    expect(html).not.toContain('a esta hora'); expect(html).toContain('La comparación aparecerá cuando haya ventas del martes pasado.');
+    expect(html).not.toContain('a esta hora'); expect(html).not.toContain('hoy-ref-line'); expect(html).toContain('La comparación aparecerá cuando haya ventas del martes pasado.');
   });
   it('first sale ever today: restrained milestone, not persisted', () => {
     expect(render(inputs({ today: ready(todayRead({ today: { 9: [5000, 1] }, firstSale: '2026-10-20' })) }))).toContain('¡Primera venta con PIKAS!');
@@ -90,6 +90,12 @@ describe('Cafetería Hoy', () => {
     const html = render(inputs(), sandbox, false);
     expect(html).toContain('no están disponibles en el entorno sandbox'); expect(html).not.toContain('Ventas de hoy'); expect(html).not.toContain('RD$'); expect(html).toContain('Cajas ahora');
     expect(render(inputs(), data(), false)).toContain('Tu rol no tiene acceso a las ventas');
+  });
+  it('refresh is a compact secondary control; long operator names are shown in full', () => {
+    const long = 'Synthetic multi-cafeteria person with an unusually long fictional name';
+    const html = renderToStaticMarkup(<CafeteriaTodayView data={data()} business inputs={inputs({ recon: recon([], [{ ...openSession(5), operator_name: long, opened_local: '2026-10-19T07:42' }]) })} onRefresh={() => {}} />);
+    expect(html).toMatch(/<button type="button" class="hoy-refresh">.*Actualizar<\/button>/); expect(html).not.toContain('class="btn-secondary">Actualizar');
+    expect(html.split(long).length - 1).toBe(2); expect(html).not.toContain('…');
   });
   it('configuration is demoted when operational and prominent when incomplete', () => {
     const html = render(inputs()); expect(html).toContain('Configuración de la cafetería'); expect(html).not.toMatch(/<details[^>]*open/);
