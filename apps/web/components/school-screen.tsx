@@ -9,6 +9,9 @@ import { ConnectedSchoolShell } from "./connected-school-shell";
 import { ConnectedSchoolPages } from "./connected-school-pages";
 import { readSchoolWalletAccess } from "../lib/wallet/access";
 import { ErrorState } from "./state-panels";
+import { walletReportSchema } from "../lib/school/wallet-report";
+import { serviceRows, walletSummary, type OverviewInputs } from "../lib/school/overview";
+type CafeteriaReadRow = Extract<NonNullable<import("../lib/school/contracts").SchoolRead["rows"]>[number], { sharing_status: unknown }>;
 const sectionPath: Record<SchoolSection, string> = { summary: "", students: "/estudiantes", administrators: "/administradores", cafeterias: "/cafeterias", activity: "/actividad" };
 export type SchoolSearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function SchoolScreen({ section, searchParams }: { section: SchoolSection; searchParams: SchoolSearchParams }) {
@@ -35,5 +38,18 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     if (!roster.error && result.success && result.data.scope.school_id === schoolId && result.data.scope.actor_id === access.context.person_id) students = (result.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row);
   }
   const walletRead = !access.context.pov && (await readSchoolWalletAccess(client, schoolId)).read;
-  return <ConnectedSchoolShell context={access.context} schoolId={schoolId} role={parsed.data.scope.role} walletNav={walletRead}><ConnectedSchoolPages walletRead={section === "students" && walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} paged={cursor.data !== null} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
+  // School Overview: extra reads with the School's own authority; each one fails on its own.
+  let overview: OverviewInputs | undefined;
+  if (section === "summary" && parsed.data.counts) {
+    const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };
+    const [cafes, admins, report] = await Promise.all([
+      client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "cafeterias", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(own, () => null),
+      client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "administrators", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(own, () => null),
+      walletRead ? client.rpc("school_wallet_report", { p_school_id: schoolId, p_period: "last_7_days", p_from: null, p_to: null }).then(r => { const p = walletReportSchema.safeParse(r.data); return !r.error && p.success && p.data.school_id === schoolId ? p.data : null; }, () => null) : Promise.resolve(null),
+    ]);
+    // Only counts and wallet aggregates leave the server: no student names, no per-cafetería spending.
+    overview = { counts: parsed.data.counts, cafeterias: cafes ? serviceRows((cafes.rows ?? []).filter((r): r is CafeteriaReadRow => "sharing_status" in r)) : null,
+      invitations: admins ? (admins.invitations ?? []).map(v => ({ status: v.status })) : null, wallet: report ? walletSummary(report) : null };
+  }
+  return <ConnectedSchoolShell context={access.context} schoolId={schoolId} role={parsed.data.scope.role} walletNav={walletRead}><ConnectedSchoolPages overview={overview} walletRead={section === "students" && walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} paged={cursor.data !== null} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
 }

@@ -1,5 +1,24 @@
 # Registro de cambios del producto
 
+## Escuela: Resumen del colegio (local)
+
+- El **Resumen** de Administración escolar ahora se centra en estudiantes, accesos y servicio. Nunca muestra el negocio de la cafetería: ventas, tickets, medios de pago, productos, cajas, cajeros ni reembolsos.
+- **Estudiantes:** número de estudiantes activos (con suspendidos e inactivos). Solo con el permiso de monederos (`school:wallets:read`) se agregan:
+  - **Con PIKAS Cash:** monederos activos;
+  - **Movimiento en PIKAS Cash:** monederos con recargas, compras o ajustes en los últimos 7 días, con las fechas visibles;
+  - **Saldo de estudiantes:** suma de los saldos de PIKAS Cash.
+
+  Sin ese permiso, esas cifras no aparecen ni dejan espacios vacíos.
+- **Requiere atención:** solo estados que el producto registra, en cantidades y sin nombres:
+  - invitaciones de administrador vencidas;
+  - una cafetería con estudiantes habilitados cuya compartición no está activa;
+  - con permiso de monederos, monederos congelados o con saldo negativo.
+
+  Sin umbrales inventados. Si no hay nada, muestra «Todo en orden».
+- **Servicio a estudiantes:** tres comprobaciones del lado del colegio: estudiantes activos, una cafetería con compartición activa y estudiantes habilitados en ella. No guarda ningún estado nuevo.
+- **Cafeterías que atienden al colegio:** sede, estado, compartición y número de estudiantes habilitados (100 o más cuando se alcanza el límite de la consulta).
+- Usa lecturas escolares existentes. Los nombres de estudiantes, los correos de invitaciones y el gasto por cafetería del informe de PIKAS Cash se descartan en el servidor. Sin migración ni cambios de autoridad.
+
 ## Plataforma: espacio de trabajo del cliente (local)
 
 - El detalle del cliente es una sola página con una barra de secciones fija: Puesta en marcha, Información, Usuarios y accesos, Estructura, Operación y Estado. La barra marca la sección actual y funciona con teclado. Los enlaces de Puesta en marcha siguen llegando a su control, sin quedar ocultos bajo el encabezado.

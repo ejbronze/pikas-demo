@@ -150,6 +150,39 @@
 .ws-rows>li>div:first-child{flex:1 1 12rem}
 .ws-danger-zone{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem 1rem;margin-top:.5rem;padding-top:1rem;border-top:1px dashed var(--border)}
 
+/* PIKAS UX 4: School Overview (students, access and service; never cafeteria sales). */
+.sch-h2{margin:0 0 .6rem;font-family:var(--font-display),var(--font-inter),system-ui,sans-serif;font-size:1.125rem;font-weight:900;color:var(--primary)}
+.sch-panel,.sch-attention{min-width:0;border-radius:1.25rem;padding:1.1rem 1.25rem;background:var(--surface);border:1px solid var(--border)}
+.sch-attention{background:var(--attention-surface);border-color:var(--attention-border)}
+.sch-ledger{border-radius:1.25rem;padding:1.1rem 1.25rem;background:var(--brand-cream);border:1px solid #f0e2bf}
+.sch-figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:1rem 1.5rem;margin:0}
+.sch-figures>div{min-width:0;padding-left:.9rem;border-left:3px solid var(--tender-wallet)}
+.sch-figures>div:first-child{border-left-color:var(--primary)}
+.sch-figures dt{font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--foreground-muted)}
+.sch-figures dd{margin:0}.sch-figures .num-display{margin-top:.25rem;font-size:2rem;color:var(--primary);overflow-wrap:anywhere}
+.sch-help{font-size:.8rem;color:var(--foreground-muted)}
+.sch-empty{display:flex;align-items:center;gap:1rem}
+.sch-calm{margin:0;color:var(--success);font-weight:600}
+.sch-list,.sch-rows,.sch-checks{display:grid;margin:0;padding:0;list-style:none}
+.sch-list>li{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem 1rem;padding:.6rem 0;border-top:1px solid var(--attention-border);color:var(--attention-ink);overflow-wrap:anywhere}
+.sch-list>li:first-child{border-top:0;padding-top:0}
+.sch-list>li>span{flex:1 1 14rem}
+.sch-action{display:inline-flex;min-height:2.75rem;align-items:center;flex:none;font-weight:800;font-size:.875rem;color:var(--primary);text-decoration:underline;text-underline-offset:3px}
+.sch-checks{gap:.5rem}
+.sch-checks>li{display:flex;align-items:center;gap:.6rem;font-size:.95rem}
+.sch-check{display:grid;flex:none;place-items:center;width:1.6rem;height:1.6rem;border-radius:.5rem;border:2px solid var(--border);font-weight:900;color:#06605f}
+.sch-checks>li[data-done="true"] .sch-check{background:#ddf5f4;border-color:#ddf5f4}
+.sch-checks>li[data-done="false"]{color:var(--foreground-muted)}
+.sch-rows>li{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;padding:.7rem 0;border-top:1px solid var(--border)}
+.sch-rows>li:first-child{border-top:0}
+.sch-rows>li>div:first-child{flex:1 1 14rem}
+.sch-row-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .9rem}
+.sch-pill{border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:800;background:#eef1f6;color:var(--foreground-muted)}
+.sch-pill[data-state="on"]{background:#ddf5f4;color:#06605f}
+.sch-next{display:flex;flex-wrap:wrap;gap:.5rem}
+.sch-next a{display:inline-flex;align-items:center;min-height:2.75rem;padding:0 1rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-weight:700;font-size:.9rem;color:var(--primary)}
+.sch-next a:hover{border-color:var(--accent)}
+
 /* Personal POS theme; branding remains unchanged. */
 .pos-dark { background:#101c2d; color:#e5edf5; }
 .pos-dark .card, .pos-dark .bg-white { background:#1b2c42; color:#e5edf5; border-color:#41536a; }
