@@ -16,7 +16,9 @@ type Range = { from: string; to: string } | null;
 
 // Phase 5D.5 School PIKAS Cash report: wallet activity of this school's students only. Every number
 // is returned by school_wallet_report; this component formats it and never adds amounts.
-export function SchoolWalletReport({ schoolId }: { schoolId: string }) {
+// `embedded` (UX 7): rendered inside School PIKAS Cash as a secondary report, without its own header or
+// "Ahora" snapshot (the page above already shows the current wallet state).
+export function SchoolWalletReport({ schoolId, embedded = false }: { schoolId: string; embedded?: boolean }) {
   const [period, setPeriod] = useState<ReportPeriod>('last_30_days'), [range, setRange] = useState<Range>(null), [draft, setDraft] = useState({ from: '', to: '' }), [rangeError, setRangeError] = useState('');
   const [report, setReport] = useState<WalletReport | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true), [revision, setRevision] = useState(0);
   const latest = useRef(0);
@@ -38,10 +40,10 @@ export function SchoolWalletReport({ schoolId }: { schoolId: string }) {
   const r = report, m = r?.movements, c = r?.current;
   const range_label = r ? (r.from === r.to ? r.from : `${r.from} – ${r.to}`) : '';
   return <section className="space-y-5">
-    <AppPageHeader title="PIKAS Cash" description="Saldo y movimientos de PIKAS Cash de los estudiantes de esta escuela. No incluye ventas en efectivo ni otras formas de pago."
-      action={<button className="btn-secondary" onClick={() => setRevision(v => v + 1)}>Actualizar</button>} />
+    {!embedded && <AppPageHeader title="PIKAS Cash" description="Saldo y movimientos de PIKAS Cash de los estudiantes de esta escuela. No incluye ventas en efectivo ni otras formas de pago."
+      action={<button className="btn-secondary" onClick={() => setRevision(v => v + 1)}>Actualizar</button>} />}
     {error && !r ? <ErrorState title={error} retry={<button className="btn-secondary" onClick={() => setRevision(v => v + 1)}>Reintentar</button>} /> : null}
-    {c && <section aria-labelledby="wallet-now" className="space-y-3">
+    {c && !embedded && <section aria-labelledby="wallet-now" className="space-y-3">
       <h2 id="wallet-now" className="text-lg font-black">Ahora</h2>
       {c.wallet_count === 0 ? <EmptyState title="Aún no hay monederos PIKAS Cash en esta escuela." description="Se crean con la primera recarga de un estudiante." />
         : <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

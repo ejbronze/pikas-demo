@@ -46,7 +46,7 @@ export function StudentWorkspace({ data, inputs, walletRead, actorId }: { data: 
 
       {walletRead && <section aria-labelledby="stw-wallet" className="stw-card">
         <div className="stw-card-head"><h2 id="stw-wallet" className="stw-h2">PIKAS Cash</h2>
-          <Link className="btn-tertiary" href={`/admin/escuela/estudiantes/${student.id}/pikas-cash?school=${school}`}>Ver PIKAS Cash</Link></div>
+          <Link className="btn-tertiary" href={`/admin/escuela/estudiantes/${student.id}/pikas-cash?school=${school}&from=estudiante`}>Ver PIKAS Cash</Link></div>
         {inputs.wallet === undefined ? <p className="stw-empty" role="alert">No pudimos cargar PIKAS Cash. Ábrelo desde «Ver PIKAS Cash».</p>
           : inputs.wallet === null ? <p className="stw-empty">Este estudiante aún no tiene monedero de PIKAS Cash.</p>
           : <dl className="stw-rows">

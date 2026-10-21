@@ -1,5 +1,18 @@
 # Registro de cambios del producto
 
+## Escuela: PIKAS Cash del colegio (local)
+
+- **PIKAS Cash** (`/admin/escuela/pikas-cash`) ahora sirve para administrar los monederos de los estudiantes. No muestra ventas de cafetería ni compras de estudiantes. Solo aparece con `school:wallets:read`; el punto de vista de sandbox sigue sin datos financieros.
+- **Monederos:** monederos activos (de cuántos, y cuántos congelados), saldo de estudiantes (ahora) y **Monederos con movimiento**, con fechas explícitas (últimos 7 días). Si el colegio aún no tiene monederos, se explica que el monedero se crea con la primera recarga de un estudiante activo y matriculado.
+- **Requiere atención:** solo monederos congelados o con saldo negativo, con la vista «Requieren atención». Si no hay ninguno, se muestra «Todo en orden».
+- **Monederos de estudiantes:** nombre, código, estado del monedero («Activo», «Congelado» o «Sin monedero») y saldo, en el orden del listado de Estudiantes, nunca ordenados por saldo ni por gasto. Se busca por nombre o código y se pagina de 50 en 50.
+- **Navegación:**
+  - el nombre abre la ficha del estudiante;
+  - «PIKAS Cash» abre el monedero del estudiante, que vuelve a PIKAS Cash;
+  - abierto desde la ficha, el monedero vuelve a la ficha.
+- Recargar, revertir y ajustar siguen en el PIKAS Cash de cada estudiante, con sus permisos. Congelar o descongelar no está implementado. El reporte de movimientos por período queda como sección secundaria plegada.
+- **Privacidad:** el servidor reduce los datos a estado y saldo por estudiante. Compras, líneas, recibos, productos y montos por cafetería no llegan a la página principal. No hay migraciones.
+
 ## Escuela: ficha del estudiante (local)
 
 - Nueva página **Estudiante** (`/admin/escuela/estudiantes/{id}`), dentro de Administración escolar. Se abre desde el nombre en Estudiantes, y la vista rápida «Ver perfil» ofrece «Abrir ficha del estudiante». Tiene un enlace de vuelta a Estudiantes.

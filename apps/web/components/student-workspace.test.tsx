@@ -29,7 +29,7 @@ describe("Student workspace", () => {
   it("PIKAS Cash with wallet authority: state and balance only, history stays on its page", () => {
     const html = render(inputs());
     expect(html).toContain("PIKAS Cash"); expect(html).toContain("RD$ 150.00"); expect(html).toContain(">Activo<");
-    expect(html).toContain(`href="/admin/escuela/estudiantes/4d600000-0000-4000-8000-000000000101/pikas-cash?school=${id}"`);
+    expect(html).toContain(`href="/admin/escuela/estudiantes/4d600000-0000-4000-8000-000000000101/pikas-cash?school=${id}&amp;from=estudiante"`);
     expect(render(inputs({ wallet: null }))).toContain("aún no tiene monedero"); expect(render(inputs({ wallet: undefined }))).toContain("No pudimos cargar PIKAS Cash");
   });
   it("without wallet authority the PIKAS Cash section does not exist", () => {

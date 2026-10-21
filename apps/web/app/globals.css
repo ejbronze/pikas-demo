@@ -240,6 +240,21 @@
 .stw-sub{font-size:.8rem;color:var(--foreground-muted)}
 .stw-zone{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem 1rem;padding:1rem 1.25rem;border-radius:1.25rem;border:1px dashed var(--border);background:var(--surface)}
 
+/* PIKAS UX 7: School PIKAS Cash (student wallet administration). */
+.pc-list{display:grid;margin:0;padding:0;list-style:none;border-radius:1.25rem;background:var(--surface);border:1px solid var(--border);overflow:hidden}
+.pc-list>li{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who balance" "state open";gap:.2rem .75rem;padding:.8rem 1.1rem;border-top:1px solid var(--border)}
+.pc-list>li:first-child{border-top:0}
+.pc-list>li[data-attention]{background:var(--attention-surface)}
+@media(min-width:900px){.pc-list>li{grid-template-columns:minmax(0,2fr) 11rem 9rem auto;grid-template-areas:"who state balance open";align-items:center}}
+.pc-who{grid-area:who;min-width:0;display:flex;flex-direction:column}
+.pc-state{grid-area:state;align-self:center;justify-self:start;border-radius:999px;padding:.15rem .6rem;font-size:.75rem;font-weight:800;background:#ddf5f4;color:#06605f;white-space:nowrap}
+.pc-state[data-state="attention"]{background:var(--attention-surface);color:var(--attention-ink);border:1px solid var(--attention-border)}
+.pc-state[data-state="none"]{background:#eef1f6;color:var(--foreground-muted)}
+.pc-balance{grid-area:balance;justify-self:end;font-weight:800;color:var(--primary)}
+.pc-open{grid-area:open;justify-self:end}
+@media(min-width:900px){.pc-balance{text-align:right}}
+.pc-report>summary{color:var(--primary)}
+
 /* Personal POS theme; branding remains unchanged. */
 .pos-dark { background:#101c2d; color:#e5edf5; }
 .pos-dark .card, .pos-dark .bg-white { background:#1b2c42; color:#e5edf5; border-color:#41536a; }
