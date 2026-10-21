@@ -10,8 +10,9 @@
   - el nombre abre la ficha del estudiante;
   - «PIKAS Cash» abre el monedero del estudiante, que vuelve a PIKAS Cash;
   - abierto desde la ficha, el monedero vuelve a la ficha.
-- Recargar, revertir y ajustar siguen en el PIKAS Cash de cada estudiante, con sus permisos. Congelar o descongelar no está implementado. El reporte de movimientos por período queda como sección secundaria plegada.
-- **Privacidad:** el servidor reduce los datos a estado y saldo por estudiante. Compras, líneas, recibos, productos y montos por cafetería no llegan a la página principal. No hay migraciones.
+- Recargar, revertir y ajustar siguen en el PIKAS Cash de cada estudiante, con sus permisos. Congelar o descongelar no está implementado. El reporte de movimientos por período queda como sección secundaria plegada, con recargas, compras y reembolsos de PIKAS Cash (totales), correcciones y movimiento neto.
+- **Sin desglose por cafetería:** se quita del colegio «¿Dónde se usó PIKAS Cash?». El colegio ve los monederos de sus estudiantes, no dónde gastaron por cafetería; ese desglose ya no se envía al navegador del colegio.
+- **Privacidad:** el servidor reduce los datos a estado y saldo por estudiante. Compras, líneas, recibos y productos no llegan a la página. Sin migraciones ni cambios de autoridad.
 
 ## Escuela: ficha del estudiante (local)
 

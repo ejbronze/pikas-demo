@@ -25,3 +25,8 @@ export const walletReportSchema = z.object({
   cafeterias: z.array(z.object({ cafeteria_id: z.guid(), name: z.string(), spent_minor: amount, purchase_count: count, refunded_minor: amount, refund_count: count }).strict()),
 }).strict();
 export type WalletReport = z.infer<typeof walletReportSchema>;
+
+// What the School browser receives (UX 7): the report without the per-cafetería breakdown. School sees
+// its students' wallets, not where they spent by cafetería; the RPC result is still validated in full first.
+export const walletReportViewSchema = walletReportSchema.omit({ cafeterias: true });
+export type WalletReportView = z.infer<typeof walletReportViewSchema>;

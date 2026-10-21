@@ -3,6 +3,7 @@ import { resolveSchoolAccess } from '../../../../lib/auth/school-access';
 import { reportErrors } from '../../../../lib/cafeteria/reports';
 import { walletReportRequestSchema, walletReportSchema } from '../../../../lib/school/wallet-report';
 // Phase 5D.5 read-only School PIKAS Cash report. Authority and every total come from school_wallet_report.
+// UX 7: the per-cafetería breakdown is validated but never sent to the School browser.
 export async function POST(request: Request) {
   const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
   if (request.headers.get('origin') !== new URL(request.url).origin) return json({ error: 'same_origin_required' }, 403);
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
     }
     const result = walletReportSchema.safeParse(data);
     if (!result.success || result.data.school_id !== op.school_id || result.data.period !== op.period) return json({ error: 'invalid_response' }, 502);
-    return json({ result: result.data });
+    const { cafeterias, ...report } = result.data; void cafeterias;
+    return json({ result: report });
   } catch { return json({ error: 'report_unavailable' }, 503); }
 }

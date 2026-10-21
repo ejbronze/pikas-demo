@@ -15,8 +15,9 @@ const report = (over: Record<string, unknown> = {}, movements: Record<string, un
   period: "last_30_days", from: "2026-09-20", to: "2026-10-19", today: "2026-10-19", as_of: "2026-10-19T15:00:00Z",
   current: { total_balance_minor: "15400", wallet_count: 3, active_wallet_count: 2, frozen_wallet_count: 1, negative_wallet_count: 1, negative_balance_minor: "-500" },
   movements: { replenishments: tally("22500", 3), reversals: tally("2500", 1), net_replenished_minor: "20000", purchases: tally("11500", 2), refunds: tally("5000", 1),
-    adjustment_credits: tally("1000", 1), adjustment_debits: tally("1100", 2), historical_adjustments: { net_minor: "0", count: 0 }, net_movement_minor: "13400", entry_count: 10, wallets_with_movement: 2, ...movements },
-  cafeterias: [{ cafeteria_id: caf, name: "Cafetería Norte", spent_minor: "8500", purchase_count: 1, refunded_minor: "5000", refund_count: 1 }, { cafeteria_id: caf2, name: "Cafetería Sur", spent_minor: "3000", purchase_count: 1, refunded_minor: "0", refund_count: 0 }], ...over });
+    adjustment_credits: tally("1000", 1), adjustment_debits: tally("1100", 2), historical_adjustments: { net_minor: "0", count: 0 }, net_movement_minor: "13400", entry_count: 10, wallets_with_movement: 2, ...movements }, ...over });
+// What the route used to send: the per-cafetería breakdown. The School browser must refuse it (UX 7).
+const cafeterias = [{ cafeteria_id: caf, name: "Cafetería Norte", spent_minor: "8500", purchase_count: 1, refunded_minor: "5000", refund_count: 1 }, { cafeteria_id: caf2, name: "Cafetería Sur", spent_minor: "3000", purchase_count: 1, refunded_minor: "0", refund_count: 0 }];
 
 beforeAll(async () => {
   const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", define: { "process.env.NODE_ENV": '"test"' },
@@ -47,7 +48,7 @@ const calls = () => win<Record<string, unknown>[]>("w => w.calls");
 const text = () => page.locator("section").first().innerText();
 
 describe("School PIKAS Cash report (5D.5)", () => {
-  it("current balance is labeled point-in-time; period metrics, corrections and cafeteria breakdown come from the server", async () => {
+  it("current balance is labeled point-in-time; period metrics and corrections come from the server; no cafetería breakdown", async () => {
     await win("w => w.mount()"); await page.getByText("Saldo PIKAS Cash total").waitFor();
     expect((await calls())[0]).toEqual({ school_id: school, period: "last_30_days", from: null, to: null });
     const t = await text();
@@ -56,8 +57,7 @@ describe("School PIKAS Cash report (5D.5)", () => {
     expect(t).toMatch(/Recargas\s*\+RD\$ 225\.00\s*3 recargas/); expect(t).toMatch(/Compras con PIKAS Cash\s*−RD\$ 115\.00\s*2 compras/); expect(t).toMatch(/Reembolsos a PIKAS Cash\s*\+RD\$ 50\.00/);
     expect(t).toMatch(/Reversiones de recarga[\s\S]*no son reembolsos de compras[\s\S]*−RD\$ 25\.00/); expect(t).toMatch(/Recargas netas[\s\S]*\+RD\$ 200\.00/);
     expect(t).toMatch(/Movimiento neto del período[\s\S]*\+RD\$ 134\.00/); expect(t).not.toContain("Ajustes históricos");
-    const breakdown = await page.locator("table").innerText(); expect(breakdown).toContain("Cafetería Norte"); expect(breakdown).toMatch(/−RD\$ 85\.00/); expect(breakdown).toContain("Cafetería Sur"); expect(breakdown).toContain("Ninguno");
-    expect(t).toContain("No son las ventas totales de cada cafetería");
+    expect(await page.locator("table").count()).toBe(0); expect(t).not.toMatch(/¿Dónde se usó|por cafetería|Cafetería Norte|Cafetería Sur|ventas totales/);
     expect(t).not.toMatch(/Ventas brutas|Ventas netas|Efectivo|Ticket|Transacciones|Crédito de personal|Esperado|Contado/);
   });
   it("periods and custom range: the 92-day guard runs before the server; every change re-reads", async () => {
@@ -69,16 +69,20 @@ describe("School PIKAS Cash report (5D.5)", () => {
     await page.getByLabel("Desde").fill("2026-09-01"); await page.getByRole("button", { name: "Aplicar fechas" }).click(); await page.getByText("2026-09-01 – 2026-10-19").waitFor();
     expect((await calls()).at(-1)).toEqual({ school_id: school, period: "custom", from: "2026-09-01", to: "2026-10-19" });
   });
-  it("empty states: no wallets, no movement in the period, no PIKAS Cash purchases; server errors are not zeros", async () => {
-    await auto({ current: { total_balance_minor: "0", wallet_count: 0, active_wallet_count: 0, frozen_wallet_count: 0, negative_wallet_count: 0, negative_balance_minor: "0" }, cafeterias: [] },
+  it("empty states: no wallets, no movement in the period, no purchases; server errors are not zeros", async () => {
+    await auto({ current: { total_balance_minor: "0", wallet_count: 0, active_wallet_count: 0, frozen_wallet_count: 0, negative_wallet_count: 0, negative_balance_minor: "0" } },
       { replenishments: tally("0", 0), reversals: tally("0", 0), net_replenished_minor: "0", purchases: tally("0", 0), refunds: tally("0", 0), adjustment_credits: tally("0", 0), adjustment_debits: tally("0", 0), net_movement_minor: "0", entry_count: 0, wallets_with_movement: 0 });
     await win("w => w.mount()"); await page.getByText("Aún no hay monederos PIKAS Cash en esta escuela.").waitFor();
-    await page.getByText("Sin movimientos de PIKAS Cash en este período.").waitFor(); await page.getByText("No hubo compras con PIKAS Cash en este período.").waitFor();
+    await page.getByText("Sin movimientos de PIKAS Cash en este período.").waitFor();
     expect(await text()).not.toContain("RD$ 0.00 en ventas");
-    await auto({ cafeterias: [] }, { purchases: tally("0", 0) }); await win("w => w.mount()"); await page.getByText("Saldo PIKAS Cash total").waitFor();
-    await page.getByText("No hubo compras con PIKAS Cash en este período.").waitFor(); expect(await page.getByText("Sin movimientos de PIKAS Cash").count()).toBe(0);
+    await auto({}, { purchases: tally("0", 0) }); await win("w => w.mount()"); await page.getByText("Saldo PIKAS Cash total").waitFor();
+    expect(await page.getByText("Sin movimientos de PIKAS Cash").count()).toBe(0);
     await win("w => { w.queue.push({ status: 403, body: { error: 'school_authority_required' } }); w.mount(); }"); await page.getByText("Tu rol no puede consultar el reporte de PIKAS Cash").waitFor();
     expect(await page.getByText("Saldo PIKAS Cash total").count()).toBe(0);
+  });
+  it("a response that still carries the per-cafetería breakdown is refused, never rendered", async () => {
+    await auto({ cafeterias }); await win("w => w.mount()"); await page.getByText("No se pudo cargar el reporte de PIKAS Cash.").waitFor();
+    expect(await page.locator("body").innerText()).not.toMatch(/Cafetería Norte|Cafetería Sur/);
   });
   it("historical adjustments appear only when present, labeled as such", async () => {
     await auto({}, { historical_adjustments: { net_minor: "-300", count: 1 } }); await win("w => w.mount()"); await page.getByText("Ajustes históricos").waitFor();

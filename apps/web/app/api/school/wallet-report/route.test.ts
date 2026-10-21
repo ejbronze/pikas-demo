@@ -15,10 +15,11 @@ export const walletReport = (over: Record<string, unknown> = {}) => ({ school_id
 const request = (payload: unknown = body, origin = 'http://localhost') => new Request('http://localhost/api/school/wallet-report', { method: 'POST', headers: { origin, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 beforeEach(() => { vi.resetAllMocks(); mocks.create.mockResolvedValue({ rpc: mocks.rpc }); mocks.access.mockResolvedValue({ status: 'authorized', context: { schools: [{ school_id: id }] } }); mocks.rpc.mockResolvedValue({ data: walletReport(), error: null }); });
 describe('5D.5 school PIKAS Cash report boundary', () => {
-  it('reads the authoritative report and passes only school and period', async () => {
+  it('reads the authoritative report, passes only school and period, and never sends the per-cafetería breakdown', async () => {
     const response = await POST(request()); expect(response.status).toBe(200); expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(mocks.rpc).toHaveBeenCalledWith('school_wallet_report', { p_school_id: id, p_period: 'last_30_days', p_from: null, p_to: null });
-    expect((await response.json()).result.cafeterias[0].spent_minor).toBe('8500');
+    const sent = await response.json(); expect(sent.result.movements.purchases).toEqual({ amount_minor: '8500', count: 1 });
+    expect(sent.result).not.toHaveProperty('cafeterias'); expect(JSON.stringify(sent)).not.toMatch(/Cafetería Ficticia|spent_minor|purchase_count|refunded_minor/);
   });
   it.each([['unauthenticated', 401], ['forbidden', 403], ['unavailable', 503]])('rejects %s', async (status, code) => { mocks.access.mockResolvedValue({ status }); expect((await POST(request())).status).toBe(code); expect(mocks.rpc).not.toHaveBeenCalled(); });
   it('denies another school, the sandbox POV and cross-origin requests before the database', async () => {

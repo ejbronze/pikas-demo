@@ -2,9 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { sessionFetch } from '../lib/auth/session-fetch';
 import { customRangeError, maxReportDays, reportErrors, type ReportPeriod } from '../lib/cafeteria/reports';
-import { walletReportSchema, type WalletReport } from '../lib/school/wallet-report';
+import { walletReportViewSchema, type WalletReportView } from '../lib/school/wallet-report';
 import { AppPageHeader } from './app-page-header';
-import { DataList } from './data-list';
 import { MetricCard } from './metric-card';
 import { MoneyValue } from './money-value';
 import { EmptyState, ErrorState } from './state-panels';
@@ -20,7 +19,7 @@ type Range = { from: string; to: string } | null;
 // "Ahora" snapshot (the page above already shows the current wallet state).
 export function SchoolWalletReport({ schoolId, embedded = false }: { schoolId: string; embedded?: boolean }) {
   const [period, setPeriod] = useState<ReportPeriod>('last_30_days'), [range, setRange] = useState<Range>(null), [draft, setDraft] = useState({ from: '', to: '' }), [rangeError, setRangeError] = useState('');
-  const [report, setReport] = useState<WalletReport | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true), [revision, setRevision] = useState(0);
+  const [report, setReport] = useState<WalletReportView | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true), [revision, setRevision] = useState(0);
   const latest = useRef(0);
   const load = useCallback(async (selected: ReportPeriod, custom: Range) => {
     const id = ++latest.current; setLoading(true); setError('');
@@ -30,7 +29,7 @@ export function SchoolWalletReport({ schoolId, embedded = false }: { schoolId: s
       const payload = await response.json().catch(() => ({}));
       if (id !== latest.current) return;
       if (!response.ok) { setReport(null); setError(reportErrors[payload.error] ?? (response.status === 403 ? 'Tu rol no puede consultar el reporte de PIKAS Cash de esta escuela.' : 'No se pudo cargar el reporte de PIKAS Cash.')); return; }
-      const parsed = walletReportSchema.safeParse(payload.result);
+      const parsed = walletReportViewSchema.safeParse(payload.result);
       if (!parsed.success || parsed.data.school_id !== schoolId || parsed.data.period !== selected) throw Error();
       setReport(parsed.data);
     } catch { if (id === latest.current) { setReport(null); setError('No se pudo cargar el reporte de PIKAS Cash.'); } }
@@ -86,16 +85,6 @@ export function SchoolWalletReport({ schoolId, embedded = false }: { schoolId: s
               </dl>
             </details>
           </>}
-        <section aria-labelledby="wallet-cafeterias" className="space-y-2">
-          <h3 id="wallet-cafeterias" className="font-black">¿Dónde se usó PIKAS Cash?</h3>
-          <p className="text-sm text-slate-600">Solo compras pagadas con PIKAS Cash por estudiantes de esta escuela. No son las ventas totales de cada cafetería.</p>
-          {!r.cafeterias.length ? <EmptyState title="No hubo compras con PIKAS Cash en este período." />
-            : <DataList label="PIKAS Cash por cafetería" rows={r.cafeterias} rowKey={x => x.cafeteria_id} columns={[
-              { header: 'Cafetería', primary: true, cell: x => x.name },
-              { header: 'Compras con PIKAS Cash', align: 'end', cell: x => <><MoneyValue minor={neg(x.spent_minor)} intent="movement" className="font-bold" /><span className="block text-xs font-normal text-slate-600">{times(x.purchase_count, 'compra', 'compras')}</span></> },
-              { header: 'Reembolsos a PIKAS Cash', align: 'end', cell: x => x.refund_count ? <><MoneyValue minor={x.refunded_minor} intent="movement" /><span className="block text-xs text-slate-600">{times(x.refund_count, 'reembolso', 'reembolsos')}</span></> : 'Ninguno' },
-            ]} />}
-        </section>
       </>}
     </section>
   </section>;
