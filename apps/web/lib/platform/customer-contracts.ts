@@ -25,7 +25,7 @@ export const customerOverviewSchema = z.object({
   customer_admin_onboarding: z.array(z.object({ intent_id: z.uuid(), role: z.string(), scope: z.string(), status: z.string(), person: z.object({ id: z.guid(), display_name: z.string() }).nullable() })),
   administrators: z.array(z.object({ display_name: z.string(), status: lifecycleStatus, person_status: lifecycleStatus })),
   administrator_intents: z.array(z.object({ id: z.uuid(), email: z.string(), status: z.enum(["pending", "linked", "granted", "expired", "revoked"]),
-    expires_at: z.string(), role_code: z.string(), scope_kind: z.string(), display_name: z.string().nullable() })),
+    expires_at: z.string(), role_code: z.string(), scope_kind: z.string(), display_name: z.string().nullable(), intended_display_name: z.string().nullish() })),
 });
 const name = z.string().trim().min(1).max(200);
 const code = z.string().trim().min(1).max(64);

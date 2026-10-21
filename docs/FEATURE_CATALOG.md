@@ -13,6 +13,7 @@ La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo com
 - **Agregar colegio** (`platform:tenant:provision`): una página con nombre, RNC, dirección, República Dominicana fija y provincia canónica; códigos generados por PIKAS; cliente, colegio, sede y cafetería principales en una transacción. Administrador del colegio por el flujo Phase 6A existente.
 - `platform:customer:operations:read`: consulta por cliente de cafeterías, catálogo, cajas, personal y transacciones/reportes. Clientes suspendidos o cerrados siguen disponibles en solo lectura.
 - `platform:customer:operations:manage`: configuración no financiera de cafeterías de clientes activos: catálogo, importación CSV, menús/turnos, configuración, cajas y asignación de personal POS ya autorizado.
+- `platform:customer:access:provision`: Personal de caja (preparar, enlace de activación, completar), Administrador de cafetería para personas existentes del cliente y corrección de nombre, sin membresía ni autoridad financiera para Plataforma.
 - `platform:customer:access:read`: Usuarios y accesos de un cliente (personas, roles, alcance, cajas, estado de inicio de sesión y accesos pendientes), solo consulta.
 - `platform:customer:profile:manage`: edición del perfil del colegio (nombre, RNC, dirección, provincia) y renombrar sedes/cafeterías de clientes activos o suspendidos, con detección de cambios concurrentes y auditoría.
 - Estudiantes, padres y profesores/personal pertenecen a la administración escolar; Backoffice no los expone.

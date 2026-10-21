@@ -12,7 +12,7 @@ const person = z.object({ person_id: id, display_name: z.string(), person_status
   phone: z.string().nullable(), email_confirmed: z.boolean(), last_sign_in_at: when, must_change_password: z.boolean(), login_suspended: z.boolean(), email_change_pending: z.boolean(),
   temporary_issued_at: when, grants: z.array(grant) });
 const pending = z.object({ kind: z.enum(["initial_admin", "invitation"]), request_id: id, role_code: z.string(), scope: z.string(), status: z.string(), email: z.string(), username: z.string().nullable(),
-  school_name: z.string().nullable(), cafeteria_name: z.string().nullable(), created_at: when, expires_at: when, request_expired: z.boolean(), identity_state: z.string().nullable(), link_state: z.string().nullable() });
+  intended_display_name: z.string().nullish(), cafeteria_id: id.nullish(), school_name: z.string().nullable(), cafeteria_name: z.string().nullable(), created_at: when, expires_at: when, request_expired: z.boolean(), identity_state: z.string().nullable(), link_state: z.string().nullable() });
 export const customerAccessSchema = z.object({ account_id: id, people: z.array(person), pending: z.array(pending) });
 export type CustomerAccess = z.infer<typeof customerAccessSchema>;
 export type AccessPerson = CustomerAccess["people"][number];
@@ -21,7 +21,8 @@ export type PendingAccess = CustomerAccess["pending"][number];
 
 const roleLabels: Record<string, string> = {
   account_admin: "Administrador del colegio", school_admin: "Administrador escolar", cafeteria_admin: "Administrador de cafetería",
-  pos_supervisor: "Operador de caja · Supervisor", pos_cashier: "Operador de caja · Cajero", pos_operator: "Operador de caja",
+  // pos_cashier: PIKAS stores no gender, so the neutral "Personal de caja" stands for Cajero/Cajera.
+  pos_supervisor: "Operador de caja · Supervisor", pos_cashier: "Personal de caja", pos_operator: "Operador de caja",
 };
 export const roleLabel = (role: string) => roleLabels[role] ?? role;
 // Cafetería roles name their cafetería; school roles their colegio. Account roles stand alone.

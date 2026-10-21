@@ -18,6 +18,8 @@ const prepareSchema = z
     expiresAt: z.iso.datetime({ offset: true }),
     // Phase 6A: optional for legacy saved requests; new UI always sends it.
     intendedUsername: provisioningUsername.optional(),
+    // Intended Person name, kept with the request and shown again at completion.
+    intendedDisplayName: z.string().trim().min(1).max(200).optional(),
   })
   .strict()
   .refine(
@@ -47,7 +49,12 @@ export const POST = createPlatformRpcPostHandler({
   resultSchema,
   rejections: isUsernameRejection,
   invoke: (supabase, payload, requestId) =>
-    supabase.rpc(payload.intendedUsername === undefined ? "platform_prepare_customer_admin" : "platform_prepare_customer_admin_with_username", {
+    payload.intendedDisplayName !== undefined && payload.intendedUsername !== undefined
+      ? supabase.rpc("platform_prepare_customer_admin_named", {
+        p_request_id: requestId, p_account_id: payload.accountId, p_scope_kind: payload.scopeKind, p_school_id: payload.schoolId,
+        p_cafeteria_id: payload.cafeteriaId, p_role_code: payload.roleCode, p_intended_email: payload.intendedEmail, p_expires_at: payload.expiresAt,
+        p_username: payload.intendedUsername, p_display_name: payload.intendedDisplayName })
+      : supabase.rpc(payload.intendedUsername === undefined ? "platform_prepare_customer_admin" : "platform_prepare_customer_admin_with_username", {
       p_request_id: requestId,
       p_account_id: payload.accountId,
       p_scope_kind: payload.scopeKind,

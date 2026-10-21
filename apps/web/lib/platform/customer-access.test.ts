@@ -5,7 +5,7 @@ const login = { has_login: true, login_suspended: false, must_change_password: f
 describe("Usuarios y accesos derivations", () => {
   it("maps real roles to product labels and names the cafetería or colegio of scoped grants", () => {
     expect(["account_admin", "school_admin", "cafeteria_admin", "pos_supervisor", "pos_cashier", "pos_operator"].map(roleLabel)).toEqual([
-      "Administrador del colegio", "Administrador escolar", "Administrador de cafetería", "Operador de caja · Supervisor", "Operador de caja · Cajero", "Operador de caja"]);
+      "Administrador del colegio", "Administrador escolar", "Administrador de cafetería", "Operador de caja · Supervisor", "Personal de caja", "Operador de caja"]);
     expect(grantLabel({ role_code: "cafeteria_admin", scope: "cafeteria", school_name: "Colegio", cafeteria_name: "Cafetería Tamboril" })).toBe("Administrador de cafetería · Cafetería Tamboril");
     expect(grantLabel({ role_code: "account_admin", scope: "account", school_name: null, cafeteria_name: null })).toBe("Administrador del colegio");
   });

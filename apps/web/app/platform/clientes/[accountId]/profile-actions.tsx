@@ -11,7 +11,7 @@ const uncertain = "No pudimos confirmar el resultado. Reintenta la misma solicit
 
 // One request identity per task, as in Agregar sede: an unconfirmed result is retried with exactly
 // the same key and body; a definite rejection releases it so the operator can correct and resend.
-function useKeyedSend<B>(path: string, result: { safeParse(v: unknown): { success: boolean } }) {
+export function useKeyedSend<B>(path: string, result: { safeParse(v: unknown): { success: boolean } }, messages: Record<string, string> = profileMessages) {
   const router = useRouter();
   const [request, setRequest] = useState<{ key: string; body: B } | null>(null), [busy, setBusy] = useState(false), [outcome, setOutcome] = useState<Outcome>(null);
   const inFlight = useRef(false);
@@ -26,7 +26,7 @@ function useKeyedSend<B>(path: string, result: { safeParse(v: unknown): { succes
       if (response.ok && result.safeParse(json.result).success) { setOutcome({ kind: "success" }); router.refresh(); return; }
       if ([400, 403, 409, 422].includes(response.status)) {
         setRequest(null);
-        setOutcome({ kind: "failure", message: profileMessages[json.error] ?? (response.status === 403 ? "No tienes permiso para editar la información del cliente." : "Revisa los datos e inténtalo de nuevo.") });
+        setOutcome({ kind: "failure", message: messages[json.error] ?? (response.status === 403 ? "No tienes permiso para realizar esta acción." : response.status === 409 ? "La solicitud encontró un conflicto. Recarga y revisa el estado actual." : "Revisa los datos e inténtalo de nuevo.") });
         return;
       }
       setOutcome({ kind: "uncertain", message: uncertain });
@@ -37,30 +37,33 @@ function useKeyedSend<B>(path: string, result: { safeParse(v: unknown): { succes
 }
 
 export type ProfileValues = { name: string; rnc: string | null; address: string | null; province: string | null };
-export function EditProfileAction({ accountId, schoolId, current, renamesAccount }: { accountId: string; schoolId: string; current: ProfileValues; renamesAccount: boolean }) {
+export function EditProfileAction({ accountId, schoolId, current, renamesAccount, accountName }: { accountId: string; schoolId: string; current: ProfileValues; renamesAccount: boolean; accountName?: string }) {
   const [open, setOpen] = useState(false);
   return <>
     <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>Editar información</button>
-    {open && <EditProfileTask accountId={accountId} schoolId={schoolId} current={current} renamesAccount={renamesAccount} onClose={() => setOpen(false)} />}
+    {open && <EditProfileTask accountId={accountId} schoolId={schoolId} current={current} renamesAccount={renamesAccount} accountName={accountName} onClose={() => setOpen(false)} />}
   </>;
 }
 
-function EditProfileTask({ accountId, schoolId, current, renamesAccount, onClose }: { accountId: string; schoolId: string; current: ProfileValues; renamesAccount: boolean; onClose: () => void }) {
+function EditProfileTask({ accountId, schoolId, current, renamesAccount, accountName, onClose }: { accountId: string; schoolId: string; current: ProfileValues; renamesAccount: boolean; accountName?: string; onClose: () => void }) {
   const initial = { name: current.name, taxId: current.rnc ?? "", addressLine: current.address ?? "", provinceCode: current.province ?? "" };
   const [fields, setFields] = useState(initial);
   const body: ProfileRequest = { accountId, schoolId, expected: current, ...fields, countryCode: DOMINICAN_REPUBLIC.code, provinceCode: fields.provinceCode as ProfileRequest["provinceCode"] };
   const parsed = profileRequestSchema.safeParse(body);
   const { send, busy, outcome, locked } = useKeyedSend<ProfileRequest>("/api/platform/customer-profile", profileResultSchema);
-  const done = outcome?.kind === "success", changed = JSON.stringify(fields) !== JSON.stringify(initial);
+  // A one-colegio customer named differently (e.g. after a person) is corrected by saving, even unchanged.
+  const mismatch = renamesAccount && accountName !== undefined && accountName !== current.name;
+  const done = outcome?.kind === "success", changed = JSON.stringify(fields) !== JSON.stringify(initial) || mismatch;
   const set = (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFields({ ...fields, [k]: e.target.value });
   const invalid = !parsed.success && changed;
   return <TaskWindow title="Editar información del colegio" context={current.name} busy={busy} dirty={changed && !done && !locked} onClose={onClose}
     footer={done ? <TaskActions><button type="button" className="btn" onClick={onClose}>Listo</button></TaskActions>
       : <TaskActions><TaskCancelButton>Cancelar</TaskCancelButton><button type="button" className="btn" disabled={busy || (!locked && (!parsed.success || !changed))} onClick={() => send(parsed.success ? body : null)}>{busy ? "Guardando…" : outcome?.kind === "uncertain" ? "Reintentar la misma solicitud" : "Guardar cambios"}</button></TaskActions>}>
-    {done ? <TaskOutcome kind="success" title="Información actualizada"><p>Los cambios ya se muestran en el cliente.{renamesAccount && fields.name !== initial.name ? " El nombre del cliente se actualizó junto con el del colegio." : ""}</p></TaskOutcome> : <>
+    {done ? <TaskOutcome kind="success" title="Información actualizada"><p>Los cambios ya se muestran en el cliente.{renamesAccount && (fields.name !== initial.name || mismatch) ? " El nombre del cliente se actualizó junto con el del colegio." : ""}</p></TaskOutcome> : <>
       <fieldset className="space-y-3" disabled={locked}>
         <label className="block font-bold">Nombre *<input className="field mt-1 w-full" value={fields.name} onChange={set("name")} maxLength={200} required data-autofocus autoComplete="off" /></label>
         {renamesAccount && <p className="text-sm text-slate-600">Este cliente tiene un solo colegio: cambiar el nombre también actualiza el nombre del cliente.</p>}
+        {mismatch && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">El cliente se llama «{accountName}», distinto del colegio. Al guardar, el cliente tomará el nombre del colegio.</p>}
         <label className="block font-bold">RNC<input className="field mt-1 w-full" value={fields.taxId} onChange={set("taxId")} maxLength={13} inputMode="numeric" autoComplete="off" /><span className="mt-1 block text-sm font-normal text-slate-600">9 dígitos (u 11 si es una cédula). Déjalo vacío si no está registrado.</span></label>
         <label className="block font-bold">Dirección<input className="field mt-1 w-full" value={fields.addressLine} onChange={set("addressLine")} maxLength={300} autoComplete="off" /></label>
         <div className="grid gap-3 sm:grid-cols-2">

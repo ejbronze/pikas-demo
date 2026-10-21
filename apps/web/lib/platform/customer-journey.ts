@@ -55,6 +55,7 @@ export class CustomerJourney {
         const response = z.object({ result: prepareResultSchema }).parse(await this.send("/api/platform/customer-admins/prepare", this.state.adminKey, {
           accountId: this.state.tenant!.account_id, scopeKind: "account", schoolId: null, cafeteriaId: null, roleCode: "account_admin",
           intendedEmail: this.state.draft.administratorEmail, expiresAt: this.state.expiresAt, intendedUsername: this.state.draft.administratorUsername,
+          intendedDisplayName: this.state.draft.administratorName,
         }));
         this.state = { ...this.state, administrator: response.result };
         this.storage.setItem(this.storageKey, JSON.stringify(this.state));

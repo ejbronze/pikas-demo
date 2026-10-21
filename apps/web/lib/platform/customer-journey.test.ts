@@ -14,7 +14,7 @@ describe("Agregar colegio onboarding recovery", () => {
     expect(result.tenant).toEqual(tenant); expect(result.administrator?.status).toBe("pending");
     expect(send.mock.calls[0][0]).toBe("/api/platform/schools/onboard");
     expect(send.mock.calls[0][2]).toEqual({ schoolName: draft.schoolName, taxId: "101234567", addressLine: draft.addressLine, countryCode: "DO", provinceCode: "DO-25" });
-    expect(send.mock.calls[1][2]).toMatchObject({ accountId: uuid(1), intendedEmail: draft.administratorEmail, intendedUsername: "admin.ficticia", scopeKind: "account", roleCode: "account_admin", schoolId: null, cafeteriaId: null });
+    expect(send.mock.calls[1][2]).toMatchObject({ accountId: uuid(1), intendedEmail: draft.administratorEmail, intendedUsername: "admin.ficticia", intendedDisplayName: "Administradora Ficticia", scopeKind: "account", roleCode: "account_admin", schoolId: null, cafeteriaId: null });
     expect(JSON.stringify(send.mock.calls)).not.toContain("authUserId"); job.finish(); expect(journal.getItem("job")).toBeNull();
   });
   it("an uncertain onboarding response does not claim success and reuses the key after reload", async () => {

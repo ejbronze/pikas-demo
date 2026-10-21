@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## Backoffice: aprovisionamiento de accesos del cliente (local)
+
+- Desde **Usuarios y accesos**, PIKAS prepara **Personal de caja** (nombre, correo, usuario PIKAS y cafetería), genera su enlace de activación (vence en una hora) y completa su acceso cuando la persona guarda su contraseña; también da **Administrador de cafetería** a una persona existente del cliente para una o varias cafeterías, con la misma persona e inicio de sesión, y corrige el nombre visible de una persona. El rol canónico sigue siendo `pos_cashier`; como PIKAS no guarda género, se muestra «Personal de caja».
+- El nombre del administrador del colegio se guarda al preparar la solicitud (Agregar colegio o Administrador inicial) y aparece prellenado al completar el acceso; si la persona ya existe en PIKAS se conserva su nombre. Textos breves explican que el enlace vence en una hora y por qué «Completar acceso» espera la contraseña.
+- Invariante del nombre del cliente: un cliente con un solo colegio toma el nombre del colegio al guardar su información, aunque el nombre del colegio no cambie (corrige casos heredados con el nombre de una persona). La ruta heredada `/api/platform/tenants` queda retirada (410).
+- Capacidad nueva `platform:customer:access:provision` (solo `platform_admin`). Migración `202611050001`.
+
 ## Backoffice: Usuarios y accesos (solo consulta, local)
 
 - En el detalle del cliente, **Usuarios y accesos** muestra a cada persona una sola vez con todos sus roles (Administrador del colegio, Administrador escolar, Administrador de cafetería · {cafetería}, Operador de caja · Supervisor/Cajero), usuario, correo, estado de acceso y de inicio de sesión, y en el detalle sus cajas asignadas y señales de credenciales. **Pendientes** muestra las solicitudes de administrador inicial y las invitaciones con su estado de activación y de enlace.

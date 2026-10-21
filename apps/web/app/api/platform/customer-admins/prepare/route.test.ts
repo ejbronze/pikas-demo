@@ -14,6 +14,10 @@ describe("Phase 6A Platform initial administrator with username", () => {
     expect((await post({ ...base, intendedUsername: " Manuel.Admin " })).status).toBe(200);
     expect(mocks.rpc).toHaveBeenCalledWith("platform_prepare_customer_admin_with_username", expect.objectContaining({ p_request_id: key, p_intended_email: "manuel@example.invalid", p_username: "manuel.admin" }));
   });
+  it("an intended Person name is kept with the request through the named wrapper", async () => {
+    expect((await post({ ...base, intendedUsername: "manuel.admin", intendedDisplayName: " Manuel Ficticio " })).status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("platform_prepare_customer_admin_named", expect.objectContaining({ p_username: "manuel.admin", p_display_name: "Manuel Ficticio", p_intended_email: "manuel@example.invalid" }));
+  });
   it("legacy saved requests without username keep the original RPC", async () => {
     await post(base); expect(mocks.rpc).toHaveBeenCalledWith("platform_prepare_customer_admin", expect.not.objectContaining({ p_username: expect.anything() }));
   });

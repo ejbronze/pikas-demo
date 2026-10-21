@@ -13,6 +13,7 @@ import { CUSTOMER_PROFILE_MANAGE, PROFILE_EDITABLE_STATUSES } from "../../../../
 import { CUSTOMER_ACCESS_READ, customerAccessSchema } from "../../../../lib/platform/customer-access";
 import { CustomerAccessSection } from "./customer-access";
 import { IDENTITY_SUPPORT_CAPABILITY } from "../../../../lib/identity/contracts";
+import { CUSTOMER_ACCESS_PROVISION } from "../../../../lib/platform/customer-provisioning";
 import Link from "next/link";
 import { CUSTOMER_OPERATIONS_READ } from "../../../../lib/platform/customer-operations";
 import { ADD_LOCATION_CAPABILITY } from "../../../../lib/platform/school-location";
@@ -37,13 +38,16 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
   const canEditProfile = customer.tenant_kind === "customer" && PROFILE_EDITABLE_STATUSES.includes(customer.account.status) && session.capabilities.includes(CUSTOMER_PROFILE_MANAGE);
   // Usuarios y accesos: customers only, read-only, its own capability; a failed read stays contained.
   const showAccess = customer.tenant_kind === "customer" && session.capabilities.includes(CUSTOMER_ACCESS_READ);
+  const canProvision = customer.tenant_kind === "customer" && session.capabilities.includes(CUSTOMER_ACCESS_PROVISION);
   const access = showAccess ? await readPlatform(session, CUSTOMER_ACCESS_READ, "platform_customer_access_read", { p_account_id: customer.account.id }, customerAccessSchema) : null;
   const hasCurrent = customer.administrators.length > 0 || customer.customer_admin_onboarding.some((intent) => intent.role === "account_admin" && intent.scope === "account" && intent.status === "granted") || initialIntents.some((intent) => ["pending", "linked", "granted"].includes(intent.status));
   return <>
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
-    <ColegioProfile customer={customer} action={canEditProfile ? (school) => <EditProfileAction accountId={customer.account.id} schoolId={school.id} renamesAccount={customer.schools.length === 1}
+    <ColegioProfile customer={customer} action={canEditProfile ? (school) => <EditProfileAction accountId={customer.account.id} schoolId={school.id} renamesAccount={customer.schools.length === 1} accountName={customer.account.name}
       current={{ name: school.name, rnc: school.rnc ?? null, address: school.address ?? null, province: school.province ?? null }} /> : undefined} />
-    {showAccess && <CustomerAccessSection access={access?.kind === "ready" && access.value.account_id === customer.account.id ? access.value : null} identities={session.capabilities.includes(IDENTITY_SUPPORT_CAPABILITY)} />}
+    {showAccess && <CustomerAccessSection access={access?.kind === "ready" && access.value.account_id === customer.account.id ? access.value : null} identities={session.capabilities.includes(IDENTITY_SUPPORT_CAPABILITY)}
+      actions={{ accountId: customer.account.id, provision: canProvision && customer.account.status === "active", rename: canProvision && PROFILE_EDITABLE_STATUSES.includes(customer.account.status),
+        cafeterias: customer.schools.flatMap(s => s.locations.flatMap(l => l.cafeterias.filter(c => c.status === "active").map(c => ({ id: c.id, name: c.name })))) }} />}
     {customer.tenant_kind === "customer" && session.capabilities.includes(CUSTOMER_OPERATIONS_READ) && <section aria-labelledby="ops-entry" className="card flex flex-wrap items-center justify-between gap-3 p-5">
       <div className="min-w-0 flex-1 basis-60"><h2 id="ops-entry" className="text-lg font-bold">Gestión del cliente</h2><p className="text-sm text-slate-600">Consulta sus cafeterías, productos, cajas, personal, transacciones y reportes como personal de PIKAS.</p></div>
       <Link className="btn" href={`/platform/clientes/${customer.account.id}/gestion`}>Administrar cliente</Link></section>}
@@ -58,9 +62,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
       {initialIntents.length === 0 && customer.administrators.length === 0 && <p>No hay solicitudes de administrador inicial visibles.</p>}
       {initialIntents.map((intent, index) => <article className="rounded-lg border p-4" key={intent.id}>
         <p className="font-semibold">{intent.display_name ?? intent.email}</p><p className="break-all">{intent.email}</p><div className="mt-2 flex flex-wrap gap-2">{intent.status === "pending" && <AdminStatus label="Acceso preparado" />}<AdminStatus label={intent.status === "pending" ? activationStates[index]?.identity_state === "ready" ? "Listo para completar" : "Activación pendiente" : intent.status === "linked" ? "Listo para completar" : intent.status === "granted" ? "Acceso completado" : statusLabel[intent.status]} /></div>
-        {["pending", "linked"].includes(intent.status) && <><p className="mt-2 text-sm text-slate-600">Genera un enlace privado para que la persona active su identidad y guarde su contraseña. No se envía correo. Después completa este mismo acceso preparado. La solicitud vence el {new Date(intent.expires_at).toLocaleDateString("es-DO", { timeZone: "America/Santo_Domingo" })}.</p>
+        {["pending", "linked"].includes(intent.status) && <><p className="mt-2 text-sm text-slate-600">Genera un enlace privado para que la persona active su identidad y guarde su contraseña. El enlace vence en una hora: entrégalo cuando la persona pueda usarlo. No se envía correo. Después completa este mismo acceso preparado. La solicitud vence el {new Date(intent.expires_at).toLocaleDateString("es-DO", { timeZone: "America/Santo_Domingo" })}.</p>
           {canComplete && customer.administrators.length === 0 && !initialIntents.some(other => other.status === "granted") && <CustomerActivationAction intentId={intent.id} status={activationStates[index]} />}
-          {canComplete && customer.administrators.length === 0 && !initialIntents.some((other) => other.status === "granted") && <AdministratorAction actor={session.identity.user.id} accountId={customer.account.id} intentId={intent.id} identityReady={activationStates[index]?.identity_state === "ready"} />}</>}
+          {canComplete && customer.administrators.length === 0 && !initialIntents.some((other) => other.status === "granted") && <AdministratorAction actor={session.identity.user.id} accountId={customer.account.id} intentId={intent.id} identityReady={activationStates[index]?.identity_state === "ready"} intendedName={intent.intended_display_name} />}</>}
       </article>)}
       {canPrepare && !hasCurrent && <><p>Prepara el correo del primer administrador. Después genera su enlace privado de activación. Preparar no concede acceso.</p><AdministratorAction actor={session.identity.user.id} accountId={customer.account.id} /></>}
     </section>

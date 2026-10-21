@@ -99,7 +99,7 @@ describe("customer server screens", () => {
     const full = await render({ kind: "ready", value: { account_id: id, people: [person], pending: [pending] } }, ["platform:identity:support"]);
     expect(full).toContain("Usuarios y accesos"); expect(full).toContain("Usuarios con acceso");
     expect(full.match(/>Ana Ficticia de un nombre muy largo/g)?.length).toBe(1);
-    for (const label of ["Administrador del colegio", "Administrador de cafetería · Cafetería Santiago", "Administrador de cafetería · Cafetería Tamboril", "Operador de caja · Cajero · Cafetería Santiago", "Cajas: Caja 1", "Nunca ha iniciado sesión", "Usuario ana.ficticia"])
+    for (const label of ["Administrador del colegio", "Administrador de cafetería · Cafetería Santiago", "Administrador de cafetería · Cafetería Tamboril", "Personal de caja · Cafetería Santiago", "Cajas: Caja 1", "Nunca ha iniciado sesión", "Usuario ana.ficticia"])
       expect(full).toContain(label.replace(/·/g, "·"));
     expect(full).toContain("Pendientes"); expect(full).toContain("coordinacion.ficticia@example.invalid"); expect(full).toContain("Usuario reservado admficticio");
     expect(full).toContain("Pendiente de activación"); expect(full).toContain("Enlace vencido"); expect(full).toContain('href="/platform/identidades"');
@@ -117,6 +117,30 @@ describe("customer server screens", () => {
     detail(customer); expect(renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }))).not.toContain("Usuarios y accesos");
     expect(mocks.readPlatform.mock.calls.map(c => c[2])).not.toContain("platform_customer_access_read");
     expect(await render({ kind: "ready", value: { account_id: id, people: [person], pending: [] } }, [], "sandbox")).toBe("");
+  });
+  it("Platform provisioning actions appear only with the provisioning capability, and only while the customer allows them", async () => {
+    const P = (n: number) => `00000000-0000-4000-8000-0000000004${String(n).padStart(2, "0")}`;
+    const school = { id: P(1), name: "Colegio Ficticio", code: "COL-0A1B2C3D4E", status: "active", business_timezone: "America/Santo_Domingo", rnc: null, address: null, country: null, province: null, province_name: null,
+      locations: [{ id: P(2), name: "Sede Santiago", code: "S1", status: "active", cafeterias: [{ id: P(3), name: "Cafetería Santiago", code: "C1", status: "active" }, { id: P(4), name: "Cafetería Tamboril", code: "C2", status: "active" }] }] };
+    const person = { person_id: P(10), display_name: "Manuel Ficticio", person_status: "active", created_at: null, has_login: true, username: "manuel.f", email: "m@example.invalid", phone: null, email_confirmed: true,
+      last_sign_in_at: null, must_change_password: false, login_suspended: false, email_change_pending: false, temporary_issued_at: null,
+      grants: [{ membership_id: P(11), scope: "cafeteria", role_code: "cafeteria_admin", status: "active", created_at: null, updated_at: null, school_id: P(1), school_name: "Colegio Ficticio", cafeteria_id: P(3), cafeteria_name: "Cafetería Santiago", location_name: "Sede Santiago", registers: [] }] };
+    const invite = { kind: "invitation", request_id: P(20), role_code: "pos_cashier", scope: "cafeteria", status: "pending", email: "cajera@example.invalid", username: "cajera.f", intended_display_name: "Jeanne Ficticia",
+      cafeteria_id: P(3), school_name: "Colegio Ficticio", cafeteria_name: "Cafetería Santiago", created_at: null, expires_at: null, request_expired: false, identity_state: "missing", link_state: "none" };
+    const render = async (status: string, caps: string[]) => {
+      mocks.requirePlatform.mockResolvedValue({ ...session, capabilities: [...session.capabilities, "platform:customer:access:read", ...caps] });
+      mocks.readPlatform.mockImplementation(async (_s: unknown, _c: unknown, rpc: string) => ({ kind: "ready", value: rpc === "platform_customer_access_read" ? { account_id: id, people: [person], pending: [invite] }
+        : rpc === "platform_customer_lifecycle_history" ? { events: [] } : { ...customer, account: { ...customer.account, status }, schools: [school] } }));
+      return renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+    };
+    const active = await render("active", ["platform:customer:access:provision"]);
+    for (const t of ["Agregar personal de caja", "Dar acceso de administrador de cafetería", "Corregir nombre", "Generar enlace de activación", "Completar acceso", "Jeanne Ficticia", "Personal de caja · Cafetería Santiago", "Se habilita cuando la persona guarde su contraseña"]) expect(active).toContain(t);
+    const suspended = await render("suspended", ["platform:customer:access:provision"]);
+    expect(suspended).not.toContain("Agregar personal de caja"); expect(suspended).not.toContain("Dar acceso de administrador de cafetería"); expect(suspended).toContain("Corregir nombre");
+    for (const [status, caps] of [["closed", ["platform:customer:access:provision"]], ["active", ["platform:customer:operations:manage", "platform:identity:support"]]] as const) {
+      const html = await render(status, [...caps]);
+      for (const t of ["Agregar personal de caja", "Dar acceso de administrador de cafetería", "Corregir nombre", "Generar enlace de activación"]) expect(html).not.toContain(t);
+    }
   });
   it("sandbox details do not expose customer-admin completion actions", async () => {
     mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { ...customer, tenant_kind: "sandbox" } });
