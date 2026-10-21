@@ -1,5 +1,23 @@
 # Registro de cambios del producto
 
+## Plataforma: espacio de trabajo del cliente (local)
+
+- El detalle del cliente es una sola página con una barra de secciones fija: Puesta en marcha, Información, Usuarios y accesos, Estructura, Operación y Estado. La barra marca la sección actual y funciona con teclado. Los enlaces de Puesta en marcha siguen llegando a su control, sin quedar ocultos bajo el encabezado.
+- **Encabezado:**
+  - nombre del cliente;
+  - estado de ciclo de vida, tipo y estado de puesta en marcha, en texto;
+  - el código interno queda como dato secundario.
+- **Información:** **Editar** (lápiz) es una acción discreta en el encabezado de la sección, o en el de cada colegio si hay varios. Ya no es un botón debajo de la tabla. El formulario no cambia.
+- **Usuarios y accesos:** el **Administrador inicial** aparece justo debajo, y la solicitud pendiente del administrador enlaza a él. Sin la capacidad de consulta de accesos, la barra nombra solo «Administrador inicial».
+- **Estructura:**
+  - se lee como árbol colegio → sede → cafetería;
+  - estado y código quedan en segundo plano;
+  - se conservan «Agregar sede» y «Renombrar»;
+  - cada cafetería enlaza a sus cajas.
+- **Operación:** reemplaza «Gestión del cliente». Tiene una acción principal, «Administrar operación», enlaces por cafetería (Abrir, Cajas, Productos) y explica que PIKAS actúa con su propia cuenta, no como usuario del cliente.
+- **Estado:** el historial del ciclo de vida va primero. Suspender y Cerrar quedan aparte, al final, en «Cambiar estado del cliente», con su confirmación existente.
+- Solo presentación y navegación: sin migración ni cambios de autoridad, de reglas de puesta en marcha, de ciclo de vida ni de aprovisionamiento.
+
 ## Plataforma: Inicio como estado de la red y Puesta en marcha (local)
 
 - **Inicio** muestra el estado de la red PIKAS:

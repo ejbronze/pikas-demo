@@ -16,15 +16,17 @@ const when = (iso: string) => new Date(iso).toLocaleString("es-DO", { dateStyle:
 export function CustomerLifecyclePanel({ accountId, name, status, canManage, history }: { accountId: string; name: string; status: string; canManage: boolean; history: HistoryEvent[] | null }) {
   const [action, setAction] = useState<LifecycleAction | null>(null);
   const actions = canManage ? actionsFor(status) : [];
-  return <section aria-labelledby="lifecycle-title" className="card space-y-4 p-5">
+  return <section id="estado-cliente" aria-labelledby="lifecycle-title" className="card space-y-4 p-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="lifecycle-title" className="text-lg font-bold">Estado del cliente</h2><LifecycleBadge status={status} /></div>
     <p className="text-sm text-slate-600">{status === "active" ? "Opera normalmente: los usuarios del cliente acceden según sus permisos." : status === "suspended" ? "Acceso del cliente bloqueado temporalmente. Sus datos, personas, accesos e historial se conservan." : status === "closed" ? "La relación con el cliente terminó. Su acceso está bloqueado; todos sus datos e historial se conservan." : "Estado registrado."}</p>
-    {actions.length > 0 && <div className="flex flex-wrap gap-2">{actions.map(a => <button key={a} type="button" className={a === "close" ? "btn-secondary border-red-300 text-red-800" : "btn-secondary"} onClick={() => setAction(a)}>{actionLabels[a]}</button>)}</div>}
     <div><h3 className="font-bold">Historial del ciclo de vida</h3>
       {history === null ? <p className="text-sm text-slate-600">No se pudo cargar el historial.</p> : history.length === 0 ? <EmptyState title="Sin cambios de estado registrados." />
         : <ol className="mt-2 divide-y rounded-xl border text-sm">{history.map((e, i) => <li key={i} className="px-4 py-3"><p className="font-bold">{eventLabels[e.action] ?? e.action}{e.from && e.to ? ` · ${statusLabel[e.from] ?? e.from} → ${statusLabel[e.to] ?? e.to}` : ""}</p>
           <p className="text-slate-600">{when(e.occurred_at)} · {e.actor_name ?? "Operador de PIKAS"}</p>{e.reason && <p className="mt-1 break-words">Motivo: {e.reason}</p>}</li>)}</ol>}
     </div>
+    {/* Low-frequency, high-impact changes sit apart from routine work; each opens its own confirmation task. */}
+    {actions.length > 0 && <div className="ws-danger-zone"><div className="min-w-0 flex-1 basis-56"><h3 className="font-bold">Cambiar estado del cliente</h3><p className="text-sm text-slate-600">Afecta el acceso de todos los usuarios del cliente. Cada cambio pide motivo y confirmación.</p></div>
+      <div className="flex flex-wrap gap-2">{actions.map(a => <button key={a} type="button" className={a === "close" ? "btn-secondary border-red-300 text-red-800 hover:bg-red-50" : a === "suspend" ? "btn-secondary border-amber-300 text-amber-900 hover:bg-amber-50" : "btn-secondary"} onClick={() => setAction(a)}>{actionLabels[a]}</button>)}</div></div>}
     {action && <LifecycleTask key={action} accountId={accountId} name={name} status={status} action={action} onClose={() => setAction(null)} />}
   </section>;
 }

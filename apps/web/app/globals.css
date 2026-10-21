@@ -130,6 +130,26 @@
 .net-steps>li[data-state="attention"] .net-step-state{color:var(--attention-ink)}
 .net-steps>li>div{flex:1 1 14rem}
 
+/* PIKAS UX 3: customer workspace (one page, anchored sections below the sticky shell header). */
+.ws [id]{scroll-margin-top:8.5rem}
+.ws-nav{position:sticky;top:3.5rem;z-index:20;margin-inline:-.25rem;padding:.4rem .25rem;background:color-mix(in srgb,var(--background) 92%,transparent);backdrop-filter:blur(6px)}
+.ws-nav ul{display:flex;gap:.35rem;margin:0;padding:0;list-style:none;overflow-x:auto;scrollbar-width:none}
+.ws-nav a{display:inline-flex;align-items:center;min-height:2.5rem;padding:0 .85rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--foreground-muted);font-size:.875rem;font-weight:700;white-space:nowrap}
+.ws-nav a:hover{color:var(--primary);border-color:var(--accent)}
+.ws-nav a[aria-current="location"]{background:var(--primary);border-color:var(--primary);color:#fff}
+.ws-meta{font-size:.78rem;color:var(--foreground-muted)}
+.ws-kind{margin-right:.35rem;font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--foreground-muted)}
+.ws-tree{display:grid;gap:.5rem}
+.ws-tree+.ws-tree{padding-top:1rem;border-top:1px solid var(--border)}
+.ws-branch{margin-left:.6rem;padding-left:1rem;border-left:2px solid var(--border)}
+.ws-node{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.25rem .75rem;padding:.25rem 0}
+.ws-node>div:first-child{flex:1 1 12rem}
+.ws-links{display:flex;flex-wrap:wrap;align-items:center;gap:.1rem .25rem}
+.ws-rows{display:grid;margin:0;padding:0;list-style:none}
+.ws-rows>li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.25rem 1rem;padding:.6rem 0;border-top:1px solid var(--border)}
+.ws-rows>li>div:first-child{flex:1 1 12rem}
+.ws-danger-zone{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem 1rem;margin-top:.5rem;padding-top:1rem;border-top:1px dashed var(--border)}
+
 /* Personal POS theme; branding remains unchanged. */
 .pos-dark { background:#101c2d; color:#e5edf5; }
 .pos-dark .card, .pos-dark .bg-white { background:#1b2c42; color:#e5edf5; border-color:#41536a; }

@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { sessionFetch } from "../../../../lib/auth/session-fetch";
 import { profileMessages, profileRequestSchema, profileResultSchema, renameRequestSchema, renameResultSchema, type ProfileRequest, type RenameRequest } from "../../../../lib/platform/customer-profile";
@@ -40,7 +41,7 @@ export type ProfileValues = { name: string; rnc: string | null; address: string 
 export function EditProfileAction({ accountId, schoolId, current, renamesAccount, accountName }: { accountId: string; schoolId: string; current: ProfileValues; renamesAccount: boolean; accountName?: string }) {
   const [open, setOpen] = useState(false);
   return <>
-    <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>Editar información</button>
+    <button type="button" className="btn-tertiary gap-1.5" aria-label={`Editar información de ${current.name}`} onClick={() => setOpen(true)}><Pencil aria-hidden className="size-4" />Editar</button>
     {open && <EditProfileTask accountId={accountId} schoolId={schoolId} current={current} renamesAccount={renamesAccount} accountName={accountName} onClose={() => setOpen(false)} />}
   </>;
 }

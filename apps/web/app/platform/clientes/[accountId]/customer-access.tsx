@@ -60,7 +60,7 @@ function PendingCard({ item, actions }: { item: PendingAccess; actions: AccessAc
     <p className="break-all text-sm text-slate-700">{item.email}{item.username ? ` · Usuario reservado ${item.username}` : ""}</p>
     {item.intended_display_name && <p className="break-words text-sm font-semibold">{item.intended_display_name}</p>}
     <p className="text-sm text-slate-600">{item.kind === "initial_admin" ? "Solicitud de PIKAS" : "Invitación del cliente"}{supportDate(item.created_at) ? ` · creada ${supportDate(item.created_at)}` : ""}{supportDate(item.expires_at) ? ` · vence ${supportDate(item.expires_at)}` : ""}</p>
-    {item.kind === "initial_admin" && <p className="text-sm text-slate-600">Se activa y completa en Administrador inicial.</p>}
+    {item.kind === "initial_admin" && <p className="text-sm text-slate-600">Se activa y completa en <a className="font-semibold text-indigo-700 underline underline-offset-4" href="#administrador-inicial">Administrador inicial</a>.</p>}
     {staff && actions.provision && <div className="grid gap-3 border-t pt-3 sm:grid-cols-2">
       <StaffActivationAction accountId={actions.accountId} cafeteriaId={item.cafeteria_id!} invitationId={item.request_id} hasLink={item.link_state === "active" || item.link_state === "expired"} />
       <CompleteStaffAction accountId={actions.accountId} cafeteriaId={item.cafeteria_id!} invitationId={item.request_id} intendedName={item.intended_display_name ?? null} ready={item.identity_state === "ready"} />
