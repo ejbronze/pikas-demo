@@ -1,5 +1,11 @@
 # Registro de cambios del producto
 
+## Códigos asignados por PIKAS para sedes, cafeterías y cajas (local)
+
+- Los operadores nombran lugares reales; PIKAS asigna los códigos. **Agregar sede** pide solo el nombre de la sede y el de su cafetería (prellenado «Cafetería {sede}», editable y sin sobrescribirse una vez editado) y muestra los códigos asignados al terminar. **Crear caja** pide solo el nombre; el código aparece en la lista de cajas, el POS, el cierre de caja y los recibos, y no se edita (al editar se conserva).
+- Formatos `SEDE-NN` (por colegio), `CAF-NN` (por sede) y `CAJA-NN` (por cafetería). Un colegio nuevo creado con **Agregar colegio** empieza con `SEDE-01` y `CAF-01` (antes `SEDE-PRINCIPAL` / `CAF-PRINCIPAL`, que los registros existentes conservan). El siguiente número es el mayor entre «hermanos + 1» y «mayor NN existente + 1», saltando códigos tomados: nunca reutiliza números (con CAJA-01 y CAJA-03 sigue CAJA-04). La generación ocurre en la base de datos con un bloqueo por padre, es segura ante creaciones simultáneas y los reintentos devuelven el mismo código.
+- Los UUID siguen siendo la identidad real. Los códigos existentes (incluidos los manuales y heredados como `01`, `CF-0001`, `CAJA-1`) no cambian; el código de una caja usada sigue bloqueado. «Agregar sede» y «Agregar personal de caja» usan el estilo de acción principal; el código del cliente pasa a una línea secundaria («Código interno»). Migración `202611060001`.
+
 ## Backoffice: aprovisionamiento de accesos del cliente (local)
 
 - Desde **Usuarios y accesos**, PIKAS prepara **Personal de caja** (nombre, correo, usuario PIKAS y cafetería), genera su enlace de activación (vence en una hora) y completa su acceso cuando la persona guarda su contraseña; también da **Administrador de cafetería** a una persona existente del cliente para una o varias cafeterías, con la misma persona e inicio de sesión, y corrige el nombre visible de una persona. El rol canónico sigue siendo `pos_cashier`; como PIKAS no guarda género, se muestra «Personal de caja».

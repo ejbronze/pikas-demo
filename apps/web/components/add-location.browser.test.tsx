@@ -22,7 +22,7 @@ beforeAll(async () => {
       import { AddLocationAction } from "./app/platform/clientes/[accountId]/add-location-action";
       const w = window; w.calls = []; w.queue = [];
       w.fetch = async (input, init = {}) => { const body = JSON.parse(init.body); w.calls.push({ url: String(input), key: new Headers(init.headers).get("Idempotency-Key"), body });
-        const r = w.queue.shift() ?? { body: { result: { account_id: body.accountId, school_id: body.schoolId, location_id: "6d000000-0000-4000-8000-0000000000c1", cafeteria_id: "6d000000-0000-4000-8000-0000000000d1" } } };
+        const r = w.queue.shift() ?? { body: { result: { account_id: body.accountId, school_id: body.schoolId, location_id: "6d000000-0000-4000-8000-0000000000c1", cafeteria_id: "6d000000-0000-4000-8000-0000000000d1", location_code: "SEDE-02", cafeteria_code: "CAF-01" } } };
         if (r === "throw") throw new TypeError("network");
         if (r === "hold") return new Promise(ok => { w.release = () => ok(new Response(JSON.stringify({ result: { account_id: body.accountId, school_id: body.schoolId, location_id: "6d000000-0000-4000-8000-0000000000c1", cafeteria_id: "6d000000-0000-4000-8000-0000000000d1" } }), { status: 200 })); });
         return new Response(JSON.stringify(r.body ?? {}), { status: r.status ?? 200, headers: { "Content-Type": "application/json" } }); };
@@ -38,20 +38,27 @@ beforeEach(async () => { native = false; page = await browser.newPage({ viewport
 afterEach(async () => { expect(native).toBe(false); await page?.close(); });
 afterAll(async () => { await browser?.close(); await new Promise<void>(ok => server?.close(() => ok())); });
 const calls = () => win<{ url: string; key: string; body: Record<string, string> }[]>("w => w.calls");
-const fill = async (task: ReturnType<Page["getByRole"]>) => {
-  const inputs = task.getByRole("textbox"); await inputs.nth(0).fill("SEDE-2"); await inputs.nth(1).fill("Sede Ficticia Dos"); await inputs.nth(2).fill("CAF-2"); await inputs.nth(3).fill("Cafetería Ficticia Dos");
-};
+const fill = async (task: ReturnType<Page["getByRole"]>) => { await task.getByLabel("Nombre de la sede *").fill("Tamboril"); };
 
 describe("Platform Agregar sede (browser)", () => {
+  it("Agregar sede is the primary action; an edited cafetería name is never overwritten", async () => {
+    expect(await page.getByRole("button", { name: "Agregar sede" }).getAttribute("class")).toBe("btn");
+    await page.getByRole("button", { name: "Agregar sede" }).click(); const task = page.getByRole("dialog", { name: "Agregar sede" });
+    await task.getByLabel("Nombre de la sede *").fill("Norte"); await task.getByLabel("Nombre de la cafetería *").fill("Comedor Norte");
+    await task.getByLabel("Nombre de la sede *").fill("Norte Dos"); expect(await task.getByLabel("Nombre de la cafetería *").inputValue()).toBe("Comedor Norte");
+  });
   it("focused task: explains it creates the cafeteria too; required fields; one request to the existing school; success refreshes the detail", async () => {
     await page.getByRole("button", { name: "Agregar sede" }).click(); const task = page.getByRole("dialog", { name: "Agregar sede" });
-    expect(await task.innerText()).toContain("Crear la sede también crea su cafetería. No se crean cajas, usuarios ni productos.");
-    expect(await page.evaluate(() => document.activeElement?.closest("fieldset")?.querySelector("legend")?.textContent)).toBe("Sede");
+    expect(await task.innerText()).toContain("Crear la sede también crea su cafetería. PIKAS asigna los códigos.");
+    expect(await task.getByText(/Código/).count()).toBe(0); expect(await task.getByRole("textbox").count()).toBe(2);
+    expect(await page.evaluate(() => (document.activeElement as HTMLInputElement | null)?.closest("label")?.textContent)).toBe("Nombre de la sede *");
     const create = task.getByRole("button", { name: "Crear sede" }); expect(await create.isDisabled()).toBe(true);
-    await fill(task); await create.click(); await task.getByText("Sede creada").waitFor();
-    expect(await task.innerText()).toMatch(/Sede Ficticia Dos · SEDE-2[\s\S]*Cafetería Ficticia Dos · CAF-2/);
+    await fill(task); expect(await task.getByLabel("Nombre de la cafetería *").inputValue()).toBe("Cafetería Tamboril");
+    await task.getByLabel("Nombre de la sede *").fill("Sede Tamboril"); expect(await task.getByLabel("Nombre de la cafetería *").inputValue()).toBe("Cafetería Tamboril");
+    await create.click(); await task.getByText("Sede Tamboril creada").waitFor();
+    expect(await task.innerText()).toMatch(/Sede Tamboril · SEDE-02[\s\S]*Cafetería Tamboril · CAF-01/);
     const sent = await calls(); expect(sent).toHaveLength(1); expect(sent[0].url).toBe("/api/platform/school-locations");
-    expect(sent[0].body).toEqual({ accountId: account, schoolId: school, locationCode: "SEDE-2", locationName: "Sede Ficticia Dos", cafeteriaCode: "CAF-2", cafeteriaName: "Cafetería Ficticia Dos" });
+    expect(sent[0].body).toEqual({ accountId: account, schoolId: school, locationName: "Sede Tamboril", cafeteriaName: "Cafetería Tamboril" });
     expect(await win<number>("w => w.refreshes")).toBe(1);
   });
 
@@ -59,7 +66,7 @@ describe("Platform Agregar sede (browser)", () => {
     await page.getByRole("button", { name: "Agregar sede" }).click(); const task = page.getByRole("dialog", { name: "Agregar sede" }); await fill(task);
     await win("w => w.queue.push('throw')"); await task.getByRole("button", { name: "Crear sede" }).click(); await task.getByText("Resultado sin confirmar").waitFor();
     expect(await task.getByRole("textbox").first().isDisabled()).toBe(true);
-    await task.getByRole("button", { name: "Reintentar la misma solicitud" }).click(); await task.getByText("Sede creada").waitFor();
+    await task.getByRole("button", { name: "Reintentar la misma solicitud" }).click(); await task.getByText("Sede Tamboril creada").waitFor();
     const sent = await calls(); expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0]);
   });
 
@@ -69,13 +76,13 @@ describe("Platform Agregar sede (browser)", () => {
     await page.evaluate(() => { const b = [...document.querySelectorAll<HTMLButtonElement>("dialog button")].find(x => x.textContent === "Crear sede")!; b.click(); b.click(); });
     await task.getByRole("button", { name: "Creando…" }).waitFor(); await page.keyboard.press("Escape");
     await task.getByText("La operación está en curso.", { exact: false }).waitFor();
-    await win("w => w.release()"); await task.getByText("Sede creada").waitFor(); expect(await calls()).toHaveLength(1);
+    await win("w => w.release()"); await task.getByText("Sede Tamboril creada").waitFor(); expect(await calls()).toHaveLength(1);
   });
 
   it("a code conflict is explained and nothing is retried automatically; cancel with typed data asks first and sends nothing", async () => {
     await page.getByRole("button", { name: "Agregar sede" }).click(); let task = page.getByRole("dialog", { name: "Agregar sede" }); await fill(task);
     await win("w => w.queue.push({ status: 422, body: { error: 'platform_tenant_code_conflict' } })"); await task.getByRole("button", { name: "Crear sede" }).click();
-    await task.getByText("Ya existe una sede con ese código", { exact: false }).waitFor(); expect(await task.getByRole("textbox").first().isDisabled()).toBe(false);
+    await task.getByText("No se pudo asignar un código único", { exact: false }).waitFor(); expect(await task.getByRole("textbox").first().isDisabled()).toBe(false);
     await task.getByRole("button", { name: "Cancelar" }).click(); await task.getByText("¿Descartar los datos ingresados?").waitFor(); await task.getByRole("button", { name: "Descartar" }).click();
     await task.waitFor({ state: "detached" }); expect(await page.evaluate(() => document.activeElement?.textContent)).toBe("Agregar sede");
     await page.getByRole("button", { name: "Agregar sede" }).click(); task = page.getByRole("dialog", { name: "Agregar sede" });

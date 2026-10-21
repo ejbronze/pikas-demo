@@ -19,7 +19,8 @@ const payloads = {
  staff_prepare: z.object({ email: z.email().trim().max(254), role: posRole, username: provisioningUsername.optional() }).strict(),
  staff_complete: z.object({ invitation_id: id, display_name: z.string().trim().min(1).max(200) }).strict(),
  staff_status: z.object({ membership_id: id, status: memberStatus }).strict(),
- register_save: z.object({ ...base, code: z.string().trim().min(1).max(32), name, status: z.enum(['active','inactive']) }).strict(),
+ // code null: PIKAS assigns CAJA-NN on create and keeps the assigned code on edit.
+ register_save: z.object({ ...base, code: z.string().trim().min(1).max(32).nullable(), name, status: z.enum(['active','inactive']) }).strict(),
  assignment_save: z.object({ membership_id: id, register_id: id, status: z.enum(['active','inactive']), version: version.nullable() }).strict(),
 };
 export const commandSchema = z.discriminatedUnion('operation', [

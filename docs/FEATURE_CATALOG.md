@@ -16,6 +16,7 @@ La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo com
 - `platform:customer:access:provision`: Personal de caja (preparar, enlace de activación, completar), Administrador de cafetería para personas existentes del cliente y corrección de nombre, sin membresía ni autoridad financiera para Plataforma.
 - `platform:customer:access:read`: Usuarios y accesos de un cliente (personas, roles, alcance, cajas, estado de inicio de sesión y accesos pendientes), solo consulta.
 - `platform:customer:profile:manage`: edición del perfil del colegio (nombre, RNC, dirección, provincia) y renombrar sedes/cafeterías de clientes activos o suspendidos, con detección de cambios concurrentes y auditoría.
+- Códigos de estructura: PIKAS asigna `SEDE-NN`, `CAF-NN` y `CAJA-NN` dentro de su padre; los operadores solo nombran. Los UUID son la identidad real; los códigos existentes se conservan y el de una caja usada queda bloqueado.
 - Estudiantes, padres y profesores/personal pertenecen a la administración escolar; Backoffice no los expone.
 - La Plataforma actúa con identidad propia y auditoría `platform_support`; no recibe membresías del cliente. La lista excluye aprovisionamiento/credenciales y toda mutación financiera, de ciclo de vida o de identidad.
 

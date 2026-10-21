@@ -62,20 +62,22 @@ export function StaffStatusTask({ member, onClose }: { member: Staff; onClose: (
 export function RegisterTask({ data, register, onClose, reopen }: { data: CafeteriaRead; register?: Register; onClose: (message?: string) => void; reopen?: () => void }) {
   const command = useCafeteriaCommand(), { draftScope } = useCatalogEditor();
   const [id] = useState(() => register?.id ?? crypto.randomUUID());
-  const initial = { name: register?.name ?? '', code: register?.code ?? '', status: register?.status ?? 'active' };
+  // The caja code is assigned by PIKAS (CAJA-NN) and is not operator-editable; edits keep it.
+  const initial = { name: register?.name ?? '', status: register?.status ?? 'active' };
   const { values: v, set, restored, drop, discard } = useSessionDraft(draftScope ? registerDraftKey(draftScope, register?.id ?? null) : null, register?.version ?? null, initial, 'La caja cambió desde tu borrador; empezamos con la configuración guardada.');
-  const payload = () => ({ id, version: register?.version ?? null, code: v.code.trim(), name: v.name.trim(), status: register ? v.status : 'active' });
+  const payload = () => ({ id, version: register?.version ?? null, code: null, name: v.name.trim(), status: register ? v.status : 'active' });
   return <CommandTask title={register ? 'Editar caja' : 'Crear caja'} context={register ? register.name : data.scope.cafeteria_name}
     pages={[{ label: 'Configuración', content: <>
       {restored && <div role="status" className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><p className="flex-1 basis-56">{restored.note}</p>{restored.recovered && <button type="button" className="btn-secondary" onClick={discard}>Descartar borrador</button>}</div>}
       <label className="block font-bold">Nombre de caja *<input className="field mt-1 w-full" required maxLength={120} data-autofocus value={v.name} onChange={e => set('name', e.target.value)} /></label>
-      <label className="block font-bold">Código de caja *<input className="field mt-1 w-full" required maxLength={32} readOnly={register?.has_history} value={v.code} onChange={e => set('code', e.target.value)} />{register?.has_history && <span className="mt-1 block text-sm font-normal text-slate-600">El código se conserva después del primer uso.</span>}</label>
+      {register ? <p className="text-sm"><span className="font-bold">Código de caja:</span> {register.code} <span className="text-slate-600">· asignado por PIKAS; aparece en el POS y en los recibos.</span></p>
+        : <p className="text-sm text-slate-600">PIKAS asigna el código de la caja (por ejemplo, CAJA-01). Aparece en el POS, en el cierre de caja y en los recibos.</p>}
       {register && <label className="block font-bold">Estado<select className="field mt-1 w-full" value={v.status} onChange={e => set('status', e.target.value as 'active' | 'inactive')}><option value="active">Activa</option><option value="inactive">Inactiva</option></select></label>}
       <p className="text-sm text-slate-600">Solo cambia la configuración. No abre, cierra ni modifica sesiones de caja; una sesión abierta bloquea los cambios.</p></> }]}
     validate={() => register && JSON.stringify(v) === JSON.stringify(initial) ? 'No hay cambios para guardar.' : null}
-    review={<TaskSummary rows={[['Nombre', v.name.trim()], ['Código', v.code.trim()], ['Estado', register ? (v.status === 'active' ? 'Activa' : 'Inactiva') : 'Activa']]} />}
+    review={<TaskSummary rows={[['Nombre', v.name.trim()], ['Código', register ? register.code : 'Lo asigna PIKAS (CAJA-NN)'], ['Estado', register ? (v.status === 'active' ? 'Activa' : 'Inactiva') : 'Activa']]} />}
     finalLabel={register ? 'Guardar caja' : 'Crear caja'} blocked={command.blocked} submit={() => command.submit('register_save', payload())}
     dirty={JSON.stringify(v) !== JSON.stringify(initial)} onKeepDraft={draftScope ? () => onClose() : undefined} onDiscard={drop} onSucceeded={drop}
-    success={{ title: register ? 'Caja actualizada' : 'Caja creada', body: !register ? <p>Asigna personal autorizado desde la lista de cajas.</p> : undefined, actions: !register && reopen ? <button type="button" className="btn-secondary" onClick={reopen}>Crear otra caja</button> : undefined, closeMessage: register ? 'Caja actualizada.' : 'Caja creada.' }} onClose={onClose} />;
+    success={{ title: register ? 'Caja actualizada' : 'Caja creada', body: !register ? <p>PIKAS le asignó su código; lo verás en la lista de cajas. Asigna personal autorizado desde esa lista.</p> : undefined, actions: !register && reopen ? <button type="button" className="btn-secondary" onClick={reopen}>Crear otra caja</button> : undefined, closeMessage: register ? 'Caja actualizada.' : 'Caja creada.' }} onClose={onClose} />;
 }
 export const registerDraftKey = (scope: string, registerId: string | null) => `pikas:register-draft:${scope}:${registerId ?? 'new'}`;

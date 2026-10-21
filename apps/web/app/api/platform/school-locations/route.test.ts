@@ -17,6 +17,13 @@ describe("Platform Agregar sede route", () => {
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, "platform_get_customer_overview", { p_account_id: account });
     expect(mocks.rpc).toHaveBeenNthCalledWith(2, "platform_add_school_location", { p_request_id: key, p_account_id: account, p_school_id: school, p_location_code: "SEDE-2", p_location_name: "Sede Ficticia", p_cafeteria_code: "CAF-2", p_cafeteria_name: "Cafetería Ficticia" });
   });
+  it("without codes (the Backoffice UI) the command receives null codes and PIKAS assigns them", async () => {
+    mocks.rpc.mockImplementation(async (name: string) => name === "platform_get_customer_overview" ? overview()
+      : { data: { account_id: account, school_id: school, location_id: key, cafeteria_id: key, location_code: "SEDE-02", cafeteria_code: "CAF-01" }, error: null });
+    const r = await post({ accountId: account, schoolId: school, locationName: "Sede Tamboril", cafeteriaName: "Cafetería Tamboril" });
+    expect(r.status).toBe(200); expect((await r.json()).result).toMatchObject({ location_code: "SEDE-02", cafeteria_code: "CAF-01" });
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, "platform_add_school_location", { p_request_id: key, p_account_id: account, p_school_id: school, p_location_code: null, p_location_name: "Sede Tamboril", p_cafeteria_code: null, p_cafeteria_name: "Cafetería Tamboril" });
+  });
   it("sandbox tenants and schools of another customer are refused before the command runs", async () => {
     mocks.rpc.mockImplementationOnce(async () => overview({ tenant_kind: "sandbox" }));
     let r = await post(body); expect(r.status).toBe(422); expect(await r.json()).toEqual({ error: "location_customer_only" });

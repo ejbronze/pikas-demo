@@ -18,7 +18,7 @@ const Failure = ({ kind, message, title }: { kind: string; message?: string; tit
 
 export function AddStaffAction({ accountId, cafeterias }: { accountId: string; cafeterias: Cafeteria[] }) {
   const [open, setOpen] = useState(false);
-  return <><button type="button" className="btn-secondary" onClick={() => setOpen(true)}>Agregar personal de caja</button>
+  return <><button type="button" className="btn" onClick={() => setOpen(true)}>Agregar personal de caja</button>
     {open && <AddStaffTask accountId={accountId} cafeterias={cafeterias} onClose={() => setOpen(false)} />}</>;
 }
 function AddStaffTask({ accountId, cafeterias, onClose }: { accountId: string; cafeterias: Cafeteria[]; onClose: () => void }) {

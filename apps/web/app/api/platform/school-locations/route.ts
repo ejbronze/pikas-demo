@@ -18,8 +18,8 @@ export const POST = createPlatformRpcPostHandler({
     if (!value.schools?.some((school) => school.id === payload.schoolId)) return { data: null, error: { code: "23503", message: "active_account_school_required" } };
     return supabase.rpc("platform_add_school_location", {
       p_request_id: requestId, p_account_id: payload.accountId, p_school_id: payload.schoolId,
-      p_location_code: payload.locationCode, p_location_name: payload.locationName,
-      p_cafeteria_code: payload.cafeteriaCode, p_cafeteria_name: payload.cafeteriaName,
+      p_location_code: payload.locationCode ?? null, p_location_name: payload.locationName,
+      p_cafeteria_code: payload.cafeteriaCode ?? null, p_cafeteria_name: payload.cafeteriaName,
     });
   },
 });

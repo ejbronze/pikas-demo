@@ -15,7 +15,7 @@ export function LifecycleBadge({ status }: { status: string }) {
 }
 export function CustomerHeading({ name, code, status, kind }: { name: string; code: string; status: string; kind: string }) {
   return <AppPageHeader back={{ href: "/platform/clientes", label: "Clientes" }} title={name}
-    meta={<span className="flex flex-wrap items-center gap-2">{code}<LifecycleBadge status={status} /><span className={`chip ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span></span>} />;
+    meta={<span className="flex flex-wrap items-center gap-2"><LifecycleBadge status={status} /><span className={`chip ${kind === "sandbox" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{kind === "sandbox" ? "Sandbox · Demostración" : "Cliente"}</span><span className="text-sm text-slate-500">Código interno {code}</span></span>} />;
 }
 // Read-only colegio profile captured by Agregar colegio. Missing values are never inferred.
 export function ColegioProfile({ customer, action }: { customer: CustomerOverview; action?: (school: CustomerOverview["schools"][number]) => React.ReactNode }) {

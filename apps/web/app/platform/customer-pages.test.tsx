@@ -134,6 +134,8 @@ describe("customer server screens", () => {
       return renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
     };
     const active = await render("active", ["platform:customer:access:provision"]);
+    expect(active).toMatch(/<button type="button" class="btn">Agregar personal de caja<\/button>/);
+    expect(active).toContain("Código interno CLIENTE");
     for (const t of ["Agregar personal de caja", "Dar acceso de administrador de cafetería", "Corregir nombre", "Generar enlace de activación", "Completar acceso", "Jeanne Ficticia", "Personal de caja · Cafetería Santiago", "Se habilita cuando la persona guarde su contraseña"]) expect(active).toContain(t);
     const suspended = await render("suspended", ["platform:customer:access:provision"]);
     expect(suspended).not.toContain("Agregar personal de caja"); expect(suspended).not.toContain("Dar acceso de administrador de cafetería"); expect(suspended).toContain("Corregir nombre");

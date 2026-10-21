@@ -191,22 +191,22 @@ describe("Cajas configuration", () => {
     await mountCafeteria("registers"); await page.getByText("2 de 2 cajas").waitFor();
     expect(await page.getByRole("button", { name: "Editar caja Caja Principal" }).isDisabled()).toBe(true);
     await page.getByLabel("Buscar cajas").fill("zzz"); await page.getByText("No encontramos cajas con estos filtros.").waitFor(); await page.getByRole("button", { name: "Limpiar filtros" }).first().click();
-    await page.getByRole("button", { name: "Crear caja" }).click(); await dlg().getByLabel("Nombre de caja *").fill("Caja Kiosco"); await dlg().getByLabel("Código de caja *").fill("C3");
+    await page.getByRole("button", { name: "Crear caja" }).click(); await dlg().getByLabel("Nombre de caja *").fill("Caja Kiosco"); expect(await dlg().getByLabel(/Código de caja/).count()).toBe(0); expect(await dlg().innerText()).toContain("PIKAS asigna el código de la caja");
     await page.keyboard.press("Escape"); await dlg().getByRole("button", { name: "Cerrar y conservar borrador" }).click();
     await page.getByRole("button", { name: "Crear caja" }).click(); expect(await dlg().getByLabel("Nombre de caja *").inputValue()).toBe("Caja Kiosco");
-    await dlg().getByRole("button", { name: "Continuar" }).click(); expect(await dlg().innerText()).toContain("C3");
+    await dlg().getByRole("button", { name: "Continuar" }).click(); expect(await dlg().innerText()).toContain("Lo asigna PIKAS (CAJA-NN)");
     const before = (await calls()).filter(c => c.url === "/api/cafeteria"); expect(before).toHaveLength(0);
     await dlg().getByRole("button", { name: "Crear caja" }).click(); await dlg().getByText("Caja creada").first().waitFor();
     const sent = (await calls()).filter(c => c.url === "/api/cafeteria"); expect(sent).toHaveLength(1);
-    expect(sent[0].body).toMatchObject({ cafeteriaId: caf, operation: "register_save", payload: { version: null, code: "C3", name: "Caja Kiosco", status: "active" } });
+    expect(sent[0].body).toMatchObject({ cafeteriaId: caf, operation: "register_save", payload: { version: null, code: null, name: "Caja Kiosco", status: "active" } });
     expect((await calls()).filter(c => c.url.startsWith("/api/cafeteria/operations")).map(c => c.body?.operation).filter(op => op === "close" || op === "open")).toEqual([]); // the sessions list only reads
     expect(await storage("pikas:register-draft")).toEqual([]);
   });
-  it("edit keeps a used code read-only and sends the current version; assignment changes confirm in the app", async () => {
+  it("edit shows the assigned code without letting it be changed and sends the current version; assignment changes confirm in the app", async () => {
     await mountCafeteria("registers", cafeteriaData({ registers: [{ id: U(111), code: "C2", name: "Caja Patio", status: "active", version: 2, has_history: true, open: false }] }));
-    await page.getByRole("button", { name: "Editar caja Caja Patio" }).click(); expect(await dlg().getByLabel("Código de caja *").getAttribute("readonly")).not.toBeNull();
+    await page.getByRole("button", { name: "Editar caja Caja Patio" }).click(); expect(await dlg().getByRole("textbox").count()).toBe(1); expect(await dlg().innerText()).toContain("Código de caja: C2");
     await dlg().getByLabel("Estado").selectOption("inactive"); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Guardar caja" }).click(); await dlg().getByText("Caja actualizada").first().waitFor();
-    expect((await calls()).filter(c => c.url === "/api/cafeteria")[0].body).toMatchObject({ operation: "register_save", payload: { id: U(111), version: 2, code: "C2", status: "inactive" } });
+    expect((await calls()).filter(c => c.url === "/api/cafeteria")[0].body).toMatchObject({ operation: "register_save", payload: { id: U(111), version: 2, code: null, status: "inactive" } });
     await dlg().getByRole("button", { name: "Cerrar", exact: true }).click(); await page.getByText("Personal autorizado", { exact: true }).click(); await page.getByRole("button", { name: "Asignar" }).first().click();
     await page.getByText("¿Confirmar el cambio de acceso a esta caja?").waitFor(); expect((await calls()).filter(c => c.url === "/api/cafeteria")).toHaveLength(1);
   });
