@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## Cafetería: «Hoy» y base visual de la experiencia (local)
+
+- El **Resumen** de Administración de cafetería pasa a llamarse **Hoy** (misma ruta) y responde cómo va el día: ventas de hoy (brutas, en RD$) con comparación contra el **mismo día de la semana pasada hasta la misma hora**, número de ventas, ticket promedio, porcentaje pagado con PIKAS Cash, **Así va el día** (ventas por hora, con la semana pasada como referencia punteada), **Requiere atención**, lo más vendido, **Cajas ahora** y **Cómo pagan**. La configuración (productos, menús, personal, cajas) queda en «Configuración de la cafetería», plegada; se muestra abierta y destacada mientras falten productos disponibles, cajas activas o personal activo.
+- **Requiere atención** solo usa señales reales: cajas abiertas desde un día anterior y cierres de los últimos 7 días con faltante, sobrante o sin efectivo contado, con enlace a Cajas o Reportes. Sin alertas muestra «Todo en orden». No hay inventario ni productos agotados.
+- Pocos datos: sin ventas muestra «Aún no hay ventas hoy. La primera venta aparecerá aquí.»; el porcentaje de comparación solo aparece con al menos 5 ventas hoy y 5 la semana pasada hasta la misma hora; con menos se muestra el monto de la semana pasada, y sin ventas la semana pasada no se compara. La primera venta de la cafetería muestra un reconocimiento breve, sin guardar estado.
+- Autoridad sin cambios: la nueva lectura `cafeteria_today_read` exige la misma autoridad de historial de compras que Reportes (Administrador de cafetería); Administración escolar, cuenta, POS y PIKAS Admin no la obtienen. Sandbox muestra solo el estado operativo. Migración `202611070001`.
+- Base visual: Inter (interfaz) y Nunito (títulos y cifras importantes) se cargan con `next/font`; antes Inter se declaraba sin cargarse. Nuevos tokens (`--brand-yellow`, `--brand-cream`, superficie de atención, colores por medio de pago) y clases `font-display`, `num` y `num-display` (cifras tabulares). El amarillo marca atención e hitos; error y peligro siguen en rojo.
+
 ## Códigos asignados por PIKAS para sedes, cafeterías y cajas (local)
 
 - Los operadores nombran lugares reales; PIKAS asigna los códigos. **Agregar sede** pide solo el nombre de la sede y el de su cafetería (prellenado «Cafetería {sede}», editable y sin sobrescribirse una vez editado) y muestra los códigos asignados al terminar. **Crear caja** pide solo el nombre; el código aparece en la lista de cajas, el POS, el cierre de caja y los recibos, y no se edita (al editar se conserva).

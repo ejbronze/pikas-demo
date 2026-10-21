@@ -3,7 +3,7 @@ import { DemoEnvironmentBar } from "./demo-environment-bar";
 import { AdministrativeShell, type ShellNavItem } from "./administrative-shell";
 import type { CafeteriaContext } from '../lib/cafeteria/contracts';
 // Operational destinations first (mobile shows the first four; the rest under "Más").
-const allItems = [['', 'Resumen', 'home'], ['/transacciones', 'Transacciones', 'receipt'], ['/cajas', 'Cajas', 'receipt'], ['/reportes', 'Reportes', 'chart'], ['/escuelas', 'PIKAS Cash', 'wallet'], ['/productos', 'Productos', 'utensils'], ['/menus', 'Menús', 'utensils'], ['/personal', 'Personal POS', 'users'], ['/configuracion', 'Configuración', 'shield']] as const;
+const allItems = [['', 'Hoy', 'home'], ['/transacciones', 'Transacciones', 'receipt'], ['/cajas', 'Cajas', 'receipt'], ['/reportes', 'Reportes', 'chart'], ['/escuelas', 'PIKAS Cash', 'wallet'], ['/productos', 'Productos', 'utensils'], ['/menus', 'Menús', 'utensils'], ['/personal', 'Personal POS', 'users'], ['/configuracion', 'Configuración', 'shield']] as const;
 // PIKAS Cash (balances/scoped adjustments on /escuelas) is listed only when the server-derived read grants cafeteria:wallets:read;
 // Reportes only with cafeteria:pos:purchases:read on a customer tenant (the report RPC enforces both).
 export function ConnectedCafeteriaShell({ context, cafeteriaId, walletNav = false, reportsNav = false, children }: { context: CafeteriaContext; cafeteriaId: string; walletNav?: boolean; reportsNav?: boolean; children: React.ReactNode }) {

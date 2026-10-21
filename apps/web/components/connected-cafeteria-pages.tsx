@@ -1,7 +1,5 @@
 'use client';
 import { AppPageHeader } from './app-page-header';
-import { MetricCard } from './metric-card';
-import Link from 'next/link';
 import {CafeteriaOperations} from './cafeteria-operations';
 import { CafeteriaTransactions } from './cafeteria-transactions';
 import {StaffActivationCard} from './staff-activation-card';
@@ -12,6 +10,7 @@ import { CafeteriaProductsEditor } from './cafeteria-products-editor';
 import { CafeteriaMenusEditor } from './cafeteria-menus-editor';
 import { CafeteriaWalletLookup } from './cafeteria-wallet-lookup';
 import { CafeteriaReports } from './cafeteria-reports';
+import { CafeteriaToday } from './cafeteria-today';
 import { CashierRefundLimits } from './cashier-refund-limits';
 import { DataList } from './data-list';
 import { EmptyState } from './state-panels';
@@ -74,7 +73,6 @@ function Categories({data}:{data:CafeteriaRead}) {
  return <details className="card mt-5 p-5"><summary className="flex min-h-11 cursor-pointer items-center text-lg font-black">Categorías</summary><div className="mt-4 space-y-5"><CommandForm operation="category_save" label="Crear categoría" payload={d=>({id:crypto.randomUUID(),version:null,name:value(d,'name'),display_order:0,status:'active'})}><Input label="Nombre de categoría" name="name" maxLength={80}/></CommandForm>{data.categories.map(c=><section className="border-t pt-4" key={c.id}><CommandForm operation="category_save" label="Guardar categoría" confirmation="¿Guardar los cambios de categoría?" payload={d=>({id:c.id,version:c.version,name:value(d,'name'),display_order:Number(value(d,'display_order')),status:value(d,'status')})}><Input label="Nombre de categoría" name="name" initial={c.name} maxLength={80}/><Input label="Orden" name="display_order" initial={String(c.display_order)} type="number"/><label className="block font-bold">Estado<select className="field mt-1" name="status" defaultValue={c.status}><option value="active">Activa</option><option value="archived">Archivada</option></select></label></CommandForm></section>)}</div></details>;
 }
 export function ConnectedCafeteriaPages({section,data}:{section:CafeteriaSection;data:CafeteriaRead}) {
- const href=(path:string)=>`/admin/cafeteria${path}?cafeteria=${data.scope.cafeteria_id}`;
  if(section==='products')return <><CafeteriaProductsEditor/><Categories data={data}/></>;
  if(section==='menus'||section==='shifts')return <CafeteriaMenusEditor shifts={section==='shifts'}/>;
  if(section==='staff')return <Staff data={data}/>;
@@ -83,7 +81,7 @@ export function ConnectedCafeteriaPages({section,data}:{section:CafeteriaSection
  if(section==='reports')return data.scope.capabilities.includes('cafeteria:pos:purchases:read')?<CafeteriaReports cafeteriaId={data.scope.cafeteria_id} sandbox={data.scope.tenant_kind==='sandbox'} reconciliation={data.scope.capabilities.includes('cafeteria:pos:sessions:read')}/>:<p className="card p-5">Tu rol no tiene acceso a reportes de esta cafetería.</p>;
  if(section==='transactions')return <CafeteriaTransactions cafeteriaId={data.scope.cafeteria_id} sandbox={data.scope.tenant_kind==='sandbox'}/>;
  if(section==='schools'){const walletRead=data.scope.tenant_kind==='customer'&&data.scope.capabilities.includes('cafeteria:wallets:read');return <><AppPageHeader title={walletRead?'PIKAS Cash':'Escuelas conectadas'} description={`${data.scope.school_name} · ${data.scope.location_name}. La escuela administra la compartición y la elegibilidad estudiantil.`}/>{walletRead&&<CafeteriaWalletLookup cafeteriaId={data.scope.cafeteria_id} actorId={data.scope.actor_id} canAdjust={data.scope.capabilities.includes('cafeteria:wallets:administrative_adjust')}/>}</>;}
- return <><AppPageHeader title="Resumen" description={`${data.scope.cafeteria_name} · ${data.scope.school_name} · ${data.scope.location_name}`}/><dl className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">{([['Productos disponibles',data.products.filter(p=>p.active&&p.available).length],['Menús activos',data.menus.filter(m=>m.active).length],['Personal POS activo',data.staff.filter(m=>m.status==='active').length],['Cajas activas',data.registers.filter(r=>r.status==='active').length]] as const).map(([label,count])=><MetricCard key={label} label={label}>{count}</MetricCard>)}</dl><section className="card mt-5 p-5"><h2 className="text-xl font-black">Menú y operación de hoy</h2><p className="mt-2">{data.settings.scheduling_enabled?'Programación activada: el POS requiere un turno y menú activos.':'Modo manual: catálogo activo y disponible.'} Siempre se requiere personal autorizado, asignación y una sesión de caja abierta.</p><p className="mt-2">Servicio actual: {data.service ? ({manual:"Catálogo manual",active:"Turno activo",no_active_service:"Sin turno activo",invalid_configuration:"Revisar configuración"})[data.service.status] : "No disponible"}{data.service?.menu_name ? ` · ${data.service.menu_name}` : ""}. {(n=>`${n} ${n===1?'sesión de caja abierta':'sesiones de caja abiertas'}`)(data.registers.filter(r=>r.open).length)}.</p><div className="mt-4 flex flex-wrap gap-2"><Link className="btn" href={href('/productos')}>Administrar productos</Link><Link className="btn-secondary" href={href('/menus/turnos')}>Turnos de servicio</Link><Link className="btn-secondary" href={href('/cajas')}>Administrar cajas</Link></div></section></>;
+ return <CafeteriaToday data={data}/>;
 }
 
 // Platform support reuses the same catalog/register tasks and provider, but exposes only the

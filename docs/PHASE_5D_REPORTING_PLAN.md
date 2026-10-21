@@ -453,6 +453,76 @@ is the candidate if needed.
 - Per-student rankings (not in 5D).
 - Export (5D.6 / D9).
 
+## Cafetería Hoy V1 (local)
+
+The Cafeteria Admin home (`/admin/cafeteria`, nav **Hoy**, formerly Resumen) is a dashboard of
+today. It reuses the 5D contracts and adds one narrow read.
+
+**Sources.**
+- `cafeteria_report_read(sales_summary, today)`: hero Ventas, Ventas count, Ticket promedio,
+  tender mix and the refund note. These are the 5D.1 values unchanged.
+- `cafeteria_report_read(top_products, today)`: top 5 by net units.
+- `cafeteria_report_read(reconciliation, last_7_days)`: attention items and open-session detail.
+  Requested only with `cafeteria:pos:sessions:read`.
+- New `public.cafeteria_today_read(p_cafeteria_id)` (migration
+  `202611070001_cafeteria_today_read.sql`): read-only, security definer, execute for
+  `authenticated` only. It returns:
+  - 24 hourly rows with gross and count for today and for `today − 7`;
+  - the baseline `day_count`;
+  - `to_cutoff_gross_minor` / `to_cutoff_count`;
+  - `last_sale` (local time, business date, register name snapshot);
+  - `first_sale_date`;
+  - `today`, `baseline_date`, `as_of_local`, `business_timezone`, `currency_code`.
+
+**Semantics.**
+- Definitions are those of 5D.1: Ventas = committed purchases by `business_date`, gross, in the
+  catalog currency. Refunds are not netted into the hourly shape or the comparison; the summary
+  reports them separately.
+- Hours and the cutoff use each purchase's `business_timezone_snapshot`.
+- Today's hourly total equals `sales_summary(today).gross_sales_minor`; a pgTAP test asserts
+  this.
+
+**Comparison.**
+- The baseline is the same weekday last week, up to the same local time (`<=` the current
+  minute).
+- A partial day is never compared with a full day.
+- The browser shows:
+  - a percentage only when today and the baseline-to-cutoff each have at least 5 sales;
+  - otherwise last week's amount at this time, as plain text;
+  - nothing when last week had no sales.
+- The chart always shows last week's whole-day shape as a neutral dashed reference.
+
+**Authority.**
+- The new read uses the 5D.1 guard: `begin_sandbox_admin_command('cafeteria_admin')` and
+  `require_financial_admin(…, 'cafeteria:pos:purchases:read')`, revalidated after reading.
+- School/Account Admins, POS operators and Platform Admins are denied, and there is no Platform
+  support wrapper.
+- The route accepts only `cafeteria_id`; dates, cutoff and totals are never client input.
+- Sandbox tenants and roles without purchase history see the operational view only (cajas and
+  configuration), as Reportes does.
+
+**Low data.**
+- Zero sales: RD$ 0.00, the invitation copy and a single mascot empty state.
+- One or sparse sales: no percentage.
+- No attention items: "Todo en orden".
+- No session-history authority: no attention claims.
+- No open caja: stated explicitly.
+- First sale ever today: a non-persisted milestone.
+- Loading and failures never render as zero.
+
+**Validation.**
+- pgTAP `cafeteria_today_read` 46/46; 5D.1 52/52.
+- Vitest (helpers, view states, route) 33/33; affected cafeteria suites 249/249.
+- Production-mode browser at 1440/768/390 with fictional local data: zero, first-sale and normal
+  states, no horizontal overflow, mobile priority order, and hero equal to Reportes "Hoy".
+
+**Deferred.**
+- Cashier/caja breakdown.
+- Multi-week trends.
+- Export.
+- Inventory or stockouts (not captured by PIKAS).
+- Real-time updates (the page refreshes on load or with **Actualizar**).
+
 ## 1. Objective
 
 Phase 5D gives tenant operators read-only visibility of what their own operation
