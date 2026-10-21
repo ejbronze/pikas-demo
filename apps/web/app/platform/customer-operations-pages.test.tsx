@@ -34,7 +34,7 @@ beforeEach(() => { vi.clearAllMocks(); mocks.requirePlatform.mockResolvedValue(s
 describe("Backoffice Customer Management (M1)", () => {
   it("customer detail offers Administrar cliente only with operations:read", async () => {
     reads({ detail: { account: { id: A, name: "Colegio", code: "C", status: "active" }, tenant_kind: "customer", schools: [], administrators: [], customer_admin_onboarding: [], administrator_intents: [] } });
-    mocks.readPlatform.mockImplementation(async (_s: unknown, _c: unknown, rpc: string) => ({ kind: "ready", value: rpc === "platform_customer_lifecycle_history" ? { events: [] } : { account: { id: A, name: "Colegio", code: "C", status: "active" }, tenant_kind: "customer", schools: [], administrators: [], customer_admin_onboarding: [], administrator_intents: [] } }));
+    mocks.readPlatform.mockImplementation(async (_s: unknown, _c: unknown, rpc: string) => ({ kind: "ready", value: rpc === "platform_customer_lifecycle_history" ? { events: [] } : rpc === "platform_customer_readiness" ? { customers: [], sandbox: [], truncated: false } : { account: { id: A, name: "Colegio", code: "C", status: "active" }, tenant_kind: "customer", schools: [], administrators: [], customer_admin_onboarding: [], administrator_intents: [] } }));
     expect(await html(CustomerPage({ params: Promise.resolve({ accountId: A }) }))).toContain(`href="/platform/clientes/${A}/gestion"`);
     mocks.requirePlatform.mockResolvedValue(session(["platform:tenant:lifecycle:read"]));
     expect(await html(CustomerPage({ params: Promise.resolve({ accountId: A }) }))).not.toContain("Administrar cliente");

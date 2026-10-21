@@ -18,6 +18,8 @@ import Link from "next/link";
 import { CUSTOMER_OPERATIONS_READ } from "../../../../lib/platform/customer-operations";
 import { ADD_LOCATION_CAPABILITY } from "../../../../lib/platform/school-location";
 import { LIFECYCLE_MANAGE, lifecycleHistorySchema } from "../../../../lib/platform/customer-lifecycle";
+import { READINESS_CAPABILITY, readinessSchema } from "../../../../lib/platform/readiness";
+import { LaunchChecklist } from "../../../../components/platform/cockpit";
 export default async function CustomerPage({ params }: { params: Promise<{ accountId: string }> }) {
   const session = await requirePlatform();
   const id = z.guid().safeParse((await params).accountId);
@@ -40,9 +42,15 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
   const showAccess = customer.tenant_kind === "customer" && session.capabilities.includes(CUSTOMER_ACCESS_READ);
   const canProvision = customer.tenant_kind === "customer" && session.capabilities.includes(CUSTOMER_ACCESS_PROVISION);
   const access = showAccess ? await readPlatform(session, CUSTOMER_ACCESS_READ, "platform_customer_access_read", { p_account_id: customer.account.id }, customerAccessSchema) : null;
+  // Puesta en marcha: customers only, derived from the readiness facts; a failed read stays contained.
+  const readiness = customer.tenant_kind === "customer" && session.capabilities.includes(READINESS_CAPABILITY)
+    ? await readPlatform(session, READINESS_CAPABILITY, "platform_customer_readiness", { p_account_id: customer.account.id }, readinessSchema) : null;
+  const launch = readiness?.kind === "ready" ? readiness.value.customers.find(c => c.account_id === customer.account.id) ?? null : null;
   const hasCurrent = customer.administrators.length > 0 || customer.customer_admin_onboarding.some((intent) => intent.role === "account_admin" && intent.scope === "account" && intent.status === "granted") || initialIntents.some((intent) => ["pending", "linked", "granted"].includes(intent.status));
   return <>
     <CustomerHeading name={customer.account.name} code={customer.account.code} status={customer.account.status} kind={customer.tenant_kind} />
+    {launch && <LaunchChecklist customer={launch} />}
+    {readiness && !launch && <p className="card p-4 text-sm text-slate-600">No pudimos cargar la puesta en marcha de este cliente.</p>}
     <ColegioProfile customer={customer} action={canEditProfile ? (school) => <EditProfileAction accountId={customer.account.id} schoolId={school.id} renamesAccount={customer.schools.length === 1} accountName={customer.account.name}
       current={{ name: school.name, rnc: school.rnc ?? null, address: school.address ?? null, province: school.province ?? null }} /> : undefined} />
     {showAccess && <CustomerAccessSection access={access?.kind === "ready" && access.value.account_id === customer.account.id ? access.value : null} identities={session.capabilities.includes(IDENTITY_SUPPORT_CAPABILITY)}
@@ -57,7 +65,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
       ? (school) => school.status === "active" ? <AddLocationAction accountId={customer.account.id} schoolId={school.id} schoolName={school.name} /> : null : undefined}
       locationAction={canEditProfile ? (location) => <RenameAction accountId={customer.account.id} kind="location" targetId={location.id} currentName={location.name} /> : undefined}
       cafeteriaAction={canEditProfile ? (cafeteria) => <RenameAction accountId={customer.account.id} kind="cafeteria" targetId={cafeteria.id} currentName={cafeteria.name} /> : undefined} />
-    <section className="card space-y-3 p-5"><h2 className="text-lg font-bold">Administrador inicial</h2>
+    <section className="card scroll-mt-24 space-y-3 p-5" aria-labelledby="administrador-inicial"><h2 id="administrador-inicial" className="text-lg font-bold">Administrador inicial</h2>
       {customer.administrators.map((admin, index) => <p key={index}>{admin.display_name} · Acceso completado · {statusLabel[admin.status]} · Persona {statusLabel[admin.person_status]?.toLowerCase()}</p>)}
       {initialIntents.length === 0 && customer.administrators.length === 0 && <p>No hay solicitudes de administrador inicial visibles.</p>}
       {initialIntents.map((intent, index) => <article className="rounded-lg border p-4" key={intent.id}>

@@ -75,6 +75,57 @@
 .hoy-setup-open{border-color:var(--attention-border);background:var(--brand-cream)}
 .hoy [data-missing="true"]{color:var(--warning)}
 
+/* PIKAS UX 2: Platform cockpit and Puesta en marcha (friendly ledger, Platform navy). */
+.net-h2{margin:0 0 .5rem;font-family:var(--font-display),var(--font-inter),system-ui,sans-serif;font-size:1.125rem;font-weight:900;color:var(--primary)}
+.net-panel,.net-attention{min-width:0;border-radius:1.25rem;padding:1.1rem 1.25rem;background:var(--surface);border:1px solid var(--border)}
+.net-attention{background:var(--attention-surface);border-color:var(--attention-border)}
+.net-band{border-radius:1.25rem;padding:1.1rem 1.4rem;background:var(--primary);color:#fff}
+.net-figures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem 1.5rem;margin:0}
+@media(min-width:768px){.net-figures{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.net-figures dt{font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#a9c7e8}
+.net-figures dd{margin:.2rem 0 0;font-size:2.25rem}
+.net-band-note{margin:.75rem 0 0;font-size:.8rem;color:#cfe0f5}
+.net-calm{margin:0;color:var(--success);font-weight:600}
+.net-list,.net-rows,.net-activity{display:grid;margin:0;padding:0;list-style:none}
+.net-list>li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1rem;padding:.75rem 0;border-top:1px solid var(--attention-border)}
+.net-list>li:first-child{border-top:0;padding-top:.25rem}
+.net-list>li>div{flex:1 1 16rem}
+.net-issue{margin:.15rem 0 0;color:var(--attention-ink);overflow-wrap:anywhere}
+.net-issue-tag{font-weight:800}
+.net-list>li[data-severity="attention"] .net-issue-tag::before{content:"!";display:inline-grid;place-items:center;width:1.2rem;height:1.2rem;margin-right:.4rem;border-radius:50%;background:var(--attention-ink);color:#fff;font-size:.72rem}
+.net-action{display:inline-flex;min-height:2.75rem;align-items:center;flex:none;font-weight:800;font-size:.875rem;color:var(--primary);text-decoration:underline;text-underline-offset:3px}
+.net-rows>li{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;padding:.75rem 0;border-top:1px solid var(--border)}
+.net-rows>li:first-child{border-top:0}
+.net-rows>li>div:first-child{flex:1 1 14rem}
+.net-row-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
+.net-row-next{margin:0;flex-basis:100%;font-size:.875rem;color:var(--foreground-muted)}
+@media(min-width:1024px){.net-row-next{flex-basis:14rem;text-align:right}}
+.net-pill{display:inline-flex;align-items:center;border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:800;background:#eef1f6;color:var(--foreground-muted)}
+.net-pill[data-launch="configuring"]{background:var(--attention-surface);color:var(--attention-ink);border:1px solid var(--attention-border)}
+.net-pill[data-launch="ready"]{background:#e0f2fe;color:#075985}
+.net-pill[data-launch="operating"]{background:#ddf5f4;color:#06605f}
+.net-meter{display:inline-flex;align-items:center;gap:.5rem}
+.net-meter-bar{display:inline-flex;gap:2px}
+.net-meter-bar>i{display:block;width:.7rem;height:.45rem;border-radius:2px;background:#dfe5ee}
+.net-meter-bar>i[data-state="complete"]{background:var(--tender-wallet)}
+.net-meter-bar>i[data-state="attention"]{background:var(--brand-yellow);box-shadow:inset 0 0 0 1px var(--attention-ink)}
+.net-meter-text{font-size:.8rem;font-weight:700;color:var(--foreground-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.net-activity>li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.25rem 1rem;padding:.5rem 0;border-top:1px solid var(--border)}
+.net-activity>li:first-child{border-top:0}
+.net-demo{background:var(--brand-cream)}
+.net-empty{display:flex;align-items:center;gap:1rem;padding:1rem;border-radius:1rem;background:var(--brand-cream);border:1px dashed var(--attention-border)}
+.net-launch{border-radius:1.25rem;padding:1.1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--brand-yellow)}
+.net-launch-done{border-left-color:var(--tender-wallet)}
+.net-steps{display:grid;gap:.5rem;margin:.9rem 0 0;padding:0;list-style:none}
+.net-steps>li{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .9rem;padding:.6rem .75rem;border-radius:.9rem;border:1px solid transparent}
+.net-steps>li[data-next="true"]{border-color:var(--attention-border);background:var(--brand-cream)}
+.net-step-mark{display:grid;flex:none;place-items:center;width:2rem;height:2rem;border-radius:.65rem;font-family:var(--font-display),system-ui,sans-serif;font-weight:900;background:#eef1f6;color:var(--foreground-muted)}
+.net-steps>li[data-state="complete"] .net-step-mark{background:#ddf5f4;color:#06605f}
+.net-steps>li[data-state="attention"] .net-step-mark{background:var(--brand-yellow);color:var(--navy,#03234b)}
+.net-step-state{margin-left:.35rem;font-size:.75rem;font-weight:700;color:var(--foreground-muted)}
+.net-steps>li[data-state="attention"] .net-step-state{color:var(--attention-ink)}
+.net-steps>li>div{flex:1 1 14rem}
+
 /* Personal POS theme; branding remains unchanged. */
 .pos-dark { background:#101c2d; color:#e5edf5; }
 .pos-dark .card, .pos-dark .bg-white { background:#1b2c42; color:#e5edf5; border-color:#41536a; }

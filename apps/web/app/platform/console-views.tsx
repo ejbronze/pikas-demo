@@ -30,7 +30,7 @@ export function ColegioProfile({ customer, action }: { customer: CustomerOvervie
 type Location = CustomerOverview["schools"][number]["locations"][number];
 export function CustomerHierarchy({ customer, schoolAction, locationAction, cafeteriaAction }: { customer: CustomerOverview; schoolAction?: (school: CustomerOverview["schools"][number]) => React.ReactNode;
   locationAction?: (location: Location) => React.ReactNode; cafeteriaAction?: (cafeteria: Location["cafeterias"][number]) => React.ReactNode }) {
-  return <section aria-label="Estructura del cliente" className="space-y-4"><h2 className="text-lg font-semibold">Estructura del cliente</h2>
+  return <section aria-label="Estructura del cliente" className="scroll-mt-24 space-y-4" id="estructura"><h2 className="text-lg font-semibold">Estructura del cliente</h2>
     {customer.schools.length === 0 && <p>No hay escuelas registradas.</p>}
     {customer.schools.map((school) => <article key={school.id} className="card space-y-3 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{school.name}</h3><p className="text-sm text-slate-600">{school.code} · {statusLabel[school.status]} · {school.business_timezone}</p></div>{schoolAction?.(school)}</div>

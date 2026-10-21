@@ -1,5 +1,38 @@
 # Registro de cambios del producto
 
+## Plataforma: Inicio como estado de la red y Puesta en marcha (local)
+
+- **Inicio** muestra el estado de la red PIKAS:
+  - resumen de clientes reales activos (en configuración, listos para operar, operando);
+  - **Requiere atención**: un aviso por cliente con su bloqueo principal y lo que también falta, con enlace a su puesta en marcha;
+  - la lista de clientes con su estado y avance («N de 7 listos»);
+  - la actividad reciente, con el nombre del cliente;
+  - las demostraciones, aparte.
+
+  Sin pasos pendientes muestra «Todo en orden». Sin clientes reales invita a agregar el primero. Sin la capacidad de operaciones se mantienen las tarjetas de destino anteriores.
+- En el detalle del cliente, **Puesta en marcha** aparece después de la identidad y antes de la información existente. Son siete pasos con estado escrito (Completo, Pendiente, Requiere atención) y un enlace al control existente cuando falta algo; no repite formularios. Un cliente que ya opera ve «Completa» con los pasos plegados.
+- Cómo se determina cada paso; nada se guarda:
+  - **Perfil:** colegio activo. RNC, dirección y provincia son opcionales y no bloquean.
+  - **Estructura:** una cafetería activa en una sede y colegio activos.
+  - **Administrador:**
+    - completo con un administrador del colegio (cuenta o escolar) activo y con inicio de sesión;
+    - requiere atención si no hay administrador ni solicitud, si la solicitud venció o si el enlace venció sin usarse;
+    - pendiente mientras el acceso está preparado, el enlace activo o falta completar.
+  - **Personal POS:** al menos una persona de caja (cajero o supervisor) activa y con inicio de sesión. Una invitación vencida requiere atención.
+  - **Cajas:** una caja activa con personal de caja activo asignado.
+  - **Productos:** un producto activo y disponible.
+  - **Primera venta:** existe una compra real del cliente.
+
+  Operando = activo y con primera venta. Listo para operar = pasos 1–6 completos sin venta. El ciclo de vida (activo, suspendido, cerrado) no cambia, y los clientes suspendidos o cerrados no se cuentan.
+- Nueva lectura de solo consulta `platform_customer_readiness` con la capacidad existente `platform:customer:operations:read`:
+  - solo clientes reales; sandbox se lista aparte;
+  - no se permite durante una sesión Demo vigente;
+  - devuelve conteos, estados de activación y fechas de primera y última venta;
+  - sin montos, saldos, credenciales, enlaces ni datos de Auth;
+  - no escribe nada.
+
+  Migración `202611080001`.
+
 ## Cafetería: «Hoy» y base visual de la experiencia (local)
 
 - El **Resumen** de Administración de cafetería pasa a llamarse **Hoy** (misma ruta) y responde cómo va el día: ventas de hoy (brutas, en RD$) con comparación contra el **mismo día de la semana pasada hasta la misma hora**, número de ventas, ticket promedio, porcentaje pagado con PIKAS Cash, **Así va el día** (ventas por hora, con la semana pasada como referencia punteada), **Requiere atención**, lo más vendido, **Cajas ahora** y **Cómo pagan**. La configuración (productos, menús, personal, cajas) queda en «Configuración de la cafetería», plegada; se muestra abierta y destacada mientras falten productos disponibles, cajas activas o personal activo.
