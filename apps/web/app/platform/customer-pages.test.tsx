@@ -78,6 +78,46 @@ describe("customer server screens", () => {
       const html = await render(status, [...caps], kind); expect(html).not.toContain("Editar información"); expect(html).not.toContain("Renombrar");
     }
   });
+  it("Usuarios y accesos: people once with every grant, registers, login state, pending access; read-only and secret-free", async () => {
+    const P = (n: number) => `00000000-0000-4000-8000-0000000003${String(n).padStart(2, "0")}`;
+    const grant = (n: number, over: Record<string, unknown>) => ({ membership_id: P(50 + n), scope: "cafeteria", role_code: "cafeteria_admin", status: "active", created_at: "2026-10-20T12:00:00Z", updated_at: null,
+      school_id: P(90), school_name: "Colegio Ficticio", cafeteria_id: P(91), cafeteria_name: "Cafetería Santiago", location_name: "Sede Norte", registers: [], ...over });
+    const person = { person_id: P(1), display_name: "Ana Ficticia de un nombre muy largo para comprobar el ajuste en pantallas pequeñas", person_status: "active", created_at: null, has_login: true,
+      username: "ana.ficticia", email: "ana.ficticia.correo.muy.largo.para.probar@example.invalid", phone: null, email_confirmed: true, last_sign_in_at: null, must_change_password: false, login_suspended: false,
+      email_change_pending: false, temporary_issued_at: null, grants: [grant(1, { scope: "account", role_code: "account_admin", school_id: null, school_name: null, cafeteria_id: null, cafeteria_name: null, location_name: null }),
+        grant(2, {}), grant(3, { cafeteria_id: P(92), cafeteria_name: "Cafetería Tamboril" }), grant(4, { role_code: "pos_cashier", registers: [{ register_id: P(70), name: "Caja 1", code: "C1", register_status: "active", assignment_status: "active" }] })] };
+    const pending = { kind: "initial_admin", request_id: P(80), role_code: "account_admin", scope: "account", status: "pending", email: "coordinacion.ficticia@example.invalid", username: "admficticio",
+      school_name: null, cafeteria_name: null, created_at: "2026-10-20T01:12:00Z", expires_at: "2026-10-27T01:12:00Z", request_expired: false, identity_state: "activation_pending", link_state: "expired" };
+    const caps = [...session.capabilities, "platform:customer:access:read"];
+    const render = async (access: unknown, extra: string[] = [], kind = "customer") => {
+      mocks.requirePlatform.mockResolvedValue({ ...session, capabilities: [...caps, ...extra] });
+      mocks.readPlatform.mockImplementation(async (_s: unknown, _c: unknown, rpc: string) => rpc === "platform_customer_access_read" ? access : { kind: "ready", value: rpc === "platform_customer_lifecycle_history" ? { events: [] } : { ...customer, tenant_kind: kind } });
+      const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));
+      const at = html.indexOf('id="customer-access"'); if (at < 0) return ""; const nested = html.indexOf("</section></section>", at);
+      return html.slice(html.lastIndexOf("<section", at), nested >= 0 ? nested + 20 : html.indexOf("</section>", at) + 10);
+    };
+    const full = await render({ kind: "ready", value: { account_id: id, people: [person], pending: [pending] } }, ["platform:identity:support"]);
+    expect(full).toContain("Usuarios y accesos"); expect(full).toContain("Usuarios con acceso");
+    expect(full.match(/>Ana Ficticia de un nombre muy largo/g)?.length).toBe(1);
+    for (const label of ["Administrador del colegio", "Administrador de cafetería · Cafetería Santiago", "Administrador de cafetería · Cafetería Tamboril", "Operador de caja · Cajero · Cafetería Santiago", "Cajas: Caja 1", "Nunca ha iniciado sesión", "Usuario ana.ficticia"])
+      expect(full).toContain(label.replace(/·/g, "·"));
+    expect(full).toContain("Pendientes"); expect(full).toContain("coordinacion.ficticia@example.invalid"); expect(full).toContain("Usuario reservado admficticio");
+    expect(full).toContain("Pendiente de activación"); expect(full).toContain("Enlace vencido"); expect(full).toContain('href="/platform/identidades"');
+    expect(full).not.toMatch(/<(input|select|textarea|form)\b/); expect(full).not.toMatch(/<button/);
+    expect(full).not.toMatch(/Suspender|Reenviar|Restablecer|Eliminar|Asignar rol|Quitar acceso|Editar/);
+    expect(full).not.toMatch(/account_admin|cafeteria_admin|pos_cashier|token|password/i);
+    expect(await render({ kind: "ready", value: { account_id: id, people: [person], pending: [] } })).not.toContain("/platform/identidades");
+    const noActive = await render({ kind: "ready", value: { account_id: id, people: [], pending: [pending] } });
+    expect(noActive).toContain("No hay usuarios con acceso activo para este cliente."); expect(noActive).toContain("Pendientes");
+    const empty = await render({ kind: "ready", value: { account_id: id, people: [], pending: [] } });
+    expect(empty).toContain("Aún no se ha dado acceso al personal de este cliente."); expect(empty).not.toContain("Pendientes");
+    expect(await render({ kind: "unavailable" })).toContain("No pudimos cargar los accesos");
+    expect(await render({ kind: "ready", value: { account_id: P(99), people: [person], pending: [] } })).toContain("No pudimos cargar los accesos");
+    mocks.requirePlatform.mockResolvedValue(session); mocks.readPlatform.mockClear();
+    detail(customer); expect(renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }))).not.toContain("Usuarios y accesos");
+    expect(mocks.readPlatform.mock.calls.map(c => c[2])).not.toContain("platform_customer_access_read");
+    expect(await render({ kind: "ready", value: { account_id: id, people: [person], pending: [] } }, [], "sandbox")).toBe("");
+  });
   it("sandbox details do not expose customer-admin completion actions", async () => {
     mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { ...customer, tenant_kind: "sandbox" } });
     const html = renderToStaticMarkup(await CustomerPage({ params: Promise.resolve({ accountId: id }) }));

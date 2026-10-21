@@ -1,5 +1,10 @@
 # Registro de cambios del producto
 
+## Backoffice: Usuarios y accesos (solo consulta, local)
+
+- En el detalle del cliente, **Usuarios y accesos** muestra a cada persona una sola vez con todos sus roles (Administrador del colegio, Administrador escolar, Administrador de cafetería · {cafetería}, Operador de caja · Supervisor/Cajero), usuario, correo, estado de acceso y de inicio de sesión, y en el detalle sus cajas asignadas y señales de credenciales. **Pendientes** muestra las solicitudes de administrador inicial y las invitaciones con su estado de activación y de enlace.
+- Capacidad nueva `platform:customer:access:read` (solo `platform_admin`). Una sola lectura de base de datos que no escribe nada, solo para clientes y nunca durante una sesión Demo vigente. No muestra contraseñas, tokens, enlaces ni metadatos de Auth, ni estudiantes, padres o datos financieros. Sin controles de edición. Migración `202611040001`.
+
 ## Backoffice: edición del perfil del cliente (local)
 
 - En el detalle del cliente, **Editar información** corrige nombre, RNC, dirección y provincia del colegio (País fijo en República Dominicana; RNC, dirección y provincia pueden quedar sin registrar). Si el cliente tiene un solo colegio, su nombre cambia junto con el del colegio. En **Estructura del cliente**, **Renombrar** cambia el nombre de una sede o cafetería; los códigos no cambian.
