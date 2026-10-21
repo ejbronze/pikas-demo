@@ -4,7 +4,7 @@ import { attentionItems, completeCount, customerHref, launchLabel, launchStatus,
   type CustomerReadiness, type LaunchStatus, type Readiness, type Step } from "../../lib/platform/readiness";
 import { statusLabel } from "../../lib/platform/customer-contracts";
 
-// PIKAS UX 2. Presentation only: every state comes from lib/platform/readiness over the
+// PIKAS UX 2. Presentation only (Inicio previews the 3 most recent activity events): every state comes from lib/platform/readiness over the
 // platform_customer_readiness facts. Status is always written as text, never color alone.
 export type ActivityItem = { id: string; label: string; customer: string | null; when: string };
 const stateText: Record<Step["state"], string> = { complete: "Completo", pending: "Pendiente", attention: "Requiere atención" };
@@ -47,9 +47,10 @@ export function PlatformCockpit({ data, activity, canAdd, demoHref }: { data: Re
         {attention.length === 0 ? <p className="net-calm"><span aria-hidden>✓</span> Ningún cliente activo tiene pasos de puesta en marcha pendientes.</p>
           : <ul className="net-list">{attention.map(item => <li key={item.customer.account_id} data-severity={item.severity}>
             <div className="min-w-0 flex-1"><p className="font-bold break-words">{item.customer.name}</p>
-              <p className="net-issue"><span className="net-issue-tag">{item.severity === "attention" ? "Requiere atención" : "Siguiente paso"} · {item.step.label}</span> {item.step.detail}</p>
-              {item.others.length > 0 && <p className="text-sm text-slate-600">También pendiente: {item.others.map(s => s.label).join(", ")}.</p>}</div>
-            <Link className="net-action" href={customerHref(item.customer.account_id, "puesta-en-marcha")}>Abrir puesta en marcha<span className="sr-only"> de {item.customer.name}</span></Link></li>)}</ul>}
+              <p className="net-issue-tag">{item.severity === "attention" ? "Requiere atención" : "Siguiente paso"} · {item.step.label}</p>
+              <p className="net-issue">{item.step.detail}</p></div>
+            <div className="net-item-end">{item.others.length > 0 && <span className="net-more">+{item.others.length} {item.others.length === 1 ? "pendiente" : "pendientes"}</span>}
+              <Link className="net-action" href={customerHref(item.customer.account_id, "puesta-en-marcha")}>Abrir puesta en marcha<span className="sr-only"> de {item.customer.name}</span></Link></div></li>)}</ul>}
       </section>}
 
     {data.customers.length > 0 && <section aria-labelledby="net-customers" className="net-panel">
@@ -66,7 +67,7 @@ export function PlatformCockpit({ data, activity, canAdd, demoHref }: { data: Re
     <div className="grid gap-5 lg:grid-cols-12">
       <section aria-labelledby="net-activity" className="net-panel lg:col-span-8"><h2 id="net-activity" className="net-h2">Actividad reciente</h2>
         {activity === null ? <p className="text-sm text-slate-600">Tu acceso no incluye el registro de actividad.</p> : activity.length === 0 ? <p className="text-sm text-slate-600">Todavía no hay actividad registrada.</p>
-          : <ul className="net-activity">{activity.map(a => <li key={a.id}><span className="min-w-0 break-words">{a.label}{a.customer ? <span className="text-slate-600"> · {a.customer}</span> : null}</span><time className="text-sm text-slate-500">{a.when}</time></li>)}</ul>}
+          : <ul className="net-activity">{activity.slice(0, 3).map(a => <li key={a.id}><span className="min-w-0 break-words">{a.label}{a.customer ? <span className="text-slate-600"> · {a.customer}</span> : null}</span><time className="text-sm text-slate-500">{a.when}</time></li>)}</ul>}
       </section>
       <section aria-labelledby="net-demo" className="net-panel net-demo lg:col-span-4"><h2 id="net-demo" className="net-h2">Demostración</h2>
         {data.sandbox.length === 0 ? <p className="text-sm text-slate-600">No hay entornos de demostración.</p>

@@ -21,7 +21,7 @@ describe("Platform cockpit", () => {
     expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display">3</); expect(html).toMatch(/En configuración<\/dt><dd class="num-display">1</);
     expect(html).toMatch(/Listos para operar<\/dt><dd class="num-display">1</); expect(html).toMatch(/Operando<\/dt><dd class="num-display">1</);
     expect(html).toContain("Requiere atención · 1"); expect(html).toContain("El enlace de activación venció sin usarse");
-    expect(html).toContain("También pendiente: Personal POS, Cajas, Productos.");
+    expect(html).toContain('<span class="net-more">+3 pendientes</span>'); expect(html).not.toContain("También pendiente");
     expect(html).toContain('href="/platform/clientes/7e00d000-0000-4000-8000-000000000001#puesta-en-marcha"');
     expect(html).toContain("Colegio Horizonte"); expect(html).toContain("Las demostraciones no se cuentan.");
     expect(html).toContain("Esperando la primera venta"); expect(html).toContain("Última venta:"); expect(html).toContain("2 de 7 listos");
@@ -45,6 +45,10 @@ describe("Platform cockpit", () => {
   it("activity is secondary and honest about missing audit access", () => {
     expect(cockpit(data([fx(2)]), null)).toContain("Tu acceso no incluye el registro de actividad.");
     expect(cockpit(data([fx(2)]), [])).toContain("Todavía no hay actividad registrada.");
+    const many = Array.from({ length: 5 }, (_, i) => ({ id: String(i), label: `Evento ${i}`, customer: null, when: "hoy" }));
+    const html = cockpit(data([fx(2)]), many);
+    expect(html).toContain("Evento 0"); expect(html).toContain("Evento 2"); expect(html).not.toContain("Evento 3");
+    expect(cockpit(data([fx(2)]), many.slice(0, 2))).toContain("Evento 1");
   });
 });
 
