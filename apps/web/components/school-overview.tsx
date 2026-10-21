@@ -31,7 +31,7 @@ export function SchoolOverview({ data, overview }: { data: SchoolRead; overview:
             <dd className="sch-help">{counts.suspended || counts.inactive ? [counts.suspended ? n(counts.suspended, "suspendido", "suspendidos") : "", counts.inactive ? n(counts.inactive, "inactivo", "inactivos") : ""].filter(Boolean).join(" · ") : `de ${n(counts.students, "estudiante registrado", "estudiantes registrados")}`}</dd></div>
           {wallet && <>
             <div><dt>Con PIKAS Cash</dt><dd className="num-display">{wallet.active_wallets.toLocaleString("es-DO")}</dd><dd className="sch-help">{wallet.active_wallets === 1 ? "monedero activo" : "monederos activos"}</dd></div>
-            <div><dt>Movimiento en PIKAS Cash</dt><dd className="num-display">{wallet.wallets_with_movement.toLocaleString("es-DO")}</dd><dd className="sch-help">monederos con recargas, compras o ajustes · {day(wallet.from)} al {day(wallet.to)}</dd></div>
+            <div><dt>Monederos con movimiento</dt><dd className="num-display">{wallet.wallets_with_movement.toLocaleString("es-DO")}</dd><dd className="sch-help">monederos con recargas, compras o ajustes · {day(wallet.from)} al {day(wallet.to)}</dd></div>
             <div><dt>Saldo de estudiantes</dt><dd className="num-display">{money(wallet.total_balance_minor)}</dd><dd className="sch-help">suma de los saldos de PIKAS Cash de los estudiantes</dd></div>
           </>}
         </dl>}
@@ -60,12 +60,10 @@ export function SchoolOverview({ data, overview }: { data: SchoolRead; overview:
           </li>)}</ul></>}
     </section>}
 
-    <nav aria-label="Accesos del colegio" className="sch-next">
-      <Link href={href("/estudiantes")}>Estudiantes</Link>
-      <Link href={href("/administradores")}>Administradores</Link>
+    {/* Mobile only, and only the sections the bottom bar folds under "Más" (it shows four when there are six). */}
+    {wallet && <nav aria-label="Más secciones del colegio" className="sch-next md:hidden">
       {rows && <Link href={href("/cafeterias")}>Cafeterías conectadas</Link>}
-      {wallet && <Link href={href("/pikas-cash")}>PIKAS Cash</Link>}
       <Link href={href("/actividad")}>Actividad</Link>
-    </nav>
+    </nav>}
   </div>;
 }

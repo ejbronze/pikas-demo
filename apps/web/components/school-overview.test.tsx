@@ -18,18 +18,21 @@ describe("School Overview", () => {
   it("students first, wallet aggregates with explicit period, service status, cafeterías as relationships", () => {
     const html = render(inputs());
     expect(html).toMatch(/<h1[^>]*>Resumen<\/h1>/); expect(html).toContain("Colegio Ficticio Atlántico");
-    expect(figures(html)).toEqual(["Estudiantes activos", "Con PIKAS Cash", "Movimiento en PIKAS Cash", "Saldo de estudiantes"]);
+    expect(figures(html)).toEqual(["Estudiantes activos", "Con PIKAS Cash", "Monederos con movimiento", "Saldo de estudiantes"]);
     expect(html).toContain(">412<"); expect(html).toContain("6 suspendidos"); expect(html).toContain("RD$ 214,380.00");
     expect(html).toContain("monederos con recargas, compras o ajustes · 15/10 al 21/10");
     expect(html).toContain("Listo para atender estudiantes"); expect(html).toContain("Todo en orden");
     expect(html).toContain("Cafeterías que atienden al colegio"); expect(html).toContain("Compartición activa"); expect(html).toContain("114 estudiantes habilitados");
-    expect(html).toContain(`href="/admin/escuela/pikas-cash?school=${schoolId}"`);
+    expect(html).not.toContain(`href="/admin/escuela/pikas-cash?school=${schoolId}"`); // in the bottom bar and sidebar already
+    expect(html).toMatch(/<nav aria-label="Más secciones del colegio" class="sch-next md:hidden">.*Cafeterías conectadas.*Actividad.*<\/nav>/);
+    expect(html).not.toMatch(/Usaron PIKAS Cash|Compradores|Estudiantes que compraron/);
     expect(html.replace(/PIKAS Cash/g, "")).not.toMatch(commercial);
   });
   it("without wallet authority: no wallet figures, no balance, no PIKAS Cash link, and no empty slots", () => {
     const html = render(inputs({ wallet: null }));
     expect(figures(html)).toEqual(["Estudiantes activos"]); expect(html).not.toContain("RD$"); expect(html).not.toContain("PIKAS Cash");
     expect(html).not.toContain("monedero"); expect(html).toContain("No hay invitaciones vencidas, comparticiones pendientes.");
+    expect(html).not.toContain("Más secciones del colegio"); // five destinations: the bottom bar shows them all
   });
   it("new / low-data school: explanatory empty states instead of a wall of zeros", () => {
     const html = render(inputs({ counts: { students: 0, active: 0, suspended: 0, inactive: 0, cafeterias: 0 }, cafeterias: [], wallet: wallet({ active_wallets: 0, total_balance_minor: "0", wallets_with_movement: 0 }) }));
