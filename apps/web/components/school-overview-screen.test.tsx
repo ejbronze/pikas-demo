@@ -48,6 +48,18 @@ describe("School Overview server reads", () => {
     const o = (await run()).overview as { cafeterias: unknown; wallet: unknown };
     expect(o.cafeterias).toBeNull(); expect(o.wallet).toBeNull();
   });
+  it("Estudiantes: the roster gets the school's own status counts; another school's counts are discarded", async () => {
+    mocks.wallet.mockResolvedValue({ read: false });
+    mocks.rpc.mockImplementation(async (rpc: string) => ({ error: null, data: rpc === "school_student_roster" ? { scope, locations: [], rows: [] }
+      : { scope, locations: [], counts: { students: 14, active: 12, suspended: 1, inactive: 1, cafeterias: 1 } } }));
+    renderToStaticMarkup(await SchoolScreen({ section: "students", searchParams: Promise.resolve({ school: id }) }));
+    expect(mocks.rpc).toHaveBeenCalledWith("school_admin_read", expect.objectContaining({ p_school_id: id, p_section: "summary" }));
+    expect((mocks.pages.mock.calls.at(-1)![0] as { studentCounts?: unknown }).studentCounts).toEqual({ students: 14, active: 12, suspended: 1, inactive: 1, cafeterias: 1 });
+    mocks.rpc.mockImplementation(async (rpc: string) => ({ error: null, data: rpc === "school_student_roster" ? { scope, locations: [], rows: [] }
+      : { scope: { ...scope, school_id: "4d700000-0000-4000-8000-0000000000ff" }, locations: [], counts: { students: 99, active: 99, suspended: 0, inactive: 0, cafeterias: 0 } } }));
+    renderToStaticMarkup(await SchoolScreen({ section: "students", searchParams: Promise.resolve({ school: id }) }));
+    expect((mocks.pages.mock.calls.at(-1)![0] as { studentCounts?: unknown }).studentCounts).toBeUndefined();
+  });
   it("another school's read is never used", async () => {
     mocks.wallet.mockResolvedValue({ read: true });
     const other = { ...scope, school_id: "4d700000-0000-4000-8000-0000000000ff" };

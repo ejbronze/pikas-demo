@@ -183,6 +183,36 @@
 .sch-next a{display:inline-flex;align-items:center;min-height:2.75rem;padding:0 1rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-weight:700;font-size:.9rem;color:var(--primary)}
 .sch-next a:hover{border-color:var(--accent)}
 
+/* PIKAS UX 5: Estudiantes roster (search first, status chips, one row per student). */
+.stu-tools{display:grid;gap:.75rem;padding:1rem 1.1rem;border-radius:1.25rem;background:var(--surface);border:1px solid var(--border)}
+.stu-search{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+.stu-search>.field{flex:1 1 14rem}
+.stu-more{flex-basis:100%}
+.stu-more>summary{display:inline-flex;min-height:2.75rem;align-items:center;cursor:pointer;font-weight:700;font-size:.875rem;color:var(--primary)}
+.stu-more-fields{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));margin-top:.25rem}
+.stu-chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.stu-chip{display:inline-flex;align-items:center;gap:.45rem;min-height:2.5rem;padding:0 .9rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:.875rem;font-weight:700;color:var(--foreground-muted)}
+.stu-chip:hover{border-color:var(--accent);color:var(--primary)}
+.stu-chip[aria-current="page"]{background:var(--primary);border-color:var(--primary);color:#fff}
+.stu-chip-count{font-variant-numeric:tabular-nums;font-weight:800;opacity:.85}
+.stu-list{display:grid;margin:0;padding:0;list-style:none;border-radius:1.25rem;background:var(--surface);border:1px solid var(--border);overflow:hidden}
+.stu-list>li{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who status" "place place" "actions actions";gap:.15rem .75rem;padding:.85rem 1.1rem;border-top:1px solid var(--border)}
+.stu-list>li:first-child{border-top:0}
+@media(min-width:900px){.stu-list>li{grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) 7.5rem auto;grid-template-areas:"who place status actions";align-items:center}}
+.stu-who{grid-area:who;min-width:0;display:flex;flex-direction:column}
+.stu-name{align-self:flex-start;max-width:100%;min-height:2rem;padding:0;border:0;background:none;text-align:left;font-weight:800;color:var(--primary);overflow-wrap:anywhere}
+.stu-name:hover{text-decoration:underline;text-underline-offset:3px}
+.stu-meta{font-size:.78rem;color:var(--foreground-muted);overflow-wrap:anywhere}
+.stu-place{grid-area:place;margin:0;font-size:.875rem;color:var(--foreground);overflow-wrap:anywhere}
+.stu-missing{color:var(--foreground-muted);font-style:italic}
+.stu-pill{grid-area:status;justify-self:end;align-self:start;border-radius:999px;padding:.15rem .6rem;font-size:.75rem;font-weight:800;background:#ddf5f4;color:#06605f;white-space:nowrap}
+@media(min-width:900px){.stu-pill{justify-self:start;align-self:center}}
+.stu-pill[data-status="suspended"]{background:var(--attention-surface);color:var(--attention-ink);border:1px solid var(--attention-border)}
+.stu-pill[data-status="inactive"]{background:#eef1f6;color:var(--foreground-muted)}
+.stu-actions{grid-area:actions;display:flex;flex-wrap:wrap;gap:.1rem .25rem;justify-content:flex-start}
+@media(min-width:900px){.stu-actions{justify-content:flex-end}}
+.stu-empty{display:flex;flex-wrap:wrap;align-items:flex-start;gap:1rem;padding:1.1rem 1.25rem;border-radius:1.25rem;background:var(--brand-cream);border:1px solid #f0e2bf}
+
 /* Personal POS theme; branding remains unchanged. */
 .pos-dark { background:#101c2d; color:#e5edf5; }
 .pos-dark .card, .pos-dark .bg-white { background:#1b2c42; color:#e5edf5; border-color:#41536a; }

@@ -1,9 +1,8 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppPageHeader } from "./app-page-header";
-import { DataList } from "./data-list";
 import { EmptyState } from "./state-panels";
 import { StudentExportControls } from "./student-export-controls";
 import { StudentImportWorkflow } from "./student-import-workflow";
@@ -15,7 +14,6 @@ import { loadCommand, recoveryKey } from "../lib/school/command";
 import type { SchoolRead, SchoolStudent } from "../lib/school/contracts";
 
 export const statusLabel = (status: string) => ({ active: "Activo", suspended: "Suspendido", inactive: "Inactivo" })[status] ?? "No disponible";
-const statusTone: Record<string, string> = { active: "bg-emerald-100 text-emerald-900", suspended: "bg-amber-100 text-amber-900", inactive: "bg-slate-200 text-slate-700" };
 const today = () => new Date().toISOString().slice(0, 10);
 type Names = { first_name: string; last_name: string; student_code: string };
 type Place = { location_id: string; starts_on: string; grade: string; class: string; homeroom: string };
@@ -34,9 +32,10 @@ function placementRows(data: SchoolRead, p: { location_id: string | null; starts
 }
 function pendingFor(actor: string, school: string, form: string) { try { return loadCommand(sessionStorage, recoveryKey(actor, school, form)) !== null; } catch { return true; } }
 
-// Wave D.3 Estudiantes workspace. Search and filters stay server-side (school_student_roster:
+// UX 5 roster (Wave D.3 workflows unchanged): search and status chips first, campus/grade under
+// «Más filtros», one row per student whose name opens the profile. Wave D.3 Estudiantes workspace. Search and filters stay server-side (school_student_roster:
 // texto, estado, campus, grado; 50 per page); nothing is filtered locally over a partial page.
-export function SchoolStudents({ data, students, query, status, location, grade, paged, walletRead, actorId }: { data: SchoolRead; students: SchoolStudent[]; query: string; status: string; location: string; grade: string; paged: boolean; walletRead: boolean; actorId: string }) {
+export function SchoolStudents({ data, students, query, status, location, grade, paged, walletRead, actorId, counts }: { data: SchoolRead; students: SchoolStudent[]; query: string; status: string; location: string; grade: string; paged: boolean; walletRead: boolean; actorId: string; counts?: NonNullable<SchoolRead["counts"]> }) {
   const router = useRouter();
   const school = data.scope.school_id;
   const base = `/admin/escuela/estudiantes?school=${school}`;
@@ -48,33 +47,58 @@ export function SchoolStudents({ data, students, query, status, location, grade,
   const filterParams = (extra: Record<string, string> = {}) => `${base}&${new URLSearchParams({ q: query, status, location, grade, ...extra })}`;
   const back = (id: string) => () => setTask({ kind: "profile", id });
   const autoSubmit = (e: React.ChangeEvent<HTMLSelectElement>) => e.currentTarget.form?.requestSubmit();
+  const multiCampus = data.locations.length > 1, gradeList = data.grades ?? [];
+  const create = () => setTask({ kind: "create", n: 0 }), openProfile = (id: string) => () => { setNotice(""); setTask({ kind: "profile", id }); };
+  // Status chips keep the other filters; counts are the school's totals from the summary read.
+  const chip = (value: string, label: string, count?: number) => <Link key={value} className="stu-chip" aria-current={status === value ? "page" : undefined}
+    href={`${base}&${new URLSearchParams({ q: query, status: value, location, grade })}`}>{label}{count !== undefined && <span className="stu-chip-count">{count.toLocaleString("es-DO")}</span>}</Link>;
+  const noStudents = counts ? counts.students === 0 : students.length === 0 && !filtered && !paged;
   return <>
-    <AppPageHeader title="Estudiantes" description="Gestiona estudiantes, su inscripción y su estado." action={<><button type="button" className="btn-secondary" onClick={() => setImporting(true)}>Importar CSV</button><button type="button" className="btn" onClick={() => setTask({ kind: "create", n: 0 })}>Crear estudiante</button></>} />
+    <header className="flex flex-wrap items-end justify-between gap-3">
+      <div className="min-w-0"><h1 className="font-display text-3xl font-black text-[var(--primary)]">Estudiantes</h1>
+        <p className="break-words text-slate-600">{data.scope.school_name}{counts && counts.students > 0 ? ` · ${counts.active.toLocaleString("es-DO")} ${counts.active === 1 ? "activo" : "activos"} de ${counts.students.toLocaleString("es-DO")}` : ""}</p></div>
+      <div className="flex flex-wrap gap-2"><button type="button" className="btn-secondary" onClick={() => setImporting(true)}>Importar CSV</button><button type="button" className="btn" onClick={create}>Crear estudiante</button></div>
+    </header>
     {notice && <p role="status" className="rounded-xl bg-emerald-50 p-3 font-bold text-emerald-900">{notice}</p>}
-    {pendingCreate && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3"><p className="flex-1 basis-60 text-sm"><strong>Hay una creación de estudiante pendiente de confirmar.</strong> Revísala antes de crear otro.</p><button type="button" className="btn-secondary" onClick={() => setTask({ kind: "create", n: 0 })}>Revisar solicitud pendiente</button></div>}
-    <form method="get" action="/admin/escuela/estudiantes" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] lg:items-end" role="search" aria-label="Filtros de estudiantes">
-      <input name="school" type="hidden" value={school} />
-      <label className="font-bold sm:col-span-2 lg:col-span-1">Buscar estudiantes<input className="field mt-1 w-full" type="search" name="q" placeholder="Nombre o código" maxLength={80} defaultValue={query} /></label>
-      <label className="font-bold">Estado<select className="field mt-1 w-full" name="status" defaultValue={status} onChange={autoSubmit}><option value="">Todos los estados</option>{["active", "suspended", "inactive"].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></label>
-      <label className="font-bold">Campus<select className="field mt-1 w-full" name="location" defaultValue={location} onChange={autoSubmit}><option value="">Todos los campus</option>{data.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
-      <label className="font-bold">Grado<select className="field mt-1 w-full" name="grade" defaultValue={grade} onChange={autoSubmit}><option value="">Todos los grados</option>{data.grades?.map(g => <option key={g} value={g}>{g}</option>)}</select></label>
-      <button className="btn-secondary">Buscar</button>
-    </form>
+    {pendingCreate && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3"><p className="flex-1 basis-60 text-sm"><strong>Hay una creación de estudiante pendiente de confirmar.</strong> Revísala antes de crear otro.</p><button type="button" className="btn-secondary" onClick={create}>Revisar solicitud pendiente</button></div>}
+    {noStudents ? <div className="stu-empty"><Image src="/brand/pikas-logo-mark-full-color.png" alt="" width={48} height={48} className="rounded-xl" />
+        <div className="min-w-0 flex-1"><p className="font-bold">Aún no hay estudiantes en este colegio.</p><p className="text-sm text-slate-600">Créalos uno por uno o importa varios desde un archivo CSV. Cada estudiante necesita nombre, apellido y código estudiantil.</p>
+          <div className="mt-3 flex flex-wrap gap-2"><button type="button" className="btn" onClick={create}>Crear estudiante</button><button type="button" className="btn-secondary" onClick={() => setImporting(true)}>Importar CSV</button></div></div></div>
+    : <>
+    <section aria-label="Buscar y filtrar" className="stu-tools">
+      <form method="get" action="/admin/escuela/estudiantes" className="stu-search" role="search" aria-label="Filtros de estudiantes">
+        <input name="school" type="hidden" value={school} />{status && <input name="status" type="hidden" value={status} />}
+        <label className="sr-only" htmlFor="stu-q">Buscar estudiantes</label>
+        <input id="stu-q" className="field min-w-0 flex-1" type="search" name="q" placeholder="Buscar por nombre o código" maxLength={80} defaultValue={query} />
+        <button className="btn-secondary">Buscar</button>
+        {(multiCampus || gradeList.length > 0) && <details className="stu-more" open={!!(location || grade) || undefined}><summary>Más filtros{location || grade ? " · activos" : ""}</summary>
+          <div className="stu-more-fields">
+            {multiCampus && <label className="font-bold">Campus<select className="field mt-1 w-full" name="location" defaultValue={location} onChange={autoSubmit}><option value="">Todos los campus</option>{data.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>}
+            {gradeList.length > 0 && <label className="font-bold">Grado<select className="field mt-1 w-full" name="grade" defaultValue={grade} onChange={autoSubmit}><option value="">Todos los grados</option>{gradeList.map(g => <option key={g} value={g}>{g}</option>)}</select></label>}
+          </div></details>}
+      </form>
+      <nav aria-label="Estado de los estudiantes" className="stu-chips">
+        {chip("", "Todos", counts?.students)}{chip("active", "Activos", counts?.active)}
+        {(!counts || counts.suspended > 0 || status === "suspended") && chip("suspended", "Suspendidos", counts?.suspended)}
+        {(!counts || counts.inactive > 0 || status === "inactive") && chip("inactive", "Inactivos", counts?.inactive)}
+      </nav>
+    </section>
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
       <p role="status">{students.length} {students.length === 1 ? "estudiante" : "estudiantes"}{filtered ? " con estos filtros" : ""}{data.next_cursor || paged ? " en esta página" : ""}</p>
       {filtered && <Link className="inline-flex min-h-11 items-center font-bold text-teal-800 underline" href={base}>Limpiar filtros</Link>}
     </div>
-    {students.length === 0 ? (filtered || paged
+    {students.length === 0
       ? <EmptyState title="No encontramos estudiantes con estos filtros." description="Prueba con otro nombre o código, o limpia los filtros." action={<Link className="btn-secondary" href={base}>Limpiar filtros</Link>} />
-      : <EmptyState title="Aún no hay estudiantes." description="Crea el primero o importa varios desde un archivo CSV." action={<button type="button" className="btn" onClick={() => setTask({ kind: "create", n: 0 })}>Crear estudiante</button>} />)
-      : <DataList label="Estudiantes" rows={students} rowKey={s => s.id} columns={[
-        { header: "Estudiante", primary: true, cell: s => <><span className="break-words">{s.display_name}</span><span className="block text-sm font-normal text-slate-600">Código {s.student_code}</span></> },
-        { header: "Grado y sección", cell: s => s.enrollment ? `${s.enrollment.grade || "Sin grado"}${s.enrollment.class ? ` · ${s.enrollment.class}` : ""}` : "Sin matrícula activa" },
-        { header: "Campus", cell: s => s.enrollment ? placeName(data, s.enrollment.location_id) : "—" },
-        { header: "Estado", cell: s => <span className={`chip ${statusTone[s.status] ?? ""}`}>{statusLabel(s.status)}</span> },
-      ]} actions={s => <>{walletRead && <Link className="btn-secondary" href={`/admin/escuela/estudiantes/${s.id}/pikas-cash?school=${school}`}>PIKAS Cash<span className="sr-only"> de {s.display_name}</span></Link>}<button type="button" className="btn-secondary" aria-label={`Ver perfil de ${s.display_name}`} onClick={() => { setNotice(""); setTask({ kind: "profile", id: s.id }); }}>Ver perfil</button></>} />}
+      : <ul aria-label="Estudiantes" className="stu-list">{students.map(s => <li key={s.id} data-status={s.status}>
+          <div className="stu-who"><button type="button" className="stu-name" onClick={openProfile(s.id)}>{s.display_name}</button><span className="stu-meta">Código {s.student_code}</span></div>
+          <p className="stu-place">{s.enrollment ? <>{s.enrollment.grade || "Sin grado"}{s.enrollment.class ? ` · ${s.enrollment.class}` : ""}{multiCampus ? ` · ${placeName(data, s.enrollment.location_id)}` : ""}</> : <span className="stu-missing">Sin matrícula activa</span>}</p>
+          <span className="stu-pill" data-status={s.status}>{statusLabel(s.status)}</span>
+          <div className="stu-actions">{walletRead && <Link className="btn-tertiary" href={`/admin/escuela/estudiantes/${s.id}/pikas-cash?school=${school}`}>PIKAS Cash<span className="sr-only"> de {s.display_name}</span></Link>}
+            <button type="button" className="btn-tertiary" aria-label={`Ver perfil de ${s.display_name}`} onClick={openProfile(s.id)}>Ver perfil</button></div>
+        </li>)}</ul>}
+    </>}
     <div className="flex flex-wrap gap-3">{paged && <Link className="btn-secondary" href={filterParams()}>Primera página</Link>}{data.next_cursor && <Link className="btn-secondary" href={filterParams({ after: data.next_cursor })}>Siguiente página</Link>}</div>
-    <details className="card p-4"><summary className="flex min-h-11 cursor-pointer items-center font-bold">Exportar estudiantes</summary><div className="mt-3"><StudentExportControls students={students} locations={data.locations} filters={{ schoolId: school, query, status: status as "" | "active" | "suspended" | "inactive", location: location || null, grade: grade || null }} /></div></details>
+    {!noStudents && <details className="card p-4"><summary className="flex min-h-11 cursor-pointer items-center font-bold">Exportar estudiantes</summary><div className="mt-3"><StudentExportControls students={students} locations={data.locations} filters={{ schoolId: school, query, status: status as "" | "active" | "suspended" | "inactive", location: location || null, grade: grade || null }} /></div></details>}
     {importing && <StudentImportWorkflow data={data} actorId={actorId} onClose={() => setImporting(false)} />}
     {task?.kind === "create" && <StudentCreateTask key={task.n} data={data} actorId={actorId}
       onClose={(code) => { setTask(null); setPendingCreate(pendingFor(actorId, school, "student-create")); if (code) { setNotice("Estudiante creado."); router.push(`${base}&q=${encodeURIComponent(code)}`); } }}

@@ -1,5 +1,17 @@
 # Registro de cambios del producto
 
+## Escuela: gestión de estudiantes (local)
+
+- **Estudiantes** es ahora una lista clara de alumnos:
+  - encabezado con el colegio y «N activos de M»;
+  - «Crear estudiante» como acción principal e «Importar CSV» como secundaria;
+  - búsqueda por nombre o código como herramienta principal;
+  - chips de estado (Todos, Activos, Suspendidos, Inactivos) con los totales del colegio, que conservan la búsqueda; los estados sin alumnos no aparecen;
+  - Campus y Grado bajo «Más filtros», solo cuando el colegio tiene más de un campus o grados registrados.
+- **Una fila por estudiante:** nombre (abre el perfil existente), código, grado y sección (y campus si hay varios), estado en texto. Acciones discretas: «PIKAS Cash», solo con permiso de monederos, y «Ver perfil». En móvil cada estudiante es una tarjeta, no una tabla comprimida.
+- **Colegio sin estudiantes:** invitación con «Crear estudiante» e «Importar CSV»; sin barra de búsqueda ni exportación. «Sin resultados» se distingue de un colegio vacío.
+- Sin cambios en la creación, importación CSV, exportación, perfil, matrícula, estado ni PIKAS Cash. Usa las lecturas escolares existentes (`school_student_roster` y los totales del resumen). Sin migración ni cambios de autoridad. No muestra saldos, compras ni datos de cafetería por estudiante.
+
 ## Escuela: Resumen del colegio (local)
 
 - El **Resumen** de Administración escolar ahora se centra en estudiantes, accesos y servicio. Nunca muestra el negocio de la cafetería: ventas, tickets, medios de pago, productos, cajas, cajeros ni reembolsos.

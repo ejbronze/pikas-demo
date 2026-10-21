@@ -38,10 +38,12 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     if (!roster.error && result.success && result.data.scope.school_id === schoolId && result.data.scope.actor_id === access.context.person_id) students = (result.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row);
   }
   const walletRead = !access.context.pov && (await readSchoolWalletAccess(client, schoolId)).read;
+  const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };
+  // Estudiantes: the school's own status totals for the roster chips (school:read summary).
+  const studentCounts = section === "students" ? await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "summary", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(r => own(r)?.counts, () => undefined) : undefined;
   // School Overview: extra reads with the School's own authority; each one fails on its own.
   let overview: OverviewInputs | undefined;
   if (section === "summary" && parsed.data.counts) {
-    const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };
     const [cafes, admins, report] = await Promise.all([
       client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "cafeterias", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(own, () => null),
       client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "administrators", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(own, () => null),
@@ -51,5 +53,5 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     overview = { counts: parsed.data.counts, cafeterias: cafes ? serviceRows((cafes.rows ?? []).filter((r): r is CafeteriaReadRow => "sharing_status" in r)) : null,
       invitations: admins ? (admins.invitations ?? []).map(v => ({ status: v.status })) : null, wallet: report ? walletSummary(report) : null };
   }
-  return <ConnectedSchoolShell context={access.context} schoolId={schoolId} role={parsed.data.scope.role} walletNav={walletRead}><ConnectedSchoolPages overview={overview} walletRead={section === "students" && walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} paged={cursor.data !== null} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
+  return <ConnectedSchoolShell context={access.context} schoolId={schoolId} role={parsed.data.scope.role} walletNav={walletRead}><ConnectedSchoolPages overview={overview} studentCounts={studentCounts} walletRead={section === "students" && walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} paged={cursor.data !== null} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
 }
