@@ -1,5 +1,25 @@
 # Registro de cambios del producto
 
+## Escuela: ficha del estudiante (local)
+
+- Nueva página **Estudiante** (`/admin/escuela/estudiantes/{id}`), dentro de Administración escolar. Se abre desde el nombre en Estudiantes, y la vista rápida «Ver perfil» ofrece «Abrir ficha del estudiante». Tiene un enlace de vuelta a Estudiantes.
+- **Identidad primero:** nombre, estado en texto, código estudiantil y grado · sección (y campus si hay varios). La acción principal es «Editar información».
+- **Requiere atención:** solo hechos registrados: suspendido, inactivo, sin matrícula activa, matrícula sin campus o grado, y, con permiso de monederos, monedero congelado o con saldo negativo, o habilitado solo en una cafetería sin compartición activa.
+- **Secciones:**
+  - **Matrícula:** campus, grado, sección, aula y fecha de inicio, con «Cambiar matrícula» o «Matricular».
+  - **PIKAS Cash:** solo con `school:wallets:read`. Muestra estado y saldo; las recargas y movimientos siguen en «Ver PIKAS Cash».
+  - **Cafeterías:** dónde está habilitado el estudiante y si el colegio comparte con esa cafetería.
+  - **Restricciones alimentarias:** solo lectura, para el rol de Administrador escolar.
+- **Estado y matrícula** («Cambiar estado», «Retirar matrícula») va aparte, con sus confirmaciones existentes. Las tareas de edición, matrícula, retiro y estado son las mismas de antes.
+- Solo lecturas escolares existentes, sin migración ni cambios de autoridad:
+  - la lista de estudiantes, en modo de un solo estudiante;
+  - `school_wallet_read`, reducido en el servidor a estado y saldo; las líneas de compra no llegan a la página;
+  - `cafeteria_customers` (`school:customers:read`);
+  - la lectura de cafeterías del colegio;
+  - `student_dietary_restrictions` (`school:restrictions:read`).
+
+  Sin historial de compras, ventas, productos, cajas ni identificadores internos visibles.
+
 ## Escuela: gestión de estudiantes (local)
 
 - **Estudiantes** es ahora una lista clara de alumnos:

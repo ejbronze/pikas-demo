@@ -26,14 +26,14 @@ function Field({ label, value, onChange, type = "text", required = true, maxLeng
 const optional = (value: string) => value.trim() || null;
 const namesPayload = (v: Names) => ({ first_name: v.first_name.trim(), last_name: v.last_name.trim(), student_code: v.student_code.trim() });
 const placePayload = (v: Place) => ({ location_id: v.location_id || null, starts_on: v.starts_on, grade: optional(v.grade), class: optional(v.class), homeroom: optional(v.homeroom) });
-function placeName(data: SchoolRead, id: string | null | undefined) { return data.locations.find(l => l.id === id)?.name ?? "Sin campus asignado"; }
+export function placeName(data: SchoolRead, id: string | null | undefined) { return data.locations.find(l => l.id === id)?.name ?? "Sin campus asignado"; }
 function placementRows(data: SchoolRead, p: { location_id: string | null; starts_on: string; grade: string | null; class: string | null; homeroom: string | null }): [string, React.ReactNode][] {
   return [["Campus", placeName(data, p.location_id)], ["Fecha efectiva", p.starts_on], ["Grado", p.grade || "Sin grado"], ["Sección", p.class || "Sin sección"], ["Aula / grupo", p.homeroom || "Sin asignar"]];
 }
 function pendingFor(actor: string, school: string, form: string) { try { return loadCommand(sessionStorage, recoveryKey(actor, school, form)) !== null; } catch { return true; } }
 
 // UX 5 roster (Wave D.3 workflows unchanged): search and status chips first, campus/grade under
-// «Más filtros», one row per student whose name opens the profile. Wave D.3 Estudiantes workspace. Search and filters stay server-side (school_student_roster:
+// «Más filtros», one row per student whose name opens the student workspace (UX 6). Wave D.3 Estudiantes workspace. Search and filters stay server-side (school_student_roster:
 // texto, estado, campus, grado; 50 per page); nothing is filtered locally over a partial page.
 export function SchoolStudents({ data, students, query, status, location, grade, paged, walletRead, actorId, counts }: { data: SchoolRead; students: SchoolStudent[]; query: string; status: string; location: string; grade: string; paged: boolean; walletRead: boolean; actorId: string; counts?: NonNullable<SchoolRead["counts"]> }) {
   const router = useRouter();
@@ -90,7 +90,7 @@ export function SchoolStudents({ data, students, query, status, location, grade,
     {students.length === 0
       ? <EmptyState title="No encontramos estudiantes con estos filtros." description="Prueba con otro nombre o código, o limpia los filtros." action={<Link className="btn-secondary" href={base}>Limpiar filtros</Link>} />
       : <ul aria-label="Estudiantes" className="stu-list">{students.map(s => <li key={s.id} data-status={s.status}>
-          <div className="stu-who"><button type="button" className="stu-name" onClick={openProfile(s.id)}>{s.display_name}</button><span className="stu-meta">Código {s.student_code}</span></div>
+          <div className="stu-who"><Link className="stu-name" href={`/admin/escuela/estudiantes/${s.id}?school=${school}`}>{s.display_name}</Link><span className="stu-meta">Código {s.student_code}</span></div>
           <p className="stu-place">{s.enrollment ? <>{s.enrollment.grade || "Sin grado"}{s.enrollment.class ? ` · ${s.enrollment.class}` : ""}{multiCampus ? ` · ${placeName(data, s.enrollment.location_id)}` : ""}</> : <span className="stu-missing">Sin matrícula activa</span>}</p>
           <span className="stu-pill" data-status={s.status}>{statusLabel(s.status)}</span>
           <div className="stu-actions">{walletRead && <Link className="btn-tertiary" href={`/admin/escuela/estudiantes/${s.id}/pikas-cash?school=${school}`}>PIKAS Cash<span className="sr-only"> de {s.display_name}</span></Link>}
@@ -128,6 +128,7 @@ function StudentProfileTask({ data, student, actorId, walletRead, open, onClose 
       {e && action("withdraw", "Retirar matrícula")}
       {action("status", "Cambiar estado")}
       {walletRead && <Link className="btn-secondary justify-start" href={`/admin/escuela/estudiantes/${student.id}/pikas-cash?school=${school}`}>Ver PIKAS Cash</Link>}
+      <Link className="btn-secondary justify-start" href={`/admin/escuela/estudiantes/${student.id}?school=${school}`}>Abrir ficha del estudiante</Link>
     </div></section>
   </TaskWindow>;
 }
@@ -167,7 +168,7 @@ function PlacementFields<V extends Place>({ data, values, set }: { data: SchoolR
     <Field label="Aula / grupo" required={false} value={values.homeroom} onChange={x => s("homeroom", x)} /></>;
 }
 
-function StudentInfoTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
+export function StudentInfoTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
   const school = data.scope.school_id;
   const command = useSchoolCommand(actorId, school, `student-update:${student.id}`, "student_update");
   const initial: Names = { first_name: student.first_name, last_name: student.last_name, student_code: student.student_code };
@@ -185,7 +186,7 @@ function StudentInfoTask({ data, student, actorId, onClose }: { data: SchoolRead
     success={{ title: "Información actualizada" }} onClose={onClose} />;
 }
 
-function StudentPlacementTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
+export function StudentPlacementTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
   const school = data.scope.school_id, operation = student.enrollment ? "student_transfer" : "student_enroll";
   const command = useSchoolCommand(actorId, school, `placement:${student.id}`, operation);
   const e = student.enrollment;
@@ -201,7 +202,7 @@ function StudentPlacementTask({ data, student, actorId, onClose }: { data: Schoo
     dirty={JSON.stringify(v) !== JSON.stringify(initial)} success={{ title: e ? "Matrícula actualizada" : "Estudiante matriculado" }} onClose={onClose} />;
 }
 
-function StudentWithdrawTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
+export function StudentWithdrawTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
   const command = useSchoolCommand(actorId, data.scope.school_id, `withdraw:${student.id}`, "student_withdraw");
   const [endsOn, setEndsOn] = useState("");
   if (!command.loaded) return null;
@@ -214,7 +215,7 @@ function StudentWithdrawTask({ data, student, actorId, onClose }: { data: School
     dirty={!!endsOn} success={{ title: "Matrícula retirada" }} onClose={onClose} />;
 }
 
-function StudentStatusTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
+export function StudentStatusTask({ data, student, actorId, onClose }: { data: SchoolRead; student: SchoolStudent; actorId: string; onClose: () => void }) {
   const command = useSchoolCommand(actorId, data.scope.school_id, `status:${student.id}`, "student_status");
   const [status, setStatus] = useState<string>(student.status);
   if (!command.loaded) return null;
