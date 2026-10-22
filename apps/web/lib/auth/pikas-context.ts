@@ -18,7 +18,9 @@ export type PikasMembership = {
   scopeKind: "account" | "school" | "cafeteria";
 };
 
-export type PikasPlatformRole = "platform_admin" | "platform_sandbox_operator";
+// platform_finance_operator (FIN 3) is recognised so a dedicated finance role can sign in once the
+// owner creates and grants it; authority still comes only from its capabilities.
+export type PikasPlatformRole = "platform_admin" | "platform_sandbox_operator" | "platform_finance_operator";
 
 export type PikasPlatformContext = {
   role: PikasPlatformRole;
@@ -29,6 +31,7 @@ export type PikasPlatformContext = {
 const platformRoleCodes = new Set<string>([
   "platform_admin",
   "platform_sandbox_operator",
+  "platform_finance_operator",
 ]);
 
 function isPlatformRole(value: unknown): value is PikasPlatformRole {

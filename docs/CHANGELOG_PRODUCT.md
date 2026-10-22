@@ -1,5 +1,20 @@
 # Registro de cambios del producto
 
+## Plataforma: Finanzas de PIKAS Cash (local)
+
+- Nuevo destino **Finanzas** en la Plataforma. Solo aparece con `platform:finance:read`, que no está otorgado a nadie.
+- **Por verificar:** transferencias bancarias pendientes, de la más antigua a la más reciente. Cada una muestra referencia, estudiante, cliente, el monto pagado, el cargo PIKAS (3 %) y lo que se acredita, además de la referencia bancaria y si hay comprobante.
+- **Historial:** decisiones recientes (verificadas, rechazadas y revertidas), con operador y fecha. Se puede buscar por referencia, cliente o estudiante y filtrar por estado.
+- **Revisión de una transferencia:** montos, quién recibe el crédito y la evidencia manual. PIKAS no confirma transacciones bancarias automáticamente.
+- **Acciones:**
+  - **Verificar** acredita el neto;
+  - **Rechazar** pide un motivo y no mueve dinero;
+  - **Revertir** solo procede si el crédito sigue disponible; si no, muestra que el caso requiere resolución financiera.
+
+  Cada acción requiere su propio permiso. Una solicitud ya procesada por otra persona o en otra pestaña lo indica sin duplicar nada.
+- **Colegio:** las acciones financieras de PIKAS aparecen como «Recarga por transferencia», «Reversión realizada por PIKAS» y «Ajuste realizado por PIKAS», registradas por PIKAS, sin el nombre del operador. El colegio ya no ve «Revertir recarga» en recargas con cargo PIKAS.
+- Sin activación de clientes, cobro en efectivo, liquidación ni reportes financieros. La compensación central sigue requiriendo aprobación legal y contable. Ver `docs/PIKAS_CASH_FINANCE_OPERATIONS.md`.
+
 ## PIKAS Cash: base financiera FIN 2 (local)
 
 - **Solo base de datos.** No hay pantallas, navegación, reportes ni carga de comprobantes nuevos. Ningún cliente queda activado y no se otorga ningún permiso.

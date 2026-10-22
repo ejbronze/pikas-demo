@@ -210,6 +210,14 @@ describe("multi-role platform context", () => {
       },
     ],
     [
+      "platform_finance_operator",
+      {
+        role: "platform_finance_operator",
+        roles: ["platform_finance_operator"],
+        capabilities: ["platform:finance:read", "platform:finance:replenishments:verify"],
+      },
+    ],
+    [
       "dual role",
       {
         role: "platform_admin",

@@ -13,7 +13,14 @@ import { WalletReversalDialog, loadPendingReversal, reversalJournalKey } from '.
 import { WalletRechargeTask, rechargeJournalKey } from './wallet-recharge-task';
 const reasonLabel = Object.fromEntries(reversalReasons) as Record<string,string>;
 const adjustmentLabel = Object.fromEntries(adjustmentReasons.map(([id,label])=>[id,label])) as Record<string,string>;
-const roleLabel: Record<string,string> = {account_admin:'Administración de cuenta',school_admin:'Administración escolar',cafeteria_admin:'Administración de cafetería'};
+const roleLabel: Record<string,string> = {account_admin:'Administración de cuenta',school_admin:'Administración escolar',cafeteria_admin:'Administración de cafetería',pikas:'PIKAS'};
+// FIN 3: PIKAS finance actions are attributed to PIKAS (the database withholds the operator).
+export const originLabel: Record<string,string> = {manual_verified:'Fondos manuales verificados',bank_transfer_verified:'Transferencia bancaria verificada por PIKAS',cafeteria_cash_collected:'Efectivo recibido en la cafetería'};
+type Movement = History['movements'][number];
+// Fee-era credits are reversed only by PIKAS finance (FIN 3); the School keeps legacy reversals.
+const feeEraSources=new Set(['bank_transfer_verified','cafeteria_cash_collected']);
+export const movementTypeLabel=(m:Movement)=>m.actor_kind==='pikas'?{replenishment:'Recarga por transferencia',adjustment:'Ajuste realizado por PIKAS',replenishment_reversal:'Reversión realizada por PIKAS'}[m.type as string]??'Movimiento de PIKAS':m.type==='adjustment'&&m.actor_role?'Ajuste administrativo':{replenishment:'Recarga verificada',purchase:'Compra',adjustment:'Ajuste histórico',refund:'Reembolso histórico',replenishment_reversal:'Reversión de recarga'}[m.type];
+export const movementActorLabel=(m:Movement)=>m.actor_kind==='pikas'?'PIKAS':m.actor??'Actor registrado';
 export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canReverse = false, canAdjust = false, back }: {schoolId:string;studentId:string;actorId:string;canReplenish:boolean;canReverse?:boolean;canAdjust?:boolean;back?:{href:string;label:string}}) {
   const key = rechargeJournalKey(actorId, schoolId, studentId);
   const [history,setHistory] = useState<History|null>(null);
@@ -38,7 +45,7 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     finally { setLoading(false); }
   },[schoolId,studentId]);
   useEffect(()=>{let alive=true;queueMicrotask(()=>{if(!alive)return;try{const stored=load(sessionStorage,key);if(stored&&(stored.school_id!==schoolId||stored.student_id!==studentId))throw Error();setPending(stored);setReady(true);try{setPendingReversal(loadPendingReversal(reversalJournalKey(actorId,schoolId,studentId))?.replenishment_id??null);}catch{setPendingReversal(null);}}catch{setMessage('No se puede recuperar la solicitud. Las recargas están bloqueadas.');}void read();});return()=>{alive=false;};},[key,actorId,schoolId,studentId,read]);
-  const typeLabel=(m:History['movements'][number])=>m.type==='adjustment'&&m.actor_role?'Ajuste administrativo':{replenishment:'Recarga verificada',purchase:'Compra',adjustment:'Ajuste histórico',refund:'Reembolso histórico',replenishment_reversal:'Reversión de recarga'}[m.type];
+  const typeLabel=movementTypeLabel;
   const when=(at:string)=>new Date(at).toLocaleString('es-DO',{timeZone:'America/Santo_Domingo',dateStyle:'medium',timeStyle:'short'});
   // One-line context from existing fields only; the full record is in "Ver detalle".
   const context=(m:History['movements'][number])=>m.type==='purchase'?[m.receipt_number?`Recibo #${m.receipt_number}`:null,m.cafeteria].filter(Boolean).join(' · '):m.type==='adjustment'&&m.actor_role?`Motivo: ${adjustmentLabel[m.adjustment_reason??'']??m.adjustment_reason??'—'}`:m.type==='replenishment_reversal'?`Motivo: ${reasonLabel[m.reversal_reason??'']??m.reversal_reason??'—'}`:m.reference?`Referencia: ${m.reference}`:'';
@@ -46,9 +53,9 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     ...(m.purchase_id?[['Recibo',`#${m.receipt_number??'—'}`],['Cafetería',m.cafeteria??'—']] as [string,React.ReactNode][]:[]),
     ...(m.type==='adjustment'&&m.actor_role?[['Motivo',adjustmentLabel[m.adjustment_reason??'']??m.adjustment_reason??'—'],['Rol',roleLabel[m.actor_role]??m.actor_role],...(m.cafeteria?[['Cafetería',m.cafeteria]]:[]),...(m.balance_before_minor?[['Saldo antes',<MoneyValue key="b" minor={m.balance_before_minor} intent="balance"/>]]:[])] as [string,React.ReactNode][]:[]),
     ...(m.type==='replenishment_reversal'?[['Motivo',reasonLabel[m.reversal_reason??'']??m.reversal_reason??'—'],...(m.reversal_note?[['Explicación',m.reversal_note]]:[]),...(m.original_reference?[['Referencia original',m.original_reference]]:[])] as [string,React.ReactNode][]:[]),
-    ...(m.replenishment_id?[['Origen','Fondos manuales verificados']] as [string,React.ReactNode][]:[]),
+    ...(m.replenishment_id?[['Origen',originLabel[m.source??'']??'Recarga verificada']] as [string,React.ReactNode][]:[]),
     ...(m.reference?[['Referencia',m.reference]] as [string,React.ReactNode][]:[]),...(m.note?[['Nota',m.note]] as [string,React.ReactNode][]:[]),
-    ['Registrado por',m.actor??'Actor registrado'],['Fecha',when(m.occurred_at)],['Saldo después',<MoneyValue key="a" minor={m.balance_after_minor} intent="balance"/>],
+    ['Registrado por',movementActorLabel(m)],['Fecha',when(m.occurred_at)],['Saldo después',<MoneyValue key="a" minor={m.balance_after_minor} intent="balance"/>],
   ];
   const ids=(m:History['movements'][number])=>[m.purchase_id&&`Compra ${m.purchase_id}`,m.replenishment_id&&`Recarga ${m.replenishment_id}`,m.reversed_replenishment_id&&`Revierte la recarga ${m.reversed_replenishment_id}`].filter(Boolean) as string[];
   return <div className="space-y-5">
@@ -71,13 +78,13 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     <section className="space-y-3" aria-labelledby="wallet-movements"><div><h2 id="wallet-movements" className="text-lg font-bold">Movimientos de PIKAS Cash</h2><p className="text-xs text-slate-600">Más recientes primero. El saldo de cada movimiento corresponde al momento de registrarlo.</p></div>
       {!history.movements.length&&<p className="card p-5">No hay movimientos registrados.</p>}
       {history.movements.length>0&&<ul className="card divide-y">{history.movements.map(m=><li className="space-y-2 break-words p-4" key={m.id}>
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1"><div className="min-w-0 flex-1 basis-48"><h3 className="font-bold">{typeLabel(m)}</h3><p className="text-sm text-slate-600">{when(m.occurred_at)} · {m.actor??'Actor registrado'}</p>{context(m)&&<p className="text-sm">{context(m)}</p>}
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1"><div className="min-w-0 flex-1 basis-48"><h3 className="font-bold">{typeLabel(m)}</h3><p className="text-sm text-slate-600">{when(m.occurred_at)} · {movementActorLabel(m)}</p>{context(m)&&<p className="text-sm">{context(m)}</p>}
           {m.type==='replenishment'&&m.reversal_id&&<p className="mt-1"><span className="chip bg-amber-100 text-amber-900">Revertida · {reasonLabel[m.reversal_reason??'']??m.reversal_reason}</span></p>}</div>
           <div className="text-right"><p className="text-lg font-black"><MoneyValue minor={m.amount_minor} intent="movement"/></p><p className="text-xs text-slate-600">Saldo después: <MoneyValue minor={m.balance_after_minor} intent="balance"/></p></div></div>
         <details className="group"><summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-teal-800">Ver detalle</summary><div className="mt-2 space-y-3"><TaskSummary rows={details(m)}/>
           {m.items.length>0&&<div><p className="text-sm font-bold">Artículos</p><ul className="text-sm">{m.items.map((i,n)=><li key={n} className="flex justify-between gap-3"><span>{i.quantity} × {i.name}</span><MoneyValue minor={i.line_total_minor} intent="amount"/></li>)}</ul></div>}
           {ids(m).map(text=><p key={text} className="break-all text-xs text-slate-500">{text}</p>)}</div></details>
-        {m.type==='replenishment'&&!m.reversal_id&&canReverse&&m.replenishment_id&&<button type="button" className="btn-secondary" onClick={()=>{setMessage('');setReversal({replenishmentId:m.replenishment_id!,amountMinor:m.amount_minor,reference:m.reference,note:m.note,occurredAt:m.occurred_at});}}>{pendingReversal===m.replenishment_id?'Recuperar reversión pendiente':'Revertir recarga'}</button>}</li>)}</ul>}
+        {m.type==='replenishment'&&!m.reversal_id&&canReverse&&m.replenishment_id&&!feeEraSources.has(m.source??'')&&<button type="button" className="btn-secondary" onClick={()=>{setMessage('');setReversal({replenishmentId:m.replenishment_id!,amountMinor:m.amount_minor,reference:m.reference,note:m.note,occurredAt:m.occurred_at});}}>{pendingReversal===m.replenishment_id?'Recuperar reversión pendiente':'Revertir recarga'}</button>}</li>)}</ul>}
       <div className="flex flex-wrap gap-3">{before&&<button className="btn-secondary" disabled={loading} onClick={()=>void read()}>Más recientes</button>}{history.next_before&&<button className="btn-secondary" disabled={loading} onClick={()=>void read(history.next_before)}>Movimientos anteriores</button>}</div>
     </section>
     {recharging&&<WalletRechargeTask schoolId={schoolId} studentId={studentId} studentName={history.student_name} actorId={actorId} balanceMinor={history.wallet?.balance_minor??'0'}

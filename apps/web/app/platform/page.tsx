@@ -19,6 +19,7 @@ const activityLabels: Record<string, string> = {
 const destinations = [
   { href: "/platform/clientes", title: "Clientes", text: "Consulta cuentas, su estructura y sus administradores.", allowed: (c: string[]) => c.includes("platform:tenant:lifecycle:read") },
   { href: "/platform/clientes/nuevo", title: "Agregar colegio", text: "Registra un colegio y prepara a su administrador.", allowed: (c: string[]) => c.includes("platform:tenant:provision") && c.includes("platform:customer_admin:provision") },
+  { href: "/platform/finanzas", title: "Finanzas", text: "Verifica transferencias bancarias de PIKAS Cash y revisa decisiones recientes.", allowed: (c: string[]) => c.includes("platform:finance:read") },
   { href: "/platform/equipo", title: "Equipo", text: "Operadores internos de PIKAS y sus accesos.", allowed: (c: string[]) => c.includes("platform:team:manage") },
   { href: "/platform/demostracion", title: "Demo", text: "Explora PIKAS en el entorno de demostración, separado de los clientes.", allowed: (c: string[]) => c.includes("platform:sandbox:pov:enter") },
 ];
@@ -39,8 +40,9 @@ export default async function PlatformHomePage() {
     }
   }
   const available = destinations.filter((d) => d.allowed(session.capabilities));
-  const administers = available.some((d) => d.href !== "/platform/demostracion");
-  return <><AppPageHeader title="PIKAS Admin" description={<>Hola, {session.identity.person.displayName}. {administers ? "Administra clientes y sus accesos desde aquí." : available.length ? "Tu acceso de PIKAS Admin incluye Demo." : "Tu acceso no incluye destinos administrativos."}</>} />
+  const administers = available.some((d) => d.href !== "/platform/demostracion" && d.href !== "/platform/finanzas");
+  const finance = available.some((d) => d.href === "/platform/finanzas");
+  return <><AppPageHeader title="PIKAS Admin" description={<>Hola, {session.identity.person.displayName}. {administers ? "Administra clientes y sus accesos desde aquí." : finance ? "Tu acceso incluye las operaciones financieras de PIKAS Cash." : available.length ? "Tu acceso de PIKAS Admin incluye Demo." : "Tu acceso no incluye destinos administrativos."}</>} />
     {available.length > 0 && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {available.map((d) => <Link key={d.href} className="card p-5" href={d.href}><h2 className="font-bold">{d.title}</h2><p>{d.text}</p></Link>)}
     </div>}

@@ -336,13 +336,12 @@ Opening liability and adjustments are never replenishment revenue.
   future recovery and accounting consideration.
 - **Activation path:** activation and ending are database/backend-only by design while the
   legal/accounting gate is open. There is no operator UI.
-- **Labels for finance actions:** the School wallet history shows finance-executed
-  adjustments and reversals with the raw role `platform_finance_operator` and the finance
-  operator's name. FIN 3 should label them and decide what the School sees.
+- **Labels for finance actions:** resolved in FIN 3. The School history shows finance
+  actions as PIKAS, and the operator stays in internal audit (`docs/PIKAS_CASH_FINANCE_OPERATIONS.md`).
 
 ## Handoff
 
-- **FIN 3, verification, collection and reversal:**
+- **FIN 3, verification and reversal:** delivered as Finanzas (`docs/PIKAS_CASH_FINANCE_OPERATIONS.md`). Collection moves to FIN 4. Original scope:
   - Platform finance UI on the decide, reverse, fund and read wrappers.
   - The School's view/escalation path for fee-era corrections and funded-adjustment requests.
   - The family/School submission wrapper.
