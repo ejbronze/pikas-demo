@@ -316,19 +316,25 @@ a.rpt-bar-row .rpt-bar-label{text-decoration:underline;text-underline-offset:3px
 .rpt-index-purpose{display:block;font-size:.875rem;color:var(--foreground-muted)}
 .rpt-generated{display:none!important}
 .rpt-print-footer{display:none}
+/* Report pages print on their own named page: intentional margins without touching POS receipt printing. */
+@page report{margin:14mm 12mm 16mm}
 @media print{
   body:has(.rpt) .admin-ux>aside,body:has(.rpt) .admin-ux>div>header,body:has(.rpt) .mobile-nav,body:has(.rpt) [data-print=hide],body:has(.rpt) .rpt-actions,body:has(.rpt) .rpt-back{display:none!important}
   body:has(.rpt),body:has(.rpt) .admin-ux{background:#fff}
   body:has(.rpt) .admin-ux{display:block;min-height:0}
   body:has(.rpt) .app-main{max-width:none;padding:0}
-  .rpt{gap:.9rem;color:#000}
+  .rpt{gap:.9rem;color:#000;page:report}
   .rpt-generated{display:flex!important}
   .rpt-print-footer{display:block;margin-top:.25rem;padding-top:.4rem;border-top:1px solid #bbb;font-size:.72rem;color:#53627c;break-inside:avoid}
   .rpt-filters>div{border-color:#999}
+  .rpt-summary dd.num-display{font-size:1.4rem;overflow-wrap:normal}
   .rpt-table-wrap,.rpt-summary>div,.sch-panel{border-color:#999;break-inside:avoid}
   .rpt-table thead{position:static;width:auto;height:auto;clip:auto}
   .rpt-table tr{display:table-row}
-  .rpt-table th[scope=row],.rpt-table td{display:table-cell;padding:.35rem .6rem;text-align:left;white-space:normal}
+  .rpt-table th[scope=row],.rpt-table td{display:table-cell;text-align:left;white-space:normal}
+  /* One horizontal inset for header, rows and the total row, so every column lines up on paper. */
+  .rpt-table thead th,.rpt-table tbody th[scope=row],.rpt-table tbody td,.rpt-table tfoot th[scope=row],.rpt-table tfoot td{padding:.35rem .6rem}
+  .rpt-table tfoot th[scope=row],.rpt-table tfoot td{padding-block:.5rem}
   .rpt-table-wrap{overflow:visible}
   .rpt-table td::before{content:none}
   .rpt-table [data-align=end]{text-align:right}
