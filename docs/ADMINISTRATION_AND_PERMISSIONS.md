@@ -53,8 +53,13 @@ Con un Demo vigente:
   operación de cafeterías, finanzas) se rechazan en el servidor antes de ejecutarse mientras el
   operador tiene un Demo vigente (`demoMutationBlock`, respuesta `403 demo_mode_active`), así que un
   formulario abierto en una pestaña antigua no cambia nada. Solo entrar, cambiar y salir del Demo
-  quedan permitidos. Operación de cafeterías, ciclo de vida y finanzas ya lo rechazaban además en la
-  base de datos; eso no cambia.
+  quedan permitidos. La base de datos aplica la misma regla (`202611130001`): cada RPC de mutación
+  real de la Plataforma sin protección propia (equipo, activaciones, administradores y accesos del
+  cliente, perfil, estructura, sedes, alta de colegios, identidades) empieza con
+  `pikas_private.require_no_current_demo()` y responde `42501 demo_mode_active` ante un POV vigente,
+  también en llamadas directas a PostgREST con el token del operador. Operación de cafeterías, ciclo
+  de vida, reserva de usuario y finanzas conservan sus guardas originales sin cambios; las lecturas,
+  los controles del Demo y el cambio de la propia contraseña no se tocan.
 - La autoridad no cambia: la base de datos sigue rechazando la operación real bajo un POV vigente,
   y el Demo no concede nada.
 
