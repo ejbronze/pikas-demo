@@ -2,14 +2,15 @@ import {NextRequest} from "next/server";
 import {beforeEach,describe,expect,it,vi} from "vitest";
 import {createHash} from "node:crypto";
 vi.mock("server-only",()=>({}));
-const mocks=vi.hoisted(()=>({rpc:vi.fn(),providerRpc:vi.fn(),create:vi.fn(),get:vi.fn()}));
+const mocks=vi.hoisted(()=>({rpc:vi.fn(),providerRpc:vi.fn(),create:vi.fn(),get:vi.fn(),demo:vi.fn()}));
+vi.mock('../../../../../lib/auth/demo-guard',()=>({demoMutationBlock:mocks.demo}));
 vi.mock('../../../../../lib/supabase/server',()=>({createSupabaseServerClient:async()=>({rpc:mocks.rpc})}));
 vi.mock('../../../../../lib/auth/activation',async original=>({...await original<typeof import('../../../../../lib/auth/activation')>(),activationOrigin:()=> 'https://pikas.example',invitationProvider:()=>({rpc:mocks.providerRpc,auth:{admin:{createUser:mocks.create,getUserById:mocks.get}}})}));
 import {POST} from './route';
 const id='4d8a0000-0000-4000-8000-000000000001',handle='b'.repeat(32),marker='c'.repeat(64),email='fictional@example.invalid';
 const owned={email,owner_key:marker,auth_id:id,ready:false};
 const request=(body:unknown={intentId:id},origin='https://pikas.example')=>new NextRequest('https://pikas.example/api/platform/customer-admins/activation',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)});
-beforeEach(()=>{vi.resetAllMocks();mocks.rpc.mockResolvedValue({data:{status:'prepared',handle,email}});mocks.providerRpc.mockResolvedValue({data:owned});mocks.get.mockResolvedValue({data:{user:{id,email,app_metadata:{pikas_activation_owner:marker}}}});mocks.create.mockResolvedValue({data:{user:{id}}});});
+beforeEach(()=>{vi.resetAllMocks();mocks.demo.mockResolvedValue(null);mocks.rpc.mockResolvedValue({data:{status:'prepared',handle,email}});mocks.providerRpc.mockResolvedValue({data:owned});mocks.get.mockResolvedValue({data:{user:{id,email,app_metadata:{pikas_activation_owner:marker}}}});mocks.create.mockResolvedValue({data:{user:{id}}});});
 describe('customer activation issuer',()=>{
  it('binds only digest to exact intent and returns an independent private app link',async()=>{const r=await POST(request());expect(r.status).toBe(200);const body=await r.json(),token=new URL(body.link).hash.slice(7);expect(token).toMatch(/^[0-9a-f]{64}$/);expect(body.delivery).toBe('link_only');expect(mocks.rpc.mock.calls[0]).toEqual(['platform_prepare_customer_activation',{p_intent_id:id}]);expect(mocks.rpc.mock.calls[1]).toEqual(['platform_bind_customer_activation',{p_intent_id:id,p_handle:handle,p_digest:createHash('sha256').update(token).digest('hex')}]);expect(JSON.stringify(mocks.rpc.mock.calls)).not.toContain(token);expect(body).not.toHaveProperty('auth_id');expect(r.headers.get('Cache-Control')).toBe('no-store');expect(r.headers.get('Referrer-Policy')).toBe('no-referrer');expect(mocks.create).not.toHaveBeenCalled();});
  it('creates passwordless provenance-owned identity only when absent',async()=>{mocks.providerRpc.mockResolvedValueOnce({data:{...owned,auth_id:null}});expect((await POST(request())).status).toBe(200);expect(mocks.create).toHaveBeenCalledExactlyOnceWith({email,email_confirm:false,app_metadata:{pikas_activation_owner:marker}});});
@@ -21,4 +22,7 @@ describe('customer activation issuer',()=>{
  it.each([{...owned,email:'wrong@example.invalid'},{...owned,auth_id:null}])('fails closed before binding on unresolved ownership',async context=>{mocks.providerRpc.mockResolvedValue({data:context});mocks.create.mockResolvedValue({error:{code:'exists'}});expect((await POST(request())).status).toBe(409);expect(mocks.rpc).toHaveBeenCalledTimes(1);});
  it('rejects a changed Auth provenance marker',async()=>{mocks.get.mockResolvedValue({data:{user:{id,email,app_metadata:{pikas_activation_owner:'wrong'}}}});expect((await POST(request())).status).toBe(503);expect(mocks.rpc).toHaveBeenCalledTimes(1);});
  it('never returns link if final source/session validation denies binding',async()=>{mocks.rpc.mockResolvedValueOnce({data:{status:'prepared',handle,email}}).mockResolvedValueOnce({error:{code:'42501'}});const r=await POST(request());expect(r.status).toBe(409);expect(await r.json()).not.toHaveProperty('link');});
+});
+describe('UX 11: customer-admin activation during a current Demo',()=>{
+ it('is refused before any reservation or provider operation',async()=>{mocks.demo.mockResolvedValue({error:'demo_mode_active',status:403});const r=await POST(request());expect(r.status).toBe(403);expect((await r.json()).error).toBe('demo_mode_active');expect(mocks.rpc).not.toHaveBeenCalled();expect(mocks.providerRpc).not.toHaveBeenCalled();});
 });

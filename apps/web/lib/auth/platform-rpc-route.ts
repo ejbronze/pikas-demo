@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { resolvePikasIdentity } from "@/lib/auth/pikas-context";
+import { demoMutationBlock } from "./demo-guard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<
@@ -23,6 +24,9 @@ type PlatformRpcPostOptions<TPayload, TResult> = {
   ) => PromiseLike<PlatformRpcResponse>;
   // Definite, user-correctable rejections returned as 422 with their code (never secrets).
   rejections?: (message: string | undefined) => boolean;
+  // UX 11: real Platform mutations are refused while the operator has a current Demo POV. Only the
+  // Demo controls themselves (enter, switch, exit) pass "allow".
+  demo?: "allow" | "block";
 };
 
 function hasSameOrigin(request: NextRequest): boolean {
@@ -51,6 +55,7 @@ export function createPlatformRpcPostHandler<TPayload, TResult>({
   resultSchema,
   invoke,
   rejections,
+  demo = "block",
 }: PlatformRpcPostOptions<TPayload, TResult>) {
   return async function POST(request: NextRequest) {
     if (!hasSameOrigin(request)) {
@@ -105,6 +110,11 @@ export function createPlatformRpcPostHandler<TPayload, TResult>({
         { error: "platform_authorization_required" },
         { status: 403 },
       );
+    }
+
+    if (demo !== "allow") {
+      const block = await demoMutationBlock(supabase, identity);
+      if (block) return NextResponse.json({ error: block.error }, { status: block.status });
     }
 
     let rpcResponse: PlatformRpcResponse;

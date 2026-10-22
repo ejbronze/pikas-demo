@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { rpc, getUser, updateUserById } = vi.hoisted(() => ({ rpc: vi.fn(), getUser: vi.fn(), updateUserById: vi.fn() }));
+const { rpc, getUser, updateUserById, demo } = vi.hoisted(() => ({ rpc: vi.fn(), getUser: vi.fn(), updateUserById: vi.fn(), demo: vi.fn() }));
+vi.mock('../../../lib/auth/demo-guard', () => ({ demoMutationBlock: demo }));
 vi.mock('../../../lib/supabase/server', () => ({ createSupabaseServerClient: vi.fn(async () => ({ rpc, auth: { getUser } })) }));
 vi.mock('../../../lib/auth/activation', () => ({
   invitationProvider: () => ({ auth: { admin: { updateUserById } } }),
@@ -19,6 +20,7 @@ const calls = () => rpc.mock.calls.map(c => c[0]);
 describe('Phase 6A identity support route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    demo.mockResolvedValue(null);
     getUser.mockResolvedValue({ data: { user: { id: 'operator' } } });
     updateUserById.mockImplementation(async (id: string, attrs: { email?: string }) => ({ data: { user: { id, email: attrs.email ?? 'cajera@example.invalid' } }, error: null }));
     rpc.mockImplementation(async (name: string) => {
@@ -105,5 +107,21 @@ describe('Phase 6A identity support route', () => {
   it('generated temporary passwords are random and long enough for the 10-character policy', () => {
     const set = new Set(Array.from({ length: 200 }, temporaryPassword));
     expect(set.size).toBe(200); for (const p of set) expect(p.length).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe('UX 11: identity mutations during a current Demo', () => {
+  beforeEach(() => { vi.clearAllMocks(); demo.mockResolvedValue({ error: 'demo_mode_active', status: 403 }); getUser.mockResolvedValue({ data: { user: { id: 'operator' } } }); });
+  it.each([
+    { operation: 'set_username', person_id: person, username: 'nuevo.usuario', expected_version: 2 },
+    { operation: 'temporary_access', person_id: person },
+    { operation: 'set_suspended', person_id: person, suspended: true, reason: 'Motivo ficticio de prueba' },
+  ])('refuses %j before any identity RPC', async (body) => {
+    const response = await post(body);
+    expect(response.status).toBe(403); expect((await response.json()).error).toBe('demo_mode_active'); expect(rpc).not.toHaveBeenCalled(); expect(updateUserById).not.toHaveBeenCalled();
+  });
+  it('reads stay available (the Demo guard is a mutation guard)', async () => {
+    rpc.mockResolvedValue({ data: summary(), error: null });
+    expect((await post({ operation: 'read', person_id: person })).status).toBe(200); expect(demo).not.toHaveBeenCalled();
   });
 });

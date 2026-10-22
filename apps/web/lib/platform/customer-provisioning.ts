@@ -18,6 +18,7 @@ export const renamePersonSchema = z.object({ accountId: id, personId: id, expect
 export const renamePersonResultSchema = z.object({ person_id: id, display_name: z.string() });
 export const staffActivationSchema = z.object({ accountId: id, cafeteriaId: id, invitationId: id }).strict();
 export const provisioningMessages: Record<string, string> = {
+  "demo_mode_active": "Estás en modo Demo. Sal del Demo para trabajar con clientes reales. No se realizó ningún cambio.",
   customer_person_required: "Esta persona no pertenece solo a este cliente; no se puede modificar desde aquí.",
   active_confirmed_pos_identity_required: "La persona debe tener un inicio de sesión activo y confirmado antes de recibir este acceso.",
   existing_membership_not_active: "Ya tiene ese acceso, pero inactivo. Reactivarlo no forma parte de esta acción.",

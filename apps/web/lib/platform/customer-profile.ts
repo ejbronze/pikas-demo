@@ -22,6 +22,7 @@ export const renameRequestSchema = z.object({ accountId: z.guid(), kind: z.enum(
 export type RenameRequest = z.infer<typeof renameRequestSchema>;
 export const renameResultSchema = z.object({ account_id: z.guid(), kind: z.enum(["location", "cafeteria"]), target_id: z.guid(), name: z.string() });
 export const profileMessages: Record<string, string> = {
+  "demo_mode_active": "Estás en modo Demo. Sal del Demo para trabajar con clientes reales. No se realizó ningún cambio.",
   invalid_customer_profile_input: "Revisa el nombre (hasta 200 caracteres), el RNC (9 u 11 dígitos) y la dirección (hasta 300 caracteres).",
   invalid_customer_structure_input: "Revisa el nombre (hasta 200 caracteres).",
   unsupported_school_region: "Selecciona una provincia de República Dominicana.",

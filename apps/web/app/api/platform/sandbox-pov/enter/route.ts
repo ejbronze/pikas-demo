@@ -14,6 +14,7 @@ const resultSchema = z.object({
 
 export const POST = createPlatformRpcPostHandler({
   capability: "platform:sandbox:pov:enter",
+  demo: "allow",
   schema: enterSchema,
   resultSchema,
   invoke: (supabase, payload, requestId) =>

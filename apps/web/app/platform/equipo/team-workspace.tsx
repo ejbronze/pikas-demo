@@ -24,7 +24,7 @@ export function TeamWorkspace({data}:{data:TeamRead}) {
    const request=pending??prepareTeam(sessionStorage,storageKey,command);setPending(request);
    await confirmTeam(sessionStorage,storageKey,request);
    setPending(null);setMessage(request.command.operation==='prepare'?'Acceso preparado. No se envió correo ni se concedió autoridad.':'Cambio confirmado.');router.refresh();return true;
-  }catch{setMessage('La solicitud sigue sin confirmar. Conservamos su clave y datos. Comprueba el acceso y la identidad activada; reintenta la misma solicitud.');return false;}
+  }catch(error){setMessage(error instanceof Error&&error.message==='authorization'?'PIKAS rechazó la solicitud: no tienes permiso para esta operación o estás en modo Demo. No se realizó ningún cambio.':'La solicitud sigue sin confirmar. Conservamos su clave y datos. Comprueba el acceso y la identidad activada; reintenta la misma solicitud.');return false;}
   finally{inFlight.current=false;setBusy(false);}
  }
  return <>

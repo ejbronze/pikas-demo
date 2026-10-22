@@ -28,6 +28,7 @@ export type IdentitySummary = z.infer<typeof identitySummarySchema>;
 export const identityResponseSchema = z.object({ result: identitySummarySchema.nullable(), temporary_password: z.string().min(10).optional() });
 
 export const identityErrors: Record<string, string> = {
+  demo_mode_active: 'Estás en modo Demo. Sal del Demo para gestionar identidades reales. No se realizó ningún cambio.',
   identity_support_required: 'No tienes permiso para gestionar el acceso de esta persona.',
   invalid_identifier: 'Escribe un correo o un usuario completo.',
   invalid_username: 'Ese usuario no es válido.',

@@ -6,6 +6,7 @@
 - **Salir del Demo** está disponible desde cualquier lugar del Demo: Plataforma, Escuela Demo, Cafetería Demo y Caja/POS. Al salir se vuelve a `/platform` con la navegación normal.
 - Abrir una ruta real (clientes, operación de cafeterías, equipo, identidades, finanzas) con un Demo vigente muestra «Estás en modo Demo», con **Salir del Demo y continuar** o **Volver al Demo**, en lugar de un «cafetería no encontrada» engañoso. Las URL manuales, los marcadores y las pestañas antiguas reciben lo mismo al recargar.
 - Entrar al Demo sigue siendo deliberado desde **Demo**; no hay interruptor global. Un Demo vencido o salido no bloquea nada.
+- Con un Demo vigente, las mutaciones reales de la Plataforma (equipo, identidades, clientes, accesos, finanzas) se rechazan en el servidor antes de ejecutarse («Estás en modo Demo…»), también desde pestañas antiguas. Entrar, cambiar y salir del Demo siguen funcionando.
 - Sin migración, sin cambios de autoridad ni de permisos. Ver `docs/ADMINISTRATION_AND_PERMISSIONS.md`.
 
 ## Plataforma: Finanzas de PIKAS Cash (local)

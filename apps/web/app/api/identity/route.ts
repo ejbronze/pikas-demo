@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '../../../lib/supabase/server';
 import { invitationProvider, sameOrigin } from '../../../lib/auth/activation';
 import { identityCommandSchema, identityErrors, identitySummarySchema } from '../../../lib/identity/contracts';
 import { temporaryPassword } from '../../../lib/identity/temporary-password';
+import { demoMutationBlock } from '../../../lib/auth/demo-guard';
 
 // Phase 6A identity support. Authority (Platform support or tenant scope) is decided by the database
 // for every step; the service role is used only for Auth-admin changes on the SAME Auth user. A
@@ -26,6 +27,11 @@ export async function POST(request: Request) {
     const client = await createSupabaseServerClient();
     const { data: auth } = await client.auth.getUser();
     if (!auth.user) return json({ error: 'authentication_required' }, 401);
+    // UX 11: a Platform operator in a current Demo cannot change real identities (reads stay available).
+    if (!['lookup', 'read', 'read_membership'].includes(op.operation)) {
+      const block = await demoMutationBlock(client);
+      if (block) return json({ error: block.error }, block.status);
+    }
     const call = (name: string, args: Record<string, unknown>) => client.rpc(name, args) as unknown as Promise<{ data: unknown; error: RpcError }>;
     const summary = (data: unknown) => { const r = identitySummarySchema.safeParse(data); return r.success ? r.data : null; };
     const read = async (personId: string) => {

@@ -2,6 +2,7 @@ import { NextRequest,NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '../../../../../lib/supabase/server';
 import { activationHandle,activationOrigin,digestActivation,invitationProvider,sameOrigin,newActivationToken,providerContext,inspectOwnedIdentity } from '../../../../../lib/auth/activation';
+import { demoMutationBlock } from '../../../../../lib/auth/demo-guard';
 const input = z.object({handle:activationHandle}).strict();
 const prepared = z.object({handle:activationHandle,email:z.email()}).strict();
 export async function POST(request:NextRequest) {
@@ -12,6 +13,7 @@ export async function POST(request:NextRequest) {
   // Configuration is checked before any side effect. No browser-supplied email or Auth ID.
   const origin = activationOrigin(),provider = invitationProvider();
   const client = await createSupabaseServerClient();
+  const block = await demoMutationBlock(client); if (block) return NextResponse.json({error:block.error},{status:block.status});
   const reservation = await client.rpc('platform_prepare_activation',{p_team_handle:command.data.handle});
   if (reservation.error) return NextResponse.json({error:'invitation_unavailable'},{status:reservation.error.code==='42501'?403:409});
   const intent = prepared.parse(reservation.data);

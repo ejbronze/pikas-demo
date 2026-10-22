@@ -48,6 +48,13 @@ Con un Demo vigente:
   marcadores y las pestañas antiguas reciben lo mismo al recargar; nunca un «cliente/cafetería no
   encontrado» engañoso. Un «no encontrado» real (cliente inválido o cafetería de otro cliente) sigue
   igual que antes.
+- Las mutaciones reales de la Plataforma (equipo e invitaciones, identidades, administradores y
+  accesos del cliente, perfil y estructura del cliente, sedes, alta de colegios, ciclo de vida,
+  operación de cafeterías, finanzas) se rechazan en el servidor antes de ejecutarse mientras el
+  operador tiene un Demo vigente (`demoMutationBlock`, respuesta `403 demo_mode_active`), así que un
+  formulario abierto en una pestaña antigua no cambia nada. Solo entrar, cambiar y salir del Demo
+  quedan permitidos. Operación de cafeterías, ciclo de vida y finanzas ya lo rechazaban además en la
+  base de datos; eso no cambia.
 - La autoridad no cambia: la base de datos sigue rechazando la operación real bajo un POV vigente,
   y el Demo no concede nada.
 

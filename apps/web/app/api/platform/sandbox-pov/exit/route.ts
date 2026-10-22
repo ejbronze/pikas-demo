@@ -7,6 +7,7 @@ const resultSchema = z.object({ status: z.literal("exited") });
 
 export const POST = createPlatformRpcPostHandler({
   capability: "platform:sandbox:pov:enter",
+  demo: "allow",
   schema: exitSchema,
   resultSchema,
   invoke: async (supabase, _payload, requestId) => {

@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../../lib/supabase/server";
 import { resolvePikasIdentity } from "@/lib/auth/pikas-context";
+import { demoMutationBlock } from "../../../../../lib/auth/demo-guard";
 import { activationHandle,activationOrigin,digestActivation,invitationProvider,sameOrigin,newActivationToken,providerContext,inspectOwnedIdentity } from "../../../../../lib/auth/activation";
 import { CUSTOMER_ACCESS_PROVISION, staffActivationSchema } from "../../../../../lib/platform/customer-provisioning";
 import { z } from "zod";
@@ -15,6 +16,7 @@ export async function POST(request:NextRequest){
   const origin=activationOrigin(),provider=invitationProvider(),client=await createSupabaseServerClient();
   const identity=await resolvePikasIdentity(client);
   if(identity.status!=="ready"||!identity.platform?.capabilities.includes(CUSTOMER_ACCESS_PROVISION))return fail("platform_authorization_required",403);
+  const block=await demoMutationBlock(client,identity);if(block)return fail(block.error,block.status);
   const scope={p_account_id:command.data.accountId,p_cafeteria_id:command.data.cafeteriaId,p_invitation_id:command.data.invitationId};
   const prepared=await client.rpc("platform_staff_activation_prepare",scope);
   if(prepared.error)return fail(prepared.error.message==="activation_identity_unavailable"?"identity_unavailable":"invitation_unavailable",prepared.error.code==="42501"?403:409);

@@ -9,6 +9,7 @@ import { sandboxDestination } from "../../../../../lib/platform/sandbox-pov";
 // supersession, four-hour expiry, real-operator binding and audit.
 const handleSwitch = createPlatformRpcPostHandler({
   capability: "platform:sandbox:pov:enter",
+  demo: "allow",
   schema: z.object({ experience: demoExperienceSchema }).strict(),
   resultSchema: z.object({ destination: z.string(), session_id: z.uuid() }).strict(),
   invoke: async (supabase, payload, requestId) => {
