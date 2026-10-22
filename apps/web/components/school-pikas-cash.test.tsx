@@ -1,6 +1,5 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-vi.mock("./school-wallet-report", () => ({ SchoolWalletReport: () => React.createElement("div", { "data-report": "embedded" }) }));
 vi.mock("next/image", () => ({ default: (p: { alt: string }) => React.createElement("img", { alt: p.alt }) }));
 (globalThis as { React?: typeof React }).React = React;
 import { renderToStaticMarkup } from "react-dom/server";
@@ -45,10 +44,14 @@ describe("School PIKAS Cash", () => {
     const err = text(html({ overview: null, students: null, attentionCount: null }));
     expect(err).toContain("No pudimos cargar el resumen"); expect(err).toContain("No pudimos cargar los monederos"); expect(err).not.toContain("Todo en orden");
   });
-  it("offers no wallet actions on the list and keeps the period report secondary", () => {
+  it("offers no wallet actions on the list; period reporting lives in Reportes, not on this page", () => {
     const h = html(), t = text(h);
     expect(t).not.toMatch(/Recargar|Congelar|Descongelar|Ajustar|Revertir/); expect(h).not.toContain("<form method=\"post\"");
-    expect(h).toMatch(/<details[^>]*>.*Reporte de movimientos por período.*data-report="embedded"/s);
+    expect(h).not.toContain("<details"); expect(t).not.toMatch(/Movimientos del período|Recargas netas|Movimiento neto/);
+    expect(h).toContain(`href="/admin/escuela/reportes/pikas-cash?school=${school}"`); expect(t).toContain("Ver reportes de PIKAS Cash");
+  });
+  it("Monederos con movimiento opens the PIKAS Cash report for the same seven days", () => {
+    expect(html()).toContain(`href="/admin/escuela/reportes/pikas-cash?school=${school}&amp;period=last_7_days"`);
   });
   it("search and paging keep the school", () => {
     const h = html({ query: "Ana", paged: true, nextCursor: ana });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { customRangeError, reportPeriods } from '../cafeteria/reports';
+import { reportPeriods } from '../cafeteria/reports';
 
 // Phase 5D.5 School PIKAS Cash report (public.school_wallet_report). Every total is computed by the
 // database from the school's wallet ledger; the browser validates and formats. This is wallet
@@ -9,10 +9,6 @@ const amount = z.string().regex(/^(0|[1-9][0-9]*)$/);
 const signed = z.string().regex(/^(0|-?[1-9][0-9]*)$/);
 const count = z.number().int().min(0);
 const tally = z.object({ amount_minor: amount, count }).strict();
-
-export const walletReportRequestSchema = z.object({
-  school_id: z.guid(), period: z.enum(reportPeriods), from: isoDate.nullable(), to: isoDate.nullable(),
-}).strict().refine(r => r.period === 'custom' ? r.from !== null && r.to !== null && customRangeError(r.from, r.to) === null : r.from === null && r.to === null);
 
 export const walletReportSchema = z.object({
   school_id: z.guid(), tenant_kind: z.enum(['customer', 'sandbox']), business_timezone: z.string().min(1), currency_code: z.literal('DOP'),
@@ -26,7 +22,7 @@ export const walletReportSchema = z.object({
 }).strict();
 export type WalletReport = z.infer<typeof walletReportSchema>;
 
-// What the School browser receives (UX 7): the report without the per-cafetería breakdown. School sees
-// its students' wallets, not where they spent by cafetería; the RPC result is still validated in full first.
+// What School pages render (UX 7, UX 8 Reportes): the report without the per-cafetería breakdown. School
+// sees its students' wallets, not where they spent by cafetería; the RPC result is validated in full first.
 export const walletReportViewSchema = walletReportSchema.omit({ cafeterias: true });
 export type WalletReportView = z.infer<typeof walletReportViewSchema>;

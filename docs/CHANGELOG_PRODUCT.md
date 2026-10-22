@@ -1,5 +1,23 @@
 # Registro de cambios del producto
 
+## Escuela: Reportes (local)
+
+- Nuevo destino **Reportes** (`/admin/escuela/reportes`) en la navegación escolar. En el escritorio va al final de la barra lateral; en el móvil está en «Más», así que la barra inferior no cambia.
+- La página de inicio lista solo los reportes que el rol puede abrir:
+  - **Estudiantes:** filtros de estado, campus y grado; resumen (total, activos, suspendidos, inactivos); «Estudiantes por grado», donde cada barra filtra el reporte a ese grado; y la tabla completa con los filtros aplicados.
+  - **PIKAS Cash:** el reporte de movimientos por período, que deja de estar en la página PIKAS Cash. Período Hoy, 7 días, 30 días o Personalizado (hasta 92 días). Muestra movimiento neto, recargas netas, monederos con movimiento, la tabla de movimientos (recargas, reversiones, compras, reembolsos, ajustes y ajustes históricos) y el estado actual de los monederos. Sin desglose por cafetería, sin productos y sin rankings.
+  - **Cafeterías conectadas:** cafetería, sede, estado, compartición, información compartida y estudiantes habilitados. Sin ventas ni datos de caja.
+- **Filtros en la URL:** cada reporte se puede recargar o guardar como marcador, y un enlace abre el mismo reporte filtrado para alguien con la misma autoridad.
+- **Imprimir:** solo el reporte, con el nombre del colegio, los filtros y la fecha de generación.
+- **Exportar CSV:** el resultado completo con los filtros aplicados, igual al reporte.
+- **Del resumen al reporte:**
+  - «Estudiantes activos» en Resumen abre Reportes / Estudiantes con el estado Activo;
+  - «Monederos con movimiento», en Resumen y en PIKAS Cash, abre Reportes / PIKAS Cash con los mismos 7 días.
+
+  Las cifras coinciden porque el reporte usa la misma lectura y el mismo filtro.
+- **PIKAS Cash** (página operativa) ya no incluye el reporte plegado. Muestra «Ver reportes de PIKAS Cash».
+- Sin migraciones ni permisos nuevos. Cada reporte usa una lectura escolar existente, reducida en el servidor. Se pospone Administración y accesos (no hay historial de accesos) y Actividad (la lectura muestra solo los últimos eventos, sin fechas ni paginación). Ver `docs/REPORTING_FOUNDATION.md`.
+
 ## Escuela: PIKAS Cash del colegio (local)
 
 - **PIKAS Cash** (`/admin/escuela/pikas-cash`) ahora sirve para administrar los monederos de los estudiantes. No muestra ventas de cafetería ni compras de estudiantes. Solo aparece con `school:wallets:read`; el punto de vista de sandbox sigue sin datos financieros.

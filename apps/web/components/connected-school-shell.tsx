@@ -2,10 +2,11 @@
 import { DemoEnvironmentBar } from "./demo-environment-bar";
 import { AdministrativeShell, type ShellNavItem } from "./administrative-shell";
 import type { SchoolContext } from "../lib/school/contracts";
-const items = [["", "Resumen", "home"], ["/estudiantes", "Estudiantes", "users"], ["/pikas-cash", "PIKAS Cash", "wallet"], ["/administradores", "Administradores", "shield"], ["/cafeterias", "Cafeterías conectadas", "utensils"], ["/actividad", "Actividad", "receipt"]] as const;
+const items = [["", "Resumen", "home"], ["/estudiantes", "Estudiantes", "users"], ["/pikas-cash", "PIKAS Cash", "wallet"], ["/administradores", "Administradores", "shield"], ["/cafeterias", "Cafeterías conectadas", "utensils"], ["/actividad", "Actividad", "receipt"], ["/reportes", "Reportes", "chart"]] as const;
 const roles = { account_admin: { area: "Administración de cuenta", role: "Administrador de cuenta" }, school_admin: { area: "Administración escolar", role: "Administrador escolar" } } as const;
 // role comes from the server-validated school read when one exists; otherwise the label stays neutral.
-// PIKAS Cash (5D.5 report) is listed only when the server-derived wallet read grants school:wallets:read.
+// PIKAS Cash is listed only when the server-derived wallet read grants school:wallets:read. Reportes (UX 8)
+// comes last: on mobile it joins «Más», so the approved bottom bar keeps its four destinations.
 export function ConnectedSchoolShell({ context, schoolId, role, walletNav = false, children }: { context: SchoolContext; schoolId: string; role?: keyof typeof roles; walletNav?: boolean; children: React.ReactNode }) {
   const scope = context.schools.find(s => s.school_id === schoolId)!;
   const nav: ShellNavItem[] = items.filter(([suffix]) => walletNav || suffix !== "/pikas-cash").map(([suffix, label, icon]) => ({ href: `/admin/escuela${suffix}?school=${schoolId}`, label, icon, match: `/admin/escuela${suffix}`, exact: suffix === "" }));

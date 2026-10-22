@@ -56,3 +56,12 @@ describe("School Overview", () => {
     expect(html).not.toMatch(/Estudiante \d|ranking|más compr/i);
   });
 });
+
+describe("School Overview → Reportes (UX 8)", () => {
+  it("Estudiantes activos and Monederos con movimiento open the matching filtered report", () => {
+    const html = render(inputs());
+    expect(html).toContain(`href="/admin/escuela/reportes/estudiantes?school=${schoolId}&amp;status=active"`);
+    expect(html).toContain(`href="/admin/escuela/reportes/pikas-cash?school=${schoolId}&amp;period=last_7_days"`);
+    expect(render(inputs({ wallet: null }))).not.toContain("/reportes/pikas-cash");
+  });
+});

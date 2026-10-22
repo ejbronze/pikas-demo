@@ -3,9 +3,11 @@ import Link from "next/link";
 import { money } from "../lib/cafeteria/operations";
 import { schoolAttention, serviceChecks, type OverviewInputs } from "../lib/school/overview";
 import type { SchoolRead } from "../lib/school/contracts";
+import { TraceLink } from "./report-frame";
 
 // PIKAS UX 4: the School Admin home. Students, access and service only; no cafeteria sales, tickets,
 // tenders, products, cajas or cashier data. Wallet figures appear only with school:wallets:read.
+// UX 8: two figures open the matching filtered report, which reconciles to the figure (same read, same filter).
 const n = (k: number, one: string, many: string) => `${k.toLocaleString("es-DO")} ${k === 1 ? one : many}`;
 const day = (iso: string) => iso.split("-").reverse().slice(0, 2).join("/");
 
@@ -27,11 +29,11 @@ export function SchoolOverview({ data, overview }: { data: SchoolRead; overview:
         ? <div className="sch-empty"><Image src="/brand/pikas-logo-mark-full-color.png" alt="" width={44} height={44} className="rounded-xl" />
             <div><p className="font-bold">Aún no hay estudiantes en este colegio.</p><p className="text-sm text-slate-600">Agrégalos uno por uno o importa un archivo CSV desde Estudiantes.</p></div></div>
         : <dl className="sch-figures">
-          <div><dt>Estudiantes activos</dt><dd className="num-display">{counts.active.toLocaleString("es-DO")}</dd>
+          <div><dt>Estudiantes activos</dt><dd className="num-display"><TraceLink href={`/admin/escuela/reportes/estudiantes?school=${data.scope.school_id}&status=active`} label={`${counts.active} estudiantes activos: ver el reporte de estudiantes activos`}>{counts.active.toLocaleString("es-DO")}</TraceLink></dd>
             <dd className="sch-help">{counts.suspended || counts.inactive ? [counts.suspended ? n(counts.suspended, "suspendido", "suspendidos") : "", counts.inactive ? n(counts.inactive, "inactivo", "inactivos") : ""].filter(Boolean).join(" · ") : `de ${n(counts.students, "estudiante registrado", "estudiantes registrados")}`}</dd></div>
           {wallet && <>
             <div><dt>Con PIKAS Cash</dt><dd className="num-display">{wallet.active_wallets.toLocaleString("es-DO")}</dd><dd className="sch-help">{wallet.active_wallets === 1 ? "monedero activo" : "monederos activos"}</dd></div>
-            <div><dt>Monederos con movimiento</dt><dd className="num-display">{wallet.wallets_with_movement.toLocaleString("es-DO")}</dd><dd className="sch-help">monederos con recargas, compras o ajustes · {day(wallet.from)} al {day(wallet.to)}</dd></div>
+            <div><dt>Monederos con movimiento</dt><dd className="num-display"><TraceLink href={`/admin/escuela/reportes/pikas-cash?school=${data.scope.school_id}&period=last_7_days`} label={`${wallet.wallets_with_movement} monederos con movimiento: ver el reporte de PIKAS Cash de estas fechas`}>{wallet.wallets_with_movement.toLocaleString("es-DO")}</TraceLink></dd><dd className="sch-help">monederos con recargas, compras o ajustes · {day(wallet.from)} al {day(wallet.to)}</dd></div>
             <div><dt>Saldo de estudiantes</dt><dd className="num-display">{money(wallet.total_balance_minor)}</dd><dd className="sch-help">suma de los saldos de PIKAS Cash de los estudiantes</dd></div>
           </>}
         </dl>}

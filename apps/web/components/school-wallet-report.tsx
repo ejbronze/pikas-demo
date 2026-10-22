@@ -1,91 +1,37 @@
-'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { sessionFetch } from '../lib/auth/session-fetch';
-import { customRangeError, maxReportDays, reportErrors, type ReportPeriod } from '../lib/cafeteria/reports';
-import { walletReportViewSchema, type WalletReportView } from '../lib/school/wallet-report';
-import { AppPageHeader } from './app-page-header';
-import { MetricCard } from './metric-card';
 import { MoneyValue } from './money-value';
-import { EmptyState, ErrorState } from './state-panels';
+import { ReportSummary, ReportTable } from './report-frame';
+import { walletLines } from '../lib/school/reports';
+import { reportDay } from '../lib/reports/filters';
+import type { WalletReportView } from '../lib/school/wallet-report';
 
-const periods: [ReportPeriod, string][] = [['today', 'Hoy'], ['last_7_days', 'Últimos 7 días'], ['last_30_days', 'Últimos 30 días'], ['custom', 'Personalizado']];
-const neg = (minor: string) => minor === '0' ? '0' : `-${minor}`;
-const times = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-type Range = { from: string; to: string } | null;
+// Phase 5D.5 School PIKAS Cash report, rehomed in School Reportes (UX 8). Every number is returned by
+// school_wallet_report for the period in the URL; this component formats it and never adds amounts.
+// Wallet movement of this school's students only: no per-cafetería breakdown (removed in UX 7), no
+// products, no per-student spending.
+const times = (n: number, one: string, many: string) => `${n.toLocaleString('es-DO')} ${n === 1 ? one : many}`;
 
-// Phase 5D.5 School PIKAS Cash report: wallet activity of this school's students only. Every number
-// is returned by school_wallet_report; this component formats it and never adds amounts.
-// `embedded` (UX 7): rendered inside School PIKAS Cash as a secondary report, without its own header or
-// "Ahora" snapshot (the page above already shows the current wallet state).
-export function SchoolWalletReport({ schoolId, embedded = false }: { schoolId: string; embedded?: boolean }) {
-  const [period, setPeriod] = useState<ReportPeriod>('last_30_days'), [range, setRange] = useState<Range>(null), [draft, setDraft] = useState({ from: '', to: '' }), [rangeError, setRangeError] = useState('');
-  const [report, setReport] = useState<WalletReportView | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true), [revision, setRevision] = useState(0);
-  const latest = useRef(0);
-  const load = useCallback(async (selected: ReportPeriod, custom: Range) => {
-    const id = ++latest.current; setLoading(true); setError('');
-    try {
-      const response = await sessionFetch('/api/school/wallet-report', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ school_id: schoolId, period: selected, from: custom?.from ?? null, to: custom?.to ?? null }) });
-      const payload = await response.json().catch(() => ({}));
-      if (id !== latest.current) return;
-      if (!response.ok) { setReport(null); setError(reportErrors[payload.error] ?? (response.status === 403 ? 'Tu rol no puede consultar el reporte de PIKAS Cash de esta escuela.' : 'No se pudo cargar el reporte de PIKAS Cash.')); return; }
-      const parsed = walletReportViewSchema.safeParse(payload.result);
-      if (!parsed.success || parsed.data.school_id !== schoolId || parsed.data.period !== selected) throw Error();
-      setReport(parsed.data);
-    } catch { if (id === latest.current) { setReport(null); setError('No se pudo cargar el reporte de PIKAS Cash.'); } }
-    finally { if (id === latest.current) setLoading(false); }
-  }, [schoolId]);
-  useEffect(() => { if (period === 'custom' && !range) return; queueMicrotask(() => void load(period, period === 'custom' ? range : null)); }, [period, range, revision, load]);
-  const r = report, m = r?.movements, c = r?.current;
-  const range_label = r ? (r.from === r.to ? r.from : `${r.from} – ${r.to}`) : '';
-  return <section className="space-y-5">
-    {!embedded && <AppPageHeader title="PIKAS Cash" description="Saldo y movimientos de PIKAS Cash de los estudiantes de esta escuela. No incluye ventas en efectivo ni otras formas de pago."
-      action={<button className="btn-secondary" onClick={() => setRevision(v => v + 1)}>Actualizar</button>} />}
-    {error && !r ? <ErrorState title={error} retry={<button className="btn-secondary" onClick={() => setRevision(v => v + 1)}>Reintentar</button>} /> : null}
-    {c && !embedded && <section aria-labelledby="wallet-now" className="space-y-3">
-      <h2 id="wallet-now" className="text-lg font-black">Ahora</h2>
-      {c.wallet_count === 0 ? <EmptyState title="Aún no hay monederos PIKAS Cash en esta escuela." description="Se crean con la primera recarga de un estudiante." />
-        : <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <MetricCard label="Saldo PIKAS Cash total" help={`En ${times(c.wallet_count, 'monedero', 'monederos')} de estudiantes, ahora. No depende del período.`}><MoneyValue minor={c.total_balance_minor} intent="balance" /></MetricCard>
-          <MetricCard label="Monederos" help={c.frozen_wallet_count ? `${c.frozen_wallet_count} congelado${c.frozen_wallet_count === 1 ? '' : 's'}` : 'Ninguno congelado'}>{c.active_wallet_count} activos</MetricCard>
-          {c.negative_wallet_count > 0 && <MetricCard label="Saldos negativos" help={`${times(c.negative_wallet_count, 'monedero', 'monederos')} por debajo de cero`}><MoneyValue minor={c.negative_balance_minor} intent="balance" /></MetricCard>}
-        </dl>}
-    </section>}
-    <section aria-labelledby="wallet-period" className="space-y-3">
-      <h2 id="wallet-period" className="text-lg font-black">Movimientos del período</h2>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Período del reporte">{periods.map(([value, label]) => <button key={value} type="button" aria-pressed={period === value} className={`min-h-11 ${period === value ? 'btn' : 'btn-secondary'}`}
-        onClick={() => { setRangeError(''); setPeriod(value); }}>{label}</button>)}</div>
-      {period === 'custom' && <form className="card flex flex-wrap items-end gap-3 p-4" noValidate onSubmit={event => { event.preventDefault(); const problem = customRangeError(draft.from, draft.to); setRangeError(problem ?? ''); if (!problem) setRange({ ...draft }); }}>
-        <label className="block min-w-0 font-bold">Desde<input type="date" className="field mt-1" value={draft.from} max={r?.today} onChange={e => setDraft({ ...draft, from: e.target.value })} /></label>
-        <label className="block min-w-0 font-bold">Hasta<input type="date" className="field mt-1" value={draft.to} max={r?.today} onChange={e => setDraft({ ...draft, to: e.target.value })} /></label>
-        <button className="btn-secondary">Aplicar fechas</button><p className="basis-full text-sm text-slate-600">Hasta {maxReportDays} días, por fecha de operación de la escuela.</p>
-        {rangeError && <p role="alert" className="basis-full text-sm font-bold text-red-800">{rangeError}</p>}</form>}
-      {loading && <p role="status" className="text-sm">Cargando reporte…</p>}
-      {error && r ? <ErrorState title={error} /> : null}
-      {r && m && !loading && <>
-        <p className="text-sm text-slate-600" role="status">{range_label} · fechas de operación de la escuela ({r.business_timezone})</p>
-        {m.entry_count === 0 ? <EmptyState title="Sin movimientos de PIKAS Cash en este período." description="No hubo recargas, compras, reembolsos ni correcciones en estas fechas." />
-          : <>
-            <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <MetricCard label="Recargas" help={times(m.replenishments.count, 'recarga', 'recargas')}><MoneyValue minor={m.replenishments.amount_minor} intent="movement" /></MetricCard>
-              <MetricCard label="Compras con PIKAS Cash" help={times(m.purchases.count, 'compra', 'compras')}><MoneyValue minor={neg(m.purchases.amount_minor)} intent="movement" /></MetricCard>
-              <MetricCard label="Reembolsos a PIKAS Cash" help={times(m.refunds.count, 'reembolso de compra', 'reembolsos de compras')}><MoneyValue minor={m.refunds.amount_minor} intent="movement" /></MetricCard>
-            </dl>
-            <details className="card p-4" open={m.reversals.count + m.adjustment_credits.count + m.adjustment_debits.count + m.historical_adjustments.count > 0}>
-              <summary className="flex min-h-11 cursor-pointer items-center font-bold">Correcciones y movimiento neto</summary>
-              <dl className="mt-3 divide-y rounded-xl border text-sm">
-                {([
-                  ['Reversiones de recarga', <MoneyValue key="rv" minor={neg(m.reversals.amount_minor)} intent="movement" />, `${times(m.reversals.count, 'reversión', 'reversiones')}. Corrigen recargas; no son reembolsos de compras.`],
-                  ['Recargas netas', <MoneyValue key="nr" minor={m.net_replenished_minor} intent="movement" />, 'Recargas − Reversiones de recarga.'],
-                  ['Ajustes administrativos (aumentos)', <MoneyValue key="ac" minor={m.adjustment_credits.amount_minor} intent="movement" />, times(m.adjustment_credits.count, 'ajuste', 'ajustes')],
-                  ['Ajustes administrativos (disminuciones)', <MoneyValue key="ad" minor={neg(m.adjustment_debits.amount_minor)} intent="movement" />, times(m.adjustment_debits.count, 'ajuste', 'ajustes')],
-                  ...(m.historical_adjustments.count > 0 ? [['Ajustes históricos', <MoneyValue key="ah" minor={m.historical_adjustments.net_minor} intent="movement" />, `${times(m.historical_adjustments.count, 'ajuste', 'ajustes')} anteriores a los ajustes administrativos.`] as const] : []),
-                  ['Movimiento neto del período', <MoneyValue key="nm" minor={m.net_movement_minor} intent="movement" className="font-black" />, `Suma de todos los movimientos de ${times(m.wallets_with_movement, 'monedero', 'monederos')}.`],
-                ] as const).map(([label, value, help]) => <div key={label} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3"><dt><span className="font-bold">{label}</span><span className="block text-slate-600">{help}</span></dt><dd className="font-bold">{value}</dd></div>)}
-              </dl>
-            </details>
-          </>}
-      </>}
+export function SchoolWalletReport({ report: r }: { report: WalletReportView }) {
+  const m = r.movements, c = r.current, lines = walletLines(r);
+  return <div className="space-y-5">
+    <ReportSummary label="Resumen del período" items={[
+      { label: 'Movimiento neto del período', value: <MoneyValue minor={m.net_movement_minor} intent="movement" />, help: times(m.entry_count, 'movimiento', 'movimientos') },
+      { label: 'Recargas netas', value: <MoneyValue minor={m.net_replenished_minor} intent="movement" />, help: 'Recargas − reversiones de recarga' },
+      { label: 'Monederos con movimiento', value: m.wallets_with_movement.toLocaleString('es-DO'), help: `con recargas, compras o ajustes · ${reportDay(r.from)} al ${reportDay(r.to)}` },
+    ]} />
+    <section aria-labelledby="rpt-movements" className="space-y-3">
+      <h2 id="rpt-movements" className="sch-h2">Movimientos del período</h2>
+      {m.entry_count === 0 ? <p className="sch-panel text-sm text-slate-600">Sin movimientos de PIKAS Cash en este período. No hubo recargas, compras, reembolsos ni correcciones en estas fechas.</p>
+        : <ReportTable label="Movimientos de PIKAS Cash del período" rows={lines} rowKey={l => l.key} columns={[
+          { header: 'Concepto', primary: true, cell: l => l.subtotal ? <span className="rpt-subtotal">{l.label}</span> : l.label },
+          { header: 'Movimientos', align: 'end', cell: l => l.count === null ? '—' : l.count.toLocaleString('es-DO') },
+          { header: 'Monto', align: 'end', cell: l => <MoneyValue minor={l.minor} intent="movement" className={l.subtotal ? 'font-bold' : ''} /> },
+        ]} foot={<tr><th scope="row">Movimiento neto del período</th><td data-align="end">{m.entry_count.toLocaleString('es-DO')}</td><td data-align="end"><MoneyValue minor={m.net_movement_minor} intent="movement" className="font-black" /></td></tr>} />}
+      <p className="rpt-help">Las reversiones corrigen recargas; no son reembolsos de compras. Fechas de operación de la escuela ({r.business_timezone}).</p>
     </section>
-  </section>;
+    <section aria-labelledby="rpt-now" className="sch-panel space-y-1">
+      <h2 id="rpt-now" className="sch-h2">Monederos ahora</h2>
+      <p className="text-sm text-slate-600">No depende del período. {c.wallet_count === 0 ? 'Aún no hay monederos de PIKAS Cash en este colegio.'
+        : <>{times(c.wallet_count, 'monedero', 'monederos')} · {c.active_wallet_count.toLocaleString('es-DO')} activos{c.frozen_wallet_count ? ` · ${times(c.frozen_wallet_count, 'congelado', 'congelados')}` : ''} · saldo total <MoneyValue minor={c.total_balance_minor} intent="balance" />{c.negative_wallet_count ? <> · {times(c.negative_wallet_count, 'saldo negativo', 'saldos negativos')} (<MoneyValue minor={c.negative_balance_minor} intent="balance" />)</> : null}</>}</p>
+    </section>
+  </div>;
 }

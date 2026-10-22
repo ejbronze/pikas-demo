@@ -2,11 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { money } from "../lib/cafeteria/operations";
 import { needsAttention, walletLabel, type WalletOverview, type WalletStudent } from "../lib/school/wallets";
-import { SchoolWalletReport } from "./school-wallet-report";
+import { TraceLink } from "./report-frame";
 
 // PIKAS UX 7: School PIKAS Cash = student wallet administration. Wallet state and balance per
 // student, a few wallet aggregates and factual attention. No purchases, products, receipts,
-// per-cafetería spending or rankings on this page; the period movement report stays secondary.
+// per-cafetería spending or rankings on this page; period reporting lives in Reportes / PIKAS Cash (UX 8).
 const n = (k: number, one: string, many: string) => `${k.toLocaleString("es-DO")} ${k === 1 ? one : many}`;
 const day = (iso: string) => iso.split("-").reverse().slice(0, 2).join("/");
 const studentStatus = { active: "", suspended: "Suspendido", inactive: "Inactivo" } as const;
@@ -30,7 +30,7 @@ export function SchoolPikasCash({ schoolId, schoolName, overview, students, view
         : <dl className="sch-figures">
           <div><dt>Monederos activos</dt><dd className="num-display">{overview.active.toLocaleString("es-DO")}</dd><dd className="sch-help">de {n(overview.wallet_count, "monedero", "monederos")}{overview.frozen ? ` · ${n(overview.frozen, "congelado", "congelados")}` : ""}</dd></div>
           <div><dt>Saldo de estudiantes</dt><dd className="num-display">{money(overview.total_balance_minor)}</dd><dd className="sch-help">suma de los saldos de PIKAS Cash, ahora</dd></div>
-          <div><dt>Monederos con movimiento</dt><dd className="num-display">{overview.with_movement.toLocaleString("es-DO")}</dd><dd className="sch-help">con recargas, compras o ajustes · {day(overview.from)} al {day(overview.to)}</dd></div>
+          <div><dt>Monederos con movimiento</dt><dd className="num-display"><TraceLink href={`/admin/escuela/reportes/pikas-cash?school=${schoolId}&period=last_7_days`} label={`${overview.with_movement} monederos con movimiento: ver el reporte de PIKAS Cash de estas fechas`}>{overview.with_movement.toLocaleString("es-DO")}</TraceLink></dd><dd className="sch-help">con recargas, compras o ajustes · {day(overview.from)} al {day(overview.to)}</dd></div>
         </dl>}
     </section>
 
@@ -63,8 +63,7 @@ export function SchoolPikasCash({ schoolId, schoolName, overview, students, view
         {nextCursor && <Link className="btn-secondary" href={`${base}&${new URLSearchParams({ q: query, after: nextCursor })}`}>Siguiente página</Link>}</div>}
     </section>
 
-    <details className="sch-panel pc-report"><summary className="flex min-h-11 cursor-pointer items-center font-bold">Reporte de movimientos por período</summary>
-      <p className="mt-1 text-sm text-slate-600">Recargas, compras, reembolsos y correcciones de los monederos del colegio en el período elegido.</p>
-      <div className="mt-3"><SchoolWalletReport schoolId={schoolId} embedded /></div></details>
+    <p className="sch-panel flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600"><span>Recargas, compras, reembolsos y correcciones por período, para imprimir o exportar.</span>
+      <Link className="sch-action" href={`/admin/escuela/reportes/pikas-cash?school=${schoolId}`}>Ver reportes de PIKAS Cash</Link></p>
   </div>;
 }
