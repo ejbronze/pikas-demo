@@ -20,12 +20,12 @@
   Semana de liquidación de lunes a domingo (America/Santo_Domingo), con vencimiento el martes. Todavía no hay lotes.
 - **Reversión en la era de comisión:** es una operación de finanzas de la Plataforma, con el permiso `platform:finance:replenishments:reverse`, que no está otorgado a nadie. El colegio ya no la ejecuta directamente y sigue revirtiendo las recargas previas a la activación como antes. Solo procede si el monedero conserva el neto completo. Si no, `FINANCIAL_RESOLUTION_REQUIRED` y no cambia nada. La reversión completa también revierte la comisión.
 - **Ajustes con significado financiero** para clientes activados:
-  - un ajuste positivo es valor financiado por compensación;
-  - uno negativo reduce el pasivo.
+  - un ajuste positivo es valor financiado por compensación. Solo lo ejecuta finanzas de la Plataforma (`platform:finance:adjustments:fund`, no otorgado a nadie). Colegio, Cuenta y Cafetería reciben `finance_adjustment_authority_required` sin que se escriba nada;
+  - uno negativo reduce el pasivo y lo siguen ejecutando los mismos administradores de antes.
 
   Sin comisión y sin simular recargas ni cobros. Los clientes no activados no cambian.
 - **Pasivo inicial heredado:** al activar, el saldo positivo existente queda registrado como un único evento de pasivo asumido. No cambia saldos ni historial. Si es cero, no se registra nada.
-- **Reembolso de una compra anterior a la activación:** la Cafetería devuelve ese valor a compensación.
+- **Reembolso de una compra anterior a la activación** (aprobado por el propietario): la Cafetería devuelve ese valor exacto a compensación, sin comisión ni recarga.
 - Ningún valor de un monedero activado aparece sin fuente económica.
 - Ver `docs/PIKAS_CASH_FINANCIAL_FOUNDATION.md`.
 

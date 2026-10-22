@@ -1,12 +1,13 @@
 # PIKAS FIN 2 — PIKAS Cash financial foundation
 
-Implemented locally on 2026-10-22 in two migrations:
+Implemented locally on 2026-10-22 in three migrations:
 
 - `202611090001_pikas_cash_financial_foundation.sql`: the foundation;
-- `202611100001_pikas_cash_financial_invariants.sql`: the owner refinement.
+- `202611100001_pikas_cash_financial_invariants.sql`: the owner refinement;
+- `202611110001_pikas_cash_funded_adjustment_authority.sql`: funded-adjustment authority.
 
-pgTAP coverage is in `supabase/tests/fin2_financial_foundation.test.sql` and
-`supabase/tests/fin2_financial_invariants.test.sql`. Not deployed.
+pgTAP coverage is in `supabase/tests/fin2_financial_foundation.test.sql`,
+`fin2_financial_invariants.test.sql` and `fin2_funded_adjustments.test.sql`. Not deployed.
 
 FIN 2 is a database foundation only. It adds no UI, navigation, reports, proof upload or
 settlement batches. It grants no capability and activates no customer: no production
@@ -101,13 +102,16 @@ Every positive change to an activated customer's wallet value has an economic so
 |---|---|
 | Opening balance | `opening_legacy_stored_value_liability`, assumed at activation |
 | Fee-era replenishment | `stored_value_issued`, funded by `replenishment_gross_collected` = fee + net |
-| Positive adjustment | `clearing_funded_adjustment`, funded by the clearing party |
+| Positive adjustment | `clearing_funded_adjustment`, funded by the clearing party and executed only by Platform finance |
 | Refund of a post-activation purchase | `stored_value_restored` + `wallet_refund_correction` (corrects the Cafetería payable) |
-| Refund of a pre-activation purchase | `stored_value_restored` + `legacy_purchase_refund` (the Cafetería returns the value) |
+| Refund of a pre-activation purchase | `stored_value_restored` + `legacy_purchase_refund` (the Cafetería returns the value; owner-approved) |
 
 A wallet created after activation starts at zero and needs no opening entry. Value can
-only reach it through these paths. The School can no longer post direct replenishments for
-an activated customer (`collection_source_required`).
+only reach it through these paths. No tenant path can create PIKAS-funded value:
+
+- The School can no longer post direct replenishments for an activated customer
+  (`collection_source_required`).
+- No tenant role can post a positive adjustment for one (see *Funded adjustments*).
 
 At any committed point, for the policy currency:
 
@@ -165,6 +169,46 @@ pgTAP and the race runs check these on every scenario.
 - **Legacy reversals:** the School still reverses legacy (pre-activation) replenishments
   with its existing authority, `school:wallets:reverse_replenishment`. After activation the
   removed value is recorded as `legacy_stored_value_reversed`.
+
+## Funded adjustments: a Platform finance operation
+
+For an activated customer, a positive administrative adjustment is value funded by clearing
+(PIKAS). Tenant roles therefore cannot execute it.
+
+- **Tenant core guard.** The shared tenant core (`post_administrative_adjustment`, used by
+  `school_wallet_adjust` for School and Account Admins and by `cafeteria_wallet_adjust`) keeps
+  its `202610200001` definition with one guard. It refuses with
+  `42501 finance_adjustment_authority_required` before any write, wallet creation included.
+  A request key that already exists still replays through the normal idempotency check.
+- **Table guard.** A BEFORE INSERT guard on `wallet_adjustments` applies the same rule to
+  every other writer, including the older `post_student_wallet_adjustment`.
+- **What stays the same:**
+  - Negative adjustments keep their tenant authority and their
+    `adjustment_stored_value_reduction` event.
+  - Customers that are not activated keep both directions exactly as before.
+- **Execution.** `platform_finance_fund_wallet_adjustment(student_id, amount_minor, reason,
+  explanation, request_key)` requires `platform:finance:adjustments:fund`. It refuses a
+  sandbox POV and requires an activated customer and an existing wallet; it never opens one.
+  It accepts positive amounts and credit reasons only.
+- **Locking.** It takes the per-student lock and checks authority again after the wait. A
+  membership suspended while the call waits is refused, as the race below showed. It locks
+  and re-reads the wallet.
+- **What it writes.** It writes the existing adjustment source record:
+  `actor_role = 'platform_finance_operator'`, scope `platform`, `actor_source = 'platform_finance'`.
+  It then writes the wallet update and ledger entry. The existing trigger adds exactly one
+  `clearing_funded_adjustment` with the clearing funding party, all in one transaction. If
+  the financial event fails, the adjustment does not exist.
+- **What it does not create:** no fee, replenishment, collection or obligation.
+- **Audit and result.** Audit records `wallet_funded_adjustment_posted` by the finance
+  operator. The result carries no internal IDs and no balance.
+- **Idempotency.** Requests are idempotent by key and fingerprint. A replay returns the same
+  result. A different body under the same key fails with `IDEMPOTENCY_CONFLICT`, and so does
+  reusing a tenant adjustment's key.
+- **Scope of the capability.** It confers no wallet read, no School or Cafetería authority,
+  and no other finance authority.
+- **Not granted to anyone:** not Edwin, not Platform Admin. No membership changed.
+- **Tenants' future role:** they may request or support such a correction in a future
+  workflow.
 
 ## Fee-era reversal: a Platform finance operation
 
@@ -227,6 +271,14 @@ Refinement:
 | Two finance reversals, different keys | One reversal; other `REPLENISHMENT_ALREADY_REVERSED` |
 | Two finance reversals, same key | Same result returned; one reversal and one set of counter-entries |
 
+Funded adjustments:
+
+| Race | Result |
+|---|---|
+| Two funded adjustments, same key | Both return `posted`; one adjustment, one event; balance +25000 once |
+| Funded adjustment racing a purchase | Both commit; delta 25000 (40000 − 15000) |
+| Operator membership suspended while waiting on the student lock | Re-check after the lock refuses with `not_authorized`; no adjustment; only the sale moved the balance |
+
 After each run the wallet matched its ledger, the value-source invariant held, and no
 obligation correction exceeded its original. All race records were removed afterwards.
 
@@ -235,6 +287,7 @@ obligation correction exceeded its original. All race records were removed after
 - **Catalogued, not granted:**
   - `platform:finance:replenishments:verify`
   - `platform:finance:replenishments:reverse`
+  - `platform:finance:adjustments:fund`
   - `platform:finance:read`
   - `platform:finance:settlement:manage`
 
@@ -245,6 +298,7 @@ obligation correction exceeded its original. All race records were removed after
 - **Public wrappers, unusable until the owner grants a capability:**
   - `platform_finance_decide_bank_replenishment`
   - `platform_finance_reverse_replenishment`
+  - `platform_finance_fund_wallet_adjustment`
   - `platform_finance_replenishment_read`
   - `cafeteria_financial_obligations_read`
 
@@ -273,21 +327,24 @@ Opening liability and adjustments are never replenishment revenue.
 
 - **Legal custody:** the legal custody of the clearing party and the activation gate are
   unresolved.
-- **Adjustments:** tenant admins (School/Account/Cafetería) can still post administrative
-  adjustments. For an activated customer, a positive adjustment is now explicitly
-  clearing-funded value. PIKAS assumes its cost without finance approval.
-- **Legacy purchase refunds:** a refund of a pre-activation purchase creates a
-  `legacy_purchase_refund` obligation, so the Cafetería owes clearing. Confirm this
-  treatment with accounting before activation.
-- **Opening negative balances:** they are recorded on the activation but are not a
-  financial event. Their collection or write-off is undecided.
-- **Activation path:** activation and ending are internal-only; there is no operator path.
+- **Legacy purchase refunds:** the owner approved and locked this treatment. A refund of a
+  pre-activation purchase made after activation creates a `legacy_purchase_refund`
+  obligation (Cafetería → clearing) for exactly the wallet refund. It has no fee, no
+  replenishment and no historical entries, and the original purchase is untouched.
+- **Opening negative balances:** recorded on the activation (`opening_negative_balance_minor`),
+  never as a money event. There is no collection or write-off logic in FIN 2; this is a
+  future recovery and accounting consideration.
+- **Activation path:** activation and ending are database/backend-only by design while the
+  legal/accounting gate is open. There is no operator UI.
+- **Labels for finance actions:** the School wallet history shows finance-executed
+  adjustments and reversals with the raw role `platform_finance_operator` and the finance
+  operator's name. FIN 3 should label them and decide what the School sees.
 
 ## Handoff
 
 - **FIN 3, verification, collection and reversal:**
-  - Platform finance UI on the decide, reverse and read wrappers.
-  - The School's view/escalation path for fee-era corrections.
+  - Platform finance UI on the decide, reverse, fund and read wrappers.
+  - The School's view/escalation path for fee-era corrections and funded-adjustment requests.
   - The family/School submission wrapper.
   - `cafeteria:wallets:collect_cash` and the POS cash-collection wrapper.
   - Owner-approved capability grants and an activation procedure.

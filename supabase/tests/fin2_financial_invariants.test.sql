@@ -132,9 +132,9 @@ select set_config('t.bank',pg_temp.bank('00000000-0000-0000-0000-000000005201',2
 select pg_temp.approve(current_setting('t.bank'),'fin2r-bank-approve-0001');
 select set_config('t.b1',pg_temp.bal()::text,true);
 select set_config('t.c1',pg_temp.counts(),true);
-select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
-select pg_temp.adjust(100000,'f2b00000-0000-4000-8000-0000000000a4');
-reset role;
+-- Positive value for an activated customer is a Platform finance operation (202611110001).
+select pikas_private.finance_fund_wallet_adjustment('00000000-0000-0000-0000-000000005201',current_setting('t.op_person')::uuid,100000,'administrative_correction',
+ 'Corrección financiada ficticia','f2b00000-0000-4000-8000-0000000000a4');
 select is(pg_temp.bal(),current_setting('t.b1')::bigint+100000,'B1. Positive adjustment adds exactly RD$ 1,000');
 select is((select l.amount_minor||':'||l.balance_after_minor from wallet_ledger_entries l join wallet_adjustments a on a.id=l.adjustment_id where a.idempotency_key='f2b00000-0000-4000-8000-0000000000a4'),
  '100000:'||pg_temp.bal(),'B2. Wallet ledger records the adjustment');
