@@ -5,9 +5,15 @@ import { maxReportDays, reportPeriods, type ReportPeriod } from "../lib/cafeteri
 import { periodLabels, reportHref } from "../lib/reports/filters";
 
 // PIKAS report frame (UX 8), shared by every role's reports: header (name, scope, active filters,
-// output), summary, visualization and detail. Presentation only — each role's page passes data it
+// output), summary, visualization and detail. List in `filters` only the dimensions the report offers. Presentation only — each role's page passes data it
 // already read and reduced under its own authority. Print keeps the report and drops the app chrome.
 export type ReportFilterLabel = { label: string; value: string };
+
+// The report page itself: one generated timestamp, shown in the header and in a quiet print-only
+// footer, so every role's report documents when and by what it was produced.
+export function ReportFrame({ generated, children }: { generated: string; children: React.ReactNode }) {
+  return <div className="rpt">{children}<p className="rpt-print-footer">Generado por PIKAS · {generated}</p></div>;
+}
 
 export function ReportHeader({ back, title, scope, purpose, filters, generated, csvHref }: { back: { href: string; label: string }; title: string; scope: string; purpose: string;
   filters: ReportFilterLabel[]; generated: string; csvHref?: string }) {

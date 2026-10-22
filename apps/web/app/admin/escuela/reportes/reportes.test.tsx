@@ -23,9 +23,10 @@ const exportRows = [{ student_code: "E1", first_name: "Ana", last_name: "Fictici
   { student_code: "E2", first_name: "Beto", last_name: "Ficticio", display_name: "Beto Ficticio", status: "suspended", campus: "Sede Norte", grade: "5to", class: "B", homeroom: "Aula 2" }];
 const cafes = [{ id: "4d800000-0000-4000-8000-0000000000c1", name: "Cafetería Norte", location: "Sede Norte", status: "active", sharing_status: "active", categories: ["student_code"], customer_count: 2,
   customers: [{ student_id: "4d800000-0000-4000-8000-000000000101", display_name: "Ana Ficticia", status: "active" }] }];
-const reads = (over: { exportSchool?: string; report?: Record<string, unknown> } = {}) => mocks.rpc.mockImplementation(async (fn: string, args: Record<string, unknown>) => ({ error: null, data:
+const north = { id: "4d800000-0000-4000-8000-0000000000b1", name: "Sede Norte" }, south = { id: "4d800000-0000-4000-8000-0000000000b2", name: "Sede Sur" };
+const reads = (over: { exportSchool?: string; report?: Record<string, unknown>; locations?: { id: string; name: string }[]; grades?: string[] } = {}) => mocks.rpc.mockImplementation(async (fn: string, args: Record<string, unknown>) => ({ error: null, data:
   fn === "school_student_export" ? { school_id: over.exportSchool ?? school, actor_id: actor, rows: exportRows }
-  : fn === "school_student_roster" ? { scope: scope(), locations: [{ id: "4d800000-0000-4000-8000-0000000000b1", name: "Sede Norte" }], grades: ["4to", "5to"], rows: [], next_cursor: null }
+  : fn === "school_student_roster" ? { scope: scope(), locations: over.locations ?? [north], grades: over.grades ?? ["4to", "5to"], rows: [], next_cursor: null }
   : fn === "school_wallet_report" ? walletReport({ period: args.p_period, ...(args.p_period === "custom" ? { from: args.p_from, to: args.p_to } : {}), ...over.report })
   : { scope: scope(), locations: [], rows: cafes } }));
 const page = async (P: (p: { searchParams: Promise<Record<string, string>> }) => Promise<React.ReactElement>, sp: Record<string, string> = {}) => renderToStaticMarkup(await P({ searchParams: Promise.resolve({ school, ...sp }) }));
@@ -51,10 +52,28 @@ describe("School Reportes pages", () => {
   it("Estudiantes: URL filters reach the read; header shows them; summary reconciles with the rows; CSV keeps the filters", async () => {
     const h = await page(Students, { status: "active", grade: "4to" }), t = text(h);
     expect(mocks.rpc).toHaveBeenCalledWith("school_student_export", { p_school_id: school, p_query: "", p_status: "active", p_location_id: null, p_grade: "4to" });
-    expect(t).toMatch(/Estado Activo .*Campus Todos .*Grado 4to/); expect(t).toMatch(/Estudiantes 2 .*Activos 1 .*Suspendidos 1 .*Inactivos 0/);
+    expect(t).toMatch(/Estado Activo Grado 4to Generado/); expect(t).toMatch(/Estudiantes 2 .*Activos 1 .*Suspendidos 1 .*Inactivos 0/);
     expect(h).toContain(`href="/admin/escuela/reportes/estudiantes/csv?school=${school}&amp;status=active&amp;grade=4to"`);
     expect(h).toContain(`/admin/escuela/reportes/estudiantes?school=${school}&amp;status=active&amp;grade=5to`); // grade bar → same report, that grade
     expect(t).not.toMatch(uuid); expect(h).toContain('data-print="hide"'); expect(h).toContain("rpt-generated");
+  });
+  it("Estudiantes filter summary lists only the dimensions the report offers (screen and print share it)", async () => {
+    const pills = (h: string) => [...h.matchAll(/<div><dt>([^<]+)<\/dt><dd>([^<]+)<\/dd><\/div>/g)].map(m => `${m[1]} ${m[2]}`);
+    let h = await page(Students); // one campus, grades exist
+    expect(pills(h)).toEqual(["Estado Todos", "Grado Todos"]); expect(h).not.toContain('name="location"'); expect(h).toContain('name="grade"');
+    reads({ locations: [north, south] }); h = await page(Students);
+    expect(pills(h)).toEqual(["Estado Todos", "Campus Todos", "Grado Todos"]); expect(h).toContain('name="location"');
+    h = await page(Students, { location: south.id, status: "suspended" });
+    expect(pills(h)).toEqual(["Estado Suspendido", "Campus Sede Sur", "Grado Todos"]);
+    reads({ grades: [] }); h = await page(Students);
+    expect(pills(h)).toEqual(["Estado Todos"]); expect(h).not.toContain('name="grade"');
+    h = await page(Students, { grade: "4to" }); expect(pills(h)).toEqual(["Estado Todos", "Grado 4to"]); // a grade already in the URL stays documented
+  });
+  it("every report carries one generated timestamp, in the header and the print-only footer", async () => {
+    for (const P of [Students, Wallet, Cafeterias]) {
+      const h = await page(P), header = h.match(/class="rpt-generated"><dt>Generado<\/dt><dd>([^<]+)<\/dd>/)?.[1], footer = h.match(/class="rpt-print-footer">Generado por PIKAS · ([^<]+)<\/p>/)?.[1];
+      expect(header).toBeTruthy(); expect(footer).toBe(header); expect(h.match(/rpt-print-footer/g)).toHaveLength(1);
+    }
   });
   it("Estudiantes: invalid filters are an error, never a wider report; another school's export is discarded", async () => {
     expect(text(await page(Students, { status: "borrado" }))).toContain("Los filtros no son válidos"); expect(mocks.rpc).not.toHaveBeenCalled();

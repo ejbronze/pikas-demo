@@ -315,6 +315,7 @@ a.rpt-bar-row .rpt-bar-label{text-decoration:underline;text-underline-offset:3px
 .rpt-index-name{display:block;font-weight:900;font-size:1.05rem;color:var(--primary)}
 .rpt-index-purpose{display:block;font-size:.875rem;color:var(--foreground-muted)}
 .rpt-generated{display:none!important}
+.rpt-print-footer{display:none}
 @media print{
   body:has(.rpt) .admin-ux>aside,body:has(.rpt) .admin-ux>div>header,body:has(.rpt) .mobile-nav,body:has(.rpt) [data-print=hide],body:has(.rpt) .rpt-actions,body:has(.rpt) .rpt-back{display:none!important}
   body:has(.rpt),body:has(.rpt) .admin-ux{background:#fff}
@@ -322,6 +323,7 @@ a.rpt-bar-row .rpt-bar-label{text-decoration:underline;text-underline-offset:3px
   body:has(.rpt) .app-main{max-width:none;padding:0}
   .rpt{gap:.9rem;color:#000}
   .rpt-generated{display:flex!important}
+  .rpt-print-footer{display:block;margin-top:.25rem;padding-top:.4rem;border-top:1px solid #bbb;font-size:.72rem;color:#53627c;break-inside:avoid}
   .rpt-filters>div{border-color:#999}
   .rpt-table-wrap,.rpt-summary>div,.sch-panel{border-color:#999;break-inside:avoid}
   .rpt-table thead{position:static;width:auto;height:auto;clip:auto}

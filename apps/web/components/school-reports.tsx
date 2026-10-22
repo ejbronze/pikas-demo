@@ -26,18 +26,25 @@ export function SchoolReportsIndex({ schoolId, schoolName, walletRead }: { schoo
   </div>;
 }
 
+// Filter dimensions the Estudiantes report offers: Estado always; Campus with more than one campus;
+// Grado when grades exist. A dimension already in the URL stays visible. The form and the filter
+// summary (screen and print) both follow this, so the report documents only what the user could set.
+export function studentFilterDimensions(r: Pick<StudentsReport, "locations" | "grades"> | null, f: StudentFilters) {
+  return { campus: (r?.locations.length ?? 0) > 1 || !!f.location, grade: (r?.grades.length ?? 0) > 0 || !!f.grade };
+}
+
 // Estudiantes: the full filtered population. Summary, grade chart and table all come from the same rows.
 export function StudentsReportBody({ schoolId, filters, report: r }: { schoolId: string; filters: StudentFilters; report: StudentsReport }) {
   const path = schoolReportPath("estudiantes"), keep = { school: schoolId, status: filters.status, location: filters.location, grade: filters.grade };
-  const filtered = !!(filters.status || filters.location || filters.grade);
+  const filtered = !!(filters.status || filters.location || filters.grade), offered = studentFilterDimensions(r, filters);
   return <div className="space-y-5">
     <form method="get" action={path} className="rpt-filter-form" data-print="hide" aria-label="Filtrar estudiantes">
       <input type="hidden" name="school" value={schoolId} />
       <label>Estado<select className="field" name="status" defaultValue={filters.status}><option value="">Todos</option>
         {(["active", "suspended", "inactive"] as const).map(s => <option key={s} value={s}>{studentStatusLabel[s]}</option>)}</select></label>
-      {r.locations.length > 1 || filters.location ? <label>Campus<select className="field" name="location" defaultValue={filters.location ?? ""}><option value="">Todos</option>
+      {offered.campus ? <label>Campus<select className="field" name="location" defaultValue={filters.location ?? ""}><option value="">Todos</option>
         {r.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label> : null}
-      {r.grades.length > 0 || filters.grade ? <label>Grado<select className="field" name="grade" defaultValue={filters.grade ?? ""}><option value="">Todos</option>
+      {offered.grade ? <label>Grado<select className="field" name="grade" defaultValue={filters.grade ?? ""}><option value="">Todos</option>
         {[...new Set([...r.grades, ...(filters.grade ? [filters.grade] : [])])].map(g => <option key={g} value={g}>{g}</option>)}</select></label> : null}
       <button className="btn-secondary">Aplicar</button>
       {filtered && <Link className="inline-flex min-h-11 items-center font-bold text-teal-800 underline" href={`${path}?school=${schoolId}`}>Limpiar filtros</Link>}

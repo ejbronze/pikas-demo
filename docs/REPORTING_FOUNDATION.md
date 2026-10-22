@@ -39,6 +39,9 @@ Reusable as found:
 
 **Header** (`ReportHeader`): report name, scope (school / cafetería / network), purpose, active filters as labelled chips, the generated date (shown in print), and the output actions.
 
+- The filter chips list only the dimensions the report actually offers (for example, Campus only when the school has more than one), on screen and in print.
+- `ReportFrame` owns the report's single generated timestamp and adds a print-only footer, «Generado por PIKAS · …».
+
 **Summary** (`ReportSummary`): a few figures, computed from the same filtered rows as the detail.
 
 **Visualization** (`BarList`):
