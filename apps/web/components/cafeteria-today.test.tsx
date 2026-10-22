@@ -17,7 +17,8 @@ const caps = ['cafeteria:pos:purchases:read', 'cafeteria:pos:sessions:read'];
 function data(patch: Partial<CafeteriaRead> = {}): CafeteriaRead {
   const d = cafeteriaRead();
   return { ...d, scope: { ...d.scope, capabilities: caps }, products: [{ id, name: 'Empanada ficticia', description: null, unit: null, category_id: null, price_minor: 5000, active: true, available: true, ingredients: null, allergens: null, version: 1 }] as unknown as CafeteriaRead['products'],
-    staff: [{ id, status: 'active' }] as unknown as CafeteriaRead['staff'], registers: [{ id: '5d300000-0000-4000-8000-000000000905', code: 'CAJA-01', name: 'Caja 5', status: 'active', version: 1, has_history: true, open: true }], ...patch };
+    staff: [{ id, status: 'active' }] as unknown as CafeteriaRead['staff'], registers: [{ id: '5d300000-0000-4000-8000-000000000905', code: 'CAJA-01', name: 'Caja 5', status: 'active', version: 1, has_history: true, open: true }],
+    assignments: [{ id, membership_id: id, register_id: '5d300000-0000-4000-8000-000000000905', status: 'active', version: 1 }], ...patch };
 }
 const zeroSummary = summary({ gross_sales_minor: '0', refunds_minor: '0', net_sales_minor: '0', transaction_count: 0, refund_count: 0, average_ticket_minor: null,
   refunds_by_tender: { cash: '0', student_wallet: '0' }, tenders: ['cash', 'student_wallet', 'staff_credit'].map(tender => ({ tender, transaction_count: 0, gross_sales_minor: '0' })) });
@@ -104,9 +105,20 @@ describe('Cafetería Hoy', () => {
     expect(html).toMatch(/<button type="button" class="hoy-refresh">.*Actualizar<\/button>/); expect(html).not.toContain('class="btn-secondary">Actualizar');
     expect(html.split(long).length - 1).toBe(2); expect(html).not.toContain('…');
   });
-  it('configuration is demoted when operational and prominent when incomplete', () => {
-    const html = render(inputs()); expect(html).toContain('Configuración de la cafetería'); expect(html).not.toMatch(/<details[^>]*open/);
-    const setup = render(inputs(), data({ products: [], registers: [] }));
-    expect(setup).toContain('Completa la configuración para vender'); expect(setup).toMatch(/<details[^>]*open/); expect(setup).toContain('No hay cajas activas.');
+  it('UX 12A: the management map names the inherited context and what the admin manages; readiness is collapsed once operating', () => {
+    const html = render(inputs());
+    expect(html).toContain('Estás administrando'); expect(html).toContain('<h2 id="map-title" class="font-display break-words text-2xl font-black text-[var(--primary)]">Real cafeteria</h2>');
+    expect(html).toContain('Sede: Real campus · Colegio: Real school'); expect(html).toContain('no tienes que crearlos');
+    expect(html).toContain('data-launch="operating">En operación'); expect(html).toContain('Puesta en marcha'); expect(html).toMatch(/<details class="mt-2"><summary[^>]*>Ver los pasos/);
+    expect(html).not.toContain('Completa la configuración para vender'); expect(html).not.toContain('Confirmar cafetería');
+    expect(html).toContain('<p class="text-sm text-slate-600">Martes, 20 de octubre</p>');
+  });
+  it('UX 12A: an unconfigured cafetería gets the readiness guide on top with one contextual next step; ready needs no sale', () => {
+    const setup = render(inputs(), data({ products: [], registers: [], assignments: [] }));
+    expect(setup.indexOf('Puesta en marcha')).toBeLessThan(setup.indexOf('Estado en vivo')); expect(setup).toContain('Siguiente paso: Crear caja.');
+    expect(setup).toContain('>Crear caja para Real cafeteria<'); expect(setup).toContain('data-launch="configuring">En configuración'); expect(setup).toContain('No hay cajas activas.');
+    expect(setup).toContain('Contexto establecido por PIKAS'); expect(setup).toContain('Sede Real campus'); expect(setup).not.toMatch(/<details[^>]*open/);
+    const ready = render(inputs({ summary: sales(zeroSummary) }), data({ registers: [{ id: '5d300000-0000-4000-8000-000000000905', code: 'CAJA-01', name: 'Caja 5', status: 'active', version: 1, has_history: false, open: false }] }));
+    expect(ready).toContain('data-launch="ready">Lista para operar'); expect(ready).toContain('no hace falta una venta'); expect(ready).toContain('3 de 4');
   });
 });

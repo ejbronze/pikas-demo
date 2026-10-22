@@ -1,5 +1,15 @@
 # Registro de cambios del producto
 
+## Cafetería: mapa de gestión y puesta en marcha (UX 12A, local)
+
+- **Dónde estoy**: toda la Administración de cafetería muestra, bajo el encabezado, la ubicación en la estructura `Colegio → Sede → Cafetería → área actual` (por ejemplo «Colegio Horizonte → Sede Santiago → Cafetería Santiago → Cajas»). Colegio, sede y cafetería son contexto heredado (texto, sin acciones); solo el área actual se resalta. En móvil el colegio se oculta para no desbordar. El encabezado nombra la cafetería con su sede y colegio.
+- **Qué administro**: **Hoy** abre con «Estás administrando {cafetería}» y la cadena Colegio → Sede → Cafetería → *Tú administras:* Cajas · Personal POS · Productos (conteos con enlace a cada sección) más la frase «El colegio, la sede y la cafetería los establece PIKAS; no tienes que crearlos». Es orientación, no un panel en vivo.
+- **Puesta en marcha** sustituye el bloque «Configuración de la cafetería» de Hoy: muestra el contexto establecido por PIKAS (✓ Sede, ✓ Cafetería) y los pasos que controla el administrador, en orden: 1. Crear caja, 2. Agregar personal y asignarlo a una caja, 3. Configurar productos (menú y turnos solo con programación activada), 4. Preparar la operación. Un solo siguiente paso resaltado con acción contextual («Crear caja para Cafetería Santiago»). Los estados salen de los datos actuales y retroceden si falta un requisito.
+- **Lista para operar** significa que existen los requisitos para empezar a operar (caja activa, personal activo asignado a una caja activa, productos disponibles y programación válida si está activada). **Nunca exige una venta.** «En operación» llega al abrirse la primera sesión de caja en el POS (tampoco exige venta). «¡Primera venta con PIKAS!» sigue siendo un hito aparte. Mientras no está en operación, la guía va arriba; después se pliega al final de Hoy.
+- **Navegación agrupada** en escritorio: **Operación** (Hoy, Transacciones, Reportes, PIKAS Cash) y **Mi cafetería** (Cajas, Personal POS, Productos, Menús, Configuración). La barra inferior móvil conserva sus cuatro destinos y «Más» (ahora también agrupado).
+- **Acciones contextuales**: «Crear caja para {cafetería}», «Agregar personal a {cafetería}», «Administrar productos de {cafetería}»; los estados vacíos de Cajas y Personal POS nombran la cafetería y explican que la asignación a caja se hace en Cajas.
+- Sin migración, sin cambios de autoridad: todo se deriva de `cafeteria_admin_read`. Sin cambios en creación de cajeros, usuarios, credenciales ni sesiones (UX 12B). Ver `docs/CAFETERIA_ADMIN_UX_SPEC.md`.
+
 ## Plataforma: modo Demo aislado (UX 11, local)
 
 - El Demo y la operación real son modos excluyentes. Mientras un Demo está vigente, la Plataforma muestra la barra **● Demo activo** (con experiencia, persona ficticia y cafetería), la navegación real desaparece y solo queda **Inicio Demo**.

@@ -18,3 +18,10 @@ describe('connected cafeteria presentation',()=>{
 });
 
 it('preserves existing sandbox staff completion without exposing activation issuance',()=>{const data=cafeteriaRead();data.scope.tenant_kind='sandbox';data.invitations=[{id,email:'fictional@example.invalid',role:'pos_cashier',status:'pending',expires_at:'2099-01-01T00:00:00Z'}];const html=renderToStaticMarkup(<ConnectedCafeteriaProvider data={data}><ConnectedCafeteriaPages section="staff" data={data}/></ConnectedCafeteriaProvider>);expect(html).toContain('Confirmar identidad y conceder acceso POS');expect(html).not.toContain('Generar enlace de activación');});
+
+it('UX 12A: Cajas and Personal POS name the cafetería in their primary action and empty state, without any cashier-access change',()=>{const data=cafeteriaRead();
+ const cajas=renderToStaticMarkup(<ConnectedCafeteriaProvider data={data}><ConnectedCafeteriaPages section="registers" data={data}/></ConnectedCafeteriaProvider>);
+ expect(cajas).toContain('>Crear caja para Real cafeteria<');expect(cajas).toContain('Aún no hay cajas en Real cafeteria.');expect(cajas).toContain('Cajas de Real cafeteria:');
+ const staff=renderToStaticMarkup(<ConnectedCafeteriaProvider data={data}><ConnectedCafeteriaPages section="staff" data={data}/></ConnectedCafeteriaProvider>);
+ expect(staff).toContain('>Agregar personal a Real cafeteria<');expect(staff).toContain('Aún no hay personal POS en Real cafeteria.');expect(staff).toContain('la asignas a una caja en Cajas');
+ expect(staff).not.toMatch(/contraseña temporal|último acceso|sesión iniciada/i);});

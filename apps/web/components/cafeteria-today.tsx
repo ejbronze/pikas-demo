@@ -9,6 +9,8 @@ import { latestGate, reportResultSchema, type Reconciliation, type SalesSummary,
 import { attentionItems, chartWindow, clock, comparison, hourLabel, longDate, peakHour, tenderShares, todaySchema, weekdayName, type TodayRead } from '../lib/cafeteria/today';
 import type { CafeteriaRead } from '../lib/cafeteria/contracts';
 import { TraceLink } from './report-frame';
+import { ManagementMap, ReadinessGuide } from './cafeteria-management-map';
+import { cafeteriaReadiness } from '../lib/cafeteria/readiness';
 
 // Cafetería Hoy V1: today's business and operation for ONE cafeteria. Every financial value is
 // authoritative server output (5D reports + cafeteria_today_read); sections load and fail
@@ -53,20 +55,22 @@ export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data
   const href = (path: string) => `/admin/cafeteria${path}?cafeteria=${data.scope.cafeteria_id}`, report: Report = (r, q) => `${href(`/reportes/${r}`)}&${q}`;
   const today = inputs.today.status === 'ready' ? inputs.today.value : null, summary = inputs.summary.status === 'ready' ? inputs.summary.value : null;
   const activeRegisters = data.registers.filter(r => r.status === 'active'), openRegisters = activeRegisters.filter(r => r.open);
-  const setupIncomplete = !data.products.some(p => p.active && p.available) || !activeRegisters.length || !data.staff.some(m => m.status === 'active');
+  // UX 12A: orientation and readiness come from the same read (no sale required to be ready).
+  const readiness = cafeteriaReadiness(data), guideOnTop = readiness.status !== 'operating';
   const firstSale = !!today && today.data.today_count > 0 && today.data.first_sale_date === today.today;
   const date = today?.today ?? data.service?.business_date;
   return <div className="hoy space-y-4">
     <header className="flex items-start justify-between gap-3">
       <div className="min-w-0"><h1 className="font-display text-3xl font-black text-[var(--primary)]">Hoy</h1>
-        <p className="text-sm text-slate-600">{data.scope.cafeteria_name} · {data.scope.school_name}{date ? ` · ${longDate(date)}` : ''}</p></div>
+        {date && <p className="text-sm text-slate-600">{longDate(date)}</p>}</div>
       {business && onRefresh && <button type="button" className="hoy-refresh" onClick={onRefresh}><RefreshCw aria-hidden className="size-4" />Actualizar</button>}
     </header>
     {!business && <p className="hoy-note" role="status">{data.scope.tenant_kind === 'sandbox' ? 'Los datos financieros no están disponibles en el entorno sandbox. Aquí ves el estado operativo de la cafetería.' : 'Tu rol no tiene acceso a las ventas de esta cafetería. Aquí ves su estado operativo.'}</p>}
+    <ManagementMap data={data} readiness={readiness} />
+    {guideOnTop && <ReadinessGuide data={data} readiness={readiness} />}
     {firstSale && <Milestone name={data.scope.cafeteria_name} />}
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12">
       <LiveStrip className="order-3 md:order-1 md:col-span-2 lg:col-span-12" open={openRegisters.length} today={today} loading={business && inputs.today.status === 'loading'} />
-      {setupIncomplete && <Setup className="order-2 md:order-2 md:col-span-2 lg:col-span-12" data={data} href={href} open />}
       {business && <>
         <Hero className="order-1 md:order-3 md:col-span-2 lg:col-span-5" inputs={inputs} report={report} />
         <Kpis className="order-5 md:order-4 md:col-span-2 lg:col-span-7" summary={inputs.summary} report={report} />
@@ -77,8 +81,8 @@ export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data
       </>}
       <Registers className={`order-7 md:order-9 md:col-span-2 ${business ? 'lg:order-8 lg:col-span-4' : 'lg:col-span-6'}`} registers={activeRegisters} recon={inputs.recon?.status === 'ready' ? inputs.recon.value : null} today={today?.today ?? null} href={href('/cajas')} />
       {business && <Payments className="order-8 md:order-8 md:col-span-1 lg:order-9 lg:col-span-4" summary={inputs.summary} href={report('pagos', 'period=today')} />}
-      {!setupIncomplete && <Setup className={`order-9 md:order-10 md:col-span-2 ${business ? 'lg:col-span-12' : 'lg:col-span-6'}`} data={data} href={href} open={false} />}
     </div>
+    {!guideOnTop && <ReadinessGuide data={data} readiness={readiness} collapsed />}
     {business && summary && <p className="text-xs text-slate-500">Ventas brutas del día de negocio ({summary.business_timezone}). Los reembolsos se muestran aparte, como en Reportes.</p>}
   </div>;
 }
@@ -198,17 +202,6 @@ function Payments({ className, summary, href }: { className: string; summary: Lo
       <div className="hoy-mix" aria-hidden>{shares.filter(s => s.percent > 0).map(s => <i key={s.tender} data-tender={s.tender} style={{ flexGrow: s.percent }} />)}</div>
       <ul className="hoy-mix-legend">{shares.map(s => <li key={s.tender}><span><i data-tender={s.tender} aria-hidden />{tenderLabel[s.tender]}</span><span className="num"><b>{percent(s.percent)}</b> · {money(s.gross_minor, summary.status === 'ready' ? summary.value.currency_code : 'DOP')}</span></li>)}</ul></>}
   </section>;
-}
-
-function Setup({ className, data, href, open }: { className: string; data: CafeteriaRead; href: (p: string) => string; open: boolean }) {
-  const counts = [['Productos disponibles', data.products.filter(p => p.active && p.available).length], ['Menús activos', data.menus.filter(m => m.active).length], ['Personal POS activo', data.staff.filter(m => m.status === 'active').length], ['Cajas activas', data.registers.filter(r => r.status === 'active').length]] as const;
-  const service = data.service ? ({ manual: 'Catálogo manual', active: 'Turno activo', no_active_service: 'Sin turno activo', invalid_configuration: 'Revisar configuración' })[data.service.status] : 'No disponible';
-  return <details className={`hoy-panel ${open ? 'hoy-setup-open' : ''} ${className}`} open={open}>
-    <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3"><span className="hoy-h2 m-0">{open ? 'Completa la configuración para vender' : 'Configuración de la cafetería'}</span><span className="text-sm text-slate-600">{service}{data.service?.menu_name ? ` · ${data.service.menu_name}` : ''}</span></summary>
-    <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">{counts.map(([label, n]) => <div key={label}><dt className="text-xs font-bold text-slate-600">{label}</dt><dd className="num-display text-xl" data-missing={n === 0 && label !== 'Menús activos'}>{n}</dd></div>)}</dl>
-    <p className="mt-3 text-sm text-slate-600">{data.settings.scheduling_enabled ? 'Programación activada: el POS requiere un turno y menú activos.' : 'Modo manual: catálogo activo y disponible.'} Siempre se requiere personal autorizado, asignación y una sesión de caja abierta.</p>
-    <div className="mt-3 flex flex-wrap gap-2"><Link className={open ? 'btn' : 'btn-secondary'} href={href('/productos')}>Administrar productos</Link><Link className="btn-secondary" href={href('/menus/turnos')}>Turnos de servicio</Link><Link className="btn-secondary" href={href('/cajas')}>Administrar cajas</Link><Link className="btn-secondary" href={href('/personal')}>Personal POS</Link></div>
-  </details>;
 }
 
 function Milestone({ name }: { name: string }) {

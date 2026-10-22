@@ -40,6 +40,57 @@ POS is a dedicated transaction workspace/mode, not simply another
 administrative page inside the normal dashboard shell. Provide a prominent
 “Abrir POS” action.
 
+## Management map and setup clarity (UX 12A, implemented)
+
+The Cafetería Admin workspace makes the management hierarchy explicit:
+
+**Colegio → Sede → Cafetería → Cajas / Personal POS / Productos → Operación**
+
+The colegio, sede and cafetería are *inherited context* established by PIKAS
+(Platform creates them). The Cafetería Admin never has to create or confirm
+them, and nothing in the workspace presents them as editable. The admin's
+manageable scope begins underneath the cafetería.
+
+Implemented surfaces (all derived from the existing `cafeteria_admin_read`;
+no migration, no authority change):
+
+- **Location trail** (every Cafetería Admin surface, under the header):
+  `Colegio → Sede → Cafetería → Current area`, e.g.
+  `Colegio Horizonte → Sede Santiago → Cafetería Santiago → Cajas`. Inherited
+  levels are plain text with a level label; only the current area is
+  emphasised. The colegio collapses on narrow screens. Resource-level context
+  (a specific caja, a specific person) continues to appear in the task window
+  header (`Editar caja · Caja Principal`).
+- **Header context** names the cafetería with its sede and colegio.
+- **Management map** (top of Hoy): “Estás administrando {cafetería}”, the
+  chain Colegio → Sede → Cafetería → *Tú administras:* Cajas · Personal POS ·
+  Productos (counts linking to each section), the readiness status pill and
+  the sentence “El colegio, la sede y la cafetería los establece PIKAS; no
+  tienes que crearlos.” It is orientation, not a live dashboard: no open /
+  closed state per caja.
+- **Puesta en marcha** (readiness guide): the PIKAS context is shown as
+  established (✓ Sede, ✓ Cafetería), then the steps the admin controls, in
+  management order: 1. Crear caja, 2. Agregar personal y asignarlo a una
+  caja, 3. Configurar productos (with menú/turnos only when scheduling is
+  enabled), 4. Preparar la operación. One highlighted next step with a
+  contextual action (“Crear caja para Cafetería Santiago”). States come from
+  current data and regress when a prerequisite disappears.
+- **Lista para operar** means the prerequisites to begin operating are met
+  (active caja, active staff assigned to an active caja, available products
+  and a valid schedule when enabled). It never requires a sale. “En
+  operación” follows the first register session opened in the POS (also no
+  sale). “¡Primera venta con PIKAS!” remains a separate adoption milestone.
+- **Navigation groups**: *Operación* (Hoy, Transacciones, Reportes, PIKAS
+  Cash) and *Mi cafetería* (Cajas, Personal POS, Productos, Menús,
+  Configuración). The mobile bottom bar keeps its compact first four items
+  plus “Más”.
+- **Contextual actions** where the context helps: “Crear caja para
+  {cafetería}”, “Agregar personal a {cafetería}”, “Administrar productos de
+  {cafetería}”, and empty states that name the cafetería.
+
+Out of scope for UX 12A (UX 12B): cashier creation, usernames, credentials,
+temporary passwords, last sign-in and session visibility.
+
 ## Cross-cutting UX principles
 
 1. Use space for decisions, not decoration.

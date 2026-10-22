@@ -9,7 +9,9 @@ import { BrandLogo } from "./brand-logo";
 // logout belongs here (never inside a Demo persona). No authority is derived in the browser.
 const icons = { home: Home, users: Users, shield: ShieldCheck, utensils: Utensils, receipt: ReceiptText, chart: BarChart3, wallet: WalletCards, clients: Building2, team: UsersRound, demo: MonitorPlay } as const;
 export type ShellIcon = keyof typeof icons;
-export type ShellNavItem = { href: string; label: string; icon: ShellIcon; match: string; exact?: boolean };
+// UX 12A: items may carry a group label; the sidebar and the mobile "Más" menu then show the groups
+// (in order of first appearance). The compact bottom bar keeps the first four items as before.
+export type ShellNavItem = { href: string; label: string; icon: ShellIcon; match: string; exact?: boolean; group?: string };
 export type ShellSwitcher = { id: string; name: string; label: string; value: string; options: { value: string; label: string }[] };
 const tones = {
   navy: { aside: "bg-[#101c35]", active: "bg-white text-[#101c35]", idle: "text-slate-300 hover:bg-white/10", mobileActive: "bg-indigo-50 text-indigo-900" },
@@ -25,12 +27,12 @@ function ContextSwitcher({ switcher, compact = false }: { switcher: ShellSwitche
   </form>;
 }
 
-export function AdministrativeShell({ tone, area, homeHref, context, switcher, nav, navLabel, account, logout, demo, notice, children }: {
+export function AdministrativeShell({ tone, area, homeHref, context, switcher, nav, navLabel, account, logout, demo, notice, trail, children }: {
   tone: keyof typeof tones; area: string; homeHref: string;
   context?: { label: string; name: string; detail?: string };
   switcher?: ShellSwitcher; nav: ShellNavItem[]; navLabel: string;
   account: { name: string; role: string }; logout: boolean;
-  demo?: React.ReactNode; notice?: React.ReactNode; children: React.ReactNode;
+  demo?: React.ReactNode; notice?: React.ReactNode; trail?: React.ReactNode; children: React.ReactNode;
 }) {
   const path = usePathname();
   const t = tones[tone];
@@ -38,6 +40,13 @@ export function AdministrativeShell({ tone, area, homeHref, context, switcher, n
   const overflow = nav.length > 5;
   const primary = overflow ? nav.slice(0, 4) : nav, extra = overflow ? nav.slice(4) : [];
   const extraCurrent = extra.find(item => isCurrent(path, item));
+  const grouped = (items: ShellNavItem[], variant: "side" | "menu") => {
+    if (!items.some(item => item.group)) return items.map(item => link(item, variant));
+    const groups = [...new Set(items.map(item => item.group ?? ""))];
+    return groups.map(group => <div key={group || "ungrouped"} className="space-y-1">
+      {group && <p className={`px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider ${variant === "side" ? "text-white/60" : "text-slate-500"}`}>{group}</p>}
+      {items.filter(item => (item.group ?? "") === group).map(item => link(item, variant))}</div>);
+  };
   const closeOnEscape = (event: React.KeyboardEvent<HTMLDetailsElement>) => {
     const details = event.currentTarget;
     if (event.key === "Escape" && details.open) { details.open = false; details.querySelector("summary")?.focus(); }
@@ -56,7 +65,7 @@ export function AdministrativeShell({ tone, area, homeHref, context, switcher, n
     <aside className={`sticky top-0 hidden h-screen flex-col overflow-y-auto p-3 text-white md:flex lg:p-4 ${t.aside}`}>
       <Link href={homeHref} className="flex min-h-11 items-center gap-2 rounded-xl"><span className="rounded-xl bg-white p-1"><BrandLogo compact className="size-8" /></span><span className="font-black">PIKAS Admin</span></Link>
       <p className="mt-2 px-1 text-xs font-bold uppercase tracking-widest text-white/70">{area}</p>
-      <nav className="mt-6 space-y-1" aria-label={navLabel}>{nav.map(item => link(item, "side"))}</nav>
+      <nav className="mt-6 space-y-1" aria-label={navLabel}>{grouped(nav, "side")}</nav>
       <div className="mt-auto space-y-2 border-t border-white/15 pt-3">
         <p className="flex items-start gap-2 px-1 text-sm"><CircleUser aria-hidden className="mt-0.5 shrink-0" size={18} /><span className="min-w-0 break-words"><span className="block font-bold">{account.name}</span><span className="block text-xs text-white/70">{account.role}</span></span></p>
         {logout && logoutForm(`nav-link w-full ${t.idle}`)}
@@ -79,13 +88,14 @@ export function AdministrativeShell({ tone, area, homeHref, context, switcher, n
       </header>
       {demo}
       {notice}
+      {trail}
       <main className="app-main mx-auto min-w-0 max-w-7xl space-y-5 break-words p-4 sm:p-5 md:p-6">{children}</main>
     </div>
     <nav className="mobile-nav fixed inset-x-0 bottom-0 z-30 grid gap-1 border-t bg-white/95 p-1 md:hidden" style={{ gridTemplateColumns: `repeat(${primary.length + (overflow ? 1 : 0)}, minmax(0, 1fr))` }} aria-label={`${navLabel} (móvil)`}>
       {primary.map(item => link(item, "mobile"))}
       {overflow && <details className="relative min-w-0" onKeyDown={closeOnEscape}>
         <summary aria-label={extraCurrent ? `Más destinos · Actual: ${extraCurrent.label}` : "Más destinos"} className={`flex min-h-14 cursor-pointer list-none flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-center text-[11px] font-bold leading-tight [&::-webkit-details-marker]:hidden ${extraCurrent ? t.mobileActive : "text-slate-600"}`}><MoreHorizontal aria-hidden size={18} /><span className="max-w-full hyphens-auto">{extraCurrent ? extraCurrent.label : "Más"}</span></summary>
-        <div className="absolute bottom-full right-0 mb-2 w-72 max-w-[calc(100vw-1rem)] rounded-xl border bg-white p-2 shadow-lg">{extra.map(item => link(item, "menu"))}</div>
+        <div className="absolute bottom-full right-0 mb-2 w-72 max-w-[calc(100vw-1rem)] rounded-xl border bg-white p-2 shadow-lg">{grouped(extra, "menu")}</div>
       </details>}
     </nav>
   </div>;

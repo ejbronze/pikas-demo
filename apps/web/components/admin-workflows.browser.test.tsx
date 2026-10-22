@@ -217,7 +217,7 @@ describe("Personal POS", () => {
     await mountCafeteria("staff"); await page.getByText("2 de 2 empleados").waitFor();
     await page.getByLabel("Filtrar por rol").selectOption("pos_supervisor"); await page.getByText("1 de 2 empleados").waitFor();
     await page.getByLabel("Buscar empleados").fill("zzz"); await page.getByText("No encontramos empleados con estos filtros.").waitFor(); await page.getByRole("button", { name: "Limpiar filtros" }).first().click();
-    await page.getByRole("button", { name: "Agregar empleado" }).click();
+    await page.getByRole("button", { name: "Agregar personal a" }).click();
     expect(await dlg().getByLabel("Rol POS").locator("option").allInnerTexts()).toEqual(["Cajero", "Supervisor"]);
     await dlg().getByLabel(/^Usuario PIKAS/).fill("cajero.norte"); await dlg().getByLabel("Correo *").fill("cajero@example.invalid"); await dlg().getByLabel("Rol POS").selectOption("pos_supervisor"); await dlg().getByRole("button", { name: "Continuar" }).click();
     await dlg().getByRole("button", { name: "Preparar acceso" }).click(); await dlg().getByText("Acceso preparado").first().waitFor();
@@ -229,7 +229,7 @@ describe("Personal POS", () => {
   it("another unconfirmed cafeteria request keeps the existing lock: no new task, only its explicit retry", async () => {
     await page.evaluate(([k, v]) => sessionStorage.setItem(k, v), [`pikas:cafeteria:request:${actor}:${caf}`, JSON.stringify({ key: U(130), command: { cafeteriaId: caf, operation: "category_save", payload: { id: U(131), version: null, name: "Postres", display_order: 0, status: "active" } } })] as const);
     await mountCafeteria("staff"); await page.getByRole("button", { name: "Confirmar solicitud pendiente" }).waitFor();
-    expect(await page.getByRole("button", { name: "Agregar empleado" }).isDisabled()).toBe(true);
+    expect(await page.getByRole("button", { name: "Agregar personal a" }).isDisabled()).toBe(true);
     expect(await page.getByRole("button", { name: "Cambiar acceso de Cajera Ficticia" }).first().isDisabled()).toBe(true);
     expect((await calls()).filter(c => c.url === "/api/cafeteria")).toHaveLength(0);
   });
