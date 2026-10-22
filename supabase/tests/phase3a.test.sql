@@ -4,8 +4,8 @@ set search_path=public,extensions;
 select no_plan();
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),60::bigint,
-  'RLS is enabled on all public tables (58 through Phase 4C + 5C.1 refund_items + 5C.2 reversals)');
+  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),66::bigint,
+  'RLS is enabled on all public tables (58 through Phase 4C + 5C.1 refund_items + 5C.2 reversals + 6 FIN 2 financial tables)');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'No direct authenticated write policies exist');
 select ok(not has_table_privilege('authenticated','public.student_wallets','UPDATE') and

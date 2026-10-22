@@ -46,6 +46,9 @@ create function pg_temp.decide(ref text,decision text,reason text,key text) retu
 create function pg_temp.cash(gross bigint,key text) returns jsonb language sql as $$
  select pikas_private.finance_post_cash_replenishment((select id from persons where auth_user_id='00000000-0000-0000-0000-000000002008'),
   '00000000-0000-0000-0000-000000000111','00000000-0000-0000-0000-000000006901',gross,'Padre ficticio',key)$$;
+-- Fee-era reversal is a Platform finance operation (202611100001).
+create function pg_temp.freverse(ref text,key text) returns jsonb language sql as $$
+ select pikas_private.finance_reverse_replenishment((select id from replenishment_requests where reference=ref),current_setting('t.op_person')::uuid,'wrong_amount',null,key)$$;
 create function pg_temp.entries(ref text,t text) returns bigint language sql as $$
  select coalesce(sum(e.amount_minor),0)::bigint from financial_entries e join replenishment_requests r on r.id=e.replenishment_request_id where r.reference=ref and e.entry_type=t$$;
 create function pg_temp.purchase_obligation(p uuid) returns financial_obligations language sql as $$
@@ -220,18 +223,15 @@ select is((pg_temp.purchase_obligation(current_setting('t.p')::uuid)).amount_min
 -- Scenario 6: the cash replenishment reverses while the wallet still holds RD$ 1,940.
 select set_config('t.cash_rep',(select wallet_replenishment_id::text from replenishment_requests where reference=current_setting('t.cref')),true);
 select set_config('t.b4',pg_temp.bal()::text,true);
-select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
-select set_config('t.rv',pg_temp.reverse(current_setting('t.cash_rep')::uuid,'f2000000-0000-4000-8000-0000000000c1')::text,true);
-reset role;
+select set_config('t.rv',pg_temp.freverse(current_setting('t.cref'),'f2000000-0000-4000-8000-0000000000c1')::text,true);
 select is(pg_temp.bal(),current_setting('t.b4')::bigint-194000,'34/35. Scenario 6: reversal removes the net RD$ 1,940');
 select is(pg_temp.entries(current_setting('t.cref'),'replenishment_fee_reversed')||'/'||pg_temp.entries(current_setting('t.cref'),'stored_value_cancelled')||'/'||pg_temp.entries(current_setting('t.cref'),'replenishment_gross_reversed'),
  '6000/194000/200000','36. Fee, net and gross countered');
 select is((select o.reason||':'||o.amount_minor||':'||d.kind||'>'||c.kind from financial_obligations o join financial_parties d on d.id=o.debtor_party_id join financial_parties c on c.id=o.creditor_party_id
   where o.reason='cash_collection_reversal'),'cash_collection_reversal:200000:clearing>cafeteria','37. Cash obligation corrected by a counter-obligation');
 select is(pg_temp.entries(current_setting('t.cref'),'replenishment_fee_earned'),6000::bigint,'38. Original fee event remains');
-select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
-select is(pg_temp.reverse(current_setting('t.cash_rep')::uuid,'f2000000-0000-4000-8000-0000000000c1'),current_setting('t.rv')::jsonb,'39. Reversal replay returns the same result');
-select is(pg_temp.attempt($$select pg_temp.reverse(current_setting('t.cash_rep')::uuid,'f2000000-0000-4000-8000-0000000000c2')$$),'23514:REPLENISHMENT_ALREADY_REVERSED','39. Second reversal refused');
+select is(pg_temp.freverse(current_setting('t.cref'),'f2000000-0000-4000-8000-0000000000c1'),current_setting('t.rv')::jsonb,'39. Reversal replay returns the same result');
+select is(pg_temp.attempt($$select pg_temp.freverse(current_setting('t.cref'),'f2000000-0000-4000-8000-0000000000c2')$$),'23514:REPLENISHMENT_ALREADY_REVERSED','39. Second reversal refused');
 -- Scenario 7: after spending, the remaining balance is below the net credit → blocked, nothing changes.
 reset role;
 select set_config('t.c7',pg_temp.cash(10000,'fin2-cash-request-0007')->>'reference',true);
@@ -239,13 +239,11 @@ select pg_temp.as_user('00000000-0000-0000-0000-000000002002'); select pg_temp.a
 reset role; select set_config('t.b5',pg_temp.bal()::text,true);
 select set_config('t.c7rep',(select wallet_replenishment_id::text from replenishment_requests where reference=current_setting('t.c7')),true);
 select set_config('t.ent',(select count(*)::text from financial_entries),true);
-select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
-select is(pg_temp.attempt($$select pg_temp.reverse(current_setting('t.c7rep')::uuid,'f2000000-0000-4000-8000-0000000000c7')$$),'23514:FINANCIAL_RESOLUTION_REQUIRED','40. Scenario 7: fee-era reversal blocked (RD$ 50 left < RD$ 97 net)');
-reset role;
+select is(pg_temp.attempt($$select pg_temp.freverse(current_setting('t.c7'),'f2000000-0000-4000-8000-0000000000c7')$$),'23514:FINANCIAL_RESOLUTION_REQUIRED','40. Scenario 7: fee-era reversal blocked (RD$ 50 left < RD$ 97 net)');
 select is(pg_temp.bal(),current_setting('t.b5')::bigint,'Scenario 7: wallet unchanged by the failed reversal');
 select is((select count(*)::text from financial_entries),current_setting('t.ent'),'Scenario 7: no partial financial mutation');
 select is((select count(*) from wallet_replenishment_reversals where replenishment_id=current_setting('t.c7rep')::uuid),0::bigint,'Scenario 7: no reversal record');
-select ok(exists(select 1 from financial_entries e join wallet_adjustments a on a.id=e.wallet_adjustment_id where a.idempotency_key='f2000000-0000-4000-8000-0000000000a3' and e.entry_type='stored_value_adjusted_decrease'),
+select ok(exists(select 1 from financial_entries e join wallet_adjustments a on a.id=e.wallet_adjustment_id where a.idempotency_key='f2000000-0000-4000-8000-0000000000a3' and e.entry_type='adjustment_stored_value_reduction'),
  'Adjustments of an activated customer are recorded as stored-value events');
 -- 41. A pre-activation (legacy) replenishment keeps legacy reversal behaviour after activation.
 select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
@@ -254,11 +252,11 @@ reset role; select ok(pg_temp.bal() < 0,'41. Legacy reversal may still go negati
 select is((select string_agg(entry_type||':'||amount_minor,',') from financial_entries where wallet_replenishment_reversal_id=(select id from wallet_replenishment_reversals where replenishment_id=current_setting('t.legacy')::uuid)),
  'legacy_stored_value_reversed:200000','41. A legacy reversal after activation records only the removed wallet value (no fee, no obligation)');
 
--- ── Reconciliation: wallets = opening + issued + restored + increases − redeemed − cancelled − decreases ─
+-- ── Reconciliation: wallets = opening + issued + restored + funded adjustments − redeemed − cancelled − reductions ─
 select is((select sum(current_balance_minor) from student_wallets where account_id='00000000-0000-0000-0000-000000000001'),
  (select (current_setting('t.act')::jsonb->>'opening_stored_value_minor')::numeric
-   + coalesce(sum(amount_minor) filter (where entry_type in ('stored_value_issued','stored_value_restored','stored_value_adjusted_increase')),0)
-   - coalesce(sum(amount_minor) filter (where entry_type in ('stored_value_redeemed','stored_value_cancelled','stored_value_adjusted_decrease','legacy_stored_value_reversed')),0)
+   + coalesce(sum(amount_minor) filter (where entry_type in ('stored_value_issued','stored_value_restored','clearing_funded_adjustment')),0)
+   - coalesce(sum(amount_minor) filter (where entry_type in ('stored_value_redeemed','stored_value_cancelled','adjustment_stored_value_reduction','legacy_stored_value_reversed')),0)
    from financial_entries where account_id='00000000-0000-0000-0000-000000000001'),
  'Reconciliation: activated customer wallet balances = opening snapshot + stored-value events, exactly');
 select is((select count(*) from replenishment_requests r where r.state='posted' and r.gross_minor<>pg_temp.entries(r.reference,'replenishment_fee_earned')+pg_temp.entries(r.reference,'stored_value_issued')),0::bigint,
