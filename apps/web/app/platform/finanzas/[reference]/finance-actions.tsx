@@ -96,8 +96,9 @@ function FinanceTask({ kind, detail, actor, recovered, onClose, onDone }: {
     {(phase === 'details' || phase === 'confirm') && <div className="rounded-xl border px-4 py-2"><AmountBreakdown gross={detail.gross_minor} fee={detail.fee_minor} net={detail.net_minor} feeBps={detail.fee_bps} compact credited={kind === 'reverse'} /></div>}
     {phase === 'details' && kind === 'reject' && <>
       <p className="text-sm">El rechazo es definitivo: la solicitud no podrá verificarse después. No se acredita dinero ni se cobra cargo.</p>
-      <label className="block font-bold">Motivo del rechazo<textarea className="field mt-1" data-autofocus aria-label="Motivo del rechazo" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>
-      {problem && <p role="alert" className="font-bold text-red-800">{problem}</p>}</>}
+      <label className="block font-bold">Motivo del rechazo<textarea className={`field mt-1 ${problem ? 'border-red-700' : ''}`} data-autofocus aria-label="Motivo del rechazo" aria-invalid={problem ? true : undefined} aria-describedby={problem ? 'finance-reject-problem' : undefined} maxLength={500} value={reason}
+        onChange={e => { setReason(e.target.value); if (e.target.value.trim().length >= 3) setProblem(''); }} /></label>
+      {problem && <p id="finance-reject-problem" role="alert" className="font-bold text-red-800">{problem}</p>}</>}
     {phase === 'details' && kind === 'reverse' && <>
       <p className="text-sm">Se retira el crédito de {money(detail.net_minor)} de PIKAS Cash y se revierte el cargo PIKAS. La recarga original se conserva. Solo puede revertirse una vez, y solo si el crédito sigue disponible.</p>
       <label className="block font-bold">Motivo<select className="field mt-1" data-autofocus aria-label="Motivo de la reversión" value={reason} onChange={e => setReason(e.target.value)}><option value="">Selecciona un motivo</option>{reversalReasons.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>

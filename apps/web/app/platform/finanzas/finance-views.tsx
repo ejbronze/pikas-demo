@@ -11,7 +11,7 @@ export function AmountBreakdown({ gross, fee, net, feeBps = 300, compact = false
   gross: string; fee: string; net: string; feeBps?: number; compact?: boolean; credited?: boolean;
 }) {
   const rate = `${(feeBps / 100).toLocaleString("es-DO", { maximumFractionDigits: 2 })} %`;
-  const rows: [string, string, string][] = [["Pagado", money(gross), ""], [`Cargo PIKAS (${rate})`, `− ${money(fee)}`, "text-slate-600"],
+  const rows: [string, string, string][] = [["Pagado", money(gross), ""], [`Cargo por recarga PIKAS (${rate})`, `− ${money(fee)}`, "text-slate-600"],
     [credited ? "Se acreditó a PIKAS Cash" : "Se acredita a PIKAS Cash", money(net), "font-black"]];
   return <dl className={`tabular-nums ${compact ? "text-sm" : ""}`} aria-label="Montos de la recarga">
     {rows.map(([label, value, tone], index) => <div key={label} className={`flex flex-wrap items-baseline justify-between gap-x-4 ${compact ? "py-0.5" : "py-2"} ${index === 2 ? "border-t border-slate-300" : ""}`}>

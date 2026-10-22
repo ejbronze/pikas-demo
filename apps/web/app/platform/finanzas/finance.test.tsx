@@ -37,7 +37,7 @@ describe('Finanzas navigation',()=>{
 describe('Finanzas queue and history',()=>{
  it('shows pending transfers with gross, fee and net and no identifiers',async()=>{mocks.read.mockResolvedValue(list([row]));const html=await page();
   expect(mocks.read).toHaveBeenCalledWith(expect.anything(),'platform:finance:read','platform_finance_replenishments_read',{p_view:'pending',p_status:null,p_query:null},expect.anything());
-  for(const text of ['Transferencias por verificar','REC-00000001','Ana Ficticia · A-001','Colegio Ficticio · Sede Norte','RD$ 2,000.00','Cargo PIKAS (3 %)','− RD$ 60.00','Se acredita a PIKAS Cash','RD$ 1,940.00','BHD-48213','Con referencia de comprobante','href="/platform/finanzas/REC-00000001"','Por verificar'])expect(html).toContain(text);
+  for(const text of ['Transferencias por verificar','REC-00000001','Ana Ficticia · A-001','Colegio Ficticio · Sede Norte','RD$ 2,000.00','Cargo por recarga PIKAS (3 %)','− RD$ 60.00','Se acredita a PIKAS Cash','RD$ 1,940.00','BHD-48213','Con referencia de comprobante','href="/platform/finanzas/REC-00000001"','Por verificar'])expect(html).toContain(text);
   expect(html).not.toMatch(uuid);});
  it('useful empty states',async()=>{mocks.read.mockResolvedValue(list([]));expect(await page()).toContain('No hay transferencias pendientes de verificación.');
   mocks.read.mockResolvedValue(list([],'history'));expect(await page({vista:'historial'})).toContain('Todavía no hay decisiones registradas.');});
@@ -50,7 +50,7 @@ describe('Finanzas queue and history',()=>{
 });
 describe('Transfer review',()=>{
  it('shows identity, arithmetic, manual evidence and verify actions',async()=>{const html=await open(detail);
-  for(const text of ['REC-00000001','Por verificar','Pagado','RD$ 2,000.00','Cargo PIKAS (3 %)','RD$ 1,940.00','Las compras con PIKAS Cash no tienen cargo','Ana Ficticia · A-001','Sede Norte','pesos dominicanos',
+  for(const text of ['REC-00000001','Por verificar','Pagado','RD$ 2,000.00','Cargo por recarga PIKAS (3 %)','RD$ 1,940.00','Las compras con PIKAS Cash no tienen cargo','Ana Ficticia · A-001','Sede Norte','pesos dominicanos',
    'PIKAS no confirma transacciones bancarias automáticamente','Laura Méndez','Semana 2','WhatsApp 22/10','Directora Ficticia','Administración escolar','Verificar transferencia','Rechazar'])expect(html).toContain(text);
   expect(html).not.toMatch(uuid);});
  it('read-only operators see no decision controls',async()=>{mocks.require.mockResolvedValue(session(['platform:finance:read']));const html=await open(detail);
