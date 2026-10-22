@@ -308,6 +308,10 @@ a.rpt-bar-row .rpt-bar-label{text-decoration:underline;text-underline-offset:3px
 .rpt-trace{display:inline-flex;align-items:baseline;gap:.3rem;color:inherit;text-decoration:underline;text-decoration-thickness:2px;text-decoration-color:#9fd9d9;text-underline-offset:5px;border-radius:.4rem}
 .rpt-trace:hover,.rpt-trace:focus-visible{text-decoration-color:currentColor}
 .rpt-trace-arrow{font-size:.55em;color:var(--foreground-muted)}
+/* Cafetería Hoy (UX 9): approved layout, so a traceable figure shows only its arrow until hover or focus. */
+.hoy .rpt-trace{text-decoration-color:transparent}
+.hoy .rpt-trace:hover,.hoy .rpt-trace:focus-visible{text-decoration-color:currentColor}
+.hoy-hero .rpt-trace-arrow{color:rgb(255 255 255/.65)}
 .rpt-index{display:grid;gap:.75rem;margin:0;padding:0;list-style:none;max-width:48rem}
 .rpt-index a{display:flex;align-items:center;gap:1rem;min-height:4.5rem;padding:1rem 1.25rem;border:1px solid var(--border);border-radius:1.25rem;background:var(--surface);color:inherit}
 .rpt-index a:hover,.rpt-index a:focus-visible{border-color:var(--primary)}

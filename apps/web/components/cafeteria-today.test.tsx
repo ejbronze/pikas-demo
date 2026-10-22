@@ -69,8 +69,15 @@ describe('Cafetería Hoy', () => {
   it('attention: real reconciliation and stale-session signals with deep links', () => {
     const html = render(inputs({ recon: recon([closedSession(1, '300000', '285000', '-15000', 'shortage', { closed_business_date: '2026-10-19' })], [{ ...openSession(5), opened_local: '2026-10-19T07:42' }]) }));
     expect(html).toContain('Requiere atención'); expect(html).toContain('Cierre del lunes con faltante de RD$ 150.00 (Caja 1)');
-    expect(html).toContain('Caja 5 abierta desde el lunes 19/10'); expect(html).toContain(`href="/admin/cafeteria/reportes?cafeteria=${id}"`);
+    expect(html).toContain('Caja 5 abierta desde el lunes 19/10'); expect(html).toContain(`href="/admin/cafeteria/reportes/cajas?cafeteria=${id}&amp;period=last_7_days"`);
     expect(html).toContain(`href="/admin/cafeteria/cajas?cafeteria=${id}"`); expect(html).toContain('Abierta · revisar');
+  });
+  it('UX 9: today figures open the matching report for the same period and read', () => {
+    const html = render(inputs());
+    expect(html.match(new RegExp(`href="/admin/cafeteria/reportes/ventas\\?cafeteria=${id}&amp;period=today"`, 'g'))?.length).toBe(3); // gross, sales, average ticket
+    expect(html).toContain(`href="/admin/cafeteria/reportes/pagos?cafeteria=${id}&amp;period=today"`);
+    expect(html).toContain(`href="/admin/cafeteria/reportes/productos?cafeteria=${id}&amp;period=today"`);
+    expect(html).not.toMatch(/href="\/admin\/cafeteria\/reportes\?/); // nothing lands on the bare landing
   });
   it('no open caja: says so and points to Cajas', () => {
     const html = render(inputs({ recon: recon([], []) }), data({ registers: [{ id, code: 'CAJA-01', name: 'Caja principal', status: 'active', version: 1, has_history: true, open: false }] }));

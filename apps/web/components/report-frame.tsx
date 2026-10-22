@@ -47,12 +47,13 @@ export function ReportTable<T>({ label, rows, rowKey, columns, foot }: { label: 
   </table></div>;
 }
 
-// Horizontal bars for a comparison between groups. The count is always written out (never color
-// alone); a bar links to the report filtered to that group only when that filter exists.
-export function BarList({ label, items, unit }: { label: string; items: { key: string; label: string; count: number; href?: string }[]; unit: [string, string] }) {
+// Horizontal bars for a comparison between groups. The value is always written out (never color
+// alone): a count with its unit, or a preformatted value (an amount). A bar links to the report
+// filtered to that group only when that filter exists.
+export function BarList({ label, items, unit }: { label: string; items: { key: string; label: string; count: number; value?: string; href?: string }[]; unit?: [string, string] }) {
   const max = Math.max(...items.map(i => i.count), 1);
   return <ul className="rpt-bars" aria-label={label}>{items.map(i => {
-    const text = `${i.count.toLocaleString("es-DO")} ${i.count === 1 ? unit[0] : unit[1]}`, body = <>
+    const text = i.value ?? `${i.count.toLocaleString("es-DO")} ${unit ? (i.count === 1 ? unit[0] : unit[1]) : ""}`.trim(), body = <>
       <span className="rpt-bar-label">{i.label}</span>
       <span className="rpt-bar-track" aria-hidden><span className="rpt-bar" style={{ width: `${Math.max((i.count / max) * 100, 2)}%` }} /></span>
       <span className="rpt-bar-value num">{text}</span></>;

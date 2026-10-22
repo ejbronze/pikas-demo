@@ -91,6 +91,41 @@ The School never receives cafetería commercial data, per-cafetería spending, p
 - These would use Platform reads under `platform:*` capabilities and the existing `status`/`kind` parameters.
 - Drill-down example: a cockpit KPI → `/platform/reportes/clientes?status=…`.
 
+## Cafetería Reportes (UX 9)
+
+**Reports:**
+- **Ventas:** `/admin/cafeteria/reportes/ventas`, with `period`/`from`/`to`, `payment=cash|pikas_cash|staff_credit` and `page`.
+  - The summary comes from `cafeteria_report_read('sales_summary')`.
+  - The sales list comes from `cafeteria_transactions_read`, with the same period and tender. Its `total_count` equals the summary's `transaction_count`.
+  - "Ventas por hora" appears only for `period=today`, from `cafeteria_today_read`. The bars sum to the gross.
+  - No series is drawn for other periods.
+- **Métodos de pago:** `/pagos`, from the same sales summary. Each method opens Ventas filtered to it.
+- **Productos:** `/productos`, from `top_products`: top 10 by net units. There are no amounts and no product filter.
+- **Cajas y cierres:** `/cajas`, from `reconciliation`, which requires `cafeteria:pos:sessions:read`. It shows open sessions and closes with the 5A capture: balanced, shortage, overage or uncaptured.
+
+**Shared rules:**
+- **Authority:** the existing Cafetería authority. A customer tenant with `cafeteria:pos:purchases:read`; sandbox tenants and POVs receive no financial data.
+- **CSV:** every CSV comes from the same loader as its page. The Ventas CSV pages through the full filtered list, up to 2,000 sales; it never truncates and refuses if the set changes mid-export.
+
+**Cafetería Hoy drill-downs:**
+
+| Hoy figure | Opens |
+|---|---|
+| Ventas de hoy (gross), Ventas, Ticket promedio | Ventas, `period=today` |
+| Pagado con PIKAS Cash; «Ver métodos» | Métodos de pago, `period=today` |
+| «Lo más vendido» → Reportes | Productos, `period=today` |
+| Attention «Ver cierre» / «Ver todas» | Cajas y cierres, `period=last_7_days` (Hoy's own window) |
+
+**Left unlinked:** the hourly bars, because no read filters by hour. Also the individual products (no product filter), last sale, and the comparison.
+
+**Deferred:**
+- Reembolsos as its own report: refunds stay in Ventas, as totals by tender and per-sale state.
+- Operación / actividad: there is no business-side activity read.
+- A daily sales series for multi-day periods.
+- Product amounts, and per-caja sales or a caja filter.
+
+The Platform customer workspace keeps using `CafeteriaReports` and `CafeteriaTransactions` unchanged.
+
 ## Deferred School reports
 
 - **Administración y accesos:** the current read gives present state only (memberships and invitations), which the Administradores page already shows in full. There is no access history to report on.

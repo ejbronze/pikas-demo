@@ -8,10 +8,13 @@ import { money } from '../lib/cafeteria/operations';
 import { latestGate, reportResultSchema, type Reconciliation, type SalesSummary, type TopProducts } from '../lib/cafeteria/reports';
 import { attentionItems, chartWindow, clock, comparison, hourLabel, longDate, peakHour, tenderShares, todaySchema, weekdayName, type TodayRead } from '../lib/cafeteria/today';
 import type { CafeteriaRead } from '../lib/cafeteria/contracts';
+import { TraceLink } from './report-frame';
 
 // Cafetería Hoy V1: today's business and operation for ONE cafeteria. Every financial value is
 // authoritative server output (5D reports + cafeteria_today_read); sections load and fail
 // independently, and a failure is never rendered as zero.
+// UX 9: figures that come from today's 5D reads open the matching Cafetería report for the same period
+// and read (Ventas / Métodos de pago / Productos for Hoy; Cajas y cierres for the last 7 days).
 export type Loaded<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; value: T };
 export type TodayInputs = { today: Loaded<TodayRead>; summary: Loaded<SalesSummary>; products: Loaded<TopProducts>; recon: Loaded<Reconciliation> | null };
 const loading = { status: 'loading' } as const;
@@ -47,7 +50,7 @@ export function CafeteriaToday({ data }: { data: CafeteriaRead }) {
 }
 
 export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data: CafeteriaRead; business: boolean; inputs: TodayInputs; onRefresh?: () => void }) {
-  const href = (path: string) => `/admin/cafeteria${path}?cafeteria=${data.scope.cafeteria_id}`;
+  const href = (path: string) => `/admin/cafeteria${path}?cafeteria=${data.scope.cafeteria_id}`, report: Report = (r, q) => `${href(`/reportes/${r}`)}&${q}`;
   const today = inputs.today.status === 'ready' ? inputs.today.value : null, summary = inputs.summary.status === 'ready' ? inputs.summary.value : null;
   const activeRegisters = data.registers.filter(r => r.status === 'active'), openRegisters = activeRegisters.filter(r => r.open);
   const setupIncomplete = !data.products.some(p => p.active && p.available) || !activeRegisters.length || !data.staff.some(m => m.status === 'active');
@@ -65,20 +68,22 @@ export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data
       <LiveStrip className="order-3 md:order-1 md:col-span-2 lg:col-span-12" open={openRegisters.length} today={today} loading={business && inputs.today.status === 'loading'} />
       {setupIncomplete && <Setup className="order-2 md:order-2 md:col-span-2 lg:col-span-12" data={data} href={href} open />}
       {business && <>
-        <Hero className="order-1 md:order-3 md:col-span-2 lg:col-span-5" inputs={inputs} />
-        <Kpis className="order-5 md:order-4 md:col-span-2 lg:col-span-7" summary={inputs.summary} />
+        <Hero className="order-1 md:order-3 md:col-span-2 lg:col-span-5" inputs={inputs} report={report} />
+        <Kpis className="order-5 md:order-4 md:col-span-2 lg:col-span-7" summary={inputs.summary} report={report} />
         <section aria-labelledby="hoy-dia" className="hoy-panel order-4 md:order-5 md:col-span-2 lg:col-span-8"><h2 id="hoy-dia" className="hoy-h2">Así va el día</h2>
           {inputs.today.status === 'ready' ? <HourlyChart today={inputs.today.value} /> : <SectionState state={inputs.today.status} what="la actividad por hora" />}</section>
-        <Attention className="order-2 md:order-6 md:col-span-2 lg:col-span-4" today={today?.today ?? null} recon={inputs.recon} href={href} />
-        <TopProductsPanel className="order-6 md:order-7 md:col-span-1 lg:col-span-4" products={inputs.products} href={href('/reportes')} />
+        <Attention className="order-2 md:order-6 md:col-span-2 lg:col-span-4" today={today?.today ?? null} recon={inputs.recon} href={href} closes={report('cajas', 'period=last_7_days')} />
+        <TopProductsPanel className="order-6 md:order-7 md:col-span-1 lg:col-span-4" products={inputs.products} href={report('productos', 'period=today')} />
       </>}
       <Registers className={`order-7 md:order-9 md:col-span-2 ${business ? 'lg:order-8 lg:col-span-4' : 'lg:col-span-6'}`} registers={activeRegisters} recon={inputs.recon?.status === 'ready' ? inputs.recon.value : null} today={today?.today ?? null} href={href('/cajas')} />
-      {business && <Payments className="order-8 md:order-8 md:col-span-1 lg:order-9 lg:col-span-4" summary={inputs.summary} />}
+      {business && <Payments className="order-8 md:order-8 md:col-span-1 lg:order-9 lg:col-span-4" summary={inputs.summary} href={report('pagos', 'period=today')} />}
       {!setupIncomplete && <Setup className={`order-9 md:order-10 md:col-span-2 ${business ? 'lg:col-span-12' : 'lg:col-span-6'}`} data={data} href={href} open={false} />}
     </div>
     {business && summary && <p className="text-xs text-slate-500">Ventas brutas del día de negocio ({summary.business_timezone}). Los reembolsos se muestran aparte, como en Reportes.</p>}
   </div>;
 }
+
+type Report = (report: string, query: string) => string;
 
 function SectionState({ state, what }: { state: 'loading' | 'error'; what: string }) {
   return state === 'loading' ? <p className="hoy-muted" role="status">Cargando {what}…</p> : <p className="hoy-muted" role="alert">No pudimos cargar {what}. Intenta actualizar.</p>;
@@ -95,14 +100,14 @@ function LiveStrip({ className, open, today, loading }: { className: string; ope
   </div>;
 }
 
-function Hero({ className, inputs }: { className: string; inputs: TodayInputs }) {
+function Hero({ className, inputs, report }: { className: string; inputs: TodayInputs; report: Report }) {
   const s = inputs.summary, t = inputs.today.status === 'ready' ? inputs.today.value : null;
   if (s.status !== 'ready') return <section className={`hoy-hero ${className}`} aria-labelledby="hoy-ventas"><p id="hoy-ventas" className="hoy-eyebrow">Ventas de hoy</p>
     <p className="mt-3 text-sm text-white/80" role={s.status === 'error' ? 'alert' : 'status'}>{s.status === 'loading' ? 'Cargando ventas…' : 'No pudimos cargar las ventas de hoy. Intenta actualizar.'}</p></section>;
   const d = s.value.data, c = t ? comparison(t) : { kind: 'none' as const };
   return <section className={`hoy-hero ${className}`} aria-labelledby="hoy-ventas">
     <p id="hoy-ventas" className="hoy-eyebrow">Ventas de hoy</p>
-    <p className="num-display mt-1 break-words text-4xl sm:text-5xl">{money(d.gross_sales_minor, s.value.currency_code)}</p>
+    <p className="num-display mt-1 break-words text-4xl sm:text-5xl"><TraceLink href={report('ventas', 'period=today')} label={`Ventas de hoy ${money(d.gross_sales_minor, s.value.currency_code)}: ver el reporte de ventas de hoy`}>{money(d.gross_sales_minor, s.value.currency_code)}</TraceLink></p>
     {d.transaction_count === 0 ? <p className="mt-2 text-sm text-white/85">Aún no hay ventas hoy. La primera venta aparecerá aquí.</p>
       : c.kind === 'delta' ? <p className="hoy-delta mt-2" data-direction={c.percent > 0 ? 'up' : c.percent < 0 ? 'down' : 'flat'}>
           {c.percent === 0 ? `Igual que el ${c.weekday} pasado a esta hora` : <><span aria-hidden>{c.percent > 0 ? '↑' : '↓'}</span><span className="sr-only">{c.percent > 0 ? 'Sube' : 'Baja'}</span> {`${Math.abs(c.percent)}% vs. ${c.weekday} pasado a esta hora`}</>}</p>
@@ -111,13 +116,13 @@ function Hero({ className, inputs }: { className: string; inputs: TodayInputs })
   </section>;
 }
 
-function Kpis({ className, summary }: { className: string; summary: Loaded<SalesSummary> }) {
+function Kpis({ className, summary, report }: { className: string; summary: Loaded<SalesSummary>; report: Report }) {
   if (summary.status !== 'ready') return <div className={`hoy-panel ${className}`}><SectionState state={summary.status} what="los indicadores" /></div>;
   const d = summary.value.data, wallet = tenderShares(summary.value).find(x => x.tender === 'student_wallet')!;
   return <dl className={`hoy-kpis ${className}`}>
-    <div><dt>Ventas</dt><dd className="num-display">{d.transaction_count}</dd><dd className="hoy-kpi-help">{d.transaction_count === 1 ? 'transacción' : 'transacciones'}</dd></div>
-    <div><dt>Ticket promedio</dt><dd className="num-display">{d.average_ticket_minor ? money(d.average_ticket_minor, summary.value.currency_code) : '—'}</dd><dd className="hoy-kpi-help">{d.average_ticket_minor ? 'por venta' : 'con la primera venta'}</dd></div>
-    <div className="col-span-2 sm:col-span-1"><dt>Pagado con PIKAS Cash</dt><dd className="num-display">{d.transaction_count ? percent(wallet.percent) : '—'}</dd><dd className="hoy-kpi-help">{d.transaction_count ? 'del total de hoy' : 'sin pagos todavía'}</dd></div>
+    <div><dt>Ventas</dt><dd className="num-display"><TraceLink href={report('ventas', 'period=today')} label={`${d.transaction_count} ventas hoy: ver el reporte de ventas de hoy`}>{d.transaction_count}</TraceLink></dd><dd className="hoy-kpi-help">{d.transaction_count === 1 ? 'transacción' : 'transacciones'}</dd></div>
+    <div><dt>Ticket promedio</dt><dd className="num-display">{d.average_ticket_minor ? <TraceLink href={report('ventas', 'period=today')} label={`Ticket promedio ${money(d.average_ticket_minor, summary.value.currency_code)}: ver el reporte de ventas de hoy`}>{money(d.average_ticket_minor, summary.value.currency_code)}</TraceLink> : '—'}</dd><dd className="hoy-kpi-help">{d.average_ticket_minor ? 'por venta' : 'con la primera venta'}</dd></div>
+    <div className="col-span-2 sm:col-span-1"><dt>Pagado con PIKAS Cash</dt><dd className="num-display">{d.transaction_count ? <TraceLink href={report('pagos', 'period=today')} label={`${percent(wallet.percent)} pagado con PIKAS Cash: ver métodos de pago de hoy`}>{percent(wallet.percent)}</TraceLink> : '—'}</dd><dd className="hoy-kpi-help">{d.transaction_count ? 'del total de hoy' : 'sin pagos todavía'}</dd></div>
   </dl>;
 }
 
@@ -149,7 +154,7 @@ export function HourlyChart({ today }: { today: TodayRead }) {
   </figure>;
 }
 
-function Attention({ className, today, recon, href }: { className: string; today: string | null; recon: Loaded<Reconciliation> | null; href: (p: string) => string }) {
+function Attention({ className, today, recon, href, closes }: { className: string; today: string | null; recon: Loaded<Reconciliation> | null; href: (p: string) => string; closes: string }) {
   const items = recon?.status === 'ready' && today ? attentionItems(today, recon.value, m => money(m, recon.value.currency_code)) : [];
   const calm = recon?.status === 'ready' && !!today && !items.length;
   return <section aria-labelledby="hoy-atencion" className={`${calm || !recon ? 'hoy-panel' : 'hoy-attention'} ${className}`}>
@@ -157,8 +162,8 @@ function Attention({ className, today, recon, href }: { className: string; today
     {!recon ? <p className="hoy-muted">Las alertas de cierres y cajas requieren acceso al historial de cajas.</p>
       : recon.status !== 'ready' || !today ? <SectionState state={recon.status === 'ready' ? 'loading' : recon.status} what="el estado de las cajas" />
       : calm ? <p className="hoy-calm"><span aria-hidden>✓</span> Sin cierres con diferencias en los últimos 7 días ni cajas abiertas de días anteriores.</p>
-      : <ul className="hoy-list">{items.slice(0, 5).map(i => <li key={i.id} data-tone={i.tone}><span>{i.text}</span><Link className="hoy-action" href={href(i.action === 'cajas' ? '/cajas' : '/reportes')}>{i.action === 'cajas' ? 'Revisar caja' : 'Ver cierre'}</Link></li>)}
-        {items.length > 5 && <li><span>{plural(items.length - 5, 'alerta más', 'alertas más')}</span><Link className="hoy-action" href={href('/reportes')}>Ver todas</Link></li>}</ul>}
+      : <ul className="hoy-list">{items.slice(0, 5).map(i => <li key={i.id} data-tone={i.tone}><span>{i.text}</span><Link className="hoy-action" href={i.action === 'cajas' ? href('/cajas') : closes}>{i.action === 'cajas' ? 'Revisar caja' : 'Ver cierre'}</Link></li>)}
+        {items.length > 5 && <li><span>{plural(items.length - 5, 'alerta más', 'alertas más')}</span><Link className="hoy-action" href={closes}>Ver todas</Link></li>}</ul>}
   </section>;
 }
 
@@ -185,10 +190,10 @@ function Registers({ className, registers, recon, today, href }: { className: st
   </section>;
 }
 
-function Payments({ className, summary }: { className: string; summary: Loaded<SalesSummary> }) {
+function Payments({ className, summary, href }: { className: string; summary: Loaded<SalesSummary>; href: string }) {
   const shares = summary.status === 'ready' ? tenderShares(summary.value) : [];
   const total = summary.status === 'ready' ? summary.value.data.transaction_count : 0;
-  return <section aria-labelledby="hoy-pagos" className={`hoy-panel ${className}`}><h2 id="hoy-pagos" className="hoy-h2">Cómo pagan</h2>
+  return <section aria-labelledby="hoy-pagos" className={`hoy-panel ${className}`}><div className="hoy-panel-head"><h2 id="hoy-pagos" className="hoy-h2">Cómo pagan</h2><Link className="hoy-action" href={href}>Ver métodos</Link></div>
     {summary.status !== 'ready' ? <SectionState state={summary.status} what="los medios de pago" /> : !total ? <p className="hoy-muted">Los medios de pago aparecerán con la primera venta.</p> : <>
       <div className="hoy-mix" aria-hidden>{shares.filter(s => s.percent > 0).map(s => <i key={s.tender} data-tender={s.tender} style={{ flexGrow: s.percent }} />)}</div>
       <ul className="hoy-mix-legend">{shares.map(s => <li key={s.tender}><span><i data-tender={s.tender} aria-hidden />{tenderLabel[s.tender]}</span><span className="num"><b>{percent(s.percent)}</b> · {money(s.gross_minor, summary.status === 'ready' ? summary.value.currency_code : 'DOP')}</span></li>)}</ul></>}

@@ -1,5 +1,19 @@
 # Registro de cambios del producto
 
+## Cafetería: Reportes y trazabilidad de Hoy (local)
+
+- **Reportes** de la cafetería ahora es una página de inicio («¿qué quieres analizar?») con cuatro reportes. Cada uno lee de la URL el período (Hoy, 7 días, 30 días o Personalizado de hasta 92 días), se puede imprimir y exportar en CSV.
+  - **Ventas:** ventas brutas, transacciones, ticket promedio y ventas netas con reembolsos; «Ventas por hora» para Hoy; y el detalle de cada venta (recibo, hora, caja, operador, método, total, reembolso), paginado. Se puede filtrar por método de pago.
+  - **Métodos de pago:** monto, transacciones y participación por método. Cada método abre las ventas pagadas con él.
+  - **Productos:** los 10 productos principales por unidades netas.
+  - **Cajas y cierres:** cajas abiertas y cierres del período con efectivo esperado, contado, diferencia y resultado. Requiere acceso al historial de cajas.
+- **Hoy** no cambia de diseño. Ahora sus cifras abren el reporte filtrado al mismo período y la misma lectura, y el número coincide:
+  - Ventas de hoy, Ventas y Ticket promedio abren Ventas de hoy.
+  - Pagado con PIKAS Cash y «Ver métodos» abren Métodos de pago de hoy.
+  - «Lo más vendido» abre Productos de hoy.
+  - «Ver cierre» abre Cajas y cierres de los últimos 7 días.
+- Sin migraciones ni permisos nuevos. En sandbox no hay datos financieros. El detalle de ventas no incluye nombres de clientes.
+
 ## Escuela: Reportes (local)
 
 - Nuevo destino **Reportes** (`/admin/escuela/reportes`) en la navegación escolar. En el escritorio va al final de la barra lateral; en el móvil está en «Más», así que la barra inferior no cambia.
