@@ -25,6 +25,32 @@
 - Implementación: `platform_support_cafeteria_command` revalida en cada operación la capacidad, el cliente explícito, la pertenencia de la cafetería, el tipo `customer` y el estado activo; después reutiliza el motor de cafetería existente. Las RPC normales del cliente conservan su autoridad y comportamiento.
 - Alta del colegio: `platform_onboard_school` valida nombre, RNC (9 u 11 dígitos), dirección, país `DO` y provincia ISO 3166-2:DO, y reutiliza en la misma transacción el aprovisionamiento existente; reintentos con la misma clave y datos devuelven el mismo resultado. La preparación del administrador es una segunda orden independiente con su propia clave; el asistente informa con honestidad si quedó pendiente.
 
+## Modo Demo y operación real (UX 11, local)
+
+El Demo y la operación real de la Plataforma son modos excluyentes. El estado lo decide siempre el
+servidor con el POV sandbox **vigente** del operador (`platform_get_active_sandbox_pov`: sesión
+activa, no vencida, persona válida y ligada a la misma identidad); un POV vencido o salido no cuenta,
+así que el historial del Demo nunca bloquea la operación real. No hay interruptor global de Demo:
+se entra de forma deliberada desde **Demo** (`/platform/demostracion`) eligiendo la experiencia.
+
+Con un Demo vigente:
+
+- La Plataforma muestra la barra persistente **● Demo activo**, con la experiencia (Administrador
+  escolar, Administrador de cafetería, Cajero), la persona ficticia y la cafetería; la navegación
+  real (Clientes, Equipo, Identidades, Finanzas) deja de ofrecerse y solo queda **Inicio Demo**.
+- La misma barra aparece en Escuela Demo, Cafetería Demo y Caja/POS Demo, con **Cambiar
+  experiencia** y **Salir del Demo**. Salir termina el POV con la operación existente y lleva a
+  `/platform` con la navegación normal.
+- Toda ruta real de la Plataforma (clientes, operación de cafeterías, equipo, identidades,
+  finanzas) se intercepta en el servidor (`requirePlatform`) antes de leer datos y muestra
+  «Estás en modo Demo», con **Salir del Demo y continuar** (termina el POV y sigue a la ruta pedida,
+  validada como ruta interna de la Plataforma) o **Volver al Demo**. Las URL escritas a mano, los
+  marcadores y las pestañas antiguas reciben lo mismo al recargar; nunca un «cliente/cafetería no
+  encontrado» engañoso. Un «no encontrado» real (cliente inválido o cafetería de otro cliente) sigue
+  igual que antes.
+- La autoridad no cambia: la base de datos sigue rechazando la operación real bajo un POV vigente,
+  y el Demo no concede nada.
+
 ## Ciclo de vida del cliente (Clientes, local)
 
 - Estados del cliente: **Activo**, **Suspendido** y **Cerrado** (`accounts.status`). Solo la Plataforma (`platform:tenant:lifecycle:manage`, rol `platform_admin`) puede suspender, reactivar, cerrar o reabrir; siempre con motivo, estado esperado y auditoría inmutable. Ningún rol del cliente tiene esta autoridad.

@@ -42,7 +42,7 @@ describe("connected POS access boundary", () => {
     const buttons = [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)];
     expect(buttons.length).toBeGreaterThan(9);
     for (const [, attributes, label] of buttons) {
-      if (!["Salir del demo", "Escuela", "Cafetería", "Verificar caja y catálogo", "Venta", "Caja"].includes(label)) expect(attributes).toContain("disabled");
+      if (!["Salir del Demo", "Escuela", "Cafetería", "Verificar caja y catálogo", "Venta", "Caja"].includes(label)) expect(attributes).toContain("disabled");
     }
     expect(html).not.toContain('href="/pos/caja"');
     expect(html).not.toContain('action="/api/pos');

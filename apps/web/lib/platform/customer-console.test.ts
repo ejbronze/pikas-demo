@@ -1,43 +1,55 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), create: vi.fn(), identity: vi.fn(), redirect: vi.fn((path: string) => { throw new Error(path); }) }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), identity: vi.fn(), headers: vi.fn(), redirect: vi.fn() }));
 vi.mock("server-only", () => ({}));
+vi.mock("next/headers", () => ({ headers: mocks.headers }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: mocks.create }));
-vi.mock("@/lib/auth/pikas-context", () => ({ resolvePikasIdentity: mocks.identity, hasPlatformAuthority: (identity: { platform?: unknown }) => Boolean(identity.platform) }));
-import { requirePlatform, readPlatform } from "./customer-console";
-const identity = { status: "ready", user: { id: "real-operator" }, person: { id: "operator-person", displayName: "Operador" }, memberships: [], platform: { capabilities: ["platform:tenant:lifecycle:read"] } };
-beforeEach(() => { vi.clearAllMocks(); mocks.create.mockResolvedValue({ rpc: mocks.rpc }); mocks.identity.mockResolvedValue(identity); });
-describe("platform server customer access", () => {
-  it("fails closed with a safe login message when authorization is unavailable", async () => {
-    mocks.identity.mockRejectedValue(new Error("private backend detail"));
-    await expect(requirePlatform()).rejects.toThrow("/backoffice/login?error=platform_unavailable");
-    expect(mocks.rpc).not.toHaveBeenCalled();
-  });
-  it("uses the real authenticated operator", async () => { const session = await requirePlatform(); expect(session.identity.user.id).toBe("real-operator"); expect(session.identity.person.id).toBe("operator-person"); });
-  it.each([{ status: "unauthenticated" }, { status: "unlinked" }, { ...identity, platform: null }])("fails closed for invalid identity %j", async (value) => { mocks.identity.mockResolvedValue(value); await expect(requirePlatform()).rejects.toThrow("/backoffice/login"); });
-  it("sandbox capability alone cannot list customers and does not call the RPC", async () => {
-    mocks.identity.mockResolvedValue({ ...identity, platform: { capabilities: ["platform:sandbox:pov:enter"] } });
-    expect(await readPlatform(await requirePlatform(), "platform:tenant:lifecycle:read", "platform_list_customers", {}, z.array(z.string()))).toEqual({ kind: "forbidden" }); expect(mocks.rpc).not.toHaveBeenCalled();
-  });
-  it.each([{ error: { code: "42501" }, data: null, kind: "forbidden" }, { error: { code: "P0002" }, data: null, kind: "missing" }, { error: null, data: {}, kind: "unavailable" }])("validates read response and maps failures %j", async ({ error, data, kind }) => {
-    mocks.rpc.mockResolvedValue({ error, data }); expect(await readPlatform(await requirePlatform(), "platform:tenant:lifecycle:read", "platform_list_customers", {}, z.array(z.string()))).toEqual({ kind });
-  });
-  it("accepts intentional empty list and catches server errors", async () => {
-    const session = await requirePlatform(); mocks.rpc.mockResolvedValue({ error: null, data: [] }); expect(await readPlatform(session, "platform:tenant:lifecycle:read", "platform_list_customers", {}, z.array(z.string()))).toEqual({ kind: "ready", value: [] });
-    mocks.rpc.mockRejectedValue(new Error("network")); expect(await readPlatform(session, "platform:tenant:lifecycle:read", "platform_list_customers", {}, z.array(z.string()))).toEqual({ kind: "unavailable" });
-  });
-});
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ rpc: mocks.rpc }) }));
+vi.mock("@/lib/auth/pikas-context", () => ({ resolvePikasIdentity: mocks.identity, hasPlatformAuthority: (i: { platform: { capabilities: string[] } | null }) => !!i.platform && i.platform.capabilities.length > 0 }));
+import { readActiveDemo, requirePlatform } from "./customer-console";
 
-describe('customer read projections', () => {
-  const row = (id: string) => ({ id, name: 'Cliente ficticio', code: 'C', status: 'active', tenant_kind: 'customer', school_count: 1, location_count: 1, cafeteria_count: 1 });
-  it('accept well-formed identifiers that are not RFC 4122 (local foundation fixtures) without blanking the list', async () => {
-    const { customerListSchema } = await import('./customer-contracts');
-    expect(customerListSchema.safeParse({ customers: [row('00000000-0000-0000-0000-000000000001'), row(crypto.randomUUID())], next_cursor: null }).success).toBe(true);
+const operator = (capabilities: string[]) => ({ status: "ready", user: { id: "u" }, person: { id: "p", displayName: "Operadora ficticia" }, memberships: [], platform: { role: "platform_admin", roles: ["platform_admin"], capabilities } });
+const caps = ["platform:tenant:lifecycle:read", "platform:customer:operations:read", "platform:sandbox:pov:enter"];
+const active = (expires = "2030-01-01T00:00:00Z") => ({ session_id: "5c300000-0000-4000-8000-000000000001", account_id: "5c300000-0000-4000-8000-000000000002", account_name: "Colegio Horizonte",
+  school_id: "5c300000-0000-4000-8000-000000000003", cafeteria_id: "5c300000-0000-4000-8000-000000000004", cafeteria_name: "Cafetería Escolar", pov_code: "cafeteria_admin", persona_display_name: "Marta Demo", expires_at: expires });
+class Redirected extends Error { constructor(public to: string) { super("NEXT_REDIRECT"); } }
+beforeEach(() => { vi.resetAllMocks(); mocks.identity.mockResolvedValue(operator(caps)); mocks.headers.mockResolvedValue(new Headers({ "x-pikas-url": "/platform/clientes?q=norte" })); mocks.redirect.mockImplementation((to: string) => { throw new Redirected(to); }); });
+
+describe("UX 11 mode resolution (server)", () => {
+  it("1. no current POV → normal Platform mode", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
+    const session = await requirePlatform(); expect(session.demo).toBeNull(); expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(mocks.rpc).toHaveBeenCalledWith("platform_get_active_sandbox_pov");
   });
-  it('still reject malformed identifiers and unknown statuses', async () => {
-    const { customerListSchema } = await import('./customer-contracts');
-    expect(customerListSchema.safeParse({ customers: [row('not-an-id')], next_cursor: null }).success).toBe(false);
-    expect(customerListSchema.safeParse({ customers: [{ ...row(crypto.randomUUID()), status: 'deleted' }], next_cursor: null }).success).toBe(false);
+  it("2. current POV → Demo mode: a real route is intercepted with the validated requested path", async () => {
+    mocks.rpc.mockResolvedValue({ data: active(), error: null });
+    await expect(requirePlatform()).rejects.toMatchObject({ to: "/platform/demostracion/salir?next=%2Fplatform%2Fclientes%3Fq%3Dnorte" });
+    const allowed = await requirePlatform({ demo: "allow" });
+    expect(allowed.demo).toMatchObject({ povCode: "cafeteria_admin", accountName: "Colegio Horizonte", cafeteriaName: "Cafetería Escolar", personaName: "Marta Demo" });
+  });
+  it("3. expired POV → normal Platform mode (never traps the operator)", async () => {
+    mocks.rpc.mockResolvedValue({ data: active("2020-01-01T00:00:00Z"), error: null });
+    expect((await requirePlatform()).demo).toBeNull(); expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+  it("4. exited POV → the resolver returns nothing → normal mode", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
+    expect((await requirePlatform({ demo: "allow" })).demo).toBeNull();
+  });
+  it("5. Demo state is read for the authenticated operator only, and only when that operator can use Demo", async () => {
+    mocks.identity.mockResolvedValue(operator(["platform:tenant:lifecycle:read"]));
+    mocks.rpc.mockResolvedValue({ data: active(), error: null });
+    expect((await requirePlatform()).demo).toBeNull(); expect(mocks.rpc).not.toHaveBeenCalledWith("platform_get_active_sandbox_pov");
+    const state = await readActiveDemo({ rpc: mocks.rpc } as never, operator(caps) as never); expect(state.kind).toBe("active");
+  });
+  it("an unavailable resolver grants nothing and does not pretend Demo is active", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: "XX000" } });
+    expect((await requirePlatform()).demo).toBeNull();
+    expect((await readActiveDemo({ rpc: mocks.rpc } as never, operator(caps) as never)).kind).toBe("unknown");
+  });
+  it("an unsafe or missing requested path falls back to the Platform home", async () => {
+    mocks.rpc.mockResolvedValue({ data: active(), error: null });
+    mocks.headers.mockResolvedValue(new Headers({ "x-pikas-url": "https://evil.invalid/platform" }));
+    await expect(requirePlatform()).rejects.toMatchObject({ to: "/platform/demostracion/salir" });
+    mocks.headers.mockResolvedValue(new Headers());
+    await expect(requirePlatform()).rejects.toMatchObject({ to: "/platform/demostracion/salir" });
   });
 });

@@ -2,9 +2,8 @@
 import { useRef, useState } from "react";
 import { hasDemoFinancialJournal } from "../lib/platform/demo-departure";
 import { sessionFetch } from "../lib/auth/session-fetch";
-import { demoExperiences, type DemoExperience } from "../lib/platform/demo-experiences";
+import { demoExperiences, demoLabel, type DemoExperience } from "../lib/platform/demo-experiences";
 import type { SandboxPovCode } from "../lib/platform/sandbox-pov";
-import { DemoEnvironmentBar } from "./demo-environment-bar";
 import type { SandboxLauncherState } from "../lib/platform/sandbox-launcher";
 const groups = [{ label: "Administración", entries: demoExperiences.slice(0, 2) }, { label: "Operaciones", entries: demoExperiences.slice(2) }];
 export function DemoWorkspace({ state, available }: { state: SandboxLauncherState; available: SandboxPovCode[] }) {
@@ -29,7 +28,7 @@ export function DemoWorkspace({ state, available }: { state: SandboxLauncherStat
   }
   if (state.kind === "hidden") return null;
   return <div className="space-y-5">
-    {state.kind === "active" && <DemoEnvironmentBar pov={{ session_id: state.active.sessionId, pov_code: state.active.povCode }} />}
+    {state.kind === "active" && <p role="status" className="card p-4">Demo activo: {demoLabel(state.active.povCode)} · {state.active.accountName} · {state.active.cafeteriaName}.{state.active.canOpenExperience && <> <a className="font-bold underline" href={state.active.destination}>Continuar en {demoLabel(state.active.povCode)}</a></>} Para salir del Demo usa «Salir del Demo» en la barra superior.</p>}
     {state.kind === "unavailable" && <p role="alert">No pudimos confirmar el entorno Demo. Actualiza la página.</p>}
     {blocked && <p role="alert">Hay una operación pendiente de confirmar en esta pestaña. <a className="underline" href="/platform/demostracion/continuar">Continuar en la experiencia actual para resolverla</a>.</p>}
     {failed && <p role="alert">No se pudo confirmar el cambio. <button className="btn-secondary" disabled={busy} onClick={() => pending.current && void enter(pending.current.experience)}>Reintentar la misma solicitud</button></p>}

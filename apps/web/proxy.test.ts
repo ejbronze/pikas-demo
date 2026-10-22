@@ -25,6 +25,19 @@ beforeEach(() => {
   mocks.access.mockResolvedValue({ status: "authorized", context: posContext() });
 });
 
+describe("UX 11 Platform routes", () => {
+  it.each(["/platform", "/platform/clientes", "/platform/finanzas?vista=historial", "/platform/demostracion/salir"])("forwards %s with the requested path recorded, without consulting the database", async (path) => {
+    const response = await proxy(request(path));
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.headers.get("x-middleware-request-x-pikas-url")).toBe(path);
+    expect(mocks.identity).not.toHaveBeenCalled(); expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+  it("overrides a client-supplied path header", async () => {
+    const response = await proxy(new NextRequest("http://localhost/platform/clientes", { headers: { "x-pikas-url": "https://evil.invalid" } }));
+    expect(response.headers.get("x-middleware-request-x-pikas-url")).toBe("/platform/clientes");
+  });
+});
+
 describe("POS proxy gate", () => {
   it.each(["/pos", "/pos/caja"])("lets a DB-authorized POS request reach %s", async (path) => {
     const response = await proxy(request(path));

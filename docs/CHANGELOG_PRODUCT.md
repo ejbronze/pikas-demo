@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## Plataforma: modo Demo aislado (UX 11, local)
+
+- El Demo y la operación real son modos excluyentes. Mientras un Demo está vigente, la Plataforma muestra la barra **● Demo activo** (con experiencia, persona ficticia y cafetería), la navegación real desaparece y solo queda **Inicio Demo**.
+- **Salir del Demo** está disponible desde cualquier lugar del Demo: Plataforma, Escuela Demo, Cafetería Demo y Caja/POS. Al salir se vuelve a `/platform` con la navegación normal.
+- Abrir una ruta real (clientes, operación de cafeterías, equipo, identidades, finanzas) con un Demo vigente muestra «Estás en modo Demo», con **Salir del Demo y continuar** o **Volver al Demo**, en lugar de un «cafetería no encontrada» engañoso. Las URL manuales, los marcadores y las pestañas antiguas reciben lo mismo al recargar.
+- Entrar al Demo sigue siendo deliberado desde **Demo**; no hay interruptor global. Un Demo vencido o salido no bloquea nada.
+- Sin migración, sin cambios de autoridad ni de permisos. Ver `docs/ADMINISTRATION_AND_PERMISSIONS.md`.
+
 ## Plataforma: Finanzas de PIKAS Cash (local)
 
 - Nuevo destino **Finanzas** en la Plataforma. Solo aparece con `platform:finance:read`, que no está otorgado a nadie.

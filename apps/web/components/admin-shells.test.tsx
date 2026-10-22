@@ -46,7 +46,7 @@ describe('school / account shell',()=>{
   expect(html).toContain('Administración de cuenta');expect(html).toContain('Administrador de cuenta');expect(html).toContain('Cuenta Ficticia');expect(html).toContain('Otra Escuela');expect(html).toContain('Cambiar</button>');});
  it('without a validated read the role label stays neutral (no inferred authority)',()=>{const html=renderToStaticMarkup(<ConnectedSchoolShell schoolId={id} context={{person_id:id,display_name:'Admin',schools:[school]}}>Workspace</ConnectedSchoolShell>);expect(html).not.toContain('Administrador de cuenta');expect(html).not.toContain('Administrador escolar');});
  it('demo persona: one Demo bar, real operator shown, no logout, no context switcher',()=>{const html=renderToStaticMarkup(<ConnectedSchoolShell schoolId={id} context={{person_id:id,display_name:'Persona ficticia',schools:[{...school,tenant_kind:'sandbox'}],pov}}>Workspace</ConnectedSchoolShell>);
-  expect(html.match(/aria-label="Entorno Demo"/g)).toHaveLength(1);expect(html).toContain('Salir del demo');expect(html).not.toContain('action="/api/auth/logout"');expect(html).not.toContain('DEMO / SANDBOX');expect(html).toContain('Edwin Ficticio');expect(html).toContain('Operador de PIKAS · Demo');expect(html).not.toContain('Cambiar</button>');});
+  expect(html.match(/aria-label="Entorno Demo"/g)).toHaveLength(1);expect(html).toContain('Salir del Demo');expect(html).not.toContain('action="/api/auth/logout"');expect(html).not.toContain('DEMO / SANDBOX');expect(html).toContain('Edwin Ficticio');expect(html).toContain('Operador de PIKAS · Demo');expect(html).not.toContain('Cambiar</button>');});
 });
 
 describe('platform shell',()=>{

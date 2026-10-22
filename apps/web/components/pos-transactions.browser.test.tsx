@@ -175,9 +175,9 @@ describe("Wave F in-app confirmations (no native dialogs)", () => {
   });
   it("Demo departure with unsent work warns in the app first; only a repeated choice proceeds", async () => {
     await win("w => w.mountPos(true)"); await page.getByText("José Ramírez · Cajero").waitFor(); await toItems(); await page.getByRole("button", { name: "Añadir Producto real" }).click();
-    await page.getByRole("button", { name: "Salir del demo" }).click(); await page.getByText("Tienes trabajo sin enviar").waitFor();
+    await page.getByRole("button", { name: "Salir del Demo" }).click(); await page.getByText("Tienes trabajo sin enviar").waitFor();
     expect((await calls()).some(c => c.url.includes("/api/platform/sandbox-pov/"))).toBe(false); expect(await win<number>("w => w.sale.getSnapshot().cart.length")).toBe(1);
-    await page.getByRole("button", { name: "Salir del demo" }).click(); await page.waitForTimeout(200);
+    await page.getByRole("button", { name: "Salir del Demo" }).click(); await page.waitForTimeout(200);
     expect((await calls()).filter(c => c.url.includes("/api/platform/sandbox-pov/exit"))).toHaveLength(1);
   });
 });

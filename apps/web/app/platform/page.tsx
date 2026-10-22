@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { z } from "zod";
+import { redirect } from "next/navigation";
 import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
+import { DEMO_HOME } from "../../lib/platform/demo-mode";
 import { ReadFailure } from "./console-views";
 import { AppPageHeader } from "../../components/app-page-header";
 import { PlatformCockpit, type ActivityItem } from "../../components/platform/cockpit";
@@ -24,7 +26,9 @@ const destinations = [
   { href: "/platform/demostracion", title: "Demo", text: "Explora PIKAS en el entorno de demostración, separado de los clientes.", allowed: (c: string[]) => c.includes("platform:sandbox:pov:enter") },
 ];
 export default async function PlatformHomePage() {
-  const session = await requirePlatform();
+  // UX 11: in Demo mode the home of the Platform is the Demo workspace, never the real cockpit.
+  const session = await requirePlatform({ demo: "allow" });
+  if (session.demo) redirect(DEMO_HOME);
   const activity = session.capabilities.includes("platform:audit:read")
     ? await readPlatform(session, "platform:audit:read", "platform_read_audit", { p_limit: 5 }, auditSchema) : null;
   const when = (iso: string) => new Date(iso).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", dateStyle: "medium", timeStyle: "short" });

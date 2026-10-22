@@ -3,7 +3,7 @@ import { requirePlatform } from "@/lib/platform/customer-console";
 import { loadSandboxLauncherState, targetSchema } from "@/lib/platform/sandbox-launcher";
 import { DemoWorkspace } from "@/components/demo-workspace";
 export default async function DemonstrationPage() {
-  const { supabase, identity, capabilities } = await requirePlatform();
+  const { supabase, identity, capabilities } = await requirePlatform({ demo: "allow" });
   if (!capabilities.includes("platform:sandbox:pov:enter")) return <p role="alert">No tienes acceso al Demo.</p>;
   const state = await loadSandboxLauncherState(supabase, identity);
   const response = await supabase.rpc("platform_list_sandbox_pov_targets");

@@ -35,6 +35,13 @@ function loginRedirect(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
+  // UX 11: Platform pages intercept real routes while a Demo POV is current (requirePlatform). The
+  // proxy only records the requested path so the conflict screen can continue to it after exit.
+  if (request.nextUrl.pathname === "/platform" || request.nextUrl.pathname.startsWith("/platform/")) {
+    const forwarded = new Headers(request.headers);
+    forwarded.set("x-pikas-url", request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.next({ request: { headers: forwarded } });
+  }
   const needed = requiredRole(request.nextUrl.pathname);
   const connectionPage = request.nextUrl.pathname === "/pilot/connected";
   if (!needed && !connectionPage) return NextResponse.next();
@@ -155,5 +162,7 @@ export const config = {
     "/admin/escuela/:path*",
     "/admin/cafeteria/:path*",
     "/pilot/connected",
+    "/platform",
+    "/platform/:path*",
   ],
 };
