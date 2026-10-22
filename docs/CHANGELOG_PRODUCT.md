@@ -1,5 +1,26 @@
 # Registro de cambios del producto
 
+## PIKAS Cash: base financiera FIN 2 (local)
+
+- **Solo base de datos.** No hay pantallas, navegación, reportes ni carga de comprobantes nuevos. Ningún cliente queda activado y no se otorga ningún permiso.
+- **La compensación central requiere aprobación legal y contable antes de activar dinero real.** La custodia legal de la parte de compensación no está asignada.
+- **Política de comisión versionada:** v1 es DOP, 3 % (300 pb), redondeo hacia arriba desde la mitad en centavos enteros. Solo aplica a recargas. Cada solicitud guarda bruto, comisión y neto, y bruto = comisión + neto. El monedero recibe el neto.
+- **Activación por cliente,** inactiva por defecto. Al activar se toma una foto del saldo existente. Los clientes no activados no cambian: sin comisión, sin obligaciones, sin reprocesar historial.
+- **Recargas con fuente de cobro:**
+  - transferencia bancaria: enviada → verificada y publicada, o rechazada;
+  - efectivo en Cafetería: se cobra y publica en una sola operación.
+
+  Con un cliente activado, el colegio ya no puede publicar recargas directas.
+- **Obligaciones:**
+  - efectivo cobrado: la Cafetería debe el bruto a compensación;
+  - compra con monedero: compensación debe a la Cafetería;
+  - reembolso: contra-obligación;
+  - reversión: corrige el cobro en efectivo.
+
+  Semana de liquidación de lunes a domingo (America/Santo_Domingo), con vencimiento el martes. Todavía no hay lotes.
+- **Reversión en la era de comisión:** solo si el monedero conserva el neto completo. Si no, `FINANCIAL_RESOLUTION_REQUIRED` y no cambia nada. La reversión completa también revierte la comisión.
+- Ver `docs/PIKAS_CASH_FINANCIAL_FOUNDATION.md`.
+
 ## Cafetería: Reportes y trazabilidad de Hoy (local)
 
 - **Reportes** de la cafetería ahora es una página de inicio («¿qué quieres analizar?») con cuatro reportes. Cada uno lee de la URL el período (Hoy, 7 días, 30 días o Personalizado de hasta 92 días), se puede imprimir y exportar en CSV.
