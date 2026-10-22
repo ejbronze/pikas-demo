@@ -68,12 +68,12 @@ export function SalesReportBody({ cafeteriaId, period, payment, summary: s, sale
       <h2 id="rpt-sales" className="sch-h2">{n(sales.total, "venta", "ventas")}{payment ? ` con ${tenderLabel[payments[payment]]}` : ""}</h2>
       {sales.total === 0 ? <p className="sch-panel text-sm text-slate-600">Sin ventas en este período{payment ? " con este método de pago" : ""}.</p> : <>
         <ReportTable label="Ventas del período" rows={sales.rows} rowKey={r => r.receipt} columns={[
-          { header: "Recibo", primary: true, cell: r => `#${r.receipt}` },
-          { header: "Fecha", cell: r => r.date.split("-").reverse().join("/") },
-          { header: "Hora", cell: r => r.time },
-          { header: "Caja", cell: r => r.register },
+          { header: "Recibo", primary: true, nowrap: true, cell: r => `#${r.receipt}` },
+          { header: "Fecha", nowrap: true, cell: r => r.date.split("-").reverse().join("/") },
+          { header: "Hora", nowrap: true, cell: r => r.time },
+          { header: "Caja", nowrap: true, cell: r => r.register },
           { header: "Operador", cell: r => r.operator },
-          { header: "Método", cell: r => tenderLabel[r.tender] },
+          { header: "Método", nowrap: true, cell: r => tenderLabel[r.tender] },
           { header: "Total", align: "end", cell: r => <MoneyValue minor={r.total_minor} intent="amount" /> },
           { header: "Reembolso", cell: r => r.refund_status === "none" ? "—" : `${refundStatusLabel[r.refund_status]} · ${money(neg(r.refunded_minor), cur)}` },
         ]} />

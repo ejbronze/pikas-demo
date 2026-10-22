@@ -34,15 +34,16 @@ export function ReportSummary({ label, items }: { label: string; items: { label:
   return <dl className="rpt-summary" aria-label={label}>{items.map(i => <div key={i.label}><dt>{i.label}</dt><dd className="num-display">{i.value}</dd>{i.help && <dd className="rpt-help">{i.help}</dd>}</div>)}</dl>;
 }
 
-export type ReportColumn<T> = { header: string; cell: (row: T) => React.ReactNode; align?: "end"; primary?: boolean };
+// nowrap: a short atomic value («Caja 1», «PIKAS Cash») that print keeps on one line; long text still wraps.
+export type ReportColumn<T> = { header: string; cell: (row: T) => React.ReactNode; align?: "end"; primary?: boolean; nowrap?: boolean };
 // A real table on screen and in print; below 640 px each row reads as a labelled card.
 export function ReportTable<T>({ label, rows, rowKey, columns, foot }: { label: string; rows: T[]; rowKey: (row: T) => string; columns: ReportColumn<T>[]; foot?: React.ReactNode }) {
   return <div className="rpt-table-wrap"><table className="rpt-table">
     <caption className="sr-only">{label}</caption>
     <thead><tr>{columns.map(c => <th key={c.header} scope="col" data-align={c.align}>{c.header}</th>)}</tr></thead>
     <tbody>{rows.map(row => <tr key={rowKey(row)}>{columns.map(c => c.primary
-      ? <th key={c.header} scope="row" data-label={c.header}>{c.cell(row)}</th>
-      : <td key={c.header} data-label={c.header} data-align={c.align}>{c.cell(row)}</td>)}</tr>)}</tbody>
+      ? <th key={c.header} scope="row" data-label={c.header} data-nowrap={c.nowrap || undefined}>{c.cell(row)}</th>
+      : <td key={c.header} data-label={c.header} data-align={c.align} data-nowrap={c.nowrap || undefined}>{c.cell(row)}</td>)}</tr>)}</tbody>
     {foot && <tfoot>{foot}</tfoot>}
   </table></div>;
 }

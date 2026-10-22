@@ -347,6 +347,8 @@ a.rpt-bar-row .rpt-bar-label{text-decoration:underline;text-underline-offset:3px
   .rpt-table-wrap{overflow:visible}
   .rpt-table td::before{content:none}
   .rpt-table [data-align=end]{text-align:right}
+  /* Short atomic values and amounts stay one unit on paper; operator names and other long text still wrap. */
+  .rpt-table [data-nowrap],.rpt-table [data-money-intent]{white-space:nowrap}
   .rpt-table thead{display:table-header-group}
   .rpt-table tr{break-inside:avoid}
   .rpt-trace,.rpt-record,a.rpt-bar-row .rpt-bar-label{text-decoration:none}
