@@ -103,7 +103,8 @@ export class ConnectedSale {
     this.update({ busy: true, customers: [], notice: "" });
     try {
       const customers = z.array(customerSchema).parse(await this.send({ operation: "search", query }));
-      this.update({ customers, notice: customers.length ? "" : "No se encontraron estudiantes." });
+      // UX 13: the POS cannot tell "no match" from "the school has not shared or enabled students"; say both.
+      this.update({ customers, notice: customers.length ? "" : "No se encontraron estudiantes. Si el colegio aún no ha compartido ni habilitado estudiantes para esta cafetería, no aparecerá ninguno." });
     }
     catch (error) { this.update({ notice: this.error(error) }); }
     finally { this.update({ busy: false }); }

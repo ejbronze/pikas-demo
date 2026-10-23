@@ -21,3 +21,26 @@ it.each([['account_admin','customer',true],['school_admin','customer',false],['a
  const scoped:SchoolRead={...data,scope:{...data.scope,role,tenant_kind:tenant},rows:[{id,name:'Fictional Cafe',location:'Campus',status:'active',sharing_status:'revoked',categories:[],customer_count:0,customers:[]}]};
  expect(renderToStaticMarkup(<ConnectedSchoolPages section="cafeterias" data={scoped}/>).includes('aria-label="Administración de cafetería"')).toBe(visible);
 });
+
+describe('UX 13 Cafeterías conectadas states', () => {
+ const row = (patch: Record<string, unknown> = {}) => ({ id, name: 'Cafetería Santiago', location: 'Sede Santiago', status: 'active', sharing_status: 'revoked', categories: [], customer_count: 0, customers: [], ...patch });
+ const render = (sharing: Record<string, 'active' | 'revoked'> | null, patch: Record<string, unknown> = {}, students: unknown[] = []) => renderToStaticMarkup(<ConnectedSchoolPages section="cafeterias" data={{ ...data, rows: [row(patch)] } as SchoolRead} sharing={sharing} students={students as never} />);
+ it('never shared: "Sin compartir todavía", a share action, basic identification preselected, and "share first" guidance for eligibility', () => {
+  const html = render({});
+  expect(html).toContain('Sin compartir todavía'); expect(html).not.toContain('revocada'); expect(html).toContain('Compartir con Cafetería Santiago'); expect(html).toContain('Compartir permite que esta cafetería vea únicamente');
+  expect(html.match(/<input[^>]*value="basic_identification"[^>]*>/)?.[0]).toContain('checked'); expect(html).toContain('Primero comparte con Cafetería Santiago.'); expect(html).toContain('id="cafeteria-'+id+'"');
+ });
+ it('revoked after sharing: says revoked and offers to share again', () => {
+  const html = render({ [id]: 'revoked' }); expect(html).toContain('Compartición revocada'); expect(html).toContain('Volver a compartir con Cafetería Santiago');
+ });
+ it('shared with students but none enabled: teaching empty state and the eligibility section open', () => {
+  const html = render({ [id]: 'active' }, { sharing_status: 'active' }, [{ id, display_name: 'Sol Ficticia', student_code: 'S-1', status: 'active', enrollment: { id, starts_on: '2026-08-15', location_id: null, grade: null, class: null, homeroom: null } }]);
+  expect(html).toContain('Compartición activa'); expect(html).toContain('Ningún estudiante habilitado todavía.'); expect(html).toMatch(/<details open/); expect(html).toContain('Habilitar estudiante');
+ });
+ it('shared but the school has no students: points to Estudiantes; enabled students show a count and no empty state', () => {
+  expect(render({ [id]: 'active' }, { sharing_status: 'active' })).toContain('Aún no hay estudiantes para habilitar.');
+  const html = render({ [id]: 'active' }, { sharing_status: 'active', customer_count: 2, customers: [{ student_id: id, display_name: 'Sol Ficticia', status: 'active' }] });
+  expect(html).toContain('2 estudiantes habilitados'); expect(html).not.toContain('Ningún estudiante habilitado'); expect(html).not.toMatch(/<details open/);
+ });
+ it('without the sharing-rows read the wording stays neutral', () => { const html = render(null); expect(html).toContain('Sin compartición activa'); expect(html).not.toContain('revocada'); });
+});

@@ -86,7 +86,7 @@ export function LaunchChecklist({ customer }: { customer: CustomerReadiness }) {
   const done = status === "operating" && steps.every(s => s.state === "complete");
   const list = <ol className="net-steps">{steps.map((s, i) => <li key={s.key} data-state={s.state} data-next={next?.key === s.key && status !== "inactive"}>
     <span className="net-step-mark" aria-hidden>{mark[s.state] || i + 1}</span>
-    <div className="min-w-0 flex-1"><p className="font-bold">{s.label} <span className="net-step-state">{stateText[s.state]}</span></p><p className="text-sm text-slate-700">{s.detail}</p></div>
+    <div className="min-w-0 flex-1"><p className="font-bold">{s.label} <span className="net-step-state">{stateText[s.state]}{s.state !== "complete" ? ` · ${s.owner === "PIKAS" ? "PIKAS" : "requiere acción de la cafetería"}` : ""}</span></p><p className="text-sm text-slate-700">{s.detail}</p></div>
     {s.state !== "complete" && s.action && <Link className="net-action" href={s.action.href}>{s.action.label}<span className="sr-only"> · {s.label}</span></Link>}
   </li>)}</ol>;
   return <section id="puesta-en-marcha" aria-labelledby="launch-title" className={`net-launch scroll-mt-24 ${done ? "net-launch-done" : ""}`}>

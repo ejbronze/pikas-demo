@@ -10,7 +10,9 @@ import { ConnectedSchoolPages } from "./connected-school-pages";
 import { readSchoolWalletAccess } from "../lib/wallet/access";
 import { ErrorState } from "./state-panels";
 import { walletReportSchema } from "../lib/school/wallet-report";
-import { serviceRows, walletSummary, type OverviewInputs } from "../lib/school/overview";
+import { serviceRows, walletSummary, type OverviewInputs, type SharingRows } from "../lib/school/overview";
+// UX 13: never-shared vs revoked comes from the School's own share rows (the sharing read coalesces both to "revoked").
+const shareRowsSchema = z.array(z.object({ cafeteria_id: z.uuid(), status: z.enum(["active", "revoked"]) }));
 type CafeteriaReadRow = Extract<NonNullable<import("../lib/school/contracts").SchoolRead["rows"]>[number], { sharing_status: unknown }>;
 const sectionPath: Record<SchoolSection, string> = { summary: "", students: "/estudiantes", administrators: "/administradores", cafeterias: "/cafeterias", activity: "/actividad" };
 export type SchoolSearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -41,6 +43,11 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
   const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };
   // Estudiantes: the school's own status totals for the roster chips (school:read summary).
   const studentCounts = section === "students" ? await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "summary", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(r => own(r)?.counts, () => undefined) : undefined;
+  // UX 13: the School's own sharing rows (RLS school:sharing:read). Unavailable → null (neutral wording, never "revocada").
+  const shares: SharingRows = section === "summary" || section === "cafeterias"
+    ? await client.from("school_cafeteria_shares").select("cafeteria_id,status").eq("school_id", schoolId)
+        .then(r => { const p = shareRowsSchema.safeParse(r.data); return !r.error && p.success ? Object.fromEntries(p.data.map(x => [x.cafeteria_id, x.status])) : null; }, () => null)
+    : null;
   // School Overview: extra reads with the School's own authority; each one fails on its own.
   let overview: OverviewInputs | undefined;
   if (section === "summary" && parsed.data.counts) {
@@ -50,8 +57,8 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
       walletRead ? client.rpc("school_wallet_report", { p_school_id: schoolId, p_period: "last_7_days", p_from: null, p_to: null }).then(r => { const p = walletReportSchema.safeParse(r.data); return !r.error && p.success && p.data.school_id === schoolId ? p.data : null; }, () => null) : Promise.resolve(null),
     ]);
     // Only counts and wallet aggregates leave the server: no student names, no per-cafetería spending.
-    overview = { counts: parsed.data.counts, cafeterias: cafes ? serviceRows((cafes.rows ?? []).filter((r): r is CafeteriaReadRow => "sharing_status" in r)) : null,
+    overview = { counts: parsed.data.counts, cafeterias: cafes ? serviceRows((cafes.rows ?? []).filter((r): r is CafeteriaReadRow => "sharing_status" in r), shares) : null,
       invitations: admins ? (admins.invitations ?? []).map(v => ({ status: v.status })) : null, wallet: report ? walletSummary(report) : null };
   }
-  return <ConnectedSchoolShell context={access.context} schoolId={schoolId} role={parsed.data.scope.role} walletNav={walletRead}><ConnectedSchoolPages overview={overview} studentCounts={studentCounts} walletRead={section === "students" && walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} paged={cursor.data !== null} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
+  return <ConnectedSchoolShell context={access.context} schoolId={schoolId} role={parsed.data.scope.role} walletNav={walletRead}><ConnectedSchoolPages overview={overview} sharing={shares} studentCounts={studentCounts} walletRead={section === "students" && walletRead} key={`${schoolId}:${section}:${query.data}:${status.data}:${cursor.data}:${location.data}:${grade.data}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} section={section} paged={cursor.data !== null} data={parsed.data} students={students} query={query.data} status={status.data} location={location.data ?? ""} grade={grade.data ?? ""} /></ConnectedSchoolShell>;
 }

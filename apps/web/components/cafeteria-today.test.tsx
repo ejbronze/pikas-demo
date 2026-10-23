@@ -113,6 +113,11 @@ describe('Cafetería Hoy', () => {
     expect(html).not.toContain('Completa la configuración para vender'); expect(html).not.toContain('Confirmar cafetería');
     expect(html).toContain('<p class="text-sm text-slate-600">Martes, 20 de octubre</p>');
   });
+  it('UX 13: Hoy names the school as the owner of student service, without claiming a state or a CTA the cafetería lacks', () => {
+    const html = render(inputs());
+    expect(html).toContain('Servicio a estudiantes · lo administra Real school'); expect(html).toContain('pide al administrador de Real school que comparta Real cafeteria'); expect(html).toContain('solo depende de lo que administras aquí');
+    expect(html).not.toMatch(/estudiantes habilitados|Requiere acción del colegio/);
+  });
   it('UX 12A: an unconfigured cafetería gets the readiness guide on top with one contextual next step; ready needs no sale', () => {
     const setup = render(inputs(), data({ products: [], registers: [], assignments: [] }));
     expect(setup.indexOf('Puesta en marcha')).toBeLessThan(setup.indexOf('Estado en vivo')); expect(setup).toContain('Siguiente paso: Crear caja.');

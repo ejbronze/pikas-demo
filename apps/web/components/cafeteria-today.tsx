@@ -9,7 +9,7 @@ import { latestGate, reportResultSchema, type Reconciliation, type SalesSummary,
 import { attentionItems, chartWindow, clock, comparison, hourLabel, longDate, peakHour, tenderShares, todaySchema, weekdayName, type TodayRead } from '../lib/cafeteria/today';
 import type { CafeteriaRead } from '../lib/cafeteria/contracts';
 import { TraceLink } from './report-frame';
-import { ManagementMap, ReadinessGuide } from './cafeteria-management-map';
+import { ManagementMap, ReadinessGuide, StudentServiceNote } from './cafeteria-management-map';
 import { cafeteriaReadiness } from '../lib/cafeteria/readiness';
 
 // Cafetería Hoy V1: today's business and operation for ONE cafeteria. Every financial value is
@@ -68,6 +68,7 @@ export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data
     {!business && <p className="hoy-note" role="status">{data.scope.tenant_kind === 'sandbox' ? 'Los datos financieros no están disponibles en el entorno sandbox. Aquí ves el estado operativo de la cafetería.' : 'Tu rol no tiene acceso a las ventas de esta cafetería. Aquí ves su estado operativo.'}</p>}
     <ManagementMap data={data} readiness={readiness} />
     {guideOnTop && <ReadinessGuide data={data} readiness={readiness} />}
+    {guideOnTop && <StudentServiceNote data={data} />}
     {firstSale && <Milestone name={data.scope.cafeteria_name} />}
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12">
       <LiveStrip className="order-3 md:order-1 md:col-span-2 lg:col-span-12" open={openRegisters.length} today={today} loading={business && inputs.today.status === 'loading'} />
@@ -82,7 +83,7 @@ export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data
       <Registers className={`order-7 md:order-9 md:col-span-2 ${business ? 'lg:order-8 lg:col-span-4' : 'lg:col-span-6'}`} registers={activeRegisters} recon={inputs.recon?.status === 'ready' ? inputs.recon.value : null} today={today?.today ?? null} href={href('/cajas')} />
       {business && <Payments className="order-8 md:order-8 md:col-span-1 lg:order-9 lg:col-span-4" summary={inputs.summary} href={report('pagos', 'period=today')} />}
     </div>
-    {!guideOnTop && <ReadinessGuide data={data} readiness={readiness} collapsed />}
+    {!guideOnTop && <><ReadinessGuide data={data} readiness={readiness} collapsed /><StudentServiceNote data={data} /></>}
     {business && summary && <p className="text-xs text-slate-500">Ventas brutas del día de negocio ({summary.business_timezone}). Los reembolsos se muestran aparte, como en Reportes.</p>}
   </div>;
 }

@@ -2,8 +2,9 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), access: vi.fn(), wallet: vi.fn(), pages: vi.fn() }));
-vi.mock("../lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ rpc: mocks.rpc }) }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), access: vi.fn(), wallet: vi.fn(), pages: vi.fn(), shares: vi.fn() }));
+// UX 13: the School's own sharing rows are read from the table (RLS); the mock answers through `shares`.
+vi.mock("../lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ rpc: mocks.rpc, from: (table: string) => ({ select: () => ({ eq: () => mocks.shares(table) }) }) }) }));
 vi.mock("../lib/auth/school-access", () => ({ resolveSchoolAccess: mocks.access }));
 vi.mock("../lib/wallet/access", () => ({ readSchoolWalletAccess: mocks.wallet }));
 vi.mock("./connected-school-shell", () => ({ ConnectedSchoolShell: ({ children }: { children: React.ReactNode }) => children }));
@@ -25,7 +26,7 @@ const reads = () => mocks.rpc.mockImplementation(async (rpc: string, args: { p_s
   rpc === "school_wallet_report" ? report : args.p_section === "summary" ? { scope, locations: [], counts: { students: 3, active: 3, suspended: 0, inactive: 0, cafeterias: 1 } }
   : args.p_section === "cafeterias" ? { scope, locations: [], rows: [cafeteria] } : { scope, locations: [], memberships: [], invitations: [{ id, email: "x@example.invalid", status: "expired", expires_at: "2026-10-01T00:00:00Z" }] } }));
 const run = async () => { renderToStaticMarkup(await SchoolScreen({ section: "summary", searchParams: Promise.resolve({ school: id }) })); return mocks.pages.mock.calls.at(-1)![0] as { overview?: unknown }; };
-beforeEach(() => { vi.clearAllMocks(); mocks.access.mockResolvedValue({ status: "authorized", context: { person_id: id, schools: [{ school_id: id }] } }); reads(); });
+beforeEach(() => { vi.clearAllMocks(); mocks.access.mockResolvedValue({ status: "authorized", context: { person_id: id, schools: [{ school_id: id }] } }); mocks.shares.mockResolvedValue({ data: [{ cafeteria_id: cafeteria.id, status: "active" }], error: null }); reads(); });
 
 describe("School Overview server reads", () => {
   it("with wallet authority: School reads plus the wallet report, reduced before reaching the page", async () => {
@@ -33,7 +34,8 @@ describe("School Overview server reads", () => {
     const props = await run(), json = JSON.stringify(props.overview);
     expect(mocks.rpc.mock.calls.map(c => [c[0], (c[1] as { p_section?: string; p_period?: string }).p_section ?? (c[1] as { p_period?: string }).p_period]))
       .toEqual(expect.arrayContaining([["school_admin_read", "summary"], ["school_admin_read", "cafeterias"], ["school_admin_read", "administrators"], ["school_wallet_report", "last_7_days"]]));
-    expect(json).toContain('"wallets_with_movement":1'); expect(json).toContain('"enabled_students":1');
+    expect(json).toContain('"wallets_with_movement":1'); expect(json).toContain('"enabled_students":1'); expect(json).toContain('"sharing_state":"active"'); expect(mocks.shares).toHaveBeenCalledWith("school_cafeteria_shares");
+    expect((props as { sharing?: unknown }).sharing).toEqual({ [cafeteria.id]: "active" });
     expect(json).not.toMatch(/424242|spent|purchase|Estudiante Privada|x@example/);
   });
   it("without wallet authority the wallet report is never requested", async () => {
@@ -47,6 +49,16 @@ describe("School Overview server reads", () => {
       : { error: null, data: args.p_section === "summary" ? { scope, locations: [], counts: { students: 0, active: 0, suspended: 0, inactive: 0, cafeterias: 0 } } : { scope, locations: [], memberships: [], invitations: [] } });
     const o = (await run()).overview as { cafeterias: unknown; wallet: unknown };
     expect(o.cafeterias).toBeNull(); expect(o.wallet).toBeNull();
+  });
+  it("UX 13: no share row means never shared; an unavailable sharing-rows read degrades to 'inactive' (never 'revoked')", async () => {
+    mocks.wallet.mockResolvedValue({ read: false }); mocks.shares.mockResolvedValue({ data: [], error: null });
+    mocks.rpc.mockImplementation(async (rpc: string, args: { p_section?: string }) => ({ error: null, data: args.p_section === "summary" ? { scope, locations: [], counts: { students: 3, active: 3, suspended: 0, inactive: 0, cafeterias: 0 } }
+      : args.p_section === "cafeterias" ? { scope, locations: [], rows: [{ ...cafeteria, sharing_status: "revoked", customer_count: 0, customers: [] }] } : { scope, locations: [], memberships: [], invitations: [] } }));
+    expect(JSON.stringify((await run()).overview)).toContain('"sharing_state":"never"');
+    mocks.shares.mockRejectedValue(new Error("down"));
+    const o = (await run()).overview as { cafeterias: { sharing_state: string }[] }; expect(o.cafeterias[0].sharing_state).toBe("inactive");
+    mocks.shares.mockResolvedValue({ data: null, error: { code: "42501" } });
+    expect(((await run()).overview as { cafeterias: { sharing_state: string }[] }).cafeterias[0].sharing_state).toBe("inactive");
   });
   it("Estudiantes: the roster gets the school's own status counts; another school's counts are discarded", async () => {
     mocks.wallet.mockResolvedValue({ read: false });

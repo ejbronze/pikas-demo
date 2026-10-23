@@ -23,7 +23,9 @@ export type Readiness = z.infer<typeof readinessSchema>;
 
 export type StepKey = "perfil" | "estructura" | "administrador" | "personal" | "cajas" | "productos" | "venta";
 export type StepState = "complete" | "pending" | "attention";
-export type Step = { key: StepKey; label: string; state: StepState; detail: string; action: { href: string; label: string } | null };
+// UX 13: who completes a pending step (PIKAS during provisioning; the cafetería once handed over).
+export type StepOwner = "PIKAS" | "cafetería";
+export type Step = { key: StepKey; label: string; state: StepState; detail: string; action: { href: string; label: string } | null; owner: StepOwner };
 export type LaunchStatus = "configuring" | "ready" | "operating" | "inactive";
 export const launchLabel: Record<LaunchStatus, string> = { configuring: "En configuración", ready: "Listo para operar", operating: "Operando", inactive: "Fuera de operación" };
 
@@ -58,16 +60,16 @@ export function readinessSteps(c: CustomerReadiness): Step[] {
     : c.registers.active > 0 ? { state: "pending", detail: "Hay cajas, pero ninguna tiene personal de caja asignado." }
     : { state: "pending", detail: "Crea la primera caja." };
   return [
-    { key: "perfil", label: "Perfil", ...(c.profile.active_schools > 0 ? { state: "complete", detail: optional ? "Colegio registrado. RNC, dirección o provincia sin registrar (opcional)." : "Colegio registrado." } : { state: "pending", detail: "Sin colegio activo." }),
+    { key: "perfil", owner: "PIKAS", label: "Perfil", ...(c.profile.active_schools > 0 ? { state: "complete", detail: optional ? "Colegio registrado. RNC, dirección o provincia sin registrar (opcional)." : "Colegio registrado." } : { state: "pending", detail: "Sin colegio activo." }),
       action: { href: at("colegio-profile"), label: "Ver perfil" } },
-    { key: "estructura", label: "Estructura", ...(c.structure.operating_cafeterias > 0 ? { state: "complete", detail: n(c.structure.operating_cafeterias, "cafetería en operación", "cafeterías en operación") } : { state: "pending", detail: "Falta una sede con su cafetería activa." }),
+    { key: "estructura", owner: "PIKAS", label: "Estructura", ...(c.structure.operating_cafeterias > 0 ? { state: "complete", detail: n(c.structure.operating_cafeterias, "cafetería en operación", "cafeterías en operación") } : { state: "pending", detail: "Falta una sede con su cafetería activa." }),
       action: { href: at("estructura"), label: "Ver estructura" } },
-    { key: "administrador", label: "Administrador", ...admin, action: { href: at("administrador-inicial"), label: "Ver administrador" } },
-    { key: "personal", label: "Personal POS", ...staff, action: { href: at("customer-access"), label: "Ver usuarios y accesos" } },
-    { key: "cajas", label: "Cajas", ...cajas, action: caf ? { href: cafeteriaHref(c.account_id, caf, "cajas"), label: "Ver cajas" } : { href: at("estructura"), label: "Ver estructura" } },
-    { key: "productos", label: "Productos", ...(c.products.available > 0 ? { state: "complete", detail: n(c.products.available, "producto disponible", "productos disponibles") } : { state: "pending", detail: "Agrega productos disponibles para la venta." }),
+    { key: "administrador", owner: "PIKAS", label: "Administrador", ...admin, action: { href: at("administrador-inicial"), label: "Ver administrador" } },
+    { key: "personal", owner: "cafetería", label: "Personal POS", ...staff, action: { href: at("customer-access"), label: "Ver usuarios y accesos" } },
+    { key: "cajas", owner: "cafetería", label: "Cajas", ...cajas, action: caf ? { href: cafeteriaHref(c.account_id, caf, "cajas"), label: "Ver cajas" } : { href: at("estructura"), label: "Ver estructura" } },
+    { key: "productos", owner: "cafetería", label: "Productos", ...(c.products.available > 0 ? { state: "complete", detail: n(c.products.available, "producto disponible", "productos disponibles") } : { state: "pending", detail: "Agrega productos disponibles para la venta." }),
       action: caf ? { href: cafeteriaHref(c.account_id, caf, "productos"), label: "Ver productos" } : { href: at("estructura"), label: "Ver estructura" } },
-    { key: "venta", label: "Primera venta", ...(c.sales.first_at ? { state: "complete", detail: `Primera venta el ${shortDate(c.sales.first_at)}.` } : { state: "pending", detail: "Se completa sola con la primera venta real en el POS." }), action: null },
+    { key: "venta", owner: "cafetería", label: "Primera venta", ...(c.sales.first_at ? { state: "complete", detail: `Primera venta el ${shortDate(c.sales.first_at)}.` } : { state: "pending", detail: "Se completa sola con la primera venta real en el POS." }), action: null },
   ];
 }
 

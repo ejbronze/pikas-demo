@@ -62,3 +62,15 @@ export function HierarchyTrail({ levels, current }: { levels: { label: string; n
     <li data-level="current" aria-current="page">{current}</li>
   </ol></nav>;
 }
+
+// UX 13: who completes student service. The Cafetería never owns sharing or eligibility; PIKAS
+// shows the owner so an empty POS search is not mistaken for a cafetería configuration problem.
+// Live state (shared? how many enabled?) is not readable by a Cafetería Admin today; nothing is claimed.
+export function StudentServiceNote({ data }: { data: CafeteriaRead }) {
+  const s = data.scope;
+  return <section aria-labelledby="student-service-title" className="hoy-panel">
+    <h2 id="student-service-title" className="hoy-h2">Servicio a estudiantes · lo administra {s.school_name}</h2>
+    <p className="text-sm">Los estudiantes que el POS puede atender los comparte y habilita el colegio, no la cafetería. Si el POS no encuentra estudiantes, pide al administrador de {s.school_name} que comparta {s.cafeteria_name} y habilite estudiantes.</p>
+    <p className="mt-2 text-xs text-slate-500">Esto no cambia tu Puesta en marcha: «Lista para operar» solo depende de lo que administras aquí.</p>
+  </section>;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { schoolAttention, serviceChecks, serviceRows, walletSummary } from "./overview";
+import { schoolAttention, serviceReadiness, serviceRows, sharingState, walletSummary } from "./overview";
 import { inputs, service, wallet } from "./overview-fixtures";
 import { walletReportSchema } from "./wallet-report";
 
@@ -18,22 +18,49 @@ describe("server-side reduction", () => {
   });
   it("cafeterías become counts, never student names; 100 means the read's limit", () => {
     const rows = serviceRows([{ id: "c1", name: "Cafetería Ficticia", location: "Sede", status: "active", sharing_status: "active", customers: Array.from({ length: 100 }, (_, i) => ({ student_id: `s${i}`, display_name: `Estudiante ${i}`, status: "active" })) }]);
-    expect(rows).toEqual([{ id: "c1", name: "Cafetería Ficticia", location: "Sede", active: true, sharing: true, enabled_students: 100, enabled_capped: true }]);
+    expect(rows).toEqual([{ id: "c1", name: "Cafetería Ficticia", location: "Sede", active: true, sharing: true, sharing_state: "active", enabled_students: 100, enabled_capped: true }]);
     expect(JSON.stringify(rows)).not.toContain("Estudiante");
   });
 });
 
-describe("school-side service checks", () => {
-  it("ready when there are active students, an active shared cafetería and enabled students there", () => {
-    expect(serviceChecks(inputs())?.every(c => c.done)).toBe(true);
-  });
-  it("new school: nothing ready; and no checks at all without the sharing read", () => {
-    expect(serviceChecks(inputs({ counts: { students: 0, active: 0, suspended: 0, inactive: 0, cafeterias: 0 }, cafeterias: [] }))?.map(c => c.done)).toEqual([false, false, false]);
-    expect(serviceChecks(inputs({ cafeterias: [service(1, { sharing: false })] }))?.map(c => c.done)).toEqual([true, false, false]);
-    expect(serviceChecks(inputs({ cafeterias: [service(1, { enabled_students: 0 })] }))?.map(c => c.done)).toEqual([true, true, false]);
-    expect(serviceChecks(inputs({ cafeterias: null }))).toBeNull();
+describe("UX 13 sharing states", () => {
+  const row = { id: "c1", sharing_status: "revoked" as const };
+  it("the School's own share rows distinguish never-shared from revoked; without them the read is only 'not active'", () => {
+    expect(sharingState(row, {})).toBe("never"); expect(sharingState(row, { c1: "revoked" })).toBe("revoked"); expect(sharingState({ ...row, sharing_status: "active" }, { c1: "active" })).toBe("active");
+    expect(sharingState(row, null)).toBe("inactive"); expect(sharingState({ ...row, sharing_status: "active" }, null)).toBe("active");
+    expect(serviceRows([{ id: "c1", name: "C", location: "S", status: "active", sharing_status: "revoked", customers: [] }], {})[0].sharing_state).toBe("never");
   });
 });
+
+describe("UX 13 school-side service readiness (states from truth, one next step, School-owned actions)", () => {
+  const keys = (r: ReturnType<typeof serviceReadiness>) => r?.steps.map(s => [s.key, s.done]);
+  it("ready when there are active students, a shared cafetería and enabled students there", () => {
+    const r = serviceReadiness(inputs()); expect(r?.status).toBe("ready"); expect(r?.next).toBeNull(); expect(r?.complete).toBe(3);
+  });
+  it("Scenario A — brand-new school: students first; sharing explained without 'revocada'; no checks at all without the sharing read", () => {
+    const r = serviceReadiness(inputs({ counts: { students: 0, active: 0, suspended: 0, inactive: 0, cafeterias: 0 }, cafeterias: [service(1, { sharing: false, sharing_state: "never", enabled_students: 0 })] }));
+    expect(keys(r)).toEqual([["students", false], ["sharing", false], ["enabled", false]]); expect(r?.next).toMatchObject({ key: "students", action: { href: "/estudiantes", label: "Agregar estudiantes" } });
+    expect(JSON.stringify(r)).not.toMatch(/revocad/i); expect(serviceReadiness(inputs({ cafeterias: null }))).toBeNull();
+  });
+  it("Scenario B — students exist, never shared: next step is to share with that cafetería", () => {
+    const r = serviceReadiness(inputs({ cafeterias: [service(1, { sharing: false, sharing_state: "never", enabled_students: 0 })] }));
+    expect(r?.next).toMatchObject({ key: "sharing", action: { href: "/cafeterias#cafeteria-4d700000-0000-4000-8000-000000000101", label: "Compartir con Cafetería Ficticia 1" } });
+    expect(r?.steps[2]).toMatchObject({ done: false, action: null });
+  });
+  it("Scenario C — shared, zero enabled: next step is eligibility, pointing at the shared cafetería", () => {
+    const r = serviceReadiness(inputs({ cafeterias: [service(1, { enabled_students: 0 })] }));
+    expect(keys(r)).toEqual([["students", true], ["sharing", true], ["enabled", false]]); expect(r?.next).toMatchObject({ key: "enabled", action: { href: "/cafeterias#cafeteria-4d700000-0000-4000-8000-000000000101", label: "Habilitar estudiantes" } });
+  });
+  it("Scenario E — revoked after sharing: the step says revoked and offers to share again", () => {
+    const r = serviceReadiness(inputs({ cafeterias: [service(1, { sharing: false, sharing_state: "revoked", enabled_students: 3 })] }));
+    expect(r?.next).toMatchObject({ key: "sharing", detail: expect.stringContaining("revocada"), action: { label: "Volver a compartir con Cafetería Ficticia 1" } });
+  });
+  it("no cafeterías yet: sharing explains that PIKAS adds them and offers no action; two cafeterías: a generic share action", () => {
+    expect(serviceReadiness(inputs({ cafeterias: [] }))?.steps[1]).toMatchObject({ done: false, action: null, detail: expect.stringContaining("PIKAS") });
+    expect(serviceReadiness(inputs({ cafeterias: [service(1, { sharing: false, sharing_state: "never" }), service(2, { sharing: false, sharing_state: "never" })] }))?.next?.action?.label).toBe("Compartir con una cafetería");
+  });
+});
+
 
 describe("Requiere atención", () => {
   it("calm when nothing the product records needs action", () => expect(schoolAttention(inputs())).toEqual([]));

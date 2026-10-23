@@ -15,6 +15,12 @@ describe("readiness contract", () => {
   });
 });
 
+describe("UX 13 step owners", () => {
+  it("provisioning steps belong to PIKAS; staff, cajas, products and the first sale belong to the cafetería", () => {
+    expect(readinessSteps(fx(1, "empty")).map(s => [s.key, s.owner])).toEqual([["perfil", "PIKAS"], ["estructura", "PIKAS"], ["administrador", "PIKAS"], ["personal", "cafetería"], ["cajas", "cafetería"], ["productos", "cafetería"], ["venta", "cafetería"]]);
+  });
+});
+
 describe("step rules", () => {
   it("almost-empty customer: profile and structure complete, everything else pending or attention", () => {
     const steps = readinessSteps(fx(1, "empty"));

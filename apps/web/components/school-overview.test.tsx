@@ -37,11 +37,11 @@ describe("School Overview", () => {
   it("new / low-data school: explanatory empty states instead of a wall of zeros", () => {
     const html = render(inputs({ counts: { students: 0, active: 0, suspended: 0, inactive: 0, cafeterias: 0 }, cafeterias: [], wallet: wallet({ active_wallets: 0, total_balance_minor: "0", wallets_with_movement: 0 }) }));
     expect(html).toContain("Aún no hay estudiantes en este colegio."); expect(html).not.toContain("RD$ 0.00"); expect(figures(html)).toEqual([]);
-    expect(html).toContain("Todavía no hay cafeterías en este colegio."); expect(html).toContain("Servicio a estudiantes"); expect(html.match(/data-done="false"/g)).toHaveLength(3);
+    expect(html).toContain("Todavía no hay cafeterías en este colegio."); expect(html).toContain("Servicio a estudiantes"); expect(html.match(/<li data-state="pending"/g)).toHaveLength(3);
   });
   it("one cafetería without active sharing is stated, and attention links to the place to act", () => {
     const html = render(inputs({ cafeterias: [service(1, { sharing: false })], invitations: [{ status: "expired" }] }));
-    expect(html).toContain("Ninguna cafetería tiene compartición activa con el colegio todavía."); expect(html).toContain("Sin compartición activa");
+    expect(html).toContain("Ninguna cafetería tiene compartición activa con el colegio todavía."); expect(html).toContain("Sin compartir todavía"); expect(html).not.toContain("revocada");
     expect(html).toContain("Requiere atención · 2"); expect(html).toMatch(new RegExp(`href="/admin/escuela/administradores\\?school=${schoolId}" class="sch-action">Ver administradores`));
     expect(html).toMatch(new RegExp(`href="/admin/escuela/cafeterias\\?school=${schoolId}" class="sch-action">Revisar cafetería<`));
   });

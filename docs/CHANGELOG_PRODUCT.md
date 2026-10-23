@@ -1,5 +1,15 @@
 # Registro de cambios del producto
 
+## Escuela y cafetería: servicio a estudiantes claro entre roles (UX 13, local)
+
+- **Compartición con la verdad del colegio**: «Cafeterías conectadas» distingue **Sin compartir todavía** (nunca se compartió), **Compartición activa** y **Compartición revocada** (hubo compartición y se retiró), leyendo las filas de compartición propias del colegio (misma autoridad `school:sharing:read`). Antes una relación nueva aparecía como «revocada». Cada cafetería explica qué significa compartir («permite que esta cafetería vea únicamente los estudiantes que el colegio habilite…»), la acción principal dice «Compartir con {cafetería}» / «Volver a compartir con…», y «Identificación básica» queda preseleccionada porque el POS la necesita para encontrar estudiantes.
+- **Estudiantes habilitados** con estado y guía: cuenta de habilitados, y cuando no hay ninguno un estado vacío que enseña qué es la elegibilidad y qué hacer: «Primero comparte…», «Aún no hay estudiantes para habilitar» (enlace a Estudiantes) o «Ningún estudiante habilitado todavía» con la sección de habilitar abierta.
+- **Resumen escolar · Servicio a estudiantes** usa el modelo de puesta en marcha (UX 12A): 1. Estudiantes registrados, 2. Cafetería compartida, 3. Estudiantes habilitados; estados desde los datos, un solo siguiente paso con acción contextual («Agregar estudiantes», «Compartir con Cafetería Santiago», «Volver a compartir con…», «Habilitar estudiantes»), que también es el botón principal del Resumen. Completo: «Listo para atender estudiantes».
+- **Cafetería · Hoy** añade «Servicio a estudiantes · lo administra {colegio}»: los estudiantes que el POS atiende los comparte y habilita el colegio; si el POS no encuentra estudiantes, hay que pedirlo al administrador del colegio. No cambia «Lista para operar» (sigue dependiendo solo de lo que administra la cafetería) y no muestra un estado en vivo: hoy el Administrador de cafetería no tiene una lectura autorizada de compartición/elegibilidad (ver informe).
+- **POS**: la búsqueda vacía aclara «Si el colegio aún no ha compartido ni habilitado estudiantes para esta cafetería, no aparecerá ninguno» (el POS no distingue ambos casos).
+- **Plataforma · Puesta en marcha**: cada paso pendiente indica quién lo completa (PIKAS o «requiere acción de la cafetería»).
+- Sin migración, sin capacidades, permisos ni roles nuevos; la autoridad del colegio sobre compartición y elegibilidad no cambia.
+
 ## Identidad: la contraseña temporal caduca a los 15 minutos (UX 12B cierre, local)
 
 - Una contraseña temporal (de un solo uso) emitida para personal POS **caduca 15 minutos después de emitirse si no se usa**. «Usarse» significa completar el cambio de contraseña obligatorio. La regla la aplica la base de datos: una temporal vencida no abre sesión en PIKAS («Tu contraseña temporal venció… pide una nueva») y no puede convertirse en contraseña permanente; el intento no cambia nada ni deja sesión.
