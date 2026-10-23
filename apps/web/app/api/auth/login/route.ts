@@ -94,11 +94,18 @@ export async function POST(request: NextRequest) {
   const target = pilotHome(identity);
   if (!target) {
     const organization = identity.status === "ready" ? await organizationDenial(supabase) : null;
+    // Lifecycle & Access Management: suspended or deactivated accesses are named as such (scope, not login).
+    let access: "access_suspended" | "access_inactive" | null = null;
+    if (identity.status === "ready" && !organization) {
+      const summary = await supabase.rpc("identity_access_summary");
+      const memberships = ((summary.data ?? {}) as { memberships?: { status: string }[] }).memberships ?? [];
+      access = memberships.some(m => m.status === "suspended") ? "access_suspended" : memberships.some(m => m.status === "inactive") ? "access_inactive" : null;
+    }
     const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
     if (signOutError) throw signOutError;
     return fail(
       request,
-      organization ?? (identity.status === "unlinked" ? "identity" : "membership"),
+      organization ?? access ?? (identity.status === "unlinked" ? "identity" : "membership"),
     );
   }
 

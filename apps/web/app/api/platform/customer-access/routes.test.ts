@@ -24,15 +24,9 @@ describe("Platform customer provisioning routes", () => {
     expect(rpc).toHaveBeenCalledExactlyOnceWith("platform_grant_cafeteria_admin", { p_request_id: key, p_account_id: account, p_person_id: person, p_cafeteria_id: caf });
     rpc.mockClear(); expect((await post(grant, { accountId: account, personId: person, cafeteriaId: caf, roleCode: "account_admin" })).status).toBe(400); expect(rpc).not.toHaveBeenCalled();
   });
-  it("staff prepare always sends pos_cashier with the intended name and username; supervisor or arbitrary roles cannot be requested", async () => {
-    rpc.mockResolvedValue({ data: { request_id: key, operation: "staff_prepare", target_id: invitation, username: "jeanne.ficticia", intended_display_name: "Jeanne Ficticia" }, error: null });
-    expect((await post(staff, prepare)).status).toBe(200);
-    expect(rpc).toHaveBeenCalledExactlyOnceWith("platform_customer_staff_command", { p_account_id: account, p_cafeteria_id: caf, p_request_id: key, p_operation: "staff_prepare",
-      p_payload: { email: "jeanne@example.invalid", role: "pos_cashier" }, p_username: "jeanne.ficticia", p_display_name: "Jeanne Ficticia" });
-    rpc.mockClear();
-    for (const extra of [{ role: "pos_supervisor" }, { role: "cafeteria_admin" }]) expect((await post(staff, { ...prepare, ...extra })).status).toBe(400);
-    expect((await post(staff, { ...prepare, operation: "staff_status" })).status).toBe(400);
-    expect(rpc).not.toHaveBeenCalled();
+  it("Lifecycle & Access Management: the deprecated link-based staff prepare is no longer accepted by the Platform route", async () => {
+    rpc.mockResolvedValue({ data: {}, error: null });
+    const r = await post(staff, prepare); expect(r.status).toBe(400); expect(rpc).not.toHaveBeenCalled();
   });
   it("staff completion sends the invitation and the Person name", async () => {
     rpc.mockResolvedValue({ data: { request_id: key, operation: "staff_complete", target_id: U(7) }, error: null });
@@ -48,14 +42,14 @@ describe("Platform customer provisioning routes", () => {
   it("requires the provisioning capability: operations, access-read, identity support and admin provisioning are not enough", async () => {
     resolvePikasIdentity.mockResolvedValue(identity(["platform:customer:operations:manage", "platform:customer:access:read", "platform:identity:support", "platform:customer_admin:provision"]));
     expect((await post(grant, { accountId: account, personId: person, cafeteriaId: caf })).status).toBe(403);
-    expect((await post(staff, prepare)).status).toBe(403);
+    expect((await post(staff, { operation: "staff_complete", accountId: account, cafeteriaId: caf, invitationId: invitation, displayName: "X" })).status).toBe(403);
     expect((await post(rename, { accountId: account, personId: person, expectedName: "a", name: "b" })).status).toBe(403);
     expect(rpc).not.toHaveBeenCalled();
   });
   it("maps definite refusals to readable 422s and never trusts an invalid result", async () => {
-    for (const message of ["customer_person_required", "active_confirmed_pos_identity_required", "customer_provisioning_inactive", "username_unavailable", "confirmed_identity_pending"]) {
+    for (const message of ["customer_person_required", "active_confirmed_pos_identity_required", "customer_provisioning_inactive", "confirmed_identity_pending"]) {
       rpc.mockResolvedValueOnce({ data: null, error: { code: "23514", message } });
-      const r = await post(message === "username_unavailable" || message === "confirmed_identity_pending" ? staff : grant, message === "username_unavailable" ? prepare : message === "confirmed_identity_pending"
+      const r = await post(message === "confirmed_identity_pending" ? staff : grant, message === "confirmed_identity_pending"
         ? { operation: "staff_complete", accountId: account, cafeteriaId: caf, invitationId: invitation, displayName: "X" } : { accountId: account, personId: person, cafeteriaId: caf });
       expect(r.status).toBe(422); expect(await r.json()).toEqual({ error: message });
     }

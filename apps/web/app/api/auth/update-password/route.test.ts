@@ -31,4 +31,11 @@ describe('Phase 6A forced password change', () => {
     const r = await submit('una-clave-nueva'); expect(r.status).toBe(409); expect(await r.json()).toEqual({ error: 'temporary_access_expired' });
   });
   it('short passwords never reach Auth', async () => { expect((await submit('corta')).status).toBe(400); expect(updateUser).not.toHaveBeenCalled(); });
+  it('Lifecycle & Access Management: when nothing opens after the change, the person is told the truthful scoped state (suspended access ≠ login suspension)', async () => {
+    pilotHome.mockReturnValue(null);
+    rpc.mockImplementation(async (name: string) => name === 'identity_access_summary' ? { data: { organization: 'active', memberships: [{ scope: 'cafeteria', role: 'pos_cashier', status: 'suspended', name: 'Cafetería Santiago' }] }, error: null } : { data: { must_change_password: false }, error: null });
+    const r = await submit('una-clave-nueva'); expect(updateUser).toHaveBeenCalledWith({ password: 'una-clave-nueva' });
+    expect(await r.json()).toEqual({ ok: true, next: null, access: { kind: 'suspended', names: ['Cafetería Santiago'] } });
+    expect(rpc.mock.calls.map(c => c[0])).toEqual(['pikas_session_start', 'identity_complete_password_change', 'identity_access_summary']);
+  });
 });

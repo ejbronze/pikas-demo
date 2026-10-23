@@ -2,10 +2,9 @@ import {NextRequest,NextResponse} from "next/server";
 import {z} from "zod";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {pilotHome,resolvePikasIdentity} from "@/lib/auth/pikas-context";
+import {accessState,type AccessSummary} from "../../../../lib/auth/post-change-access";
 
 const schema=z.object({password:z.string().min(10).max(128)});
-// Sets the password on the signed-in Auth user (recovery link or temporary access). Phase 6A: a
-// pending forced change completes only when the stored hash differs from the issued temporary one.
 export async function POST(req:NextRequest){
  const parsed=schema.safeParse(Object.fromEntries(await req.formData()));
  if(!parsed.success)return NextResponse.json({error:"invalid"},{status:400});
@@ -24,6 +23,11 @@ export async function POST(req:NextRequest){
   if(!completed||completed.error)return NextResponse.json({ok:true,next:null});
   let next:string|null=null;
   try{next=pilotHome(await resolvePikasIdentity(supabase));}catch{next=null;}
-  return NextResponse.json({ok:true,next});
+  if(next)return NextResponse.json({ok:true,next});
+  // Lifecycle & Access Management: nothing opens → say why, truthfully, from the person's own access summary
+  // (names and states only). Password/security state is already saved and is not touched here.
+  const summary=await supabase.rpc("identity_access_summary");
+  const access=accessState((summary.data??null) as AccessSummary);
+  return NextResponse.json({ok:true,next:null,access});
  }catch{return NextResponse.json({error:"config"},{status:503})}
 }

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { provisioningUsername } from "../identity/provisioning";
 
 // Platform customer provisioning: thin contracts over the provisioning commands, which own the
 // authority (platform:customer:access:provision), customer scope, lifecycle, journals and audit.
@@ -7,9 +6,10 @@ export const CUSTOMER_ACCESS_PROVISION = "platform:customer:access:provision";
 const id = z.guid(), personName = z.string().trim().min(1).max(200);
 export const grantCafeteriaAdminSchema = z.object({ accountId: id, personId: id, cafeteriaId: id }).strict();
 export const grantResultSchema = z.object({ membership_id: id, person_id: id, cafeteria_id: id, already_granted: z.boolean() });
-// Platform provisions Personal de caja only (canonical role pos_cashier).
+// Platform provisions Personal de caja only (canonical role pos_cashier). Lifecycle & Access Management:
+// the link-based staff_prepare operation was retired from this contract (no runtime caller since the
+// one-step flow, lib/identity/staff-access-flow); staff_complete stays to finish pending link invitations.
 export const staffCommandSchema = z.discriminatedUnion("operation", [
-  z.object({ operation: z.literal("staff_prepare"), accountId: id, cafeteriaId: id, displayName: personName, email: z.email().trim().max(254), username: provisioningUsername }).strict(),
   z.object({ operation: z.literal("staff_complete"), accountId: id, cafeteriaId: id, invitationId: id, displayName: personName }).strict(),
 ]);
 export type StaffCommand = z.input<typeof staffCommandSchema>;

@@ -197,4 +197,14 @@ describe("public tenant login route", () => {
     rpc.mockImplementation(async (name: string) => ({ data: name === "tenant_lifecycle_state" ? "closed" : {}, error: null }));
     expect((await login("tenant@example.com")).headers.get("location")).toBe("https://pikas-pikas.app/login?error=organization_closed");
   });
+
+  it("Lifecycle & Access Management: a valid login whose only accesses are suspended or deactivated is told that scope, not 'credentials' or 'membership'", async () => {
+    resolvePikasIdentity.mockResolvedValue({ ...activeTenantIdentity, memberships: [] }); pilotHome.mockReturnValue(null);
+    rpc.mockImplementation(async (name: string) => ({ data: name === "tenant_lifecycle_state" ? "active" : name === "identity_access_summary" ? { organization: "active", memberships: [{ scope: "cafeteria", role: "pos_cashier", status: "suspended", name: "Cafetería Santiago" }] } : {}, error: null }));
+    expect((await login("tenant@example.com")).headers.get("location")).toBe("https://pikas-pikas.app/login?error=access_suspended"); expect(signOut).toHaveBeenCalledOnce();
+    rpc.mockImplementation(async (name: string) => ({ data: name === "tenant_lifecycle_state" ? "active" : name === "identity_access_summary" ? { organization: "active", memberships: [{ scope: "cafeteria", role: "pos_cashier", status: "inactive", name: "Cafetería Santiago" }] } : {}, error: null }));
+    expect((await login("tenant@example.com")).headers.get("location")).toBe("https://pikas-pikas.app/login?error=access_inactive");
+    rpc.mockImplementation(async (name: string) => ({ data: name === "tenant_lifecycle_state" ? "active" : name === "identity_access_summary" ? { organization: "active", memberships: [] } : {}, error: null }));
+    expect((await login("tenant@example.com")).headers.get("location")).toBe("https://pikas-pikas.app/login?error=membership");
+  });
 });
