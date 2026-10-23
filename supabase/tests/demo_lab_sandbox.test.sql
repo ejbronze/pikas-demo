@@ -16,6 +16,9 @@ create function pg_temp.as_user(u text) returns void language plpgsql as $$decla
 create function pg_temp.attempt(sql text) returns text language plpgsql as $$declare m text; s text; begin execute sql; return 'ok';
  exception when others then get stacked diagnostics m=message_text, s=returned_sqlstate; return s||':'||m; end$$;
 create function pg_temp.q(sql text) returns text language plpgsql security definer as $$declare r text; begin execute sql into r; return r; end$$;
+-- sandbox_admin_has_capability is owner-only (202611180001); released RPCs reach it as SECURITY DEFINER, so the test does too.
+create function pg_temp.sandbox_cap(p_code text,cap text,a uuid,s uuid default null,c uuid default null) returns boolean language sql security definer as $$
+ select pikas_private.sandbox_admin_has_capability(p_code,cap,a,s,c) $$;
 -- Fingerprint of a real customer's operational rows: must never move.
 create function pg_temp.real_fp() returns text language plpgsql security definer as $$declare r text; begin
  select md5(coalesce((select string_agg(id::text,',' order by id) from students where account_id='00000000-0000-0000-0000-000000000001'),'')||'|'||
@@ -97,9 +100,9 @@ select is(pg_temp.attempt($$select identity_begin_temporary_access('00000000-000
 select is(pg_temp.attempt($$select identity_set_login_suspended('00000000-0000-0000-0000-000000001008',true,'x')$$),'42501:demo_mode_active','Real login suspension refused under the POV');
 select is(pg_temp.attempt(format($$select identity_set_login_suspended(%L,true,'Motivo ficticio')$$,current_setting('t.carla'))),'42501:demo_mode_active','Login suspension stays a Platform identity action, never from inside a POV');
 -- Demo-context reporting: read-only business reads open, every wallet write still refused.
-select ok(pikas_private.sandbox_admin_has_capability('cafeteria_admin','cafeteria:pos:purchases:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid,current_setting('t.caf')::uuid),'Sales reports readable inside the cafetería POV');
-select ok(pikas_private.sandbox_admin_has_capability('cafeteria_admin','cafeteria:pos:sessions:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid,current_setting('t.caf')::uuid),'Sessions readable inside the cafetería POV');
-select ok(not pikas_private.sandbox_admin_has_capability('cafeteria_admin','cafeteria:wallets:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid,current_setting('t.caf')::uuid),'Cafetería wallet reads stay excluded');
+select ok(pg_temp.sandbox_cap('cafeteria_admin','cafeteria:pos:purchases:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid,current_setting('t.caf')::uuid),'Sales reports readable inside the cafetería POV');
+select ok(pg_temp.sandbox_cap('cafeteria_admin','cafeteria:pos:sessions:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid,current_setting('t.caf')::uuid),'Sessions readable inside the cafetería POV');
+select ok(not pg_temp.sandbox_cap('cafeteria_admin','cafeteria:wallets:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid,current_setting('t.caf')::uuid),'Cafetería wallet reads stay excluded');
 select is(pg_temp.attempt(format($$select cafeteria_report_read(%L,'sales_summary','today')$$,current_setting('t.caf'))),'ok','Sales summary readable inside the sandbox POV');
 select is(pg_temp.attempt(format($$select cafeteria_transactions_read(%L,'today')$$,current_setting('t.caf'))),'ok','Transactions readable inside the sandbox POV');
 select is(pg_temp.attempt(format($$select cafeteria_wallet_read(%L,'')$$,current_setting('t.caf'))),'42501:cafeteria_authority_required','Cafetería PIKAS Cash still refused inside the POV');
@@ -121,8 +124,8 @@ select is(pg_temp.attempt(format($$select platform_exit_sandbox_pov(%L)$$,'20000
 -- B holds a Demo POV on the sandbox while A resets: B's session ends as sandbox_reset.
 select pg_temp.as_user('00000000-0000-0000-0000-00000000dd02');
 select set_config('t.povB',(platform_enter_sandbox_pov(gen_random_uuid(),current_setting('t.sbx')::uuid,current_setting('t.caf')::uuid,'school_admin')->>'session_id'),true);
-select ok(pikas_private.sandbox_admin_has_capability('school_admin','school:wallets:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid),'School POV may read PIKAS Cash');
-select ok(not pikas_private.sandbox_admin_has_capability('school_admin','school:wallets:replenish',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid),'School POV may not replenish');
+select ok(pg_temp.sandbox_cap('school_admin','school:wallets:read',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid),'School POV may read PIKAS Cash');
+select ok(not pg_temp.sandbox_cap('school_admin','school:wallets:replenish',current_setting('t.sbx')::uuid,current_setting('t.sch')::uuid),'School POV may not replenish');
 select is((school_wallet_access(current_setting('t.sch')::uuid)->>'read')||'/'||(school_wallet_access(current_setting('t.sch')::uuid)->>'replenish')||'/'||(school_wallet_access(current_setting('t.sch')::uuid)->>'adjust'),'true/false/false','school_wallet_access: read only inside the POV');
 select is(pg_temp.attempt(format($$select school_wallet_report(%L,'today')$$,current_setting('t.sch'))),'ok','School PIKAS Cash report readable inside the sandbox POV');
 select isnt(pg_temp.attempt(format($$select school_wallet_replenish(%L,'4c000000-0000-4000-8000-000000000201',1000,'x','demo-lab-rep-00000000001')$$,current_setting('t.sch'))),'ok','School POV cannot replenish');
