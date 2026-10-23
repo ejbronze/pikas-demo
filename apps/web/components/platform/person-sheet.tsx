@@ -8,12 +8,15 @@ import type { IdentitySummary } from "../../lib/identity/contracts";
 import type { FailureKind } from "../../lib/ux/state-classes";
 import { accessStatus, loginStatus, membershipStatusLabel, roleLabel, supportDate, type AccessPerson } from "../../lib/platform/customer-access";
 import { GrantCafeteriaAdminAction, RenamePersonAction } from "../../app/platform/clientes/[accountId]/access-actions";
+import { AddPosAccessAction, AssignmentActions, MembershipStatusActions, type SheetCafeteria } from "./access-lifecycle-actions";
+import { membershipWord } from "../../lib/platform/lifecycle-access";
 
 // UX 15+16: one person of the customer, in context. Identity, every access the person holds
 // (operational words: role · where · state · cajas), POS context, the bounded support actions, and
 // Credenciales opened right here (platform:identity:support) — no copying an email into Identidades.
 // A window within the workspace: the customer stays visible behind the sheet on wide screens.
-export type SheetActions = { accountId: string; provision: boolean; rename: boolean; cafeterias: { id: string; name: string }[] };
+// provision: grants (active customers only). lifecycle: suspend/deactivate/reactivate an existing access (active or suspended customers). assign: caja assignment (operations:manage, active customers).
+export type SheetActions = { accountId: string; provision: boolean; rename: boolean; cafeterias: SheetCafeteria[]; assign?: boolean; lifecycle?: boolean };
 // «Sede Santiago», not «Sede Sede Santiago»: real names often already carry their level word.
 const withLevel = (level: string, name: string) => name.trim().toLocaleLowerCase("es").startsWith(level.toLocaleLowerCase("es")) ? name : `${level} ${name}`;
 const tone: Record<string, string> = { Activo: "bg-emerald-100 text-emerald-900", Suspendido: "bg-amber-100 text-amber-950", Inactivo: "bg-slate-200 text-slate-900" };
@@ -58,10 +61,14 @@ export function PersonSheet({ person, customerName, identities, actions, onClose
             <p className="font-bold">{g.scope === "cafeteria" ? g.cafeteria_name ?? "Cafetería" : g.scope === "school" ? g.school_name ?? "Colegio" : customerName} · {roleLabel(g.role_code)}</p>
             <p className="text-slate-700">{g.scope === "account" ? "Todo el cliente" : g.scope === "school" ? "Colegio" : g.location_name ? withLevel("Sede", g.location_name) : "Cafetería"} · {membershipStatusLabel(g.status)}{supportDate(g.created_at) ? ` · desde ${supportDate(g.created_at)}` : ""}</p>
             {g.scope === "cafeteria" && ["pos_cashier", "pos_supervisor", "pos_operator"].includes(g.role_code) && <p className="text-slate-700">{g.registers.length ? `Cajas: ${g.registers.map(r => `${r.name}${r.assignment_status !== "active" ? ` (${membershipStatusLabel(r.assignment_status).toLowerCase()})` : ""}`).join(", ")}` : "Sin caja asignada · la asigna el administrador de la cafetería en Cajas"}</p>}
+            {g.status !== "active" && <p className="text-amber-950">{membershipWord[g.status] ?? g.status}{g.status === "suspended" ? " · temporal, reversible" : " · reversible desde aquí"}</p>}
+            {(actions.lifecycle || actions.assign) && <div className="mt-2 space-y-2">{actions.lifecycle && <MembershipStatusActions accountId={actions.accountId} grant={g} customerName={customerName} personName={person.display_name} />}
+              {actions.assign && <AssignmentActions accountId={actions.accountId} grant={g} personName={person.display_name} cafeterias={actions.cafeterias} />}</div>}
           </li>)}</ul>}
           <p className="text-xs text-slate-500">Los accesos del colegio (estudiantes, familias) los administra el colegio; los de la cafetería, su administrador. PIKAS da acceso de administrador de cafetería y crea Personal POS cuando el cliente lo pide.</p>
         </section>
-        {(actions.rename || (actions.provision && person.has_login && grantable.length > 0)) && <section aria-label="Acciones de soporte" className="flex flex-wrap gap-2 border-t pt-3">
+        {(actions.rename || (actions.provision && person.has_login)) && <section aria-label="Acciones de soporte" className="flex flex-wrap gap-2 border-t pt-3">
+          {actions.provision && person.has_login && <AddPosAccessAction accountId={actions.accountId} personId={person.person_id} personName={person.display_name} grants={person.grants} cafeterias={actions.cafeterias} canAssign={!!actions.assign} />}
           {actions.provision && person.has_login && grantable.length > 0 && <GrantCafeteriaAdminAction accountId={actions.accountId} personId={person.person_id} personName={person.display_name} cafeterias={grantable} />}
           {actions.rename && <RenamePersonAction accountId={actions.accountId} personId={person.person_id} currentName={person.display_name} />}
         </section>}

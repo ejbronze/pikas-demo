@@ -8,7 +8,7 @@ import { linkStatus, pendingStatus, roleLabel, supportDate, type CustomerAccess,
 // accesos, cajas, credentials, bounded support actions); pending accesses beneath with their
 // recovery. New Personal POS is created in one step (the canonical workflow); the link-based
 // preparation is no longer offered, only recovered where a pending invitation still exists.
-export type AccessActions = { accountId: string; provision: boolean; rename: boolean; cafeterias: StaffCafeteria[]; staffAccess: boolean };
+export type AccessActions = { accountId: string; provision: boolean; rename: boolean; cafeterias: StaffCafeteria[]; staffAccess: boolean; assign?: boolean; lifecycle?: boolean };
 
 function PendingCard({ item, actions }: { item: PendingAccess; actions: AccessActions }) {
   const staff = item.kind === "invitation" && ["pos_cashier", "pos_supervisor"].includes(item.role_code) && !!item.cafeteria_id && !item.request_expired;
@@ -37,7 +37,7 @@ export function CustomerAccessSection({ access, identities, actions, openPerson 
     {actions.provision && !actions.staffAccess && access && actions.cafeterias.length > 0 && <p className="text-sm text-slate-600">Crear Personal POS requiere también soporte de identidad (la contraseña temporal). Pide el acceso a un administrador de la plataforma o deja que el administrador de la cafetería lo cree desde Personal POS.</p>}
     {!access ? <ErrorState title="No pudimos cargar los accesos de este cliente." description="Actualiza la página para intentarlo de nuevo. El resto del cliente se muestra con normalidad." /> : <>
       <section aria-labelledby="access-people" className="space-y-2"><h3 id="access-people" className="font-black">Usuarios con acceso <span className="font-normal text-slate-600">({access.people.length})</span></h3>
-        {access.people.length ? <PeopleList people={access.people} customerName={customerName} identities={identities} openPerson={openPerson} actions={{ accountId: actions.accountId, provision: actions.provision, rename: actions.rename, cafeterias: actions.cafeterias.map(c => ({ id: c.id, name: c.name })) }} />
+        {access.people.length ? <PeopleList people={access.people} customerName={customerName} identities={identities} openPerson={openPerson} actions={{ accountId: actions.accountId, provision: actions.provision, rename: actions.rename, cafeterias: actions.cafeterias, assign: actions.assign, lifecycle: actions.lifecycle }} />
           : <EmptyState title={access.pending.length ? "No hay usuarios con acceso activo para este cliente." : "Aún no se ha dado acceso al personal de este cliente."} description={access.pending.length ? "Los accesos pendientes aparecen abajo con su estado y su siguiente paso." : "Cuando el administrador del colegio active su acceso o PIKAS cree Personal POS, aparecerán aquí."} />}
       </section>
       {access.pending.length > 0 && <section aria-labelledby="access-pending" className="space-y-2"><h3 id="access-pending" className="font-black">Pendientes <span className="font-normal text-slate-600">({access.pending.length})</span></h3>

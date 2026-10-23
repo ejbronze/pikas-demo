@@ -14,7 +14,6 @@ import { isUsernameRejection, usernameRejectionMessage } from '../lib/identity/p
 import { staffAccessErrors, staffAccessResponseSchema, suggestUsername, type StaffAccessResult } from '../lib/identity/staff-access';
 import { TaskActions, TaskCancelButton, TaskOutcome, TaskWindow } from './task-window';
 
-const statusLabel = (s: string) => ({ active: 'Activo', inactive: 'Inactivo', suspended: 'Suspendido' })[s] ?? s;
 export const roleLabel = (s: string) => s === 'pos_supervisor' ? 'Supervisor' : 'Cajero';
 type Staff = CafeteriaRead['staff'][number];
 type Register = CafeteriaRead['registers'][number];
@@ -34,16 +33,17 @@ function useCafeteriaCommand() {
 }
 
 export function StaffPrepareTask({ data, onClose }: { data: CafeteriaRead; onClose: (message?: string) => void }) {
+  const cafeteriaName = data.scope.cafeteria_name;
   const command = useCafeteriaCommand();
   const [email, setEmail] = useState(''), [role, setRole] = useState('pos_cashier'), [username, setUsername] = useState('');
-  return <CommandTask title="Agregar personal POS" context={data.scope.cafeteria_name}
+  return <CommandTask title="Agregar personal POS" context={cafeteriaName}
     pages={[{ label: 'Acceso', content: <>
       {data.scope.tenant_kind !== 'sandbox' && <ProvisioningUsernameField value={username} onChange={setUsername} autoFocus />}
       <label className="block font-bold">Correo *<input className="field mt-1 w-full" type="email" required maxLength={254} data-autofocus={data.scope.tenant_kind === 'sandbox' || undefined} value={email} onChange={e => setEmail(e.target.value)} /></label>
       <label className="block font-bold">Rol POS<select className="field mt-1 w-full" value={role} onChange={e => setRole(e.target.value)}><option value="pos_cashier">Cajero</option><option value="pos_supervisor">Supervisor</option></select></label>
       <p className="text-sm text-slate-600">Supervisor es un rol operativo y no concede administración. Las cajas se asignan después en Cajas.</p></> }]}
     validate={() => data.scope.tenant_kind === 'sandbox' ? null : usernameProblem(username)}
-    review={<><TaskSummary rows={[...(data.scope.tenant_kind === 'sandbox' ? [] : [['Usuario', normalizeUsername(username)] as [string, React.ReactNode]]), ['Correo', email.trim()], ['Rol POS', roleLabel(role)], ['Cafetería', data.scope.cafeteria_name]]} />
+    review={<><TaskSummary rows={[...(data.scope.tenant_kind === 'sandbox' ? [] : [['Usuario', normalizeUsername(username)] as [string, React.ReactNode]]), ['Correo', email.trim()], ['Rol POS', roleLabel(role)], ['Cafetería', cafeteriaName]]} />
       <p className="text-sm text-slate-600">{data.scope.tenant_kind === 'sandbox' ? 'No se emiten enlaces de activación en sandbox. Solo puede completarse acceso para una identidad elegible ya existente.' : 'Preparar no concede acceso ni envía correo. Después generas un enlace privado de activación y confirmas este mismo acceso.'}</p></>}
     finalLabel="Preparar acceso" sendingLabel="Preparando acceso…" blocked={command.blocked} submit={() => command.submit('staff_prepare', data.scope.tenant_kind === 'sandbox' ? { email: email.trim(), role } : { email: email.trim(), role, username: normalizeUsername(username) })}
     dirty={!!email || !!username || role !== 'pos_cashier'} success={{ title: 'Acceso preparado', body: <p>Aparece en Accesos preparados con el usuario reservado. No se ha concedido acceso.</p>, closeMessage: 'Acceso POS preparado.' }} onClose={onClose} />;
@@ -57,6 +57,7 @@ type AccessPhase = 0 | 1 | 'review' | 'sending' | 'success' | 'rejected' | 'unce
 type AccessOutcome = { result: StaffAccessResult; temporary?: string };
 const emailOk = (value: string) => !value.trim() || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClose: (message?: string) => void }) {
+  const cafeteriaName = data.scope.cafeteria_name;
   const { pendingMutation } = useCatalogEditor(), router = useRouter();
   const [key] = useState(() => crypto.randomUUID());
   const [name, setName] = useState(''), [email, setEmail] = useState(''), [role, setRole] = useState('pos_cashier'), [username, setUsername] = useState(''), [touched, setTouched] = useState(false), [registerId, setRegisterId] = useState('');
@@ -100,10 +101,10 @@ export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClos
       uncertain: <><button type="button" className="btn-secondary" onClick={close}>Cerrar</button><button type="button" className="btn" disabled={!!blocked} onClick={() => void send()}>Reintentar la misma solicitud</button></>,
     }[phase];
   const r = outcome?.result;
-  return <TaskWindow title="Agregar personal POS" context={data.scope.cafeteria_name} steps={editing ? ['Persona', 'Caja', 'Revisar'] : undefined} step={typeof phase === 'number' ? phase : 2}
+  return <TaskWindow title="Agregar personal POS" context={cafeteriaName} steps={editing ? ['Persona', 'Caja', 'Revisar'] : undefined} step={typeof phase === 'number' ? phase : 2}
     busy={phase === 'sending'} dirty={editing && (!!name || !!email || touched || !!registerId)} onClose={close} footer={<TaskActions>{footer}</TaskActions>}>
     <section hidden={phase !== 0} className="space-y-4">
-      <p className="text-sm text-slate-600">Se crea el acceso en un paso: PIKAS sugiere el usuario, genera una contraseña temporal de un solo uso y concede el rol en {data.scope.cafeteria_name}. No se envía correo.</p>
+      <p className="text-sm text-slate-600">Se crea el acceso en un paso: PIKAS sugiere el usuario, genera una contraseña temporal de un solo uso y concede el rol en {cafeteriaName}. No se envía correo.</p>
       <label className="block font-bold">Nombre completo *<input className="field mt-1 w-full" data-autofocus required maxLength={200} value={name} onChange={e => setName(e.target.value)} autoComplete="off" /></label>
       <label className="block font-bold">Rol POS<select className="field mt-1 w-full" value={role} onChange={e => setRole(e.target.value)}><option value="pos_cashier">Cajero</option><option value="pos_supervisor">Supervisor</option></select>
         <span className="mt-1 block text-sm font-normal text-slate-600">Supervisor es un rol operativo y no concede administración.</span></label>
@@ -113,19 +114,19 @@ export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClos
         <span className="mt-1 block text-sm font-normal text-slate-600">Sin correo, la persona entra solo con su usuario y no podrá recuperar la contraseña por correo; tú puedes emitirle una temporal desde Credenciales.</span></label>
     </section>
     <section hidden={phase !== 1} className="space-y-4">
-      <p className="font-bold">Caja en {data.scope.cafeteria_name}</p>
+      <p className="font-bold">Caja en {cafeteriaName}</p>
       {registers.length ? <fieldset className="space-y-2"><legend className="text-sm text-slate-600">La persona solo podrá abrir las cajas que tenga asignadas. Puedes cambiarlo después en Cajas.</legend>
         <label className="flex min-h-11 items-center gap-3"><input type="radio" name="staff-access-register" checked={registerId === ''} onChange={() => setRegisterId('')} /><span>Asignar después</span></label>
         {registers.map(reg => <label key={reg.id} className="flex min-h-11 items-center gap-3"><input type="radio" name="staff-access-register" checked={registerId === reg.id} onChange={() => setRegisterId(reg.id)} /><span>{reg.name} <span className="text-slate-500">· {reg.code}</span></span></label>)}</fieldset>
         : <p className="text-sm text-slate-600">Aún no hay cajas activas en esta cafetería. Crea una en Cajas y asigna a la persona desde allí.</p>}
     </section>
     {problem && typeof phase === 'number' && <p role="alert" className="rounded-xl bg-red-50 p-3 font-bold text-red-800">{problem}</p>}
-    {phase === 'review' && <><TaskSummary rows={[['Nombre', name.trim()], ['Rol POS', roleLabel(role)], ['Usuario', effectiveUsername], ['Correo', email.trim() ? email.trim().toLowerCase() : 'Sin correo · entra solo con su usuario'], ['Cafetería', data.scope.cafeteria_name], ['Caja', registerId ? registerName(registerId) : 'Asignar después']]} />
+    {phase === 'review' && <><TaskSummary rows={[['Nombre', name.trim()], ['Rol POS', roleLabel(role)], ['Usuario', effectiveUsername], ['Correo', email.trim() ? email.trim().toLowerCase() : 'Sin correo · entra solo con su usuario'], ['Cafetería', cafeteriaName], ['Caja', registerId ? registerName(registerId) : 'Asignar después']]} />
       <p className="text-sm text-slate-600">Al confirmar se crea el inicio de sesión y verás una contraseña temporal una sola vez. La persona deberá crear su propia contraseña al entrar.</p>
       {blocked && <p role="alert" className="text-sm font-bold text-red-800">{blocked}</p>}</>}
     {phase === 'sending' && <TaskOutcome kind="pending" title="Creando acceso…"><p>No cierres esta ventana.</p></TaskOutcome>}
     {phase === 'success' && r && <TaskOutcome kind="success" title="Listo para iniciar sesión">
-      <TaskSummary rows={[['Nombre', r.display_name], ['Usuario', r.username ?? effectiveUsername], ['Rol POS', roleLabel(r.role)], ['Cafetería', data.scope.cafeteria_name],
+      <TaskSummary rows={[['Nombre', r.display_name], ['Usuario', r.username ?? effectiveUsername], ['Rol POS', roleLabel(r.role)], ['Cafetería', cafeteriaName],
         ['Caja', r.register ? (r.register.assigned ? registerName(r.register.register_id) : `No se pudo asignar ${registerName(r.register.register_id)}: asígnala en Cajas.`) : 'Sin caja asignada todavía: asígnala en Cajas.'],
         ['Correo', r.email_kind === 'real' ? email.trim().toLowerCase() : 'Sin correo · entra solo con su usuario']]} />
       {outcome.temporary ? <>
@@ -141,35 +142,38 @@ export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClos
   </TaskWindow>;
 }
 
-export function StaffStatusTask({ member, onClose }: { member: Staff; onClose: (message?: string) => void }) {
+export function StaffStatusTask({ member, cafeteriaName, onClose }: { member: Staff; cafeteriaName: string; onClose: (message?: string) => void }) {
   const command = useCafeteriaCommand();
   const [status, setStatus] = useState<string>(member.status);
-  return <CommandTask title="Cambiar acceso a esta cafetería" context={`${member.name} · ${roleLabel(member.role)}`}
-    pages={[{ label: 'Estado', content: <><label className="block font-bold">Acceso en esta cafetería<select className="field mt-1 w-full" data-autofocus value={status} onChange={e => setStatus(e.target.value)}>{['active', 'suspended', 'inactive'].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></label>
-      <p className="text-sm text-slate-600">Suspender o retirar solo afecta su acceso POS en esta cafetería: la persona, su usuario y su inicio de sesión en PIKAS se conservan (la suspensión global del inicio de sesión la hace PIKAS). Las cajas se asignan en Cajas.</p>
+  const accessWord = (s: string) => ({ active: 'Activo', suspended: 'Suspendido (temporal)', inactive: 'Desactivado' })[s] ?? s;
+  return <CommandTask title={`Cambiar acceso a ${cafeteriaName}`} context={`${member.name} · ${roleLabel(member.role)}`}
+    pages={[{ label: 'Estado', content: <><label className="block font-bold">Acceso a {cafeteriaName}<select className="field mt-1 w-full" data-autofocus value={status} onChange={e => setStatus(e.target.value)}>{['active', 'suspended', 'inactive'].map(s => <option key={s} value={s}>{accessWord(s)}</option>)}</select></label>
+      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700"><li><strong>Suspendido</strong>: temporal y reversible; no podrá abrir cajas ni vender en {cafeteriaName} mientras dure.</li><li><strong>Desactivado</strong>: deja de tener este rol aquí; la persona sigue existiendo y puede reactivarse si vuelve.</li><li>Solo afecta su acceso a esta cafetería: su usuario, su inicio de sesión en PIKAS y sus accesos en otros lugares no cambian (la suspensión global del inicio de sesión la hace PIKAS). Sus cajas asignadas, sesiones y ventas se conservan. Nada se elimina.</li></ul>
       {member.open && <p className="rounded-xl bg-amber-50 p-3 text-sm">Tiene una sesión abierta: suspender bloquea nuevas operaciones y conserva su cierre propio.</p>}</> }]}
     validate={() => status === member.status ? 'Elige un estado distinto del actual.' : null}
-    review={<TaskSummary rows={[['Persona', member.name], ['Estado actual', statusLabel(member.status)], ['Nuevo estado', statusLabel(status)]]} />}
-    finalLabel={`Cambiar a ${statusLabel(status).toLowerCase()}`} destructive={status !== 'active'} blocked={command.blocked} submit={() => command.submit('staff_status', { membership_id: member.id, status })}
+    review={<TaskSummary rows={[['Persona', member.name], ['Cafetería', cafeteriaName], ['Estado actual', accessWord(member.status)], ['Nuevo estado', accessWord(status)]]} />}
+    finalLabel={status === 'active' ? `Reactivar acceso a ${cafeteriaName}` : status === 'suspended' ? `Suspender acceso a ${cafeteriaName}` : `Desactivar acceso a ${cafeteriaName}`} destructive={status !== 'active'} blocked={command.blocked} submit={() => command.submit('staff_status', { membership_id: member.id, status })}
     dirty={status !== member.status} success={{ title: 'Acceso POS actualizado', closeMessage: 'Acceso POS actualizado.' }} onClose={onClose} />;
 }
 
 // Register CONFIGURATION only (name, code, active state). It never opens, closes or changes a
 // register session; the server keeps rejecting edits while a session is open.
 export function RegisterTask({ data, register, onClose, reopen }: { data: CafeteriaRead; register?: Register; onClose: (message?: string) => void; reopen?: () => void }) {
+  const cafeteriaName = data.scope.cafeteria_name;
   const command = useCafeteriaCommand(), { draftScope } = useCatalogEditor();
   const [id] = useState(() => register?.id ?? crypto.randomUUID());
   // The caja code is assigned by PIKAS (CAJA-NN) and is not operator-editable; edits keep it.
   const initial = { name: register?.name ?? '', status: register?.status ?? 'active' };
   const { values: v, set, restored, drop, discard } = useSessionDraft(draftScope ? registerDraftKey(draftScope, register?.id ?? null) : null, register?.version ?? null, initial, 'La caja cambió desde tu borrador; empezamos con la configuración guardada.');
   const payload = () => ({ id, version: register?.version ?? null, code: null, name: v.name.trim(), status: register ? v.status : 'active' });
-  return <CommandTask title={register ? 'Editar caja' : 'Crear caja'} context={register ? register.name : data.scope.cafeteria_name}
+  return <CommandTask title={register ? 'Editar caja' : 'Crear caja'} context={register ? register.name : cafeteriaName}
     pages={[{ label: 'Configuración', content: <>
       {restored && <div role="status" className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><p className="flex-1 basis-56">{restored.note}</p>{restored.recovered && <button type="button" className="btn-secondary" onClick={discard}>Descartar borrador</button>}</div>}
       <label className="block font-bold">Nombre de caja *<input className="field mt-1 w-full" required maxLength={120} data-autofocus value={v.name} onChange={e => set('name', e.target.value)} /></label>
       {register ? <p className="text-sm"><span className="font-bold">Código de caja:</span> {register.code} <span className="text-slate-600">· asignado por PIKAS; aparece en el POS y en los recibos.</span></p>
         : <p className="text-sm text-slate-600">PIKAS asigna el código de la caja (por ejemplo, CAJA-01). Aparece en el POS, en el cierre de caja y en los recibos.</p>}
-      {register && <label className="block font-bold">Estado<select className="field mt-1 w-full" value={v.status} onChange={e => set('status', e.target.value as 'active' | 'inactive')}><option value="active">Activa</option><option value="inactive">Inactiva</option></select></label>}
+      {register && <label className="block font-bold">Estado<select className="field mt-1 w-full" value={v.status} onChange={e => set('status', e.target.value as 'active' | 'inactive')}><option value="active">Activa</option><option value="inactive">Inactiva</option></select>
+        <span className="mt-1 block text-sm font-normal text-slate-600">Inactiva: no se pueden abrir sesiones nuevas en esta caja; sus sesiones, ventas y asignaciones anteriores se conservan como historial y puede reactivarse después. Una caja con historial nunca se elimina.</span></label>}
       <p className="text-sm text-slate-600">Solo cambia la configuración. No abre, cierra ni modifica sesiones de caja; una sesión abierta bloquea los cambios.</p></> }]}
     validate={() => register && JSON.stringify(v) === JSON.stringify(initial) ? 'No hay cambios para guardar.' : null}
     review={<TaskSummary rows={[['Nombre', v.name.trim()], ['Código', register ? register.code : 'Lo asigna PIKAS (CAJA-NN)'], ['Estado', register ? (v.status === 'active' ? 'Activa' : 'Inactiva') : 'Activa']]} />}

@@ -82,13 +82,13 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     const access = showAccess ? await readPlatform(session, CUSTOMER_ACCESS_READ, "platform_customer_access_read", { p_account_id: customer.account.id }, customerAccessSchema) : null;
     const canProvision = isCustomer && can(CUSTOMER_ACCESS_PROVISION);
     // Caja options for one-step POS access come from the support read (operations:read), per active cafetería.
-    const registers = canProvision && active && showOperations ? await Promise.all(activeCafeterias.map(async c => {
+    const registers = canProvision && showOperations ? await Promise.all(activeCafeterias.map(async c => {
       const read = await readPlatform(session, CUSTOMER_OPERATIONS_READ, "platform_support_cafeteria_read", { p_account_id: customer.account.id, p_cafeteria_id: c.id }, supportCafeteriaReadSchema);
       return { id: c.id, name: c.name, location: c.place, registers: read.kind === "ready" ? (read.value?.registers ?? []).filter(r => r.status === "active").map(r => ({ id: r.id, name: r.name, code: r.code })) : [] };
     })) : activeCafeterias.map(c => ({ id: c.id, name: c.name, location: c.place, registers: [] }));
     body = <div className="space-y-5">
       {showAccess && <CustomerAccessSection access={access?.kind === "ready" && access.value?.account_id === customer.account.id ? access.value : null} identities={can(IDENTITY_SUPPORT_CAPABILITY)} openPerson={personParam} customerName={customer.account.name}
-        actions={{ accountId: customer.account.id, provision: canProvision && active, rename: canProvision && PROFILE_EDITABLE_STATUSES.includes(customer.account.status), cafeterias: registers, staffAccess: canProvision && active && can(IDENTITY_SUPPORT_CAPABILITY) }} />}
+        actions={{ accountId: customer.account.id, provision: canProvision && active, rename: canProvision && PROFILE_EDITABLE_STATUSES.includes(customer.account.status), lifecycle: canProvision && PROFILE_EDITABLE_STATUSES.includes(customer.account.status), cafeterias: registers, staffAccess: canProvision && active && can(IDENTITY_SUPPORT_CAPABILITY), assign: can(CUSTOMER_OPERATIONS_MANAGE) && active }} />}
       <InitialAdministrator customer={customer} intents={initialIntents} activation={activation} actor={session.identity.user.id} canPrepare={canPrepare} canComplete={canComplete} />
     </div>;
   } else if (section === "operacion") {

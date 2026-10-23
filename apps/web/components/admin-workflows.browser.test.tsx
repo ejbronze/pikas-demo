@@ -207,8 +207,8 @@ describe("Cajas configuration", () => {
     await page.getByRole("button", { name: "Editar caja Caja Patio" }).click(); expect(await dlg().getByRole("textbox").count()).toBe(1); expect(await dlg().innerText()).toContain("Código de caja: C2");
     await dlg().getByLabel("Estado").selectOption("inactive"); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Guardar caja" }).click(); await dlg().getByText("Caja actualizada").first().waitFor();
     expect((await calls()).filter(c => c.url === "/api/cafeteria")[0].body).toMatchObject({ operation: "register_save", payload: { id: U(111), version: 2, code: null, status: "inactive" } });
-    await dlg().getByRole("button", { name: "Cerrar", exact: true }).click(); await page.getByText("Personal autorizado", { exact: true }).click(); await page.getByRole("button", { name: "Asignar" }).first().click();
-    await page.getByText("¿Confirmar el cambio de acceso a esta caja?").waitFor(); expect((await calls()).filter(c => c.url === "/api/cafeteria")).toHaveLength(1);
+    await dlg().getByRole("button", { name: "Cerrar", exact: true }).click(); await page.getByText("Personal autorizado", { exact: true }).click(); await page.getByRole("button", { name: /^Asignar Caja Patio/ }).first().click();
+    await page.getByText(/¿Asignar Caja Patio a .+\? Podrá abrir sesiones en esta caja desde el POS\./).waitFor(); expect((await calls()).filter(c => c.url === "/api/cafeteria")).toHaveLength(1);
   });
 });
 
@@ -231,7 +231,7 @@ describe("Personal POS", () => {
     const outcome = await dlg().innerText(); expect(outcome).toContain("Temp-fictional-418xyz"); expect(outcome).toContain("Caja Patio"); expect(outcome).toContain("no se volverá a mostrar");
     await dlg().getByRole("button", { name: "Cerrar", exact: true }).click(); expect(await page.getByText("Temp-fictional-418xyz").count()).toBe(0);
     await page.getByRole("button", { name: "Cambiar acceso de Cajera Ficticia" }).first().click();
-    await dlg().getByLabel("Acceso en esta cafetería").selectOption("suspended"); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Cambiar a suspendido" }).click();
+    await dlg().getByLabel("Acceso a Cafetería Ficticia").selectOption("suspended"); expect(await dlg().innerText()).toContain("Solo afecta su acceso a esta cafetería"); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Suspender acceso a Cafetería Ficticia" }).click();
     await dlg().getByText("Acceso POS actualizado").first().waitFor(); expect((await calls()).filter(c => c.url === "/api/cafeteria")[0].body).toMatchObject({ operation: "staff_status", payload: { membership_id: U(120), status: "suspended" } });
   });
   it("a username collision returns to the form with the explanation; an uncertain result retries with the same key", async () => {

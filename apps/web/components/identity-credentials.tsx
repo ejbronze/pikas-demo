@@ -105,7 +105,10 @@ function IdentityTask({ task, identity, onDone, onClose }: { task: Exclude<Task,
         <label className="block font-bold">Correo correcto<input data-autofocus type="email" className="field mt-1" value={value} onChange={e => setValue(e.target.value)} autoCapitalize="none" /></label></>}
       {task === 'temporary' && <><p>Se generará una contraseña temporal para {identity.display_name}. Sus sesiones abiertas terminarán y, al entrar, deberá crear su propia contraseña. Si no se usa en 15 minutos, caduca y habrá que emitir otra.</p>
         <p className="text-sm text-slate-600">La contraseña se muestra una sola vez. PIKAS no la guarda ni la registra.</p></>}
-      {task === 'suspend' && <p>{suspend ? 'No podrá iniciar sesión y sus sesiones abiertas terminarán. Sus accesos y su historial no cambian.' : 'Podrá volver a iniciar sesión con sus credenciales actuales.'}</p>}
+      {task === 'suspend' && (suspend ? <div className="space-y-2 text-sm"><p className="font-bold">Suspender inicio de sesión en PIKAS: afecta todos sus accesos.</p>
+        <ul className="list-disc space-y-1 pl-5"><li>No podrá iniciar sesión en ningún lugar de PIKAS (colegio, cafetería o POS) y sus sesiones abiertas terminarán.</li><li>Sus accesos, sus cajas y su historial no cambian: al reactivar, vuelve a entrar con los mismos permisos.</li><li>Es reversible desde aquí. Solo PIKAS puede hacerlo; los administradores de cafetería solo suspenden el acceso a su cafetería.</li></ul>
+        <p className="text-slate-600">Si solo quieres retirar el acceso a una cafetería o colegio, usa «Suspender acceso a…» en la persona, no esta acción.</p></div>
+        : <p>Podrá volver a iniciar sesión con sus credenciales actuales, con los mismos accesos que tenía.</p>)}
       {(task === 'email' || task === 'suspend') && <label className="block font-bold">Motivo<input className="field mt-1" value={reason} onChange={e => setReason(e.target.value)} maxLength={500} /></label>}
       {error && <ErrorState title={error} />}
     </>}
