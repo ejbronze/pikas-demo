@@ -13,7 +13,8 @@ import { runStaffAccess, type RpcError } from '../../../../lib/identity/staff-ac
 //   prepare  → provisioning_prepare_with_username (flow cafeteria_staff, this request key)
 //   complete → cafeteria_admin_command staff_complete (derived key)
 //   assign   → cafeteria_admin_command assignment_save (derived key)
-// Sandbox and Demo personas are refused: there, identities are never provisioned.
+// Inside the sandbox (Demo Lab) the cafetería-admin POV creates Personal POS of ITS sandbox cafetería: the
+// database admits only that (username ending in .demo, sandbox identity targets). Real tenants never run under a POV.
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
 const fail = (error: string, status: number) => json({ error }, status);
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (access.status !== 'authorized') return fail('cafeteria_authority_required', 403);
     const cafeteria = access.context.cafeterias.find(c => c.cafeteria_id === input.cafeteriaId);
     if (!cafeteria) return fail('cafeteria_authority_required', 403);
-    if (cafeteria.tenant_kind !== 'customer' || access.context.pov) return fail('sandbox_unsupported', 403);
+    if (cafeteria.tenant_kind === 'customer' ? !!access.context.pov : access.context.pov?.pov_code !== 'cafeteria_admin') return fail('sandbox_unsupported', 403);
     const rpc = (name: string, args: Record<string, unknown>) => client.rpc(name, args) as unknown as Promise<{ data: unknown; error: RpcError }>;
     const command = (requestId: string, operation: string, payload: Record<string, unknown>) =>
       rpc('cafeteria_admin_command', { p_cafeteria_id: input.cafeteriaId, p_request_id: requestId, p_operation: operation, p_payload: payload });

@@ -42,11 +42,12 @@ describe("School Reportes pages", () => {
     mocks.wallet.mockResolvedValue({ read: false }); t = text(await page(Landing));
     expect(t).toContain("Estudiantes"); expect(t).not.toContain("PIKAS Cash"); expect(t).not.toMatch(/próximamente|coming soon/i);
   });
-  it("authority: unauthenticated → login; unknown school → back to School; sandbox POV → no wallet read", async () => {
+  it("authority: unauthenticated → login; unknown school → back to School; sandbox POV → the server read decides PIKAS Cash (Demo Lab)", async () => {
     mocks.access.mockResolvedValueOnce({ status: "unauthenticated" }); await expect(page(Landing)).rejects.toMatchObject({ url: "/login?next=%2Fadmin%2Fescuela" });
     await expect(page(Students, { school: other })).rejects.toMatchObject({ url: "/admin/escuela" });
     mocks.access.mockResolvedValue({ status: "authorized", context: { person_id: actor, display_name: "P", pov: { role: "school_admin" }, schools: [{ school_id: school, school_name: "Colegio", account_id: actor, account_name: "C", tenant_kind: "sandbox" }] } });
-    expect(text(await page(Wallet))).toContain("no están habilitados en este punto de vista"); expect(mocks.wallet).not.toHaveBeenCalled();
+    mocks.wallet.mockResolvedValueOnce({ school_id: school, read: false, replenish: false, reverse: false, adjust: false });
+    expect(text(await page(Wallet))).not.toContain("no están habilitados en este punto de vista"); expect(mocks.wallet).toHaveBeenCalled();
     expect(mocks.rpc.mock.calls.map(c => c[0])).not.toContain("school_wallet_report");
   });
   it("Estudiantes: URL filters reach the read; header shows them; summary reconciles with the rows; CSV keeps the filters", async () => {

@@ -56,6 +56,7 @@ export function StaffPrepareTask({ data, onClose }: { data: CafeteriaRead; onClo
 type AccessPhase = 0 | 1 | 'review' | 'sending' | 'success' | 'rejected' | 'uncertain';
 type AccessOutcome = { result: StaffAccessResult; temporary?: string };
 const emailOk = (value: string) => !value.trim() || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
+const demoUsername = (u: string) => !u ? '' : u.endsWith('.demo') ? u : `${u.slice(0, 35).replace(/[._-]+$/, '')}.demo`;
 export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClose: (message?: string) => void }) {
   const cafeteriaName = data.scope.cafeteria_name;
   const { pendingMutation } = useCatalogEditor(), router = useRouter();
@@ -64,9 +65,11 @@ export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClos
   const [phase, setPhase] = useState<AccessPhase>(0), [problem, setProblem] = useState(''), [message, setMessage] = useState(''), [outcome, setOutcome] = useState<AccessOutcome | null>(null), [copied, setCopied] = useState('');
   const sending = useRef(false);
   const registers = data.registers.filter(r => r.status === 'active');
-  const suggested = suggestUsername(name), effectiveUsername = normalizeUsername(touched ? username : suggested);
+  // Demo Lab: inside the sandbox every username ends in «.demo» (the database refuses any other), so the suggestion carries it.
+  const sandbox = data.scope.tenant_kind === 'sandbox';
+  const suggested = sandbox ? demoUsername(suggestUsername(name)) : suggestUsername(name), effectiveUsername = normalizeUsername(touched ? username : suggested);
   const blocked = pendingMutation ? 'Hay otra solicitud pendiente de confirmar en esta cafetería. Confírmala antes de crear este acceso.' : '';
-  const validate = (): string | null => !name.trim() ? 'Escribe el nombre completo.' : usernameProblem(effectiveUsername) ?? (!emailOk(email) ? 'Ese correo no es válido. Déjalo vacío si no tiene.' : null);
+  const validate = (): string | null => !name.trim() ? 'Escribe el nombre completo.' : usernameProblem(effectiveUsername) ?? (sandbox && !effectiveUsername.endsWith('.demo') ? staffAccessErrors.sandbox_username_requires_demo_suffix : !emailOk(email) ? 'Ese correo no es válido. Déjalo vacío si no tiene.' : null);
   const send = async () => {
     if (sending.current || blocked) return;
     sending.current = true; setPhase('sending'); setMessage('');
@@ -109,7 +112,7 @@ export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClos
       <label className="block font-bold">Rol POS<select className="field mt-1 w-full" value={role} onChange={e => setRole(e.target.value)}><option value="pos_cashier">Cajero</option><option value="pos_supervisor">Supervisor</option></select>
         <span className="mt-1 block text-sm font-normal text-slate-600">Supervisor es un rol operativo y no concede administración.</span></label>
       <ProvisioningUsernameField value={touched ? username : suggested} onChange={value => { setTouched(true); setUsername(value); }} />
-      {!touched && suggested && <p className="text-sm text-slate-600">Sugerido por PIKAS a partir del nombre; puedes cambiarlo antes de confirmar.</p>}
+      {!touched && suggested && <p className="text-sm text-slate-600">Sugerido por PIKAS a partir del nombre; puedes cambiarlo antes de confirmar.{sandbox ? ' En el Demo los usuarios terminan en «.demo».' : ''}</p>}
       <label className="block font-bold">Correo (opcional)<input className="field mt-1 w-full" type="email" maxLength={254} value={email} onChange={e => setEmail(e.target.value)} autoCapitalize="none" autoComplete="off" />
         <span className="mt-1 block text-sm font-normal text-slate-600">Sin correo, la persona entra solo con su usuario y no podrá recuperar la contraseña por correo; tú puedes emitirle una temporal desde Credenciales.</span></label>
     </section>

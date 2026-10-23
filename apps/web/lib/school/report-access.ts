@@ -8,7 +8,7 @@ import { crossSite } from "../reports/csv";
 
 // UX 8 School Reportes: the same School authority as every School page. The school comes from the URL
 // and must be one of the actor's schools; PIKAS Cash also needs the server-derived school:wallets:read
-// and stays excluded from the sandbox POV, as in School PIKAS Cash.
+// (inside the sandbox POV the server grants read-only access to the sandbox's own fictional wallets).
 export async function schoolReportPage(searchParams: Promise<SearchParams>) {
   if (isDemoMode()) notFound();
   const client = await createSupabaseServerClient(), access = await resolveSchoolAccess(client);
@@ -17,7 +17,7 @@ export async function schoolReportPage(searchParams: Promise<SearchParams>) {
   const params = await searchParams, schoolId = one(params.school) ?? access.context.schools[0].school_id;
   const school = access.context.schools.find(s => s.school_id === schoolId);
   if (!school) redirect("/admin/escuela");
-  const walletRead = !access.context.pov && (await readSchoolWalletAccess(client, schoolId)).read;
+  const walletRead = (await readSchoolWalletAccess(client, schoolId)).read;
   return { client, context: access.context, params, schoolId, school, walletRead };
 }
 
@@ -32,6 +32,6 @@ export async function schoolReportRoute(request: Request, { wallet = false } = {
   if (access.status !== "authorized") return fail("school_authority_required", access.status === "unavailable" ? 503 : 403);
   const schoolId = one(params.school), school = access.context.schools.find(s => s.school_id === schoolId);
   if (!schoolId || !school) return fail("school_authority_required", 403);
-  if (wallet && (access.context.pov || !(await readSchoolWalletAccess(client, schoolId)).read)) return fail("school_authority_required", 403);
+  if (wallet && !(await readSchoolWalletAccess(client, schoolId)).read) return fail("school_authority_required", 403);
   return { ok: true as const, client, context: access.context, params, schoolId, school };
 }

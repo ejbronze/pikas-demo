@@ -23,9 +23,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   const params = await searchParams;
   const schoolId = params.school ?? access.context.schools[0].school_id;
   if (!access.context.schools.some(s => s.school_id === schoolId)) redirect('/admin/escuela');
-  const wallet = access.context.pov ? null : await readSchoolWalletAccess(client, schoolId);
+  const wallet = await readSchoolWalletAccess(client, schoolId);
   const shell = (children: React.ReactNode) => <ConnectedSchoolShell context={access.context} schoolId={schoolId} walletNav={Boolean(wallet?.read)}>{children}</ConnectedSchoolShell>;
-  if (access.context.pov) return shell(<><AppPageHeader title="PIKAS Cash" /><p className="card p-5" role="status">Las operaciones y reportes financieros no están habilitados en este punto de vista de sandbox.</p></>);
   if (!wallet?.read) return shell(<><AppPageHeader title="PIKAS Cash" /><ErrorState kind="permission" title="Tu rol no tiene acceso a PIKAS Cash en esta escuela." description="Lo otorga el administrador de la cuenta del colegio; pídeselo si lo necesitas." /></>);
 
   const query = z.string().max(80).catch('').parse(params.q ?? ''), after = z.guid().nullable().catch(null).parse(params.after ?? null), view = params.vista === 'atencion' ? 'atencion' as const : 'todos' as const;

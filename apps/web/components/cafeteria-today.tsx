@@ -33,7 +33,7 @@ async function read<T>(url: string, body: unknown, parse: (v: unknown) => T | nu
 
 export function CafeteriaToday({ data }: { data: CafeteriaRead }) {
   const id = data.scope.cafeteria_id, caps = data.scope.capabilities;
-  const business = data.scope.tenant_kind === 'customer' && caps.includes('cafeteria:pos:purchases:read'), sessions = business && caps.includes('cafeteria:pos:sessions:read');
+  const business = caps.includes('cafeteria:pos:purchases:read'), sessions = business && caps.includes('cafeteria:pos:sessions:read');
   const [inputs, setInputs] = useState<TodayInputs>({ today: loading, summary: loading, products: loading, recon: sessions ? loading : null });
   const gate = useRef(latestGate());
   const load = useCallback(() => {
@@ -65,7 +65,7 @@ export function CafeteriaTodayView({ data, business, inputs, onRefresh }: { data
         {date && <p className="text-sm text-slate-600">{longDate(date)}</p>}</div>
       {business && onRefresh && <button type="button" className="hoy-refresh" onClick={onRefresh}><RefreshCw aria-hidden className="size-4" />Actualizar</button>}
     </header>
-    {!business && <p className="hoy-note" role="status">{data.scope.tenant_kind === 'sandbox' ? 'Los datos financieros no están disponibles en el entorno sandbox. Aquí ves el estado operativo de la cafetería.' : 'Tu rol no tiene acceso a las ventas de esta cafetería. Aquí ves su estado operativo.'}</p>}
+    {!business && <p className="hoy-note" role="status">Tu rol no tiene acceso a las ventas de esta cafetería. Aquí ves su estado operativo.</p>}
     <ManagementMap data={data} readiness={readiness} />
     {guideOnTop && <ReadinessGuide data={data} readiness={readiness} />}
     {guideOnTop && <StudentServiceNote data={data} />}

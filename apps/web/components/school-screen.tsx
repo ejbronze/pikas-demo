@@ -51,7 +51,7 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
     const result = readSchema.safeParse(roster.data);
     if (!roster.error && result.success && result.data.scope.school_id === schoolId && result.data.scope.actor_id === access.context.person_id) students = (result.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row);
   }
-  const walletRead = !access.context.pov && (await readSchoolWalletAccess(client, schoolId)).read;
+  const walletRead = (await readSchoolWalletAccess(client, schoolId)).read;
   const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };
   // Estudiantes: the school's own status totals for the roster chips (school:read summary).
   const studentCounts = section === "students" ? await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "summary", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(r => own(r)?.counts, () => undefined) : undefined;

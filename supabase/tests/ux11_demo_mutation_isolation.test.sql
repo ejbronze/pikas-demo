@@ -28,11 +28,11 @@ select set_config('t.cashier',(select p.id::text from persons p where p.auth_use
 
 -- The guard itself and its coverage.
 select ok(not has_function_privilege('authenticated','pikas_private.require_no_current_demo()','execute'),'The shared guard is not client-callable');
-select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosrc ~ 'require_no_current_demo'),24::bigint,'24 real Platform mutation RPCs carry the shared guard');
+select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosrc ~ 'require_no_current_demo'),25::bigint,'25 real Platform mutation RPCs carry the shared guard (Lifecycle: none; Demo Lab: platform_reset_sandbox)');
 select is((select string_agg(p.proname,',' order by p.proname) from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_language l on l.oid=p.prolang
   where n.nspname='public' and (p.proname like 'platform\_%' or p.proname like 'identity\_%') and has_function_privilege('authenticated',p.oid,'execute') and p.provolatile='v'
   and p.prosrc ~* '(insert into|update [a-z_.]+ set|delete from)'
-  and p.prosrc !~ 'require_no_current_demo|sandbox_pov_current_attempt|sandbox_validated_pov|require_customer_operations_scope|begin_customer_operations_scope'),
+  and p.prosrc !~ 'require_no_current_demo|sandbox_pov_current_attempt|sandbox_validated_pov|require_customer_operations_scope|begin_customer_operations_scope|require_customer_provisioning'),
  'identity_complete_password_change,platform_enter_sandbox_pov,platform_exit_sandbox_pov','The only unguarded writers are the Demo controls and the caller''s own password change');
 
 -- Real mutations as A with no POV: the representative command of each family runs (authority permitting).

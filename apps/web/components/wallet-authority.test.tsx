@@ -34,10 +34,14 @@ describe('capability-aware wallet surfaces',()=>{
   if(!mounted)expect(html).toContain('Tu rol no tiene acceso a PIKAS Cash');
   else expect(mocks.walletProps[0]).toMatchObject({canReplenish});
  });
- it('sandbox POV never queries or mounts wallet',async()=>{
+ it('Demo Lab: inside the sandbox POV the server-derived read decides the wallet (read-only), never the client',async()=>{
   mocks.access.mockResolvedValue({status:'authorized',context:{person_id:id,display_name:'Admin',schools:[{school_id:id}],pov:{}}});
-  const html=renderToStaticMarkup(await WalletPage({params:Promise.resolve({studentId:id}),searchParams:Promise.resolve({school:id})}));
-  expect(html).toContain('sandbox');expect(mocks.wallet).not.toHaveBeenCalled();expect(mocks.walletProps).toHaveLength(0);
+  mocks.wallet.mockResolvedValue({school_id:id,read:false,replenish:false});
+  let html=renderToStaticMarkup(await WalletPage({params:Promise.resolve({studentId:id}),searchParams:Promise.resolve({school:id})}));
+  expect(mocks.wallet).toHaveBeenCalled();expect(html).toContain('Tu rol no tiene acceso a PIKAS Cash');expect(mocks.walletProps).toHaveLength(0);
+  mocks.wallet.mockResolvedValue({school_id:id,read:true,replenish:false});
+  html=renderToStaticMarkup(await WalletPage({params:Promise.resolve({studentId:id}),searchParams:Promise.resolve({school:id})}));
+  expect(html).toContain('data-wallet="mounted"');expect(mocks.walletProps[0]).toMatchObject({canReplenish:false});
  });
  it.each([[['cafeteria:wallets:read'],'customer',true],[['cafeteria:catalog:manage'],'customer',false],[['cafeteria:wallets:read'],'sandbox',false]])('cafeteria lookup with %j/%s',(capabilities,tenant,visible)=>{
   const read=cafeteriaRead();read.scope.capabilities=capabilities;read.scope.tenant_kind=tenant as 'customer'|'sandbox';

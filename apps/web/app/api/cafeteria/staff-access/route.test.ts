@@ -99,6 +99,10 @@ describe('UX 12B one-step staff access', () => {
     mocks.access.mockResolvedValue({ status: 'authorized', pov: { pov_code: 'cafeteria_admin' }, context: { pov: { pov_code: 'cafeteria_admin' }, cafeterias: [{ cafeteria_id: caf, tenant_kind: 'customer' }] } });
     expect((await POST(request())).status).toBe(403); expect(mocks.rpc).not.toHaveBeenCalled(); expect(mocks.createUser).not.toHaveBeenCalled();
   });
+  it('Demo Lab: the sandbox cafetería-admin POV runs the same one-step flow inside its sandbox', async () => {
+    mocks.access.mockResolvedValue({ status: 'authorized', context: { pov: { pov_code: 'cafeteria_admin' }, cafeterias: [{ cafeteria_id: caf, tenant_kind: 'sandbox' }] } });
+    expect((await POST(request())).status).toBe(200); expect(mocks.rpc).toHaveBeenCalledWith('provisioning_prepare_with_username', expect.objectContaining({ p_flow: 'cafeteria_staff', p_cafeteria_id: caf }));
+  });
   it.each(['role_code', 'person_id', 'auth_id', 'account_id', 'must_change_password'])('rejects browser-supplied %s', async field => {
     expect((await POST(request({ ...body, [field]: auth }))).status).toBe(400); expect(mocks.access).not.toHaveBeenCalled();
   });

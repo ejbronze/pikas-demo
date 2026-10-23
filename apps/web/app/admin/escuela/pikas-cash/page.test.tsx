@@ -76,10 +76,14 @@ describe("School PIKAS Cash server reads", () => {
     const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ school }) }));
     expect(html).toContain("Tu rol no tiene acceso a PIKAS Cash"); expect(mocks.rpc).not.toHaveBeenCalled(); expect(mocks.from).not.toHaveBeenCalled(); expect(mocks.cash).not.toHaveBeenCalled();
   });
-  it("a sandbox POV keeps its financial exclusion", async () => {
+  it("Demo Lab: a sandbox POV reads the sandbox's own PIKAS Cash when the server read grants it; without it, the permission state", async () => {
     mocks.access.mockResolvedValue({ status: "authorized", context: { person_id: school, pov: { role: "school_admin" }, schools: [{ school_id: school, school_name: "Colegio" }] } });
-    const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ school }) }));
-    expect(html).toContain("no están habilitados"); expect(mocks.wallet).not.toHaveBeenCalled(); expect(mocks.rpc).not.toHaveBeenCalled();
+    mocks.wallet.mockResolvedValue({ school_id: school, read: false, replenish: false, reverse: false, adjust: false });
+    let html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ school }) }));
+    expect(html).not.toContain("no están habilitados"); expect(html).toContain("Tu rol no tiene acceso a PIKAS Cash"); expect(mocks.wallet).toHaveBeenCalled(); expect(mocks.rpc).not.toHaveBeenCalled();
+    mocks.wallet.mockResolvedValue({ school_id: school, read: true, replenish: false, reverse: false, adjust: false }); roster(scope());
+    html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ school }) }));
+    expect(mocks.rpc).toHaveBeenCalledWith("school_student_roster", expect.anything());
   });
   it("an unknown school redirects; invalid paging input is ignored", async () => {
     await run({ after: "not-a-uuid", q: "x".repeat(200) });

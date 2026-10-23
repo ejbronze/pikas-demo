@@ -89,7 +89,9 @@ select set_config('phase5b.sandbox_school',(select school_id::text from pikas_pr
 select set_config('phase5b.sandbox_student',(select id::text from students where school_id=current_setting('phase5b.sandbox_school')::uuid limit 1),true);
 select set_config('request.jwt.claim.sub','ec08ad21-4020-4b0d-b041-ee4a1fe09471',true);set local role authenticated;
 select platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','school_admin');
-select throws_ok($$select school_wallet_read(current_setting('phase5b.sandbox_school')::uuid,current_setting('phase5b.sandbox_student')::uuid)$$,'42501',null,'Sandbox school POV cannot read financial ledger');
+-- Demo Lab (202611170001): the sandbox school POV reads the sandbox's own fictional ledger; every wallet write stays refused.
+select lives_ok($$select school_wallet_read(current_setting('phase5b.sandbox_school')::uuid,current_setting('phase5b.sandbox_student')::uuid)$$,'Sandbox school POV reads the sandbox''s own ledger (Demo Lab, read-only)');
+select is((school_wallet_access(current_setting('phase5b.sandbox_school')::uuid)->>'replenish')||'/'||(school_wallet_access(current_setting('phase5b.sandbox_school')::uuid)->>'adjust'),'false/false','…and holds no wallet write authority');
 select throws_ok($$select school_wallet_replenish(current_setting('phase5b.sandbox_school')::uuid,current_setting('phase5b.sandbox_student')::uuid,1,gen_random_uuid(),'Local','Verificado')$$,'42501',null,'Sandbox school POV cannot replenish');
 reset role;
 set constraints all immediate;

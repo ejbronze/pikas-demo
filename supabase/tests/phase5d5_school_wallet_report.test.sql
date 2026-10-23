@@ -60,7 +60,9 @@ reset role;
 select set_config('t.sandbox_school',(select school_id::text from pikas_private.sandbox_pov_personas where pov_code='school_admin' limit 1),true);
 select pg_temp.as_user('ec08ad21-4020-4b0d-b041-ee4a1fe09471');
 select platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','school_admin');
-select is(pg_temp.attempt(school=>current_setting('t.sandbox_school')),'42501:wallet_report_authority_required','Sandbox School Admin POV denied financial reporting');
+-- Demo Lab (202611170001): inside the sandbox POV the School Admin reads the sandbox's OWN fictional PIKAS Cash report; wallet writes stay refused.
+select is(pg_temp.attempt(school=>current_setting('t.sandbox_school')),'ok','Sandbox School Admin POV reads the sandbox''s own PIKAS Cash report (Demo Lab)');
+select is((select school_wallet_access(current_setting('t.sandbox_school')::uuid)->>'replenish'),'false','…but may not replenish inside the POV');
 reset role;
 
 -- Period contract (shared with 5D.1–5D.4)

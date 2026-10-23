@@ -45,10 +45,9 @@ describe("Cafetería Reportes pages", () => {
     mocks.access.mockResolvedValueOnce({ status: "unauthenticated" }); await expect(page(Landing)).rejects.toMatchObject({ url: "/login?next=%2Fadmin%2Fcafeteria" });
     await expect(page(Ventas, { cafeteria: other })).rejects.toMatchObject({ url: "/admin/cafeteria" });
   });
-  it("sandbox tenants and roles without sales access get no financial read", async () => {
+  it("Demo Lab: a sandbox tenant with sales access reads its own fictional reports; roles without sales access get no financial read", async () => {
     mocks.access.mockResolvedValue(ctx("sandbox")); reads(caps.all, "sandbox");
-    for (const P of [Landing, Ventas, Pagos, Productos, Cajas]) expect(text(await page(P))).toContain("no están disponibles en el entorno sandbox");
-    expect(reportCalls()).toEqual([]);
+    expect(text(await page(Ventas))).not.toContain("no están disponibles en el entorno sandbox"); expect(reportCalls().length).toBeGreaterThan(0);
     mocks.access.mockResolvedValue(ctx()); reads([]); vi.clearAllMocks(); reads([]);
     expect(text(await page(Ventas))).toContain("Tu rol no tiene acceso a reportes"); expect(reportCalls()).toEqual([]);
     reads(caps.sales); expect(text(await page(Cajas))).toContain("historial de cajas"); expect(reportCalls()).toEqual([]);
@@ -80,11 +79,11 @@ describe("Cafetería Reportes pages", () => {
   });
 });
 describe("Cafetería Reportes CSV", () => {
-  it("authority: unauthenticated 401, another cafetería 403, cross-site 403, sandbox 403 — all before any read", async () => {
+  it("authority: unauthenticated 401, another cafetería 403, cross-site 403 — all before any read; a sandbox tenant reads its own data (the RPC decides)", async () => {
     mocks.access.mockResolvedValueOnce({ status: "unauthenticated" }); expect((await get(ventasCsv, `cafeteria=${id}`)).status).toBe(401);
     expect((await get(ventasCsv, `cafeteria=${other}`)).status).toBe(403); expect((await get(ventasCsv, `cafeteria=${id}`, "cross-site")).status).toBe(403);
-    mocks.access.mockResolvedValue(ctx("sandbox")); expect((await get(cajasCsv, `cafeteria=${id}`)).status).toBe(403);
     expect(mocks.rpc).not.toHaveBeenCalled();
+    mocks.access.mockResolvedValue(ctx("sandbox")); expect((await get(cajasCsv, `cafeteria=${id}`)).status).toBe(200);
   });
   it("Ventas CSV is the same filtered list as the report", async () => {
     const r = await get(ventasCsv, `cafeteria=${id}&period=today&payment=cash`), body = await r.text();

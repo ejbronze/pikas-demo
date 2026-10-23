@@ -96,7 +96,7 @@ describe('Cafetería Hoy', () => {
   it('sandbox or no purchase authority: operational view only, no sales', () => {
     const d = data(); const sandbox = { ...d, scope: { ...d.scope, tenant_kind: 'sandbox' as const } };
     const html = render(inputs(), sandbox, false);
-    expect(html).toContain('no están disponibles en el entorno sandbox'); expect(html).not.toContain('Ventas de hoy'); expect(html).not.toContain('RD$'); expect(html).toContain('Cajas ahora');
+    expect(html).toContain('Tu rol no tiene acceso a las ventas'); expect(html).not.toContain('Ventas de hoy'); expect(html).not.toContain('RD$'); expect(html).toContain('Cajas ahora');
     expect(render(inputs(), data(), false)).toContain('Tu rol no tiene acceso a las ventas');
   });
   it('refresh is a compact secondary control; long operator names are shown in full', () => {
