@@ -214,9 +214,9 @@ describe("Cajas configuration", () => {
 
 describe("Personal POS", () => {
   it("collection filters with empty/no-match; one-step access task: suggested username, optional email, caja, one request, password shown once; status change via task", async () => {
-    await mountCafeteria("staff"); await page.getByText("2 de 2 empleados").waitFor();
-    await page.getByLabel("Filtrar por rol").selectOption("pos_supervisor"); await page.getByText("1 de 2 empleados").waitFor();
-    await page.getByLabel("Buscar empleados").fill("zzz"); await page.getByText("No encontramos empleados con estos filtros.").waitFor(); await page.getByRole("button", { name: "Limpiar filtros" }).first().click();
+    await mountCafeteria("staff"); await page.getByText("2 de 2 personas").waitFor();
+    await page.getByLabel("Filtrar por rol").selectOption("pos_supervisor"); await page.getByText("1 de 2 personas").waitFor();
+    await page.getByLabel("Buscar personal").fill("zzz"); await page.getByText("No encontramos personas con estos filtros.").waitFor(); await page.getByRole("button", { name: "Limpiar filtros" }).first().click();
     await page.getByRole("button", { name: "Agregar personal a" }).click();
     expect(await dlg().getByLabel("Rol POS").locator("option").allInnerTexts()).toEqual(["Cajero", "Supervisor"]);
     await dlg().getByLabel("Nombre completo *").fill("María José Pérez García"); expect(await dlg().getByLabel(/^Usuario PIKAS/).inputValue()).toBe("maria.garcia");

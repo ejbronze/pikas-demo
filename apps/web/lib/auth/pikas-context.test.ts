@@ -290,4 +290,5 @@ describe("multi-role platform context", () => {
   });
 });
 
+it("routes POS-only people (cashier, supervisor) straight to the POS",()=>{expect(pilotHome(readyIdentity([{...tenantMembership,scopeKind:"cafeteria",roleCode:"pos_cashier",cafeteriaId:"cafeteria-id"}],null))).toBe("/pos");expect(pilotHome(readyIdentity([{...tenantMembership,scopeKind:"cafeteria",roleCode:"pos_supervisor",cafeteriaId:"cafeteria-id"}],null))).toBe("/pos");});
 it("routes explicit cafeteria administrators to their connected workspace",()=>{expect(pilotHome(readyIdentity([{...tenantMembership,scopeKind:"cafeteria",roleCode:"cafeteria_admin",cafeteriaId:"cafeteria-id"}],null))).toBe("/admin/cafeteria");});

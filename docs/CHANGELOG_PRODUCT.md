@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## Cafetería: pulido del recorrido de puesta en marcha (local)
+
+- Un cajero o supervisor entra **directamente al POS** al iniciar sesión o al crear su contraseña personal (antes pasaba por la pantalla técnica «Conexión PIKAS Pilot»). El POS sigue verificando su acceso.
+- Personal POS habla de **personas** (Buscar personal, «n de n personas», columna Persona) en lugar de «empleados»; «Agregar personal POS» también en sandbox.
+- **Accesos preparados por enlace** solo lista los que esperan activación (pendientes o vencidos); los accesos creados en un paso ya están en la lista de personal y no se repiten. No se muestra un estado vacío cuando no hay ninguno. Un acceso sin correo se describe como «Acceso sin correo (usuario PIKAS)» en vez de mostrar la dirección interna.
+- El rechazo por identidad existente explica que puede ser la propia, la de otro cliente o la de PIKAS.
+
 ## Cafetería: personal POS y acceso de cajeros en un paso (UX 12B, local)
 
 - **Agregar personal a {cafetería}** crea el acceso en un solo paso desde Personal POS: nombre, rol POS, **usuario sugerido por PIKAS** a partir del nombre (editable antes de confirmar; las colisiones se explican y se corrigen en el mismo formulario), **correo opcional**, y caja (opcional, entre las cajas activas). Al confirmar: identidad de inicio de sesión confirmada, Persona y membresía POS en esa cafetería, asignación a la caja elegida y una **contraseña temporal de un solo uso** que se muestra una sola vez (con «Copiar contraseña») y nunca se guarda, registra ni vuelve a mostrar. Resultado: **«Listo para iniciar sesión»**.

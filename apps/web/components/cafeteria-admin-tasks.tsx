@@ -36,7 +36,7 @@ function useCafeteriaCommand() {
 export function StaffPrepareTask({ data, onClose }: { data: CafeteriaRead; onClose: (message?: string) => void }) {
   const command = useCafeteriaCommand();
   const [email, setEmail] = useState(''), [role, setRole] = useState('pos_cashier'), [username, setUsername] = useState('');
-  return <CommandTask title="Agregar empleado POS" context={data.scope.cafeteria_name}
+  return <CommandTask title="Agregar personal POS" context={data.scope.cafeteria_name}
     pages={[{ label: 'Acceso', content: <>
       {data.scope.tenant_kind !== 'sandbox' && <ProvisioningUsernameField value={username} onChange={setUsername} autoFocus />}
       <label className="block font-bold">Correo *<input className="field mt-1 w-full" type="email" required maxLength={254} data-autofocus={data.scope.tenant_kind === 'sandbox' || undefined} value={email} onChange={e => setEmail(e.target.value)} /></label>
@@ -149,7 +149,7 @@ export function StaffStatusTask({ member, onClose }: { member: Staff; onClose: (
       <p className="text-sm text-slate-600">El rol concedido y la identidad se conservan. Las cajas se asignan en Cajas.</p>
       {member.open && <p className="rounded-xl bg-amber-50 p-3 text-sm">Tiene una sesión abierta: suspender bloquea nuevas operaciones y conserva su cierre propio.</p>}</> }]}
     validate={() => status === member.status ? 'Elige un estado distinto del actual.' : null}
-    review={<TaskSummary rows={[['Empleado', member.name], ['Estado actual', statusLabel(member.status)], ['Nuevo estado', statusLabel(status)]]} />}
+    review={<TaskSummary rows={[['Persona', member.name], ['Estado actual', statusLabel(member.status)], ['Nuevo estado', statusLabel(status)]]} />}
     finalLabel={`Cambiar a ${statusLabel(status).toLowerCase()}`} destructive={status !== 'active'} blocked={command.blocked} submit={() => command.submit('staff_status', { membership_id: member.id, status })}
     dirty={status !== member.status} success={{ title: 'Acceso POS actualizado', closeMessage: 'Acceso POS actualizado.' }} onClose={onClose} />;
 }

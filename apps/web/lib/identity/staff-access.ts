@@ -48,7 +48,7 @@ export type StaffAccessResult = z.infer<typeof staffAccessResultSchema>;
 export const staffAccessErrors: Record<string, string> = {
   sandbox_unsupported: 'En sandbox no se crean accesos POS. Usa el flujo de activación de una identidad existente.',
   cafeteria_authority_required: 'No tienes autoridad sobre esta cafetería.',
-  identity_outside_customer: 'Ese correo pertenece a una persona de otro cliente de PIKAS. Usa otro correo o déjalo vacío.',
+  identity_outside_customer: 'Ese correo ya tiene una identidad que no puede recibir acceso aquí (la tuya, la de otro cliente o la de PIKAS). Usa otro correo o déjalo vacío.',
   confirmed_identity_pending: 'La identidad de esa persona no está confirmada. Revisa Accesos preparados en Personal POS.',
   existing_membership_not_active: 'Esa persona ya tiene este rol en la cafetería, pero su acceso no está activo. Reactívalo con «Cambiar acceso».',
   request_key_reused: 'Esta solicitud ya se usó con otros datos. Cierra y empieza de nuevo.',

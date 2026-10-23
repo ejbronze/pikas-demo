@@ -299,16 +299,8 @@ export function pilotHome(identity: PikasIdentity): string | null {
     return "/admin/escuela";
   }
   if (identity.memberships.some(({ roleCode }) => roleCode === "cafeteria_admin")) return "/admin/cafeteria";
-  if (
-    identity.memberships.some(
-      ({ roleCode }) =>
-        roleCode === "cafeteria_admin" ||
-        roleCode === "pos_cashier" ||
-        roleCode === "pos_supervisor",
-    )
-  ) {
-    return "/pilot/connected";
-  }
+  // POS-only people (cashiers, supervisors) go straight to the POS, which re-checks their access.
+  if (identity.memberships.some(({ roleCode }) => roleCode === "pos_cashier" || roleCode === "pos_supervisor")) return "/pos";
   return null;
 }
 
