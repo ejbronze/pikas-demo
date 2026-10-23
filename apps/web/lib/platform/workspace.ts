@@ -32,6 +32,7 @@ export const activityLabels: Record<string, string> = {
   school_location_added: "Sede agregada", sandbox_pov_entered: "Demostración iniciada", sandbox_pov_exited: "Demostración finalizada",
   customer_profile_updated: "Perfil del cliente actualizado", customer_structure_renamed: "Sede o cafetería renombrada", customer_person_renamed: "Nombre de persona corregido",
   cafeteria_admin_granted: "Administrador de cafetería asignado", customer_staff_prepared: "Personal POS preparado", customer_staff_completed: "Acceso de personal POS completado",
+  customer_structure_status_changed: "Estado de sede o cafetería cambiado", customer_membership_status_changed: "Acceso de persona cambiado", customer_pos_access_granted: "Acceso POS agregado en otra cafetería",
   school_onboarded: "Colegio agregado", customer_suspended: "Cliente suspendido", customer_reactivated: "Cliente reactivado", customer_closed: "Cliente cerrado", customer_reopened: "Cliente reabierto",
 };
 export const activityLabel = (action: string) => activityLabels[action] ?? "Actividad de plataforma";

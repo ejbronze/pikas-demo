@@ -209,7 +209,7 @@ export function StudentWithdrawTask({ data, student, actorId, onClose }: { data:
   const stored = command.pending?.command.operation === "student_withdraw" ? command.pending.command.payload : null;
   return <CommandTask title="Retirar matrícula" context={student.display_name}
     pages={[{ label: "Fecha", content: <><Field label="Fecha de retiro" type="date" value={endsOn} onChange={setEndsOn} autoFocus /><p className="text-sm text-slate-600">La fecha debe ser posterior al inicio de la matrícula ({student.enrollment?.starts_on}).</p></> }]}
-    review={<><TaskSummary rows={[["Estudiante", student.display_name], ["Matrícula desde", student.enrollment?.starts_on ?? "—"], ["Fecha de retiro", endsOn]]} /><p className="text-sm text-slate-600">El estudiante quedará sin matrícula activa.</p></>}
+    review={<><TaskSummary rows={[["Estudiante", student.display_name], ["Matrícula desde", student.enrollment?.starts_on ?? "—"], ["Fecha de retiro", endsOn]]} /><ul className="list-disc space-y-1 pl-5 text-sm text-slate-700"><li>Retirar la matrícula termina la relación de matrícula en esa fecha; no es una eliminación.</li><li>El estudiante, su expediente, su PIKAS Cash y su historial de compras se conservan.</li><li>Sin matrícula activa no puede ser atendido en el POS; si regresa, puede matricularse de nuevo.</li></ul></>}
     recovery={stored && <TaskSummary rows={[["Fecha de retiro", stored.ends_on]]} />}
     finalLabel="Retirar matrícula" destructive blocked={command.blocked} submit={() => command.submit(() => ({ student_id: student.id, ends_on: endsOn }))}
     dirty={!!endsOn} success={{ title: "Matrícula retirada" }} onClose={onClose} />;
@@ -221,7 +221,7 @@ export function StudentStatusTask({ data, student, actorId, onClose }: { data: S
   if (!command.loaded) return null;
   const stored = command.pending?.command.operation === "student_status" ? command.pending.command.payload : null;
   return <CommandTask title="Cambiar estado" context={student.display_name}
-    pages={[{ label: "Estado", content: <><label className="block font-bold">Estado<select className="field mt-1 w-full" data-autofocus value={status} onChange={e => setStatus(e.target.value)}>{["active", "suspended", "inactive"].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></label><p className="text-sm text-slate-600">Para pasar a inactivo, retira primero su matrícula activa.</p></> }]}
+    pages={[{ label: "Estado", content: <><label className="block font-bold">Estado<select className="field mt-1 w-full" data-autofocus value={status} onChange={e => setStatus(e.target.value)}>{["active", "suspended", "inactive"].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></label><ul className="list-disc space-y-1 pl-5 text-sm text-slate-700"><li><strong>Suspendido</strong>: temporal y reversible; el estudiante no puede ser atendido en el POS ni usar su PIKAS Cash mientras dure. Su matrícula y su historial no cambian.</li><li><strong>Inactivo</strong>: el estudiante queda fuera de operación; su expediente, su matrícula anterior y su historial se conservan. Para pasar a inactivo, retira primero su matrícula activa.</li><li>Ningún estado elimina al estudiante ni su historial.</li></ul></> }]}
     validate={() => status === student.status ? "Elige un estado distinto del actual." : null}
     review={<TaskSummary rows={[["Estado actual", statusLabel(student.status)], ["Nuevo estado", statusLabel(status)]]} />}
     recovery={stored && <TaskSummary rows={[["Nuevo estado", statusLabel(stored.status)]]} />}

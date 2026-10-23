@@ -20,6 +20,7 @@ import { READINESS_CAPABILITY, readinessSchema } from "../../../../lib/platform/
 import { CustomerOperationsEntry } from "../../../../components/platform/customer-operations-entry";
 import { cafeteriaHref } from "../../../../components/platform/customer-operations";
 import { CustomerContextBar } from "../../../../components/platform/customer-context";
+import { StructureStatusAction } from "../../../../components/platform/structure-status-action";
 import { SetupMap, type CafeteriaService } from "../../../../components/platform/customer-resumen";
 import { InitialAdministrator } from "../../../../components/platform/initial-administrator";
 import { activityLabel, customerActivity, isWorkspaceSection, workspaceHref, type WorkspaceSection } from "../../../../lib/platform/workspace";
@@ -45,8 +46,9 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   // Launch readiness feeds the context bar on every section; the other reads belong to one section each.
   const readiness = isCustomer && can(READINESS_CAPABILITY) ? await readPlatform(session, READINESS_CAPABILITY, "platform_customer_readiness", { p_account_id: customer.account.id }, readinessSchema) : null;
   const launch = readiness?.kind === "ready" ? readiness.value?.customers?.find(c => c.account_id === customer.account.id) ?? null : null;
-  const cafeterias = customer.schools.flatMap(s => s.locations.flatMap(l => l.cafeterias.map(c => ({ id: c.id, name: c.name, status: c.status, location: `${s.name} · ${l.name}`, school: s.name, place: l.name }))));
-  const activeCafeterias = cafeterias.filter(c => c.status === "active");
+  // Lifecycle: a cafetería is available only while it AND its sede are active (scope_active); an inactive sede never rewrites the cafetería's own status.
+  const cafeterias = customer.schools.flatMap(s => s.locations.flatMap(l => l.cafeterias.map(c => ({ id: c.id, name: c.name, status: c.status, effective: c.status !== "active" ? c.status : l.status !== "active" ? "location_inactive" : "active", location: `${s.name} · ${l.name}`, school: s.name, place: l.name }))));
+  const activeCafeterias = cafeterias.filter(c => c.effective === "active");
 
   let body: React.ReactNode;
   if (section === "resumen") {
@@ -58,12 +60,15 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     body = <SetupMap customer={customer} launch={launch} readinessFailed={!!readiness && !launch} services={isCustomer ? services : null} />;
   } else if (section === "estructura") {
     const canEditProfile = isCustomer && PROFILE_EDITABLE_STATUSES.includes(customer.account.status) && can(CUSTOMER_PROFILE_MANAGE);
+    // Sede / cafetería lifecycle (Suspender · Desactivar · Reactivar): Platform lifecycle authority, active or suspended customers.
+    const canLifecycle = isCustomer && PROFILE_EDITABLE_STATUSES.includes(customer.account.status) && can(LIFECYCLE_MANAGE);
     body = <div className="space-y-5">
+      {canLifecycle && <p className="text-sm text-slate-600">Sedes y cafeterías se suspenden, desactivan o reactivan desde aquí. Nada se elimina: cajas, personal, transacciones e historial se conservan, y lo que esté inactivo sigue consultable en Operación como historial.</p>}
       <ColegioProfile customer={customer} action={canEditProfile ? (school) => <EditProfileAction accountId={customer.account.id} schoolId={school.id} renamesAccount={customer.schools.length === 1} accountName={customer.account.name}
         current={{ name: school.name, rnc: school.rnc ?? null, address: school.address ?? null, province: school.province ?? null }} /> : undefined} />
       <CustomerHierarchy customer={customer} schoolAction={isCustomer && active && can(ADD_LOCATION_CAPABILITY) ? (school) => school.status === "active" ? <AddLocationAction accountId={customer.account.id} schoolId={school.id} schoolName={school.name} /> : null : undefined}
-        locationAction={canEditProfile ? (location) => <RenameAction accountId={customer.account.id} kind="location" targetId={location.id} currentName={location.name} /> : undefined}
-        cafeteriaAction={canEditProfile ? (cafeteria) => <RenameAction accountId={customer.account.id} kind="cafeteria" targetId={cafeteria.id} currentName={cafeteria.name} /> : undefined}
+        locationAction={canEditProfile || canLifecycle ? (location) => <>{canEditProfile && <RenameAction accountId={customer.account.id} kind="location" targetId={location.id} currentName={location.name} />}{canLifecycle && <StructureStatusAction accountId={customer.account.id} kind="location" targetId={location.id} name={location.name} status={location.status} />}</> : undefined}
+        cafeteriaAction={canEditProfile || canLifecycle ? (cafeteria) => <>{canEditProfile && <RenameAction accountId={customer.account.id} kind="cafeteria" targetId={cafeteria.id} currentName={cafeteria.name} />}{canLifecycle && <StructureStatusAction accountId={customer.account.id} kind="cafeteria" targetId={cafeteria.id} name={cafeteria.name} status={cafeteria.status} />}</> : undefined}
         cafeteriaLink={showOperations ? (cafeteria) => <Link className="btn-tertiary" href={cafeteriaHref(customer.account.id, cafeteria.id)} aria-label={`Operación de ${cafeteria.name}`}>Operación</Link> : undefined} />
     </div>;
   } else if (section === "personas") {
@@ -87,7 +92,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       <InitialAdministrator customer={customer} intents={initialIntents} activation={activation} actor={session.identity.user.id} canPrepare={canPrepare} canComplete={canComplete} />
     </div>;
   } else if (section === "operacion") {
-    body = <CustomerOperationsEntry accountId={customer.account.id} cafeterias={activeCafeterias.map(c => ({ id: c.id, name: c.name, location: c.location }))} canManage={can(CUSTOMER_OPERATIONS_MANAGE) && active} />;
+    body = <CustomerOperationsEntry accountId={customer.account.id} cafeterias={cafeterias.map(c => ({ id: c.id, name: c.name, location: c.location, status: c.effective }))} canManage={can(CUSTOMER_OPERATIONS_MANAGE) && active} />;
   } else if (section === "actividad") {
     const audit = await readPlatform(session, "platform:audit:read", "platform_read_audit", { p_limit: 100 }, auditSchema);
     const events = audit.kind === "ready" ? customerActivity(audit.value, customer.account.id) : [];

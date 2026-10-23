@@ -33,13 +33,13 @@ export function CustomerLifecyclePanel({ accountId, name, status, canManage, his
 
 const copy: Record<LifecycleAction, { title: string; points: string[]; confirm?: string; final: string; done: string }> = {
   suspend: { title: "Suspender cliente", final: "Suspender", done: "Cliente suspendido",
-    points: ["El acceso de los usuarios del cliente quedará bloqueado temporalmente, incluidas las sesiones abiertas.", "Se conservan escuelas, cafeterías, personas, accesos, cajas, transacciones, saldos de PIKAS Cash e historial.", "Puedes reactivarlo cuando corresponda."] },
+    points: ["El acceso de los usuarios del cliente quedará bloqueado temporalmente, incluidas las sesiones abiertas. Es temporal y reversible.", "Se conservan colegios, sedes, cafeterías, personas, accesos, cajas, transacciones, saldos de PIKAS Cash e historial; nada se elimina.", "No cambia la activación financiera ni crea obligaciones.", "Puedes reactivarlo cuando corresponda desde este mismo lugar."] },
   reactivate: { title: "Reactivar cliente", final: "Reactivar", done: "Cliente reactivado",
     points: ["Los usuarios del cliente recuperarán su acceso con los mismos permisos que tenían.", "No se recrea nada: es el mismo cliente con sus mismos datos."] },
   close: { title: "Cerrar cliente", final: "Cerrar cliente", done: "Cliente cerrado", confirm: "Entiendo que el cliente quedará cerrado y sin acceso operativo, y que solo podrá reabrirse desde la gestión de clientes de PIKAS.",
-    points: ["El acceso de los usuarios del cliente quedará bloqueado.", "La relación con el cliente quedará marcada como cerrada.", "No se elimina ningún dato ni historial.", "No se modifican saldos de PIKAS Cash ni transacciones.", "No realiza liquidación financiera ni reembolsos.", "Solo podrá reabrirse desde la gestión de ciclo de vida de PIKAS."] },
+    points: ["Cerrar termina la relación operativa: el acceso de los usuarios del cliente quedará bloqueado.", "La relación con el cliente quedará marcada como cerrada.", "No se elimina ningún dato ni historial. Estructura, personas, accesos, cajas, transacciones y auditoría quedan como historial de solo consulta.", "No se modifican saldos de PIKAS Cash ni transacciones.", "No realiza liquidación financiera ni reembolsos. Las obligaciones pendientes se resuelven aparte.", "Solo podrá reabrirse desde la gestión de ciclo de vida de PIKAS."] },
   reopen: { title: "Reabrir cliente", final: "Reabrir cliente", done: "Cliente reabierto", confirm: "Confirmo que este mismo cliente debe volver a estar activo.",
-    points: ["El mismo cliente vuelve a estar Activo, con su estructura, personas, accesos e historial.", "No se crea un cliente nuevo."] },
+    points: ["El mismo cliente vuelve a estar Activo, con su estructura, personas, accesos e historial.", "No se crea un cliente nuevo.", "No cambia la activación financiera.", "Las sedes, cafeterías o accesos que estuvieran suspendidos o desactivados por separado siguen así hasta reactivarlos uno a uno."] },
 };
 
 function LifecycleTask({ accountId, name, status, action, onClose }: { accountId: string; name: string; status: string; action: LifecycleAction; onClose: () => void }) {
