@@ -2,6 +2,12 @@
 -- Fictional local fixtures; everything is rolled back. Account 1 = customer (cafeterias 111/112/113),
 -- account 2 = another customer (cafeteria 121), 03e71159… = sandbox tenant.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -17,8 +23,8 @@ create function pg_temp.as_user(u text) returns void language plpgsql as $$decla
 create function pg_temp.memberships(p text) returns text language sql security definer set search_path=public as $$
  select concat_ws('|',(select count(*) from account_memberships where person_id=p::uuid),(select count(*) from school_memberships where person_id=p::uuid),(select count(*) from cafeteria_memberships where person_id=p::uuid)) $$;
 reset role;
-select set_config('t.admin','8f6f4cb4-de08-41bf-a062-156f636873b2',true);
-select set_config('t.admin_person',(select id::text from persons where auth_user_id='8f6f4cb4-de08-41bf-a062-156f636873b2'),true);
+select set_config('t.admin','7a000000-0000-4000-8000-00000000ad01',true);
+select set_config('t.admin_person',(select id::text from persons where auth_user_id='7a000000-0000-4000-8000-00000000ad01'),true);
 select set_config('t.a1','00000000-0000-0000-0000-000000000001',true);
 select set_config('t.c111','00000000-0000-0000-0000-000000000111',true);
 
@@ -37,7 +43,8 @@ select set_config('t.before_reader',pg_temp.memberships('00000000-0000-0000-0000
 
 -- Grants and privileges
 select ok(exists(select 1 from pikas_private.platform_role_capabilities where role_code='platform_admin' and capability='platform:customer:operations:read'),'operations:read granted to platform_admin');
-select ok(not exists(select 1 from pikas_private.platform_capabilities where capability='platform:customer:operations:manage'),'operations:manage is NOT created');
+-- operations:manage was later approved and created by 202611050001 (platform_admin only).
+select is((select array_agg(role_code::text order by role_code) from pikas_private.platform_role_capabilities where capability='platform:customer:operations:manage'),array['platform_admin'],'operations:manage is held only by platform_admin');
 select ok(not has_function_privilege('authenticated','pikas_private.cafeteria_admin_read_core(uuid,uuid)','execute')
  and not has_function_privilege('authenticated','pikas_private.require_customer_operations_read(uuid,uuid)','execute')
  and not has_function_privilege('authenticated','pikas_private.cafeteria_read_scope(uuid,uuid,text)','execute'),'Cores and support guard are not client-callable');

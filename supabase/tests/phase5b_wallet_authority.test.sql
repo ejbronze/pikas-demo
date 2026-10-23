@@ -111,15 +111,24 @@ select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
 select throws_ok($$select cafeteria_wallet_read('00000000-0000-0000-0000-000000000111','')$$,'42501',null,'Suspended Cafeteria Admin cannot read');
 reset role;
 
--- Sandbox POV and Platform: no standing or POV wallet access
+-- Platform operator: no standing customer wallet access.
+-- Sandbox POV (Demo Lab, 202611170001): reads only the sandbox's own fictional PIKAS Cash; every write and all real finance stay refused.
 select set_config('auth5b.sandbox_school',(select school_id::text from pikas_private.sandbox_pov_personas where pov_code='school_admin' limit 1),true);
 select set_config('auth5b.sandbox_student',(select id::text from students where school_id=current_setting('auth5b.sandbox_school')::uuid limit 1),true);
 select pg_temp.as_user('ec08ad21-4020-4b0d-b041-ee4a1fe09471');
 select is(school_wallet_access('00000000-0000-0000-0000-000000000011')->>'read','false','Platform operator has no customer wallet access');
 select throws_ok($$select cafeteria_wallet_read('00000000-0000-0000-0000-000000000111','')$$,'42501',null,'Platform operator cannot read cafeteria balances');
 select platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','school_admin');
-select is(school_wallet_access(current_setting('auth5b.sandbox_school')::uuid)->>'read','false','Sandbox POV has no wallet access');
+select is(school_wallet_access(current_setting('auth5b.sandbox_school')::uuid)->>'read','true','Sandbox POV reads the sandbox''s own PIKAS Cash');
+select lives_ok($$select school_wallet_read(current_setting('auth5b.sandbox_school')::uuid,current_setting('auth5b.sandbox_student')::uuid)$$,'Sandbox POV reads a sandbox student ledger');
+select is((select concat_ws('/',a->>'replenish',a->>'adjust',a->>'reverse') from (select school_wallet_access(current_setting('auth5b.sandbox_school')::uuid) a) x),'false/false/false','Sandbox POV holds no wallet write authority');
+select is(school_wallet_access('00000000-0000-0000-0000-000000000011')->>'read','false','Sandbox POV cannot read a customer school''s wallets');
+select throws_ok($$select school_wallet_read('00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201')$$,'42501',null,'Sandbox POV cannot read a customer student ledger');
 select throws_ok($$select school_wallet_replenish(current_setting('auth5b.sandbox_school')::uuid,current_setting('auth5b.sandbox_student')::uuid,1,gen_random_uuid(),'Local','Verificado')$$,'42501',null,'Sandbox POV cannot replenish');
+select throws_ok($$select platform_finance_fund_wallet_adjustment(current_setting('auth5b.sandbox_student')::uuid,100,'Ajuste','Fondos ficticios','auth5b-sandbox-fund-0001')$$,'42501',null,'Sandbox POV cannot fund adjustments');
+select throws_ok($$select platform_finance_replenishments_read('pending',null,null)$$,'42501',null,'Sandbox POV cannot read real finance replenishments');
+select throws_ok($$select platform_finance_decide_bank_replenishment('PK-SANDBOX','approve',null,'auth5b-sandbox-bank-0001')$$,'42501',null,'Sandbox POV cannot verify bank replenishments');
+select throws_ok($$select cafeteria_financial_obligations_read('b9496342-5079-46ae-83b8-05c39bcbd7fe')$$,'42501',null,'Sandbox POV cannot read fee obligations');
 reset role;
 set constraints all immediate;
 select * from finish();

@@ -4,7 +4,7 @@ set search_path=public,extensions;
 select no_plan();
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),58::bigint,
+  where n.nspname='public' and c.relkind='r' and not c.relrowsecurity),0::bigint,
   'RLS is enabled on every public table through Phase 4C');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'Phase 4B adds no direct-write RLS policy');
@@ -37,7 +37,8 @@ select is((select count(*) from cafeteria_service_shifts),3::bigint,'Synthetic s
 select is((select count(*) from cafeteria_service_shift_days),7::bigint,'Weekday rows use normalized ISO weekday values');
 select is((select count(*) from cafeteria_menus where name_key='desayuno'),3::bigint,
   'The same normalized menu name is allowed in another cafeteria');
-select is((select count(*) from cafeteria_operation_settings where not scheduling_enabled),4::bigint,
+-- Scoped to non-sandbox fixtures: the canonical Horizonte sandbox (Demo Lab seed) is part of the local baseline.
+select is((select count(*) from cafeteria_operation_settings where not scheduling_enabled and account_id in (select id from public.accounts where tenant_kind<>'sandbox')),4::bigint,
   'Phase 4B fixtures leave all cafeterias in manual scheduling mode');
 insert into public.cafeteria_products(id,account_id,school_id,cafeteria_id,category_id,name,description,price_minor,active,available)
 values('00000000-0000-0000-0000-000000008211','00000000-0000-0000-0000-000000000001',

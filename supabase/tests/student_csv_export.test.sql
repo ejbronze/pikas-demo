@@ -1,9 +1,15 @@
 -- Focused synthetic export fixture; everything except the installed RPC rolls back.
 begin;
+-- Transactional fictional sandbox operator (rolled back with the test); no prior browser walkthrough is required.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7b000000-0000-4000-8000-00000000b001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-sandbox-operator@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7b000000-0000-4000-8000-00000000b002','7b000000-0000-4000-8000-00000000b001','Operador sandbox de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7b000000-0000-4000-8000-00000000b002','platform_sandbox_operator');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
-create temporary table fixture as select auth_user_id uid,'b2c00000-0000-4000-8000-000000000001'::uuid sid from persons where id='4d6b0000-0000-4000-8000-000000000001';
+create temporary table fixture as select auth_user_id uid,'b2c00000-0000-4000-8000-000000000001'::uuid sid from persons where id='7b000000-0000-4000-8000-00000000b002';
 insert into auth.sessions(id,user_id,created_at,updated_at) select sid,uid,clock_timestamp(),clock_timestamp() from fixture;
 select set_config('request.jwt.claims',jsonb_build_object('sub',uid,'role','authenticated','session_id',sid)::text,true) from fixture;
 select public.pikas_session_start();

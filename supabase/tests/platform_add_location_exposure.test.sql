@@ -1,6 +1,12 @@
 -- Platform "Agregar sede" exposure of the EXISTING platform_add_school_location (no schema change).
 -- Fictional local fixtures (account 1 / school 11); everything is rolled back.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -20,7 +26,7 @@ create function pg_temp.counts() returns text language sql security definer set 
  (select count(*) from cafeteria_registers),(select count(*) from persons),(select count(*) from auth.users),
  (select count(*) from account_memberships)+(select count(*) from school_memberships)+(select count(*) from cafeteria_memberships)) $$;
 reset role;
-select set_config('t.platform','8f6f4cb4-de08-41bf-a062-156f636873b2',true);
+select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 select set_config('t.before',pg_temp.counts(),true);
 
 -- Authority: the existing narrow provisioning capability; nobody tenant-side
@@ -56,7 +62,9 @@ select is(pg_temp.attempt($$select pg_temp.add('6d000000-0000-4000-8000-00000000
 -- Conflicts
 select is(pg_temp.attempt($$select pg_temp.add('6d000000-0000-4000-8000-000000000011','sede-norte','Repetida','CAF-Z','Z')$$),'23505:platform_tenant_code_conflict','Duplicate location code (case-insensitive) rejected');
 select is(pg_temp.add('6d000000-0000-4000-8000-000000000012','SEDE-SUR','Sede Sur Ficticia','CAF-NORTE','Cafetería Sur Ficticia')->>'school_id','00000000-0000-0000-0000-000000000011','A cafeteria code is unique per sede: reusing it in a NEW sede is allowed by the existing model');
-select is(pg_temp.attempt($$select pg_temp.add('6d000000-0000-4000-8000-000000000013','','Sin código','CAF-Q','Q')$$),'22023:invalid_school_location_input','Missing code rejected');
+-- 202611060001: a blank location code is system-generated instead of rejected.
+select is(pg_temp.attempt($$select pg_temp.add('6d000000-0000-4000-8000-000000000013','','Sin código','CAF-Q','Q')$$),'ok','Blank location code is accepted');
+select ok(nullif(btrim(pg_temp.add('6d000000-0000-4000-8000-000000000013','','Sin código','CAF-Q','Q')->>'location_code'),'') is not null,'…and receives a system-generated code');
 select is(pg_temp.attempt($$select pg_temp.add('6d000000-0000-4000-8000-000000000014',repeat('x',65),'Largo','CAF-Q','Q')$$),'22023:invalid_school_location_input','Over-long code rejected');
 select is(pg_temp.attempt($$select public.platform_add_school_location('6d000000-0000-4000-8000-000000000015','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000021','S','S','C','C')$$),'23503:active_account_school_required','A school of another customer cannot be targeted');
 reset role;
@@ -85,7 +93,7 @@ update accounts set status='active' where id='00000000-0000-0000-0000-0000000000
 -- Audit + journal: the real Platform operator
 select is((select concat_ws('|',e.actor_kind,e.actor_auth_user_id,p.auth_user_id,e.capability,e.target_location_id::text=(current_setting('t.result')::jsonb->>'location_id'),e.target_cafeteria_id::text=(current_setting('t.result')::jsonb->>'cafeteria_id'))
  from pikas_private.platform_audit_events e join persons p on p.id=e.actor_person_id where e.request_id='6d000000-0000-4000-8000-000000000010'),
- 'platform_operator|8f6f4cb4-de08-41bf-a062-156f636873b2|8f6f4cb4-de08-41bf-a062-156f636873b2|platform:tenant:provision|t|t','Audited once with the real operator and the created ids');
+ 'platform_operator|7a000000-0000-4000-8000-00000000ad01|7a000000-0000-4000-8000-00000000ad01|platform:tenant:provision|t|t','Audited once with the real operator and the created ids');
 select is((select count(*) from pikas_private.platform_audit_events where request_id='6d000000-0000-4000-8000-000000000010'),1::bigint,'Exact retry did not audit twice');
 select is((select actor_auth_user_id::text from pikas_private.platform_requests where request_id='6d000000-0000-4000-8000-000000000010'),current_setting('t.platform'),'Request journal bound to the real operator');
 

@@ -9,7 +9,7 @@ create function pg_temp.account_id() returns uuid language sql as $$select (v->>
 create function pg_temp.intent_id() returns uuid language sql as $$select (v->>'intent_id')::uuid from console_state where k='intent'$$;
 -- Use the existing minimal Auth fixture contract; production GoTrue eligibility
 -- fields are additionally enforced when present by the completion RPC.
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  (pg_temp.id(1),'authenticated','authenticated','console-operator@example.invalid',now()),
  (pg_temp.id(2),'authenticated','authenticated','console-admin@example.invalid',null),
  (pg_temp.id(3),'authenticated','authenticated','console-sandbox@example.invalid',now());
@@ -24,7 +24,9 @@ insert into public.cafeteria_memberships(id,account_id,school_id,cafeteria_id,pe
 insert into pikas_private.sandbox_pov_personas(account_id,school_id,cafeteria_id,pov_code,person_id,cafeteria_membership_id) values(pg_temp.id(21),pg_temp.id(22),pg_temp.id(24),'cashier',pg_temp.id(14),pg_temp.id(25));
 select ok(has_function_privilege('authenticated','public.platform_list_customers(text,text,text,uuid,integer)','execute') and not has_function_privilege('anon','public.platform_list_customers(text,text,text,uuid,integer)','execute'),'Customer listing is authenticated-only');
 select ok(not has_function_privilege('service_role','public.platform_get_customer_overview(uuid)','execute') and not has_function_privilege('anon','public.platform_complete_initial_customer_admin(uuid,uuid,text)','execute'),'New contracts expose no anonymous/service-role access');
-select is((select count(*) from pikas_private.platform_role_capabilities where role_code='platform_admin'),5::bigint,'Original platform capabilities are unchanged');
+-- Later approved migrations add platform capabilities; assert the contract, not a frozen global count.
+select ok((select array['platform:audit:read','platform:customer_admin:provision','platform:identity:link','platform:tenant:lifecycle:read','platform:tenant:provision'] <@ array_agg(capability::text) and not ('platform:sandbox:pov:enter'=any(array_agg(capability::text))) from pikas_private.platform_role_capabilities where role_code='platform_admin'),
+ 'platform_admin keeps its original capabilities and never gains sandbox POV entry');
 select set_config('request.jwt.claim.sub','',true);
 set local role authenticated;
 select throws_ok($$select public.platform_list_customers()$$,'42501',null,'Authenticated role without identity is denied');
@@ -41,12 +43,19 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002001'
 set local role authenticated;
 select throws_ok($$select public.platform_list_customers()$$,'42501',null,'Ordinary tenant identity cannot list platform customers');
 reset role;
+-- Application-session enforcement (cc3c351): the operator needs a live Auth session bound in its JWT claims.
+insert into auth.sessions(id,user_id,created_at,updated_at) values(pg_temp.id(90),pg_temp.id(1),clock_timestamp(),clock_timestamp());
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.id(1),'role','authenticated','session_id',pg_temp.id(90))::text,true);
 select set_config('request.jwt.claim.sub',pg_temp.id(1)::text,true);
 set local role authenticated;
+select public.pikas_session_start();
 select public.platform_enter_sandbox_pov(pg_temp.id(33),pg_temp.id(21),pg_temp.id(24),'cashier');
+-- UX11 (202611130001): real customer provisioning is refused while a Demo POV is active; exit the Demo first.
+select throws_ok($$select public.platform_provision_tenant(pg_temp.id(40),'4D1-CUSTOMER','Fictional customer','S','Fictional school','America/Santo_Domingo','L','Fictional location','C','Fictional cafeteria')$$,'42501','demo_mode_active','Real customer provisioning is refused during a Demo POV');
+select lives_ok($$select public.platform_exit_sandbox_pov(pg_temp.id(34))$$,'Operator exits the Demo POV');
 insert into console_state values('tenant',public.platform_provision_tenant(pg_temp.id(40),'4D1-CUSTOMER','Fictional customer','S','Fictional school','America/Santo_Domingo','L','Fictional location','C','Fictional cafeteria'));
 select is(jsonb_array_length(public.platform_list_customers('4D1-CUSTOMER')->'customers'),1,'Search resolves provisioned customer');
-select is(public.platform_list_customers('4D1-CUSTOMER')->'customers'->0->>'tenant_kind','customer','Existing atomic provisioning creates customer kind even during POV');
+select is(public.platform_list_customers('4D1-CUSTOMER')->'customers'->0->>'tenant_kind','customer','Existing atomic provisioning creates customer kind after the Demo POV ends');
 select is(public.platform_list_customers('4D1-SANDBOX',null,'sandbox')->'customers'->0->>'tenant_kind','sandbox','Sandbox kind is distinct and unchanged');
 select is(jsonb_array_length(public.platform_list_customers('not-present')->'customers'),0,'Empty list is an intentional successful response');
 select is(jsonb_array_length(public.platform_list_customers('4D1',null,null,null,1)->'customers'),1,'List page is bounded');
@@ -63,9 +72,9 @@ select throws_ok($$select public.platform_complete_initial_customer_admin(pg_tem
 reset role;
 select is((select count(*) from public.persons where auth_user_id=pg_temp.id(2)),0::bigint,'Unconfirmed identity does not create Person');
 select is((select count(*) from public.account_memberships where account_id=pg_temp.account_id()),0::bigint,'Unconfirmed identity does not create membership');
-select is((select actor_person_id from pikas_private.platform_requests where request_id=pg_temp.id(40)),pg_temp.id(11),'Real operator remains provisioning actor during delegated POV');
+select is((select actor_person_id from pikas_private.platform_requests where request_id=pg_temp.id(40)),pg_temp.id(11),'Real operator is the provisioning actor');
 select ok(exists(select 1 from pikas_private.platform_audit_events where request_id=pg_temp.id(40) and actor_person_id=pg_temp.id(11) and actor_auth_user_id=pg_temp.id(1) and action='tenant_provisioned'),'Provisioning audit attributes real operator');
-update auth.users set confirmed_at=now() where id=pg_temp.id(2);
+update auth.users set email_confirmed_at=now() where id=pg_temp.id(2);
 set local role authenticated;
 insert into console_state values('grant',public.platform_complete_initial_customer_admin(pg_temp.id(42),pg_temp.intent_id(),'Fictional admin'));
 select is((select v->>'status' from console_state where k='grant'),'granted','Confirmed intended identity is linked and granted atomically');
@@ -91,7 +100,9 @@ select set_config('request.jwt.claim.sub',pg_temp.id(1)::text,true);
 set local role authenticated;
 insert into console_state values('guard-tenant',public.platform_provision_tenant(pg_temp.id(50),'4D1-GUARD','Guard customer','S','Guard school','America/Santo_Domingo','L','Guard location','C','Guard cafeteria'));
 insert into console_state values('self-intent',public.platform_prepare_customer_admin(pg_temp.id(51),(select (v->>'account_id')::uuid from console_state where k='guard-tenant'),'account',null,null,'account_admin','console-operator@example.invalid',now()+interval '7 days'));
-select throws_ok($$select public.platform_complete_initial_customer_admin(pg_temp.id(52),(select (v->>'intent_id')::uuid from console_state where k='self-intent'),'Operator')$$,'42501','customer_identity_required','Operator cannot provision themselves as initial customer admin');
+-- The activation identity state (customer_activation_state) now classifies the operator's own or any platform identity as unavailable,
+-- so the refusal surfaces before the later explicit identity check; no authority is granted either way (asserted below).
+select throws_ok($$select public.platform_complete_initial_customer_admin(pg_temp.id(52),(select (v->>'intent_id')::uuid from console_state where k='self-intent'),'Operator')$$,'23514','activation_password_pending','Operator cannot provision themselves as initial customer admin');
 insert into console_state values('school-intent',public.platform_prepare_customer_admin(pg_temp.id(53),(select (v->>'account_id')::uuid from console_state where k='guard-tenant'),'school',(select (v->>'school_id')::uuid from console_state where k='guard-tenant'),null,'school_admin','console-admin@example.invalid',now()+interval '7 days'));
 select throws_ok($$select public.platform_complete_initial_customer_admin(pg_temp.id(54),(select (v->>'intent_id')::uuid from console_state where k='school-intent'),'Admin')$$,'23514','initial_customer_admin_intent_required','Wrapper cannot broaden initial-admin role or scope');
 reset role;
@@ -101,7 +112,7 @@ select throws_ok($$select public.platform_complete_initial_customer_admin(pg_tem
 reset role;
 select is((select count(*) from public.account_memberships where account_id=(select (v->>'account_id')::uuid from console_state where k='guard-tenant')),0::bigint,'Rejected guard cases leave no partial authority');
 update public.accounts set status='active' where id=(select (v->>'account_id')::uuid from console_state where k='guard-tenant');
-insert into auth.users(id,aud,role,email,confirmed_at) values(pg_temp.id(63),'authenticated','authenticated','CONSOLE-OPERATOR@example.invalid',now());
+insert into auth.users(id,aud,role,email,email_confirmed_at) values(pg_temp.id(63),'authenticated','authenticated','CONSOLE-OPERATOR@example.invalid',now());
 set local role authenticated;
 select throws_ok($$select public.platform_complete_initial_customer_admin(pg_temp.id(64),(select (v->>'intent_id')::uuid from console_state where k='self-intent'),'Admin')$$,'23514','confirmed_identity_pending','Ambiguous normalized email fails closed rather than selecting an arbitrary identity');
 insert into console_state values('missing-intent',public.platform_prepare_customer_admin(pg_temp.id(65),(select (v->>'account_id')::uuid from console_state where k='guard-tenant'),'account',null,null,'account_admin','not-registered@example.invalid',now()+interval '7 days'));

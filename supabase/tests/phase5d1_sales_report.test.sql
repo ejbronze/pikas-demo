@@ -3,6 +3,12 @@
 -- assignment 9503) of 111; 2008 cashier 111 / supervisor 112; 2002 School Admin 11; 2001 Account Admin.
 -- Assertions compare deltas so pre-existing local fixture sales never affect the result.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -30,8 +36,7 @@ select ok(has_function_privilege('authenticated','cafeteria_report_read(uuid,tex
 select ok(not has_function_privilege('anon','cafeteria_report_read(uuid,text,text,date,date)','execute')
  and not has_function_privilege('service_role','cafeteria_report_read(uuid,text,text,date,date)','execute'),'No anonymous or service report bypass');
 select ok(not has_function_privilege('authenticated','pikas_private.report_clock()','execute'),'Report clock seam is private');
-reset role; select set_config('t.platform',(select p.auth_user_id::text from pikas_private.platform_memberships m join persons p on p.id=m.person_id
- where m.status='active' and m.role_code='platform_admin' and p.auth_user_id is not null limit 1),true);
+reset role; select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 
 -- Authority
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');

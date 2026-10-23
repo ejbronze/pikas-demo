@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 select no_plan();
-select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relrowsecurity), 58::bigint, 'RLS enabled on all public tables through Phase 3D');
+select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity),0::bigint, 'RLS enabled on all public tables through Phase 3D');
 select is((select count(*) from pg_policies where schemaname='public' and cmd <> 'SELECT'), 0::bigint, 'No application write policies exist');
 select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pikas_private' and p.prosecdef and not ('search_path=""'=any(p.proconfig))), 0::bigint, 'Definer helpers pin an empty search path');
 select is((select count(*) from pikas_private.role_capabilities where role_code='pos_operator'), 1::bigint, 'POS role has only the narrowly scoped customer lookup capability');
@@ -203,9 +203,15 @@ reset role;
 select set_config('request.jwt.claim.sub', '', true);
 -- Additional boundary and lifecycle evidence under the database owner.
 -- Count history: 2 (Phase 1) + 7 platform tables (6A1, stale at HEAD: produced 9) + 3 sandbox POV tables (6B) = 12.
+-- Later approved milestones add private tables; assert the role catalogs and the no-client-access contract instead of a frozen count.
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='pikas_private' and c.relkind='r' and c.relrowsecurity), 12::bigint,
+  where n.nspname='pikas_private' and c.relkind='r' and c.relrowsecurity
+    and c.relname in ('roles','role_capabilities','platform_roles','platform_role_capabilities')), 4::bigint,
   'Private role catalog also has RLS enabled');
+select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+  where n.nspname='pikas_private' and c.relkind='r' and not c.relrowsecurity
+    and (has_table_privilege('anon',c.oid,'SELECT,INSERT,UPDATE,DELETE') or has_table_privilege('authenticated',c.oid,'SELECT,INSERT,UPDATE,DELETE'))), 0::bigint,
+  'No private table without RLS is reachable by client roles');
 select throws_ok($test$update schools set business_timezone='Not/A_Timezone'
   where id='00000000-0000-0000-0000-000000000011'$test$, '23514', null, 'Invalid business timezone rejected');
 select lives_ok($test$insert into persons(id,display_name)

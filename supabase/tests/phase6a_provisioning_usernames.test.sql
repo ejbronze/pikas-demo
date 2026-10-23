@@ -1,6 +1,12 @@
 -- Phase 6A completion: username reserved at provisioning (202610270001). Fictional local fixtures; rolled back.
 -- 2003/1003 Cafeteria Admin 111; 2004 Cafeteria Admin 112; 2008 cashier 111; 2002 School Admin 11; 2001 Account Admin 1.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -23,8 +29,7 @@ create function pg_temp.with_session(u text) returns void language plpgsql as $$
  perform set_config('request.jwt.claims',jsonb_build_object('sub',u,'role','authenticated','session_id',sid)::text,true);
  execute 'set local role authenticated'; end$$;
 reset role;
-select set_config('t.platform',(select p.auth_user_id::text from pikas_private.platform_memberships m join persons p on p.id=m.person_id
- where m.status='active' and m.role_code='platform_admin' and p.auth_user_id is not null limit 1),true);
+select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 select set_config('t.persons',(select count(*)::text from persons),true);
 select set_config('t.members',(select (select count(*) from cafeteria_memberships)+(select count(*) from school_memberships)+(select count(*) from account_memberships))::text,true);
 insert into pikas_private.reserved_usernames(username) values('soporte');

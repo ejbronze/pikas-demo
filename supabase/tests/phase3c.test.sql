@@ -51,8 +51,8 @@ select ok(not has_table_privilege('anon','public.cafeteria_refund_policies','INS
 select ok(not has_table_privilege('authenticated','public.cafeteria_refund_policies','INSERT,UPDATE,DELETE,TRUNCATE'),'authenticated has no direct cafeteria_refund_policies writes');
 select ok(not has_table_privilege('service_role','public.cafeteria_refund_policies','INSERT,UPDATE,DELETE,TRUNCATE'),'service_role has no direct cafeteria_refund_policies writes');
 
-select is((select count(*) from public.cafeteria_refund_policies),4::bigint,'Existing cafeterias automatically have policies');
-select is((select count(*) from public.cafeteria_refund_policies where supervisor_override_enabled and daily_independent_refund_allowance_minor=0 and currency_code='DOP' and version=1),4::bigint,'Policies have locked safe defaults');
+select is((select count(*) from public.cafeterias c where not exists(select 1 from public.cafeteria_refund_policies p where p.cafeteria_id=c.id)),0::bigint,'Existing cafeterias automatically have policies');
+select is((select count(*) from public.cafeteria_refund_policies where not (supervisor_override_enabled and daily_independent_refund_allowance_minor=0 and currency_code='DOP' and version=1)),0::bigint,'Policies have locked safe defaults');
 select is((select count(*) from public.refunds),0::bigint,'No fabricated refunds');
 select ok(to_regclass('public.cafeteria_refund_counters') is null,'No cafeteria-wide refund counter');
 -- Phase 5C.1 (202610180001) adds item-level refund allocation; no item rows exist before any refund.
@@ -152,7 +152,8 @@ select ok(not exists(select 1 from public.audit_events where action like 'refund
 select throws_ok($$update public.refunds set notes='changed' where id=current_setting('p3c.first')::uuid$$,'23514',null,'Notes immutable even privileged');
 select throws_ok($$delete from public.refunds where id=current_setting('p3c.first')::uuid$$,'23514',null,'Refund deletion prohibited');
 select throws_ok($$truncate public.refunds cascade$$,'23514',null,'Financial truncate prohibited');
-select is((select sum(amount_minor)::bigint from public.wallet_ledger_entries),18000::bigint,'Ledger reconciles current wallet');
+-- Scoped to non-sandbox fixtures: the canonical Horizonte sandbox (Demo Lab seed) is part of the local baseline.
+select is((select sum(amount_minor)::bigint from public.wallet_ledger_entries where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),18000::bigint,'Ledger reconciles current wallet');
 
 select ok(not exists(select 1 from pikas_private.role_capabilities where capability like '%refund%' and role_code in ('school_admin','account_admin','pos_operator','backoffice')),'No implied administrative or reserved authority');
 select is((select count(*) from pikas_private.role_capabilities where role_code='pos_cashier' and capability like '%refund%'),2::bigint,'Cashier create and own-read only');
@@ -235,7 +236,7 @@ select is((select count(distinct wallet_id) from public.wallet_refund_credits),1
 select is((select count(*) from public.wallet_purchase_debits),1::bigint,'Original debit remains one immutable operation');
 select is((select amount_minor from public.wallet_ledger_entries where entry_type='purchase'),-5000::bigint,'Original negative debit ledger unchanged');
 select is((select amount_minor from public.student_daily_spend_events where event_type='purchase'),5000::bigint,'Original positive usage unchanged');
-select is((select sum(amount_minor)::bigint from public.wallet_ledger_entries),(select current_balance_minor from public.student_wallets where id='00000000-0000-0000-0000-000000007001'),'Ledger reconciles after lifecycle refunds');
+select is((select sum(amount_minor)::bigint from public.wallet_ledger_entries where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),(select current_balance_minor from public.student_wallets where id='00000000-0000-0000-0000-000000007001'),'Ledger reconciles after lifecycle refunds');
 select pg_temp.login('2008');
 set local role authenticated;
 select throws_ok($$insert into public.refunds default values$$,'42501',null,'Direct refunds insert denied');
@@ -433,7 +434,7 @@ reset role;
 select is((select count(*)::text from public.refunds),current_setting('p3c.refund_count'),'Overflow creates no refund root');
 select ok((select consumed_refund_id is null from public.financial_approvals where id=current_setting('p3c.overflow_ap')::uuid),'Overflow leaves approval unused');
 select is((select current_balance_minor from public.student_wallets where id='00000000-0000-0000-0000-000000007001'),9223372036854775807::bigint,'Overflow leaves exact maximum balance');
-select is((select sum(amount_minor::numeric) from public.wallet_ledger_entries),(select current_balance_minor::numeric from public.student_wallets where id='00000000-0000-0000-0000-000000007001'),'Numeric ledger sum reconciles at bigint maximum');
+select is((select sum(amount_minor::numeric) from public.wallet_ledger_entries where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),(select current_balance_minor::numeric from public.student_wallets where id='00000000-0000-0000-0000-000000007001'),'Numeric ledger sum reconciles at bigint maximum');
 
 set constraints all immediate;
 select * from finish();

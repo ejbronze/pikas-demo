@@ -5,6 +5,12 @@
 -- Student 5201 (wallet) at cafeterias 111 (customer 6901) and 113 (customer added below).
 -- Totals are compared as deltas against a baseline taken in the same transaction.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -25,8 +31,7 @@ create function pg_temp.sale(sid text,key text,qty integer,tender text,product t
  'cafeteria_customer_id',case when tender='cash' then null else customer end,'items',jsonb_build_array(jsonb_build_object('product_id',product,
  'quantity',qty,'expected_product_version',1,'expected_unit_price_minor',price::text)),'expected_total_minor',(price*qty)::text,
  'tender',case tender when 'cash' then jsonb_build_object('type','cash','cash_received_minor',(price*qty)::text) else jsonb_build_object('type',tender) end))->>'purchase_id')::uuid$$;
-reset role; select set_config('t.platform',(select p.auth_user_id::text from pikas_private.platform_memberships m join persons p on p.id=m.person_id
- where m.status='active' and m.role_code='platform_admin' and p.auth_user_id is not null limit 1),true);
+reset role; select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 
 -- Privileges
 select ok(has_function_privilege('authenticated','school_wallet_report(uuid,text,date,date)','execute'),'Authenticated may call the report');

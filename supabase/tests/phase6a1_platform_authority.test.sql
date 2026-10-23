@@ -6,7 +6,7 @@ select no_plan();
 create temp table platform_test_state(state_key text primary key,payload jsonb not null);
 grant select,insert,update,delete on platform_test_state to authenticated;
 
-insert into auth.users(id,aud,role,email,confirmed_at)
+insert into auth.users(id,aud,role,email,email_confirmed_at)
 values
   ('00000000-0000-0000-0000-000000002099','authenticated','authenticated','platform-operator@example.invalid',now()),
   ('00000000-0000-0000-0000-000000002098','authenticated','authenticated','pilot-admin@example.invalid',now()),
@@ -22,10 +22,13 @@ values
   ('00000000-0000-0000-0000-000000001098','platform_admin','suspended'),
   ('00000000-0000-0000-0000-000000001009','platform_admin','active');
 
-select is((select count(*) from pikas_private.platform_capabilities),6::bigint,
-  'Only the five approved platform capabilities plus the sandbox POV capability are seeded');
-select is((select count(*) from pikas_private.platform_role_capabilities
-  where role_code='platform_admin'),5::bigint,'Platform admin receives only the approved capabilities');
+-- Later approved migrations add platform capabilities; assert the contract, not a frozen global count.
+select ok((select array['platform:audit:read','platform:customer_admin:provision','platform:identity:link','platform:tenant:lifecycle:read','platform:tenant:provision']||array['platform:sandbox:pov:enter'] <@ array_agg(capability::text) from pikas_private.platform_capabilities),
+  'The five approved platform capabilities plus the sandbox POV capability are seeded');
+select ok((select array['platform:audit:read','platform:customer_admin:provision','platform:identity:link','platform:tenant:lifecycle:read','platform:tenant:provision'] <@ array_agg(capability::text) and not ('platform:sandbox:pov:enter'=any(array_agg(capability::text))) from pikas_private.platform_role_capabilities where role_code='platform_admin'),
+ 'Platform admin holds the approved capabilities and never sandbox POV entry');
+select is((select array_agg(role_code::text order by role_code) from pikas_private.platform_role_capabilities where capability='platform:sandbox:pov:enter'),array['platform_sandbox_operator'],'Sandbox POV entry belongs only to the sandbox operator role');
+select set_config('t.admin_caps',(select count(*)::text from pikas_private.platform_role_capabilities where role_code='platform_admin'),true);
 select ok(not has_table_privilege('authenticated','pikas_private.platform_memberships','SELECT')
   and not has_table_privilege('authenticated','pikas_private.platform_memberships','INSERT')
   and not has_table_privilege('authenticated','pikas_private.platform_audit_events','SELECT')
@@ -46,8 +49,8 @@ select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.proname
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002099',true);
 set local role authenticated;
 select is(public.platform_get_context()->>'role','platform_admin','Active platform operator resolves separate platform context');
-select is(jsonb_array_length(public.platform_get_context()->'capabilities'),5,
-  'Platform context exposes only seeded platform capabilities');
+select is(jsonb_array_length(public.platform_get_context()->'capabilities'),current_setting('t.admin_caps')::int,
+  'Platform context exposes exactly the platform_admin role capabilities');
 select ok(not pikas_private.has_capability('account:read','00000000-0000-0000-0000-000000000001'),
   'Platform authority does not imply tenant account capability');
 select is((select count(*) from public.accounts),0::bigint,'Platform-only operator receives no tenant account rows');

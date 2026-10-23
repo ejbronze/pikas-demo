@@ -8,8 +8,13 @@ begin perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000
 
 create function pg_temp.sid(r uuid) returns uuid language sql security definer as $$ select id from pikas_private.sandbox_pov_sessions where request_id=r $$;
 grant execute on function pg_temp.sid(uuid) to authenticated;
+-- The canonical Horizonte sandbox (Demo Lab seed) is part of the local baseline; this test asserts only its own fixtures.
+create function pg_temp.targets() returns jsonb language sql as $$
+ select coalesce(jsonb_agg(t order by o),'[]'::jsonb) from jsonb_array_elements(public.platform_list_sandbox_pov_targets()) with ordinality x(t,o)
+ where t->>'account_id'<>'03e71159-69e9-4387-9b3b-65799d49faf0' $$;
+grant execute on function pg_temp.targets() to authenticated;
 
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  ('00000000-0000-0000-0000-000000002301','authenticated','authenticated','p6b2-op-a@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002302','authenticated','authenticated','p6b2-op-b@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002303','authenticated','authenticated','p6b2-admin@example.invalid',now()),
@@ -31,14 +36,14 @@ insert into public.cafeteria_memberships(id,account_id,school_id,cafeteria_id,pe
 -- Before the account is classified as sandbox nothing is listable, and customer tenants can never hold personas.
 select pg_temp.login('2301');
 set local role authenticated;
-select is(public.platform_list_sandbox_pov_targets(),'[]'::jsonb,'Customer tenants are never listed');
+select is(pg_temp.targets(),'[]'::jsonb,'Customer tenants are never listed');
 reset role;
 alter table public.accounts disable trigger accounts_tenant_kind_immutable;
 update public.accounts set tenant_kind='sandbox' where id='00000000-0000-0000-0000-000000000001';
 alter table public.accounts enable trigger accounts_tenant_kind_immutable;
 select pg_temp.login('2301');
 set local role authenticated;
-select is(public.platform_list_sandbox_pov_targets(),'[]'::jsonb,'Sandbox without a persona registration lists nothing');
+select is(pg_temp.targets(),'[]'::jsonb,'Sandbox without a persona registration lists nothing');
 reset role;
 insert into pikas_private.sandbox_pov_personas(id,account_id,school_id,cafeteria_id,pov_code,person_id,cafeteria_membership_id)
 values('00000000-0000-0000-0000-000000008910','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000000111','cashier','00000000-0000-0000-0000-000000001310','00000000-0000-0000-0000-000000004710');
@@ -50,8 +55,9 @@ select ok(not has_function_privilege('anon','public.platform_list_sandbox_pov_ta
   and not has_function_privilege('service_role','public.platform_get_active_sandbox_pov()','EXECUTE')
   and has_function_privilege('authenticated','public.platform_list_sandbox_pov_targets()','EXECUTE')
   and has_function_privilege('authenticated','public.platform_get_active_sandbox_pov()','EXECUTE'),'Read RPC grants are authenticated only');
-select ok((select provolatile='s' from pg_proc where oid='public.platform_list_sandbox_pov_targets()'::regprocedure)
-  and (select provolatile='s' from pg_proc where oid='public.platform_get_active_sandbox_pov()'::regprocedure),'Both read RPCs are stable (read-only)');
+-- 202610120002 made both reads volatile because they validate the live POV; they still never write (asserted by the snapshots below).
+select ok((select provolatile='v' from pg_proc where oid='public.platform_list_sandbox_pov_targets()'::regprocedure)
+  and (select provolatile='v' from pg_proc where oid='public.platform_get_active_sandbox_pov()'::regprocedure),'Both read RPCs are volatile POV validators');
 select pg_temp.login('2303');
 set local role authenticated;
 select throws_ok($$select public.platform_list_sandbox_pov_targets()$$,'42501','not_authorized','platform_admin without sandbox capability cannot list targets');
@@ -69,13 +75,14 @@ reset role;
 -- Listing.
 select pg_temp.login('2301');
 set local role authenticated;
-select is(jsonb_array_length(public.platform_list_sandbox_pov_targets()),1,'Sandbox operator lists exactly one valid cashier target');
-select is(public.platform_list_sandbox_pov_targets()->0,jsonb_build_object(
+select is(jsonb_array_length(pg_temp.targets()),1,'Sandbox operator lists exactly one valid cashier target');
+select is(pg_temp.targets()->0,jsonb_build_object(
   'account_id','00000000-0000-0000-0000-000000000001'::uuid,
   'account_name','SYNTHETIC-A',
   'cafeteria_id','00000000-0000-0000-0000-000000000111'::uuid,
   'cafeteria_name','Synthetic cafeteria A1-C1',
-  'pov_code','cashier','persona_display_name','Cajero Demo'),'Target exposes only the minimum launcher fields');
+  'pov_code','cashier','persona_display_name','Cajero Demo',
+  'school_id','00000000-0000-0000-0000-000000000011'::uuid),'Target exposes only the minimum launcher fields (school_id added by 202610120002)');
 select is(public.platform_get_active_sandbox_pov(),null::jsonb,'No active POV before entering');
 select lives_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000d001','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','cashier')$$,'Operator A enters');
 select is((public.platform_get_active_sandbox_pov()) - 'session_id' - 'expires_at',jsonb_build_object(
@@ -83,7 +90,8 @@ select is((public.platform_get_active_sandbox_pov()) - 'session_id' - 'expires_a
   'account_name','SYNTHETIC-A',
   'cafeteria_id','00000000-0000-0000-0000-000000000111'::uuid,
   'cafeteria_name','Synthetic cafeteria A1-C1',
-  'pov_code','cashier','persona_display_name','Cajero Demo'),'Active POV returns the server-derived account, cafeteria and persona');
+  'pov_code','cashier','persona_display_name','Cajero Demo',
+  'school_id','00000000-0000-0000-0000-000000000011'::uuid,'operator_name','Read operator A'),'Active POV returns the server-derived account, cafeteria, persona and real operator');
 select ok((public.platform_get_active_sandbox_pov()->>'session_id')::uuid=pg_temp.sid('00000000-0000-0000-0000-00000000d001')
   and (public.platform_get_active_sandbox_pov()->>'expires_at')::timestamptz>now(),'Active POV carries its session id and a future expiry');
 select ok(not (public.platform_get_active_sandbox_pov() ? 'initiator_person_id' or public.platform_get_active_sandbox_pov() ? 'persona_person_id'
@@ -98,7 +106,7 @@ reset role;
 
 -- Reads grant nothing.
 select is((select count(*) from pikas_private.sandbox_pov_sessions),1::bigint,'Reads create no sessions');
-select is((select count(*) from pikas_private.platform_memberships),4::bigint,'Reads create no platform memberships');
+select is((select count(*) from pikas_private.platform_memberships where person_id::text like '00000000-0000-0000-0000-00000000130%'),4::bigint,'Reads create no platform memberships');
 select pg_temp.login('2303');
 select ok(not pikas_private.platform_has_capability('platform:sandbox:pov:enter'),'platform_admin gains no sandbox authority from the reads');
 select pg_temp.login('2301');
@@ -109,7 +117,7 @@ select ok(pikas_private.pos_actor_person_id()='00000000-0000-0000-0000-000000001
 set local role authenticated;
 select lives_ok($$select public.platform_exit_sandbox_pov('00000000-0000-0000-0000-00000000d002')$$,'Operator A exits');
 select is(public.platform_get_active_sandbox_pov(),null::jsonb,'Exit leaves no active demonstration');
-select is(jsonb_array_length(public.platform_list_sandbox_pov_targets()),1,'Target remains listable after exit');
+select is(jsonb_array_length(pg_temp.targets()),1,'Target remains listable after exit');
 reset role;
 
 -- Expired session never resolves active.
@@ -138,21 +146,21 @@ select lives_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0
 reset role;
 update public.cafeterias set status='suspended' where id='00000000-0000-0000-0000-000000000111';
 set local role authenticated;
-select ok(public.platform_list_sandbox_pov_targets()='[]'::jsonb and public.platform_get_active_sandbox_pov() is null,'Inactive cafeteria is neither listed nor active');
+select ok(pg_temp.targets()='[]'::jsonb and public.platform_get_active_sandbox_pov() is null,'Inactive cafeteria is neither listed nor active');
 reset role;
 update public.cafeterias set status='active' where id='00000000-0000-0000-0000-000000000111';
 update public.accounts set status='suspended' where id='00000000-0000-0000-0000-000000000001';
 set local role authenticated;
-select ok(public.platform_list_sandbox_pov_targets()='[]'::jsonb and public.platform_get_active_sandbox_pov() is null,'Inactive account is neither listed nor active');
+select ok(pg_temp.targets()='[]'::jsonb and public.platform_get_active_sandbox_pov() is null,'Inactive account is neither listed nor active');
 reset role;
 update public.accounts set status='active' where id='00000000-0000-0000-0000-000000000001';
 set local role authenticated;
-select is(jsonb_array_length(public.platform_list_sandbox_pov_targets()),1,'Target returns once the scope is active again');
+select is(jsonb_array_length(pg_temp.targets()),1,'Target returns once the scope is active again');
 select ok(public.platform_get_active_sandbox_pov() is not null,'POV resolves again once the scope is active again');
 reset role;
 update pikas_private.sandbox_pov_personas set status='inactive' where id='00000000-0000-0000-0000-000000008910';
 set local role authenticated;
-select ok(public.platform_list_sandbox_pov_targets()='[]'::jsonb and public.platform_get_active_sandbox_pov() is null,'Inactive persona is neither listed nor active');
+select ok(pg_temp.targets()='[]'::jsonb and public.platform_get_active_sandbox_pov() is null,'Inactive persona is neither listed nor active');
 reset role;
 
 select * from finish();

@@ -3,7 +3,7 @@ create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
 
-insert into auth.users(id,aud,role,email,confirmed_at)
+insert into auth.users(id,aud,role,email,email_confirmed_at)
 values
   ('00000000-0000-0000-0000-000000006099','authenticated','authenticated','phase6a2-platform@example.invalid',now()),
   ('00000000-0000-0000-0000-000000006098','authenticated','authenticated','phase6a2-other-platform@example.invalid',now()),
@@ -60,9 +60,10 @@ insert into phase6a2_state(state_key,payload) values(
     'C2','Phase 6A.2 second campus','CAF2','Phase 6A.2 second cafeteria'
   )
 );
+-- 202611060001 also returns the system-generated codes; the hierarchy-ID contract is unchanged.
 select is((select count(*) from phase6a2_state s
   cross join lateral jsonb_object_keys(s.payload) as fields(key)
-  where s.state_key='expansion'),4::bigint,'Expansion returns the four hierarchy IDs');
+  where s.state_key='expansion' and fields.key like '%\_id'),4::bigint,'Expansion returns the four hierarchy IDs');
 select is((select payload->>'account_id' from phase6a2_state where state_key='expansion'),
   (select payload->>'account_id' from phase6a2_state where state_key='tenant'),
   'Expansion reuses the existing Account');

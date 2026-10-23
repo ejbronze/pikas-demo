@@ -58,8 +58,10 @@ complete connected product for these phases. Phase 6 targets financial, authorit
 concurrency and operational hardening. Phase 7 prepares pilot operations/readiness.
 Implement only the explicitly approved milestone.
 
-Targeted follow-up: newly enrolled **Sol Ficticia Beta** was absent from POS student
-search during 4D.8. Do not investigate/fix unless directly relevant to approved work.
+Closed follow-up (2026-10-23): the 4D.8 note that newly enrolled **Sol Ficticia Beta**
+was absent from POS student search is obsolete. That fictional student and its account
+were removed from production; the report was never reproduced or diagnosed. If a newly
+enrolled student is missing from POS search again, treat it as a new issue.
 
 ## PIKAS mascot
 The mascot system lives in docs/pikas-mascot-system/.

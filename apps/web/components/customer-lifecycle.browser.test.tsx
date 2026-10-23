@@ -40,14 +40,15 @@ beforeEach(async () => { native = false; page = await browser.newPage({ viewport
 afterEach(async () => { expect(native).toBe(false); await page?.close(); });
 afterAll(async () => { await browser?.close(); await new Promise<void>(ok => server?.close(() => ok())); });
 const calls = () => win<{ key: string; body: Record<string, string> }[]>("w => w.calls");
-const actions = () => page.locator("section").first().locator(":scope > div.flex.flex-wrap.gap-2 button").allInnerTexts();
+// Lifecycle actions live in the panel's danger zone since the customer workspace reorganization.
+const actions = () => page.locator("#estado-cliente .ws-danger-zone div.flex.flex-wrap.gap-2 > button").allInnerTexts();
 
 describe("Platform customer lifecycle (browser)", () => {
   it("each state offers only its valid actions; without the capability there are none", async () => {
     for (const [status, expected] of [["active", ["Suspender", "Cerrar cliente"]], ["suspended", ["Reactivar", "Cerrar cliente"]], ["closed", ["Reabrir cliente"]]] as const) {
-      await win(`w => w.mount("${status}")`); await page.getByText("Estado del cliente").waitFor(); expect(await actions()).toEqual(expected);
+      await win(`w => w.mount("${status}")`); await page.getByText("Estado del cliente", { exact: true }).waitFor(); expect(await actions()).toEqual(expected);
     }
-    await win(`w => w.mount("active", false)`); await page.getByText("Estado del cliente").waitFor(); expect(await actions()).toEqual([]);
+    await win(`w => w.mount("active", false)`); await page.getByText("Estado del cliente", { exact: true }).waitFor(); expect(await actions()).toEqual([]);
   });
 
   it("suspend: preservation copy, reason required, one request with expected state, result shown and page refreshed", async () => {

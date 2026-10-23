@@ -10,7 +10,7 @@ grant all on state to authenticated;
 create function pg_temp.student_id() returns uuid language sql as $$select (v->>'student_id')::uuid from state where k='student'$$;
 create function pg_temp.invite_id() returns uuid language sql as $$select (v->>'invitation_id')::uuid from state where k='invite'$$;
 create function pg_temp.member_id() returns uuid language sql as $$select (v->>'membership_id')::uuid from state where k='grant'$$;
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  (pg_temp.id(1),'authenticated','authenticated','school-new@example.invalid',null),
  (pg_temp.id(2),'authenticated','authenticated','school-platform@example.invalid',now()),
  (pg_temp.id(3),'authenticated','authenticated','school-ambiguous@example.invalid',now()),
@@ -29,7 +29,9 @@ insert into public.students(id,account_id,school_id,person_id,student_code,first
 select ok(has_function_privilege('authenticated','public.get_school_admin_context()','execute') and not has_function_privilege('anon','public.get_school_admin_context()','execute'),'Context is authenticated-only');
 select ok(not has_function_privilege('service_role','public.school_admin_command(uuid,uuid,text,jsonb)','execute'),'No service-role execution');
 select ok(not has_table_privilege('authenticated','pikas_private.school_admin_requests','select'),'Recovery journal is private');
-select is((select count(*) from pikas_private.platform_role_capabilities where role_code='platform_admin'),5::bigint,'Platform authority unchanged');
+-- Later approved migrations add platform capabilities; assert the contract, not a frozen global count.
+select ok((select array['platform:audit:read','platform:customer_admin:provision','platform:identity:link','platform:tenant:lifecycle:read','platform:tenant:provision'] <@ array_agg(capability::text) and not ('platform:sandbox:pov:enter'=any(array_agg(capability::text))) from pikas_private.platform_role_capabilities where role_code='platform_admin'),
+ 'platform_admin keeps its original capabilities and never gains sandbox POV entry');
 select set_config('request.jwt.claim.sub','',true);
 set local role authenticated;
 select is(public.get_school_admin_context(),null::jsonb,'Unauthenticated context provides no scope');
@@ -39,8 +41,8 @@ select set_config('request.jwt.claim.sub',pg_temp.id(2)::text,true);
 set local role authenticated;
 select public.platform_enter_sandbox_pov(pg_temp.id(30),pg_temp.id(21),pg_temp.id(24),'cashier');
 select is(public.get_pos_access_context()->'actor'->>'person_id',pg_temp.id(14)::text,'Synthetic operator has valid delegated cashier POV');
-select is(public.get_school_admin_context()->>'person_id',pg_temp.id(12)::text,'School context never substitutes the POV Person');
-select is(jsonb_array_length(public.get_school_admin_context()->'schools'),0,'Platform-only active POV gains no tenant scopes');
+-- Since 202610120002 (sandbox admin POV) a non-school-admin POV fails closed instead of returning an empty school context.
+select throws_ok($$select public.get_school_admin_context()$$,'42501','sandbox_admin_authority_required','Cashier POV supplies no school-admin context and never substitutes the POV Person');
 select throws_ok($$select pg_temp.command(101,'admin_prepare','{"email":"any@example.invalid"}')$$,'42501',null,'Platform-only user cannot prepare tenant authority');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002002',true);
@@ -80,18 +82,18 @@ select throws_ok($$select pg_temp.command(132,'admin_complete',jsonb_build_objec
 select throws_ok($$select pg_temp.command(133,'admin_complete',jsonb_build_object('invitation_id',pg_temp.invite_id(),'display_name','New admin','auth_id',pg_temp.id(2)))$$,'22023',null,'Browser cannot select arbitrary Auth identity');
 reset role;
 select is((select count(*) from public.persons where auth_user_id=pg_temp.id(1)),0::bigint,'Failed onboarding creates no Person');
-update auth.users set confirmed_at=now() where id=pg_temp.id(1);
+update auth.users set email_confirmed_at=now() where id=pg_temp.id(1);
 set local role authenticated;
 insert into state values('grant',pg_temp.command(132,'admin_complete',jsonb_build_object('invitation_id',pg_temp.invite_id(),'display_name','New admin')));
 select is(pg_temp.command(132,'admin_complete',jsonb_build_object('invitation_id',pg_temp.invite_id(),'display_name','New admin')),(select v from state where k='grant'),'Admin completion exact replay idempotent');
 select throws_ok($$select pg_temp.command(134,'admin_complete',jsonb_build_object('invitation_id',pg_temp.invite_id(),'display_name','New admin'))$$,'23514',null,'New key cannot recomplete accepted invitation');
 select lives_ok($$select pg_temp.command(135,'admin_status',jsonb_build_object('membership_id',pg_temp.member_id(),'status','suspended'))$$,'Intended school membership suspension supported');
 reset role;
-update auth.users set confirmed_at=null where id=pg_temp.id(1);
+update auth.users set email_confirmed_at=null where id=pg_temp.id(1);
 set local role authenticated;
 select throws_ok($$select pg_temp.command(170,'admin_status',jsonb_build_object('membership_id',pg_temp.member_id(),'status','active'))$$,'23514',null,'Activation cannot reuse an identity that lost confirmation');
 reset role;
-update auth.users set confirmed_at=now() where id=pg_temp.id(1);
+update auth.users set email_confirmed_at=now() where id=pg_temp.id(1);
 set local role authenticated;
 select lives_ok($$select pg_temp.command(136,'admin_status',jsonb_build_object('membership_id',pg_temp.member_id(),'status','active'))$$,'Confirmed school membership activation supported');
 select throws_ok($$select pg_temp.command(137,'admin_status','{"membership_id":"00000000-0000-0000-0000-000000003101","status":"suspended"}')$$,'42501',null,'Self suspension denied');
@@ -142,7 +144,7 @@ select is((select actor_scope_kind from public.audit_events where request_id=pg_
 set local role authenticated;
 select throws_ok($$select public.platform_list_customers()$$,'42501',null,'Tenant admin cannot provision/read platform');
 reset role;
-update auth.users set confirmed_at=now() where id='00000000-0000-0000-0000-000000002006';
+update auth.users set email_confirmed_at=now() where id='00000000-0000-0000-0000-000000002006';
 insert into public.invitations(id,account_id,school_id,scope_kind,role_code,intended_email,token_hash,invited_by,expires_at) values(pg_temp.id(160),'00000000-0000-0000-0000-000000000001',pg_temp.a(),'school','school_admin','foundation-6@example.invalid',repeat('d',64),'00000000-0000-0000-0000-000000001001',now()+interval '7 days');
 set local role authenticated;
 select throws_ok($$select pg_temp.command(161,'admin_complete',jsonb_build_object('invitation_id',pg_temp.id(160),'display_name','Other customer'))$$,'42501',null,'Identity already linked to another customer cannot be reused');

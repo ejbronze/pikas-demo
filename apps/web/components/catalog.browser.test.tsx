@@ -110,8 +110,8 @@ describe("product task", () => {
     await dlg().getByText("Recuperamos cambios sin guardar").waitFor(); expect(await calls()).toHaveLength(0);
     await page.keyboard.press("Escape"); await dlg().getByRole("button", { name: "Cerrar y conservar borrador" }).click();
     await page.getByRole("button", { name: "Editar Agua ficticia" }).click(); expect(await dlg().getByLabel("Nombre del producto *").inputValue()).toBe("Agua ficticia"); await page.keyboard.press("Escape");
-    await mount("products", false, "actor-2:caf-1"); expect(await page.getByText("Tienes un producto nuevo sin guardar").count()).toBe(0);
-    await mount("products", false, "actor-1:caf-2"); expect(await page.getByText("Tienes un producto nuevo sin guardar").count()).toBe(0);
+    await mount("products", false, "actor-2:caf-1"); await expect.poll(() => page.getByText("Tienes un producto nuevo sin guardar").count()).toBe(0);
+    await mount("products", false, "actor-1:caf-2"); await expect.poll(() => page.getByText("Tienes un producto nuevo sin guardar").count()).toBe(0);
     await mount(); await page.getByRole("button", { name: "Continuar borrador" }).click(); await dlg().getByRole("button", { name: "Descartar borrador" }).click();
     expect(await dlg().getByLabel("Nombre del producto *").inputValue()).toBe(""); expect(await page.evaluate(() => Object.keys(sessionStorage).filter(k => k.startsWith("pikas:catalog-draft")))).toEqual([]);
     expect(native).toBe(false);

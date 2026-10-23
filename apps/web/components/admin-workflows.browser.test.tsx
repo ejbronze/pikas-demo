@@ -88,11 +88,11 @@ describe("Estudiantes workspace", () => {
     await mountStudents();
     await page.getByRole("search", { name: "Filtros de estudiantes" }).waitFor();
     expect(await page.getByRole("status").filter({ hasText: "estudiantes" }).innerText()).toBe("2 estudiantes");
-    const table = await page.locator("table").innerText(); expect(table).toContain("Sol Ficticia"); expect(table).toContain("Código C-1"); expect(table).toContain("4to · B"); expect(table).toContain("Campus Norte"); expect(table).toContain("Sin matrícula activa"); expect(table).toContain("Suspendido");
+    const table = await page.getByRole("list", { name: "Estudiantes" }).innerText(); // the roster is a scannable list since 28114e7 expect(table).toContain("Sol Ficticia"); expect(table).toContain("Código C-1"); expect(table).toContain("4to · B"); expect(table).toContain("Campus Norte"); expect(table).toContain("Sin matrícula activa"); expect(table).toContain("Suspendido");
     expect(table).not.toContain(U(11)); // no internal ids
     await page.getByRole("link", { name: "PIKAS Cash de Sol Ficticia" }).first().waitFor();
     await mountStudents({ students: [], query: "zzz" }); await page.getByText("No encontramos estudiantes con estos filtros.").waitFor(); await page.getByRole("link", { name: "Limpiar filtros" }).first().waitFor();
-    await mountStudents({ students: [] }); await page.getByText("Aún no hay estudiantes.").waitFor(); expect(await page.getByText("No encontramos estudiantes").count()).toBe(0);
+    await mountStudents({ students: [] }); await page.getByText("Aún no hay estudiantes en este colegio.").waitFor(); expect(await page.getByText("No encontramos estudiantes").count()).toBe(0);
     await mountStudents({ walletRead: false }); expect(await page.getByRole("link", { name: /PIKAS Cash/ }).count()).toBe(0);
   });
   it("create: Estudiante → Matrícula → Revisar → «Crear estudiante» sends exactly one keyed request; Atrás keeps values; create another starts clean", async () => {

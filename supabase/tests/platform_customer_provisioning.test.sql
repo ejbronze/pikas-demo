@@ -72,7 +72,7 @@ select pg_temp.as_user(current_setting('t.tenant'));
 select alike(pg_temp.attempt($$select platform_grant_cafeteria_admin(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000001001','00000000-0000-0000-0000-000000000112')$$),'42501:%','7. Tenant admin cannot call Platform provisioning');
 select alike(pg_temp.attempt($$select platform_customer_staff_command('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111',gen_random_uuid(),'staff_prepare','{"email":"x@example.invalid","role":"pos_cashier"}','cajero.x','X')$$),'42501:%','7. Tenant admin cannot call Platform staff provisioning');
 select pg_temp.as_user('00000000-0000-0000-0000-0000000bd0a4');
-select is(pg_temp.attempt($$select platform_grant_cafeteria_admin(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000001001','00000000-0000-0000-0000-000000000112')$$),'42501:customer_access_authority_required','Current Demo POV refused');
+select is(pg_temp.attempt($$select platform_grant_cafeteria_admin(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000001001','00000000-0000-0000-0000-000000000112')$$),'42501:demo_mode_active','Current Demo POV refused (UX11 demo_mode_active guard, 202611130001)');
 reset role; update accounts set status='closed' where id='00000000-0000-0000-0000-000000000002';
 select pg_temp.as_user('00000000-0000-0000-0000-0000000bd0a1');
 select is(pg_temp.attempt($$select platform_grant_cafeteria_admin(gen_random_uuid(),'00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000001006','00000000-0000-0000-0000-000000000121')$$),'23514:customer_provisioning_inactive','8. Closed customer refused for new provisioning');

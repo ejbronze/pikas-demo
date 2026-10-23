@@ -4,6 +4,12 @@
 -- POS Supervisor of 112 without an admin membership; 2002 School Admin; 2001 Account Admin.
 -- Counts are compared as deltas and sessions by ID, so pre-existing local sessions never affect results.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -46,8 +52,7 @@ declare sid uuid; begin
  update register_sessions set status='closed',closed_at=closed,closed_by_person_id=operator_person_id,counted_cash_minor=counted,close_type='normal',
   close_request_key=key||'-close',close_payload_fingerprint=repeat('b',64),version=version+1 where id=sid;
  return sid::text; end $$;
-reset role; select set_config('t.platform',(select p.auth_user_id::text from pikas_private.platform_memberships m join persons p on p.id=m.person_id
- where m.status='active' and m.role_code='platform_admin' and p.auth_user_id is not null limit 1),true);
+reset role; select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 
 -- Privileges (unchanged)
 select ok(has_function_privilege('authenticated','cafeteria_report_read(uuid,text,text,date,date)','execute'),'Authenticated may call the report');
@@ -75,7 +80,9 @@ select pg_temp.as_user(current_setting('t.platform'));
 select alike(pg_temp.attempt('today'),'42501:%','Platform Admin denied');
 select pg_temp.as_user('ec08ad21-4020-4b0d-b041-ee4a1fe09471');
 select platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','cafeteria_admin');
-select alike(pg_temp.attempt('today',null,null,'b9496342-5079-46ae-83b8-05c39bcbd7fe'),'42501:%','Sandbox Cafeteria Admin POV denied (frozen allowlist excludes session reads)');
+-- Demo Lab (202611170001): the sandbox Cafeteria Admin POV reads its OWN fictional reconciliation (cafeteria:pos:sessions:read is in the POV allow-list); never a customer's.
+select is(pg_temp.attempt('today',null,null,'b9496342-5079-46ae-83b8-05c39bcbd7fe'),'ok','Sandbox Cafeteria Admin POV reads the sandbox''s own reconciliation (Demo Lab, read-only)');
+select alike(pg_temp.attempt('today'),'42501:%','Sandbox Cafeteria Admin POV cannot read a customer cafeteria''s reconciliation');
 reset role;
 
 -- Period contract (shared with 5D.1/5D.2)

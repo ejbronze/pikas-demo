@@ -6,7 +6,7 @@ create function pg_temp.id(n integer) returns uuid language sql immutable as $$s
 create function pg_temp.cmd(n integer,op text,payload jsonb) returns jsonb language sql as $$select public.platform_team_command(pg_temp.id(n),op,payload)$$;
 create temp table saved(k text primary key,v text);
 grant all on saved to authenticated;
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  (pg_temp.id(1),'authenticated','authenticated','team-admin@example.invalid',now()),
  (pg_temp.id(2),'authenticated','authenticated','team-new@example.invalid',null),
  (pg_temp.id(3),'authenticated','authenticated','team-existing@example.invalid',now()),
@@ -19,6 +19,7 @@ select ok(not has_table_privilege('authenticated','pikas_private.platform_team_h
 select ok(not has_function_privilege('anon','public.platform_team_command(uuid,text,jsonb)','execute'),'Anonymous command unavailable');
 select ok(not has_function_privilege('service_role','public.platform_team_command(uuid,text,jsonb)','execute'),'Service role cannot bypass');
 select is((select count(*) from pikas_private.platform_role_capabilities where role_code='platform_admin' and capability='platform:sandbox:pov:enter'),0::bigint,'Admin never bundles sandbox entry');
+select set_config('t.memberships_before',(select count(*)::text from pikas_private.platform_memberships),true);
 select set_config('request.jwt.claim.sub','',true);set local role authenticated;
 select throws_ok($$select public.platform_team_read()$$,'42501',null,'Unauthenticated read denied');
 reset role;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002001',true);set local role authenticated;
@@ -36,11 +37,11 @@ select lives_ok($$select pg_temp.cmd(103,'prepare','{"name":"New operator","emai
 reset role;
 select is((select count(*) from pikas_private.platform_team_intents where email_key='team-new@example.invalid'),1::bigint,'One prepared intent');
 select is((select count(*) from public.persons where auth_user_id=pg_temp.id(2)),0::bigint,'Prepare creates no Person');
-select is((select count(*) from pikas_private.platform_memberships),2::bigint,'Prepare grants no authority');
+select is((select count(*) from pikas_private.platform_memberships),current_setting('t.memberships_before')::bigint,'Prepare grants no authority');
 insert into saved select 'new',handle from pikas_private.platform_team_intents where email_key='team-new@example.invalid';
 set local role authenticated;
 select throws_ok($$select pg_temp.cmd(104,'complete',jsonb_build_object('handle',(select v from saved where k='new')))$$,'23514','confirmed_identity_pending','Unconfirmed identity cannot complete');
-reset role;update auth.users set confirmed_at=now() where id=pg_temp.id(2);set local role authenticated;
+reset role;update auth.users set email_confirmed_at=now() where id=pg_temp.id(2);set local role authenticated;
 select lives_ok($$select pg_temp.cmd(104,'complete',jsonb_build_object('handle',(select v from saved where k='new')))$$,'Confirmed identity completes');
 select lives_ok($$select pg_temp.cmd(104,'complete',jsonb_build_object('handle',(select v from saved where k='new')))$$,'Completion replay safe');
 select throws_ok($$select pg_temp.cmd(105,'complete',jsonb_build_object('handle',(select v from saved where k='new')))$$,'23514',null,'Different-key completion cannot duplicate grants');
@@ -66,7 +67,7 @@ select lives_ok($$select pg_temp.cmd(110,'complete',jsonb_build_object('handle',
 reset role;
 select is((select display_name from public.persons where id=pg_temp.id(13)),'Existing name','Existing Person name/link not replaced');
 select is((select count(*) from pikas_private.platform_memberships where person_id=pg_temp.id(13) and role_code='platform_sandbox_operator'),0::bigint,'Demo false grants admin only');
-update auth.users set confirmed_at=now() where id='00000000-0000-0000-0000-000000002001';set local role authenticated;
+update auth.users set email_confirmed_at=now() where id='00000000-0000-0000-0000-000000002001';set local role authenticated;
 select lives_ok($$select pg_temp.cmd(111,'prepare','{"name":"Tenant","email":"foundation-1@example.invalid","demo":true}')$$,'Prepare still grants nothing for customer email');
 reset role;insert into saved select 'tenant',handle from pikas_private.platform_team_intents where email_key='foundation-1@example.invalid';set local role authenticated;
 select throws_ok($$select pg_temp.cmd(112,'complete',jsonb_build_object('handle',(select v from saved where k='tenant')))$$,'42501',null,'Customer identity cannot be converted');
@@ -76,7 +77,7 @@ select lives_ok($$select pg_temp.cmd(113,'prepare','{"name":"Existing operator",
 reset role;insert into saved select 'existing-admin',handle from pikas_private.platform_team_intents where email_key='team-existing@example.invalid' and status='pending';set local role authenticated;
 select throws_ok($$select pg_temp.cmd(114,'complete',jsonb_build_object('handle',(select v from saved where k='existing-admin')))$$,'42501',null,'Existing platform identity cannot be replaced or reactivated by onboarding');
 reset role;
-insert into auth.users(id,aud,role,email,confirmed_at) values(pg_temp.id(5),'authenticated','authenticated','team-inactive@example.invalid',now());
+insert into auth.users(id,aud,role,email,email_confirmed_at) values(pg_temp.id(5),'authenticated','authenticated','team-inactive@example.invalid',now());
 insert into public.persons(id,auth_user_id,display_name,status) values(pg_temp.id(15),pg_temp.id(5),'Inactive','inactive');
 set local role authenticated;
 select lives_ok($$select pg_temp.cmd(115,'prepare','{"name":"Inactive","email":"team-inactive@example.invalid","demo":false}')$$,'Inactive identity preparation grants nothing');

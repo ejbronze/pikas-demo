@@ -3,7 +3,7 @@ create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
 
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  ('00000000-0000-0000-0000-000000002801','authenticated','authenticated','step4-op@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002802','authenticated','authenticated','step4-other@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002803','authenticated','authenticated','step4-admin@example.invalid',now()),
@@ -32,8 +32,9 @@ insert into pikas_private.sandbox_pov_personas(id,account_id,school_id,cafeteria
 select ok(has_function_privilege('authenticated','public.get_pos_access_context()','EXECUTE')
  and not has_function_privilege('anon','public.get_pos_access_context()','EXECUTE')
  and not has_function_privilege('service_role','public.get_pos_access_context()','EXECUTE'),'Only authenticated clients may execute the RPC');
-select ok((select provolatile='s' and prosecdef and pronargs=0 and proconfig=array['search_path=""']::text[]
- from pg_proc where oid='public.get_pos_access_context()'::regprocedure),'RPC is stable, security definer, empty search path and takes no authority arguments');
+-- 202610120002 made the context volatile (it validates the live POV); it remains definer, pinned and argument-free.
+select ok((select provolatile='v' and prosecdef and pronargs=0 and proconfig=array['search_path=""']::text[]
+ from pg_proc where oid='public.get_pos_access_context()'::regprocedure),'RPC is volatile, security definer, empty search path and takes no authority arguments');
 set local role anon;
 select throws_ok($$select public.get_pos_access_context()$$,'42501',null,'Anonymous RPC access is denied');
 reset role;
@@ -93,6 +94,10 @@ begin
   result_value:=public.get_pos_access_context();
   raise exception using errcode='Z0001',message='rollback_fixture';
  exception when sqlstate 'Z0001' then null;
+  -- Since 202610120002 an invalid active POV raises instead of returning no context; both fail closed.
+  when sqlstate '42501' then
+   if sqlerrm<>'cashier_sandbox_pov_required' then raise; end if;
+   result_value:=null;
  end;
  return result_value;
 end $$;
@@ -109,12 +114,13 @@ select is(pg_temp.context_after($case$set local session_replication_role=replica
 select is(pg_temp.context_after($case$update pikas_private.sandbox_pov_sessions set status='exited',ended_at=now(),end_reason='exited' where request_id='00000000-0000-0000-0000-000000009811'$case$),null::jsonb,'Exited POV fails closed');
 select is(pg_temp.context_after($case$set local session_replication_role=replica; update public.persons set auth_user_id='00000000-0000-0000-0000-000000002805' where id='00000000-0000-0000-0000-000000001810'; set local session_replication_role=origin$case$),null::jsonb,'Auth-linked persona fails closed');
 select is(public.get_pos_access_context(),(select data from expected_context),'Invalid-state reads leave the original context unchanged');
--- A user with ordinary authority falls back to that authority after an invalid/expired POV.
+-- 202610120002: an invalid/expired active POV fails closed even when the real operator also holds ordinary authority
+-- ("Invalid/wrong-type active sessions raise, even if the real operator happens to have historical customer memberships").
 insert into public.cafeteria_memberships(account_id,school_id,cafeteria_id,person_id,role_code)
  values ('00000000-0000-0000-0000-000000000091','00000000-0000-0000-0000-000000000092','00000000-0000-0000-0000-000000000094','00000000-0000-0000-0000-000000001801','pos_cashier');
 select is(pg_temp.context_after($case$set local session_replication_role=replica;
  update pikas_private.sandbox_pov_sessions set started_at=now()-interval '2 hours',expires_at=now()-interval '1 minute' where request_id='00000000-0000-0000-0000-000000009811';
- set local session_replication_role=origin$case$)->'actor'->>'person_id','00000000-0000-0000-0000-000000001801','Expired POV preserves ordinary tenant identity fallback');
+ set local session_replication_role=origin$case$),null::jsonb,'Expired POV fails closed instead of falling back to ordinary authority');
 select is(jsonb_array_length(public.get_pos_access_context()->'memberships'),1,'Valid POV never merges the initiators tenant scopes');
 
 create function pg_temp.snapshot() returns jsonb language plpgsql as $$

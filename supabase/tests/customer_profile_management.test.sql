@@ -100,7 +100,7 @@ reset role; update accounts set status='active' where id='00000000-0000-0000-000
 select pg_temp.as_user('00000000-0000-0000-0000-00000000e2a1');
 select is(pg_temp.attempt($$select platform_rename_customer_structure(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','location','00000000-0000-0000-0000-000000000212','Synthetic campus A2-C1','X')$$),'42501:not_authorized','operations:manage and tenant:provision cannot edit profiles');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000e2a2');
-select is(pg_temp.attempt($$select platform_rename_customer_structure(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','location','00000000-0000-0000-0000-000000000212','Synthetic campus A2-C1','X')$$),'42501:customer_profile_authority_required','Current Demo POV cannot edit profiles');
+select is(pg_temp.attempt($$select platform_rename_customer_structure(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','location','00000000-0000-0000-0000-000000000212','Synthetic campus A2-C1','X')$$),'42501:demo_mode_active','Current Demo POV cannot edit profiles (UX11 demo_mode_active guard, 202611130001)');
 select pg_temp.as_user(current_setting('t.tenant'));
 select alike(pg_temp.attempt($$select platform_rename_customer_structure(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','location','00000000-0000-0000-0000-000000000212','Synthetic campus A2-C1','X')$$),'42501:%','Tenant administrator cannot use the Platform command');
 

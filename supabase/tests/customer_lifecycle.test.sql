@@ -2,6 +2,12 @@
 -- Account 1 (SYNTHETIC-A): 2001 Account Admin, 2002 School Admin 11, 2003 Cafeteria Admin 111, 2008 cashier 111/POS Supervisor 112.
 -- Account 2 (SYNTHETIC-B): school 21.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -30,7 +36,7 @@ create function pg_temp.snapshot() returns text language sql security definer se
  (select count(*) from pikas_private.login_identities where login_suspended_at is not null),
  (select count(*) from pikas_private.application_sessions where ended_at is not null)) $$;
 reset role;
-select set_config('t.platform','8f6f4cb4-de08-41bf-a062-156f636873b2',true);
+select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 select set_config('t.sandbox_op','ec08ad21-4020-4b0d-b041-ee4a1fe09471',true);
 select set_config('t.before',pg_temp.snapshot(),true);
 

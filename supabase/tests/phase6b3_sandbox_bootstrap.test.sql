@@ -167,7 +167,7 @@ select is((select counts[1] from pristine_result),0::bigint,'Pre-seed reset is g
 select is((select counts[2] from pristine_result),0::bigint,'Pristine bootstrap succeeds without creating identities or tenants');
 
 -- Edwin-like platform_admin fixture whose authority must be unaffected.
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  ('00000000-0000-0000-0000-000000002601','authenticated','authenticated','p6b3-admin@example.invalid',now());
 insert into public.persons(id,auth_user_id,display_name,status) values
  ('00000000-0000-0000-0000-000000001601','00000000-0000-0000-0000-000000002601','Bootstrap admin','active');
@@ -1101,7 +1101,7 @@ $bootstrap$;
 $t$,'P0001','sandbox_bootstrap_account_state_mismatch','Bootstrap cannot be applied twice');
 
 -- Persona guards remain enforced.
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  ('00000000-0000-0000-0000-000000002602','authenticated','authenticated','p6b3-auth-cashier@example.invalid',now());
 insert into public.persons(id,auth_user_id,display_name,status) values
  ('00000000-0000-0000-0000-000000001602','00000000-0000-0000-0000-000000002602','Auth cashier','active'),

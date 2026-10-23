@@ -7,14 +7,15 @@ create temp table phase4c_state(test_key text primary key,test_value text not nu
 grant select,insert,update,delete on phase4c_state to authenticated;
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),58::bigint,
+  where n.nspname='public' and c.relkind='r' and not c.relrowsecurity),0::bigint,
   'RLS is enabled on all Phase 1 through Phase 4C public tables');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'Phase 4C adds no direct-write RLS policy');
-select is((select count(*) from public.cafeteria_memberships where role_code in ('pos_cashier','pos_supervisor')),4::bigint,
+-- Scoped to non-sandbox fixtures: the canonical Horizonte sandbox (Demo Lab seed) is part of the local baseline.
+select is((select count(*) from public.cafeteria_memberships where role_code in ('pos_cashier','pos_supervisor') and account_id in (select id from public.accounts where tenant_kind<>'sandbox')),4::bigint,
   'Fixtures keep cashier/supervisor roles as distinct exact-cafeteria memberships');
-select is((select count(*) from public.cafeteria_registers),4::bigint,'Four logical registers are seeded');
-select is((select count(*) from public.cafeteria_register_assignments),5::bigint,'Assignments are independent register-scoped rows');
+select is((select count(*) from public.cafeteria_registers where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),4::bigint,'Four logical registers are seeded');
+select is((select count(*) from public.cafeteria_register_assignments where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),5::bigint,'Assignments are independent register-scoped rows');
 select is((select count(*) from public.register_sessions),0::bigint,'No synthetic session history is invented');
 select is((select count(*) from information_schema.columns where table_schema='public' and table_name='register_sessions'
   and column_name in ('expected_cash_minor','variance_minor','reconciled','reconciliation_status')),0::bigint,

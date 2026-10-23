@@ -4,7 +4,7 @@ set search_path=public,extensions;
 select no_plan();
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public' and c.relkind='r' and c.relrowsecurity),58::bigint,
+  where n.nspname='public' and c.relkind='r' and not c.relrowsecurity),0::bigint,
   'RLS remains enabled on all Phase 1 through Phase 4C public tables');
 select is((select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT'),0::bigint,
   'No Phase 4A write RLS policies exist');
@@ -39,18 +39,19 @@ select ok(not has_function_privilege('anon','public.create_cafeteria_product(uui
   not has_function_privilege('service_role','public.update_cafeteria_product(uuid,uuid,integer,text,text,uuid,bigint,boolean,boolean,text[],text[])','EXECUTE'),
   'Anonymous and service roles cannot invoke Phase 4A catalog mutations');
 
-select is((select count(*) from cafeteria_operation_settings),4::bigint,
+-- Scoped to non-sandbox fixtures: the canonical Horizonte sandbox (Demo Lab seed) is part of the local baseline.
+select is((select count(*) from cafeteria_operation_settings where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),4::bigint,
   'Existing four synthetic cafeterias each receive exactly one settings row');
-select is((select count(*) from cafeteria_operation_settings where catalog_currency_code='DOP' and scheduling_enabled=false and version=1),4::bigint,
+select is((select count(*) from cafeteria_operation_settings where account_id in (select id from public.accounts where tenant_kind<>'sandbox') and catalog_currency_code='DOP' and scheduling_enabled=false and version=1),4::bigint,
   'Catalog settings default to supported DOP and scheduling OFF');
-select is((select count(*) from cafeteria_product_categories),3::bigint,'Synthetic categories are cafeteria-owned');
-select is((select count(*) from cafeteria_products),4::bigint,'Synthetic products exercise catalog states');
+select is((select count(*) from cafeteria_product_categories where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),3::bigint,'Synthetic categories are cafeteria-owned');
+select is((select count(*) from cafeteria_products where account_id in (select id from public.accounts where tenant_kind<>'sandbox')),4::bigint,'Synthetic products exercise catalog states');
 select ok(exists(select 1 from cafeteria_products where cafeteria_id='00000000-0000-0000-0000-000000000111' and active and available and price_minor=5000)
   and exists(select 1 from cafeteria_products where cafeteria_id='00000000-0000-0000-0000-000000000111' and active and not available and price_minor=0)
   and exists(select 1 from cafeteria_products where cafeteria_id='00000000-0000-0000-0000-000000000111' and not active and available)
   and exists(select 1 from cafeteria_products where cafeteria_id='00000000-0000-0000-0000-000000000111' and category_id is null and price_minor=0),
   'Fixtures cover active/available, unavailable zero-price, inactive, and uncategorized products');
-select is((select count(distinct cafeteria_id) from cafeteria_product_categories where name_key='bebidas'),2::bigint,
+select is((select count(distinct cafeteria_id) from cafeteria_product_categories where name_key='bebidas' and account_id in (select id from public.accounts where tenant_kind<>'sandbox')),2::bigint,
   'Same normalized category label is isolated per cafeteria');
 select is((select count(*) from supported_currencies where currency_code='DOP' and status='enabled'),1::bigint,
   'Catalog uses the existing enabled DOP currency');

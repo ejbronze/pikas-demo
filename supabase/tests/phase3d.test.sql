@@ -13,7 +13,7 @@ returns jsonb language sql immutable set search_path='' as $$
 $$;
 
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
- where n.nspname='public' and c.relkind='r' and c.relrowsecurity),58::bigint,
+ where n.nspname='public' and c.relkind='r' and not c.relrowsecurity),0::bigint,
  'RLS is enabled on every public table including all four Phase 3D tables');
 select ok((select bool_and(relrowsecurity and relforcerowsecurity) from pg_class
  where oid in ('public.staff_receivable_accounts'::regclass,'public.purchase_staff_credit_tenders'::regclass,

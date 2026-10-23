@@ -3,6 +3,12 @@
 -- (register 9401 / assignment 9503 / membership 4603); 2008 cashier 111; 2002 School Admin; 2001 Account Admin.
 -- Counts are compared as deltas and rows by ID, so pre-existing local purchases never affect results.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -33,8 +39,7 @@ create function pg_temp.sale(sid text,key text,qty integer,tender text,customer 
 create function pg_temp.refund(sid text,p uuid,qty integer,key text) returns jsonb language sql as $$
  select create_purchase_item_refund(sid::uuid,p,
   jsonb_build_array(jsonb_build_object('purchase_item_id',(select id from purchase_items where purchase_id=p),'quantity',qty)),'wrong_product',null,key,null)$$;
-reset role; select set_config('t.platform',(select p.auth_user_id::text from pikas_private.platform_memberships m join persons p on p.id=m.person_id
- where m.status='active' and m.role_code='platform_admin' and p.auth_user_id is not null limit 1),true);
+reset role; select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 
 -- Privileges
 select ok(has_function_privilege('authenticated','cafeteria_transactions_read(uuid,text,date,date,text,text,bigint,integer)','execute'),'Authenticated may call the transactions read');
@@ -65,7 +70,9 @@ select pg_temp.as_user(current_setting('t.platform'));
 select alike(pg_temp.attempt(),'42501:%','Platform Admin has no standing tenant financial read');
 select pg_temp.as_user('ec08ad21-4020-4b0d-b041-ee4a1fe09471');
 select platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','cafeteria_admin');
-select alike(pg_temp.attempt(caf=>'b9496342-5079-46ae-83b8-05c39bcbd7fe'),'42501:%','Sandbox Cafeteria Admin POV denied financial transactions');
+-- Demo Lab (202611170001): the sandbox Cafeteria Admin POV reads its OWN fictional transactions (cafeteria:pos:purchases:read is in the POV allow-list); never a customer's.
+select is(pg_temp.attempt(caf=>'b9496342-5079-46ae-83b8-05c39bcbd7fe'),'ok','Sandbox Cafeteria Admin POV reads the sandbox''s own transactions (Demo Lab, read-only)');
+select alike(pg_temp.attempt(),'42501:%','Sandbox Cafeteria Admin POV cannot read a customer cafeteria''s transactions');
 reset role;
 
 -- Period and filter contract (shared periods with 5D.1–5D.3)

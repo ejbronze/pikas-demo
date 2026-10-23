@@ -153,7 +153,7 @@ select throws_ok($$select pg_temp.run_bootstrap()$$,'P0001','sandbox_operator_bo
 select is(pg_temp.snapshot(),(select data from before_missing),'Missing-person failure changes no existing row');
 
 -- Synthetic Edwin and another administrator; neither identity is created by the migration.
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  ('ec08ad21-4020-4b0d-b041-ee4a1fe09471','authenticated','authenticated','p6b4-edwin@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002701','authenticated','authenticated','p6b4-other@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002702','authenticated','authenticated','p6b4-unlinked@example.invalid',now());

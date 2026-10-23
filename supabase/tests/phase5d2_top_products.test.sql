@@ -3,6 +3,12 @@
 -- assignment 9503 / membership 4603); 2008 cashier 111 / supervisor 112; 2002 School Admin; 2001 Account Admin.
 -- Test products have new IDs (5d200000-…-01xx) so assertions hold regardless of other local data.
 begin;
+-- Transactional Platform Admin fixture (fictional; rolled back with the test). The canonical local DB has no platform_admin.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('7a000000-0000-4000-8000-00000000ad01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','tx-platform-admin@example.invalid','',now(),now(),now(),'{}','{}');
+insert into public.persons(id,auth_user_id,display_name) values('7a000000-0000-4000-8000-00000000ad02','7a000000-0000-4000-8000-00000000ad01','Platform Admin de prueba');
+insert into pikas_private.platform_memberships(person_id,role_code) values('7a000000-0000-4000-8000-00000000ad02','platform_admin');
+
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
@@ -30,8 +36,7 @@ create function pg_temp.sale(key text,n integer,qty integer,version integer defa
 create function pg_temp.refund(p uuid,qty integer,key text) returns jsonb language sql as $$
  select create_purchase_item_refund(current_setting('t.sid')::uuid,p,
   jsonb_build_array(jsonb_build_object('purchase_item_id',(select id from purchase_items where purchase_id=p),'quantity',qty)),'wrong_product',null,key,null)$$;
-reset role; select set_config('t.platform',(select p.auth_user_id::text from pikas_private.platform_memberships m join persons p on p.id=m.person_id
- where m.status='active' and m.role_code='platform_admin' and p.auth_user_id is not null limit 1),true);
+reset role; select set_config('t.platform','7a000000-0000-4000-8000-00000000ad01',true);
 
 -- Authority (identical to 5D.1 sales_summary)
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');

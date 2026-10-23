@@ -21,7 +21,7 @@ create function pg_temp.ctx(customer uuid default '00000000-0000-0000-0000-00000
  select public.get_pos_customer_purchase_context('00000000-0000-0000-0000-000000000111',customer) $$;
 
 -- Fixtures: platform operators, sandbox persona (no Auth identity) and its cashier membership/assignment.
-insert into auth.users(id,aud,role,email,confirmed_at) values
+insert into auth.users(id,aud,role,email,email_confirmed_at) values
  ('00000000-0000-0000-0000-000000002201','authenticated','authenticated','sandbox-op-1@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002202','authenticated','authenticated','platform-admin-only@example.invalid',now()),
  ('00000000-0000-0000-0000-000000002203','authenticated','authenticated','sandbox-op-expired@example.invalid',now()),
@@ -80,8 +80,11 @@ select throws_ok($$insert into pikas_private.sandbox_pov_personas(account_id,sch
 insert into pikas_private.sandbox_pov_personas(id,account_id,school_id,cafeteria_id,pov_code,person_id,cafeteria_membership_id)
 values ('00000000-0000-0000-0000-000000008810','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000000111','cashier','00000000-0000-0000-0000-000000001210','00000000-0000-0000-0000-000000004610');
 
-select is((select count(*) from pikas_private.platform_capabilities),6::bigint,'Exactly one platform capability was added');
-select is((select count(*) from pikas_private.platform_role_capabilities where role_code='platform_admin'),5::bigint,'platform_admin capabilities are unchanged');
+-- Later approved migrations add platform capabilities; assert the contract, not a frozen global count.
+select is((select array_agg(role_code::text order by role_code) from pikas_private.platform_role_capabilities where capability='platform:sandbox:pov:enter'),array['platform_sandbox_operator'],'The sandbox POV capability exists and belongs only to the sandbox operator role');
+select ok((select array['platform:audit:read','platform:customer_admin:provision','platform:identity:link','platform:tenant:lifecycle:read','platform:tenant:provision'] <@ array_agg(capability::text) and not ('platform:sandbox:pov:enter'=any(array_agg(capability::text))) from pikas_private.platform_role_capabilities where role_code='platform_admin'),
+ 'platform_admin keeps its original capabilities and never gains sandbox POV entry');
+select set_config('p6b.admin_caps',(select count(*)::text from pikas_private.platform_role_capabilities where role_code='platform_admin'),true);
 select ok(not exists(select 1 from pikas_private.platform_role_capabilities where role_code='platform_admin' and capability='platform:sandbox:pov:enter'),'platform_admin does not hold the sandbox capability');
 select is((select array_agg(capability) from pikas_private.platform_role_capabilities where role_code='platform_sandbox_operator'),array['platform:sandbox:pov:enter'],'Sandbox operator role holds only the POV capability');
 select ok(not has_table_privilege('authenticated','pikas_private.sandbox_pov_sessions','SELECT,INSERT,UPDATE,DELETE')
@@ -113,7 +116,8 @@ select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-
 select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a004','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000111','cashier')$$,'42501','sandbox_pov_not_available','Cross-account cafeteria is rejected');
 select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a005','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000112','cashier')$$,'42501','sandbox_pov_not_available','Cafeteria without a registered persona is rejected');
 select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a006','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000113','cashier')$$,'42501','sandbox_pov_not_available','Other cafeteria persona without a registry row is rejected');
-select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a007','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','cafeteria_admin')$$,'22023','invalid_sandbox_pov_request','Only the cashier POV is accepted');
+select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a007','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','cafeteria_admin')$$,'42501','sandbox_pov_not_available','An admin POV without a registered persona is not available (admin POV codes valid since 202610120002)');
+select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a00f','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','supervisor')$$,'22023','invalid_sandbox_pov_request','Unknown POV codes are rejected');
 reset role;
 select is((select count(*) from pikas_private.sandbox_pov_sessions),0::bigint,'Rejected attempts create no sessions');
 
@@ -229,13 +233,14 @@ select throws_ok($$update pikas_private.sandbox_pov_sessions set status='active'
 insert into pikas_private.sandbox_pov_sessions(request_id,initiator_person_id,initiator_auth_user_id,account_id,school_id,cafeteria_id,pov_code,persona_id,persona_person_id,persona_membership_id,started_at,expires_at)
 values('00000000-0000-0000-0000-00000000c001','00000000-0000-0000-0000-000000001203','00000000-0000-0000-0000-000000002203','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000000111','cashier','00000000-0000-0000-0000-000000008810','00000000-0000-0000-0000-000000001210','00000000-0000-0000-0000-000000004610',now()-interval '5 hours',now()-interval '1 hour');
 select pg_temp.login('2203');
-select is(pikas_private.pos_actor_person_id(),'00000000-0000-0000-0000-000000001203'::uuid,'Expired POV session fails closed to the real person');
+-- 202610120002: an invalid/expired active POV raises instead of silently falling back to the real person.
+select throws_ok($$select pikas_private.pos_actor_person_id()$$,'42501','cashier_sandbox_pov_required','Expired POV session fails closed');
 
 -- Platform role composition: independent roles, union of explicitly granted capabilities only.
 select throws_ok($$insert into pikas_private.platform_memberships(person_id,role_code,status) values('00000000-0000-0000-0000-000000001205','platform_admin','active')$$,'23505',null,'A duplicate live membership for the same role is rejected');
 select pg_temp.login('2202');
 set local role authenticated;
-select is(jsonb_array_length(public.platform_get_context()->'capabilities'),5,'platform_admin alone keeps exactly five capabilities');
+select is(jsonb_array_length(public.platform_get_context()->'capabilities'),current_setting('p6b.admin_caps')::int,'platform_admin alone keeps exactly its role capabilities');
 reset role;
 select ok(not pikas_private.platform_has_capability('platform:sandbox:pov:enter'),'platform_admin alone lacks sandbox POV capability');
 set local role authenticated;
@@ -253,7 +258,7 @@ select throws_ok($$select public.platform_provision_tenant('00000000-0000-0000-0
 reset role;
 select pg_temp.login('2206');
 set local role authenticated;
-select is(jsonb_array_length(public.platform_get_context()->'capabilities'),6,'Dual-role Person holds the union of six explicit capabilities');
+select is(jsonb_array_length(public.platform_get_context()->'capabilities'),current_setting('p6b.admin_caps')::int+1,'Dual-role Person holds the union of explicit capabilities (admin set plus sandbox entry)');
 select is(public.platform_get_context()->>'role','platform_admin','Dual-role context keeps platform_admin as primary role');
 select is(public.platform_get_context()->'roles','["platform_admin","platform_sandbox_operator"]'::jsonb,'Dual-role context lists both roles');
 reset role;
@@ -268,7 +273,7 @@ reset role;
 select ok(pikas_private.platform_has_capability('platform:tenant:provision') and not pikas_private.platform_has_capability('platform:sandbox:pov:enter'),'Revoking sandbox role removes sandbox authority only');
 set local role authenticated;
 select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000b104','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','cashier')$$,'42501',null,'Revoked sandbox role cannot enter POV');
-select is(jsonb_array_length(public.platform_get_context()->'capabilities'),5,'Context shrinks to the five admin capabilities');
+select is(jsonb_array_length(public.platform_get_context()->'capabilities'),current_setting('p6b.admin_caps')::int,'Context shrinks to the admin capabilities');
 reset role;
 select pg_temp.login('2207');
 update pikas_private.platform_memberships set status='inactive' where person_id='00000000-0000-0000-0000-000000001206' and role_code='platform_admin';
@@ -285,18 +290,18 @@ select lives_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0
 reset role;
 select is(pikas_private.pos_actor_person_id(),'00000000-0000-0000-0000-000000001210'::uuid,'Second operator resolves to the persona');
 update pikas_private.platform_memberships set status='inactive' where person_id='00000000-0000-0000-0000-000000001204';
-select is(pikas_private.pos_actor_person_id(),'00000000-0000-0000-0000-000000001204'::uuid,'Revoked platform authority invalidates the POV');
+select throws_ok($$select pikas_private.pos_actor_person_id()$$,'42501','cashier_sandbox_pov_required','Revoked platform authority invalidates the POV (fails closed, 202610120002)');
 
 select pg_temp.login('2201');
 set local role authenticated;
 select lives_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000b005','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','cashier')$$,'Operator re-enters');
 reset role;
 update public.persons set auth_user_id='00000000-0000-0000-0000-000000002205' where id='00000000-0000-0000-0000-000000001210';
-select is(pikas_private.pos_actor_person_id(),'00000000-0000-0000-0000-000000001201'::uuid,'A persona that gained an Auth identity is rejected');
+select throws_ok($$select pikas_private.pos_actor_person_id()$$,'42501','cashier_sandbox_pov_required','A persona that gained an Auth identity is rejected (fails closed, 202610120002)');
 update public.persons set auth_user_id=null where id='00000000-0000-0000-0000-000000001210';
 select is(pikas_private.pos_actor_person_id(),'00000000-0000-0000-0000-000000001210'::uuid,'Valid persona resolves again');
 update public.cafeteria_memberships set status='inactive' where id='00000000-0000-0000-0000-000000004610';
-select is(pikas_private.pos_actor_person_id(),'00000000-0000-0000-0000-000000001201'::uuid,'Persona without an active POS membership is rejected');
+select throws_ok($$select pikas_private.pos_actor_person_id()$$,'42501','cashier_sandbox_pov_required','Persona without an active POS membership is rejected (fails closed, 202610120002)');
 
 -- Normal POS behavior is unchanged.
 select pg_temp.login('2008');
