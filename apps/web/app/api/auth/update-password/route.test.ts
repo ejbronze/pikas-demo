@@ -22,5 +22,13 @@ describe('Phase 6A forced password change', () => {
     rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'application_session_expired' } });
     expect(await (await submit('una-clave-nueva')).json()).toEqual({ ok: true, next: null });
   });
+  it('UX 12B closure: an expired temporary password is refused before any Auth change', async () => {
+    rpc.mockImplementation(async (name: string) => name === 'pikas_session_start' ? { data: null, error: { code: '42501', message: 'temporary_access_expired' } } : { data: {}, error: null });
+    const r = await submit('una-clave-nueva'); expect(r.status).toBe(409); expect(await r.json()).toEqual({ error: 'temporary_access_expired' }); expect(updateUser).not.toHaveBeenCalled();
+  });
+  it('UX 12B closure: a completion refused as expired is reported as such', async () => {
+    rpc.mockImplementation(async (name: string) => name === 'pikas_session_start' ? { data: {}, error: null } : { data: null, error: { code: '42501', message: 'temporary_access_expired' } });
+    const r = await submit('una-clave-nueva'); expect(r.status).toBe(409); expect(await r.json()).toEqual({ error: 'temporary_access_expired' });
+  });
   it('short passwords never reach Auth', async () => { expect((await submit('corta')).status).toBe(400); expect(updateUser).not.toHaveBeenCalled(); });
 });

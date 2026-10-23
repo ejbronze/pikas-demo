@@ -74,16 +74,17 @@ export async function POST(request: NextRequest) {
   const started = await supabase.rpc("pikas_session_start");
   if (started.error) {
     await supabase.auth.signOut({ scope: "local" });
-    return fail(request, "session");
+    // UX 12B closure: the database refuses an unused temporary password older than 15 minutes.
+    return fail(request, started.error.message === "temporary_access_expired" ? "temporary_expired" : "session");
   }
 
   // Phase 6A (after the application session exists; the pre-request guard requires it): a
   // suspended login is signed out generically; a temporary password must be replaced first.
   const credential = await supabase.rpc("identity_credential_state");
-  const state = (credential.data ?? {}) as { must_change_password?: boolean; login_suspended?: boolean };
-  if (credential.error || state.login_suspended) {
+  const state = (credential.data ?? {}) as { must_change_password?: boolean; login_suspended?: boolean; temporary_expired?: boolean };
+  if (credential.error || state.login_suspended || state.temporary_expired) {
     await supabase.auth.signOut({ scope: "local" });
-    return fail(request, credential.error ? "session" : "credentials");
+    return fail(request, credential.error ? "session" : state.temporary_expired ? "temporary_expired" : "credentials");
   }
   if (state.must_change_password) {
     return NextResponse.redirect(new URL("/actualizar-contrasena?motivo=temporal", request.url), 303);

@@ -18,7 +18,7 @@ export type IdentityCommand = z.infer<typeof identityCommandSchema>;
 export const identitySummarySchema = z.object({
   person_id: uuid, display_name: z.string(), person_status: z.string(), username: z.string().nullable(), email: z.string().nullable(),
   email_confirmed: z.boolean(), last_sign_in_at: z.string().nullable(), must_change_password: z.boolean(), login_suspended: z.boolean(),
-  temporary_issued_at: z.string().nullable(), pending_email: z.string().nullable(), version: z.number().int(),
+  temporary_issued_at: z.string().nullable(), temporary_expired: z.boolean().optional(), pending_email: z.string().nullable(), version: z.number().int(),
   memberships: z.array(z.object({ scope: z.enum(['account', 'school', 'cafeteria']), role: z.string(), status: z.string(), name: z.string() })),
   audit: z.array(z.object({ operation: z.string(), occurred_at: z.string(), actor_scope: z.enum(['platform', 'tenant', 'self']), actor_name: z.string(),
     metadata: z.record(z.string(), z.unknown()), reason: z.string().nullable() })),

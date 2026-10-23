@@ -175,6 +175,19 @@ describe("public tenant login route", () => {
     expect(rpc).toHaveBeenCalledWith("pikas_session_start");
     expect(resolvePikasIdentity).not.toHaveBeenCalled();
   });
+  it("UX 12B closure: the database refusing to start a session for an expired temporary password maps to the same explanation", async () => {
+    rpc.mockImplementation(async (name: string) => name === "pikas_session_start" ? { data: null, error: { code: "42501", message: "temporary_access_expired" } } : { data: {}, error: null });
+    const response = await login("tenant@example.com");
+    expect(response.headers.get("location")).toBe("https://pikas-pikas.app/login?error=temporary_expired"); expect(signOut).toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith("identity_credential_state");
+  });
+  it("UX 12B closure: an expired temporary password is refused with its own explanation and the Auth session is dropped", async () => {
+    rpc.mockImplementation(async (name: string) => ({ data: name === "identity_credential_state" ? { login_suspended: false, must_change_password: true, temporary_expired: true } : {}, error: null }));
+    const response = await login("tenant@example.com");
+    expect(response.headers.get("location")).toBe("https://pikas-pikas.app/login?error=temporary_expired"); expect(signOut).toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("pikas_session_start");
+    expect(resolvePikasIdentity).not.toHaveBeenCalled();
+  });
 
   it("customer lifecycle: an authenticated user of a suspended organization sees that, not a credentials or role error", async () => {
     resolvePikasIdentity.mockResolvedValue({ ...activeTenantIdentity, memberships: [] }); pilotHome.mockReturnValue(null);

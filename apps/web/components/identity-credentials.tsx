@@ -26,7 +26,7 @@ const when = (iso: string | null) => iso ? new Date(iso).toLocaleString('es-DO',
 export function IdentityCredentials({ initial }: { initial: IdentitySummary }) {
   const [identity, setIdentity] = useState(initial), [task, setTask] = useState<Task>(null);
   const platform = identity.support_scope === 'platform';
-  const status = identity.login_suspended ? 'Inicio de sesión suspendido' : identity.must_change_password ? 'Debe crear su contraseña' : identity.email_confirmed ? 'Activo' : 'Pendiente de activación';
+  const status = identity.login_suspended ? 'Inicio de sesión suspendido' : identity.must_change_password ? (identity.temporary_expired ? 'Contraseña temporal vencida' : 'Debe crear su contraseña') : identity.email_confirmed ? 'Activo' : 'Pendiente de activación';
   return <section aria-labelledby="identity-title" className="space-y-4">
     <div className="card space-y-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2"><div><h2 id="identity-title" className="text-xl font-black">{identity.display_name}</h2>
@@ -84,7 +84,7 @@ function IdentityTask({ task, identity, onDone, onClose }: { task: Exclude<Task,
       : <TaskActions><TaskCancelButton>Cancelar</TaskCancelButton><button type="button" className="btn" disabled={busy || !ready} onClick={run}>{busy ? 'Guardando…' : task === 'temporary' ? 'Emitir contraseña' : 'Confirmar'}</button></TaskActions>}>
     {done ? task === 'temporary'
       ? <TaskOutcome kind="success" title="Contraseña temporal emitida">
-          <p>Entrégala a {identity.display_name} por un canal seguro. Al entrar deberá crear su propia contraseña.</p>
+          <p>Entrégala a {identity.display_name} por un canal seguro. Vale 15 minutos si no se usa; al entrar deberá crear su propia contraseña.</p>
           <p className="rounded-lg border bg-white p-3 text-center font-mono text-xl font-black tracking-wider" aria-label="Contraseña temporal">{temporary}</p>
           <p className="text-sm font-bold">Cópiala ahora: PIKAS no la guarda y no se volverá a mostrar.</p>
         </TaskOutcome>
@@ -97,7 +97,7 @@ function IdentityTask({ task, identity, onDone, onClose }: { task: Exclude<Task,
         {value && !usernameOk && <span className="mt-1 block text-sm text-red-800">Ese usuario no cumple las reglas.</span>}</label>}
       {task === 'email' && <><p className="text-sm text-slate-600">Cambia el correo de la MISMA cuenta (inicio de sesión y recuperación). No crea otra persona. Actual: <strong className="break-all">{identity.email}</strong></p>
         <label className="block font-bold">Correo correcto<input data-autofocus type="email" className="field mt-1" value={value} onChange={e => setValue(e.target.value)} autoCapitalize="none" /></label></>}
-      {task === 'temporary' && <><p>Se generará una contraseña temporal para {identity.display_name}. Sus sesiones abiertas terminarán y, al entrar, deberá crear su propia contraseña.</p>
+      {task === 'temporary' && <><p>Se generará una contraseña temporal para {identity.display_name}. Sus sesiones abiertas terminarán y, al entrar, deberá crear su propia contraseña. Si no se usa en 15 minutos, caduca y habrá que emitir otra.</p>
         <p className="text-sm text-slate-600">La contraseña se muestra una sola vez. PIKAS no la guarda ni la registra.</p></>}
       {task === 'suspend' && <p>{suspend ? 'No podrá iniciar sesión y sus sesiones abiertas terminarán. Sus accesos y su historial no cambian.' : 'Podrá volver a iniciar sesión con sus credenciales actuales.'}</p>}
       {(task === 'email' || task === 'suspend') && <label className="block font-bold">Motivo<input className="field mt-1" value={reason} onChange={e => setReason(e.target.value)} maxLength={500} /></label>}

@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## Identidad: la contraseña temporal caduca a los 15 minutos (UX 12B cierre, local)
+
+- Una contraseña temporal (de un solo uso) emitida para personal POS **caduca 15 minutos después de emitirse si no se usa**. «Usarse» significa completar el cambio de contraseña obligatorio. La regla la aplica la base de datos: una temporal vencida no abre sesión en PIKAS («Tu contraseña temporal venció… pide una nueva») y no puede convertirse en contraseña permanente; el intento no cambia nada ni deja sesión.
+- 14:59 sigue valiendo; emitir otra temporal reemplaza la anterior y abre una ventana nueva; una contraseña personal nunca está sujeta a la regla; las sesiones ajenas no se tocan.
+- Personal POS y Credenciales muestran «Credencial temporal vencida» / «Contraseña temporal vencida», y los textos de emisión indican la vigencia de 15 minutos.
+- **Suspender** en Personal POS se presenta como «Cambiar acceso a esta cafetería»: suspende o retira el acceso POS en esa cafetería; la persona, su usuario y su inicio de sesión en PIKAS se conservan. La suspensión global del inicio de sesión sigue siendo de PIKAS.
+- Migración `202611140001_temporary_access_expiry.sql` (solo funciones: predicado privado, `identity_credential_state`, `pikas_session_start`, `identity_complete_password_change`, `identity_summary`). Sin cambios de capacidad, rol, membresía, RLS ni datos.
+
 ## Cafetería: pulido del recorrido de puesta en marcha (local)
 
 - Un cajero o supervisor entra **directamente al POS** al iniciar sesión o al crear su contraseña personal (antes pasaba por la pantalla técnica «Conexión PIKAS Pilot»). El POS sigue verificando su acceso.

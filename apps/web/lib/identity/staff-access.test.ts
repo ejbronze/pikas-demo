@@ -26,6 +26,8 @@ describe('UX 12B staff access rules', () => {
     expect(accessState(summary({ email_confirmed: false }), 'active').label).toBe('Pendiente de activación');
     expect(accessState(summary({ must_change_password: true, temporary_issued_at: '2026-10-22T20:00:00Z' }), 'active').label).toBe('Credencial temporal emitida');
     expect(accessState(summary({ must_change_password: true }), 'active').label).toBe('Cambio de contraseña requerido');
+    expect(accessState(summary({ must_change_password: true, temporary_issued_at: '2026-10-22T19:00:00Z', temporary_expired: true }), 'active')).toMatchObject({ label: 'Credencial temporal vencida', tone: 'blocked' });
+    expect(accessState(summary({ temporary_expired: true }), 'active').label).toBe('Acceso listo'); // a permanent password is never "expired"
     expect(accessState(summary(), 'active')).toMatchObject({ label: 'Acceso listo', tone: 'ready', detail: expect.stringContaining('aún no ha entrado') });
     expect(accessState(summary({ last_sign_in_at: '2026-10-22T20:00:00Z' }), 'active').detail).toBe('Puede iniciar sesión.');
   });

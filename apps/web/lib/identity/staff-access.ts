@@ -60,11 +60,12 @@ export const staffAccessErrors: Record<string, string> = {
 export type AccessState = { label: string; tone: 'ready' | 'pending' | 'blocked' | 'off'; detail: string };
 export function accessState(summary: IdentitySummary, membershipStatus: 'active' | 'suspended' | 'inactive'): AccessState {
   if (membershipStatus === 'inactive') return { label: 'Acceso retirado', tone: 'off', detail: 'Ya no tiene este rol en la cafetería.' };
-  if (membershipStatus === 'suspended') return { label: 'Acceso suspendido', tone: 'blocked', detail: 'No puede operar hasta reactivarlo.' };
+  if (membershipStatus === 'suspended') return { label: 'Acceso suspendido', tone: 'blocked', detail: 'Suspendido en esta cafetería; su inicio de sesión en PIKAS no cambia.' };
   if (summary.login_suspended) return { label: 'Inicio de sesión suspendido', tone: 'blocked', detail: 'Suspendido por PIKAS; no puede entrar.' };
   if (!summary.email_confirmed) return { label: 'Pendiente de activación', tone: 'pending', detail: 'Todavía no creó su contraseña.' };
+  if (summary.must_change_password && summary.temporary_expired) return { label: 'Credencial temporal vencida', tone: 'blocked', detail: 'Venció sin usarse (15 minutos). Emite otra desde Credenciales.' };
   if (summary.must_change_password) return summary.temporary_issued_at
-    ? { label: 'Credencial temporal emitida', tone: 'pending', detail: 'Al entrar deberá crear su propia contraseña.' }
+    ? { label: 'Credencial temporal emitida', tone: 'pending', detail: 'Vale 15 minutos. Al entrar deberá crear su propia contraseña.' }
     : { label: 'Cambio de contraseña requerido', tone: 'pending', detail: 'Falta emitir la contraseña temporal.' };
   return { label: 'Acceso listo', tone: 'ready', detail: summary.last_sign_in_at ? 'Puede iniciar sesión.' : 'Puede iniciar sesión; aún no ha entrado.' };
 }

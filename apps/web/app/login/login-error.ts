@@ -30,6 +30,10 @@ const messages: Record<string, LoginErrorMessage> = {
     title: "Organización cerrada",
     body: "Esta cuenta de organización está cerrada y ya no tiene acceso operativo a PIKAS.",
   },
+  temporary_expired: {
+    title: "Tu contraseña temporal venció",
+    body: "Las contraseñas temporales caducan a los 15 minutos si no se usan. Pide una nueva al administrador de tu cafetería e inicia sesión con ella.",
+  },
   pilot_email_required: {
     title: "Revisa tu correo electrónico",
     body: "Ingresa el correo electrónico asociado a tu cuenta de PIKAS.",

@@ -132,7 +132,7 @@ export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClos
         <p className="font-bold">Contraseña temporal (una sola vez)</p>
         <p className="rounded-lg border bg-white p-3 text-center font-mono text-xl font-black tracking-wider" aria-label="Contraseña temporal">{outcome.temporary}</p>
         <div className="flex flex-wrap items-center gap-2"><button type="button" className="btn-secondary" onClick={async () => { try { await navigator.clipboard.writeText(outcome.temporary ?? ''); setCopied('Contraseña copiada.'); } catch { setCopied('No se pudo copiar; selecciónala y cópiala a mano.'); } }}>Copiar contraseña</button>{copied && <span role="status" className="text-sm">{copied}</span>}</div>
-        <p className="text-sm font-bold">Cópiala ahora: PIKAS no la guarda y no se volverá a mostrar. Entrégala por un canal seguro.</p>
+        <p className="text-sm font-bold">Cópiala ahora: PIKAS no la guarda y no se volverá a mostrar. Vale 15 minutos si no se usa. Entrégala por un canal seguro.</p>
         <p className="text-sm">Cómo entra: en la pantalla de inicio de sesión escribe su usuario «{r.username ?? effectiveUsername}» y esta contraseña; PIKAS le pedirá crear una contraseña personal y luego podrá abrir su caja en el POS.</p>
       </> : <p>Esta persona ya tenía acceso a PIKAS y conserva su contraseña: solo se le concedió el rol en esta cafetería.</p>}
     </TaskOutcome>}
@@ -144,9 +144,9 @@ export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClos
 export function StaffStatusTask({ member, onClose }: { member: Staff; onClose: (message?: string) => void }) {
   const command = useCafeteriaCommand();
   const [status, setStatus] = useState<string>(member.status);
-  return <CommandTask title="Cambiar acceso POS" context={`${member.name} · ${roleLabel(member.role)}`}
-    pages={[{ label: 'Estado', content: <><label className="block font-bold">Estado<select className="field mt-1 w-full" data-autofocus value={status} onChange={e => setStatus(e.target.value)}>{['active', 'suspended', 'inactive'].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></label>
-      <p className="text-sm text-slate-600">El rol concedido y la identidad se conservan. Las cajas se asignan en Cajas.</p>
+  return <CommandTask title="Cambiar acceso a esta cafetería" context={`${member.name} · ${roleLabel(member.role)}`}
+    pages={[{ label: 'Estado', content: <><label className="block font-bold">Acceso en esta cafetería<select className="field mt-1 w-full" data-autofocus value={status} onChange={e => setStatus(e.target.value)}>{['active', 'suspended', 'inactive'].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></label>
+      <p className="text-sm text-slate-600">Suspender o retirar solo afecta su acceso POS en esta cafetería: la persona, su usuario y su inicio de sesión en PIKAS se conservan (la suspensión global del inicio de sesión la hace PIKAS). Las cajas se asignan en Cajas.</p>
       {member.open && <p className="rounded-xl bg-amber-50 p-3 text-sm">Tiene una sesión abierta: suspender bloquea nuevas operaciones y conserva su cierre propio.</p>}</> }]}
     validate={() => status === member.status ? 'Elige un estado distinto del actual.' : null}
     review={<TaskSummary rows={[['Persona', member.name], ['Estado actual', statusLabel(member.status)], ['Nuevo estado', statusLabel(status)]]} />}

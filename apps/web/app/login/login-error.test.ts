@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { getLoginErrorMessage } from "./login-error";
 
 describe("public login error messages", () => {
+  it("UX 12B closure: an expired temporary password is explained with the 15-minute rule and the way out", () => {
+    const m = getLoginErrorMessage("temporary_expired"); expect(m?.title).toBe("Tu contraseña temporal venció"); expect(m?.body).toContain("15 minutos"); expect(m?.body).toContain("administrador de tu cafetería");
+  });
   it("explains that a valid identity has no tenant access", () => {
     expect(getLoginErrorMessage("membership")).toEqual({
       title: "No tienes acceso a una cuenta de PIKAS",
