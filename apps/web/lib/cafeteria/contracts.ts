@@ -52,6 +52,9 @@ export const readSchema = z.object({
  staff: z.array(z.object({ id, name: z.string(), role: posRole, status: memberStatus, open: z.boolean() })),
  assignments: z.array(z.object({ id, membership_id: id, register_id: id, status: z.enum(['active','inactive']), version })),
  invitations: z.array(z.object({ id, email: z.string(), role: posRole, status: z.enum(['pending','accepted','expired','revoked']), expires_at: z.string() })),
+ // UX 13B: School-owned student service as operational status only (no names, ids, codes or rows).
+ student_service: z.object({ sharing: z.enum(['never','active','revoked']), identification_shared: z.boolean(), school_has_students: z.boolean(), enabled_students: z.number().int().nonnegative(),
+  state: z.enum(['not_shared','sharing_revoked','identification_not_shared','no_students','no_students_enabled','ready']) }).strict().optional(),
  service: z.object({status:z.enum(['manual','no_active_service','invalid_configuration','active']),scheduling_enabled:z.boolean(),business_date:z.string(),local_time:z.string(),business_timezone:z.string(),service_shift_id:id.nullable(),service_shift_name:z.string().nullable(),menu_id:id.nullable(),menu_name:z.string().nullable()}).nullable(),
 }).strict();
 export type CafeteriaRead = z.infer<typeof readSchema>;

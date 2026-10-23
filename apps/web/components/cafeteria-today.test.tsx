@@ -113,6 +113,19 @@ describe('Cafetería Hoy', () => {
     expect(html).not.toContain('Completa la configuración para vender'); expect(html).not.toContain('Confirmar cafetería');
     expect(html).toContain('<p class="text-sm text-slate-600">Martes, 20 de octubre</p>');
   });
+  it.each([
+    [{ state: 'not_shared', sharing: 'never', identification_shared: false, school_has_students: false, enabled_students: 0 }, 'Requiere acción del colegio', 'todavía no ha compartido estudiantes con Real cafeteria'],
+    [{ state: 'sharing_revoked', sharing: 'revoked', identification_shared: false, school_has_students: true, enabled_students: 2 }, 'Compartición revocada', 'debe volver a compartir Real cafeteria'],
+    [{ state: 'identification_not_shared', sharing: 'active', identification_shared: false, school_has_students: true, enabled_students: 0 }, 'Requiere acción del colegio', 'Identificación básica'],
+    [{ state: 'no_students', sharing: 'active', identification_shared: true, school_has_students: false, enabled_students: 0 }, 'Requiere acción del colegio', 'todavía no ha agregado estudiantes'],
+    [{ state: 'no_students_enabled', sharing: 'active', identification_shared: true, school_has_students: true, enabled_students: 0 }, '0 estudiantes habilitados', 'debe habilitar estudiantes para Real cafeteria'],
+    [{ state: 'ready', sharing: 'active', identification_shared: true, school_has_students: true, enabled_students: 126 }, '126 estudiantes habilitados', 'el POS puede encontrarlos'],
+  ] as const)('UX 13B: live student-service status %o → label and School-owned explanation, never a Cafetería CTA, never a setup step', (status, label, detail) => {
+    const html = render(inputs(), data({ student_service: status }));
+    expect(html).toContain('role="status">' + label + '<'); expect(html).toContain(detail); expect(html).toContain('Lo administra Real school.'); expect(html).toContain('solo depende de lo que administras aquí');
+    const block = html.slice(html.indexOf('id="student-service-title"'), html.indexOf('</section>', html.indexOf('id="student-service-title"'))); expect(block).not.toMatch(/<a |<button/);
+    expect(html).toContain('data-launch="operating">En operación'); // the Cafetería's own readiness is untouched
+  });
   it('UX 13: Hoy names the school as the owner of student service, without claiming a state or a CTA the cafetería lacks', () => {
     const html = render(inputs());
     expect(html).toContain('Servicio a estudiantes · lo administra Real school'); expect(html).toContain('pide al administrador de Real school que comparta Real cafeteria'); expect(html).toContain('solo depende de lo que administras aquí');

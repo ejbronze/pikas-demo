@@ -63,14 +63,32 @@ export function HierarchyTrail({ levels, current }: { levels: { label: string; n
   </ol></nav>;
 }
 
-// UX 13: who completes student service. The Cafetería never owns sharing or eligibility; PIKAS
-// shows the owner so an empty POS search is not mistaken for a cafetería configuration problem.
-// Live state (shared? how many enabled?) is not readable by a Cafetería Admin today; nothing is claimed.
+// UX 13 / 13B: student service is School-owned. With the read's student_service status (13B) the
+// block shows the live operational truth for THIS cafetería; without it, only the ownership. It is
+// never a Cafetería setup step and never carries a Cafetería CTA: the School completes it.
+export type StudentServiceStatus = NonNullable<CafeteriaRead['student_service']>;
+export function studentServiceCopy(status: StudentServiceStatus, school: string, cafeteria: string): { label: string; tone: 'ready' | 'school' | 'off'; detail: string } {
+  const n = status.enabled_students;
+  switch (status.state) {
+    case 'ready': return { label: n === 1 ? '1 estudiante habilitado' : `${n} estudiantes habilitados`, tone: 'ready', detail: `${school} ya comparte esta cafetería y habilitó estudiantes: el POS puede encontrarlos.` };
+    case 'no_students_enabled': return { label: '0 estudiantes habilitados', tone: 'school', detail: `${school} debe habilitar estudiantes para ${cafeteria}; hasta entonces el POS no encontrará ninguno.` };
+    case 'no_students': return { label: 'Requiere acción del colegio', tone: 'school', detail: `${school} todavía no ha agregado estudiantes.` };
+    case 'identification_not_shared': return { label: 'Requiere acción del colegio', tone: 'school', detail: `${school} comparte esta cafetería sin «Identificación básica»: el POS no puede buscar estudiantes por nombre hasta que la incluya.` };
+    case 'sharing_revoked': return { label: 'Compartición revocada', tone: 'off', detail: `${school} debe volver a compartir ${cafeteria} para que los estudiantes aparezcan en el POS.` };
+    default: return { label: 'Requiere acción del colegio', tone: 'school', detail: `${school} todavía no ha compartido estudiantes con ${cafeteria}.` };
+  }
+}
 export function StudentServiceNote({ data }: { data: CafeteriaRead }) {
-  const s = data.scope;
-  return <section aria-labelledby="student-service-title" className="hoy-panel">
+  const s = data.scope, status = data.student_service;
+  if (!status) return <section aria-labelledby="student-service-title" className="hoy-panel">
     <h2 id="student-service-title" className="hoy-h2">Servicio a estudiantes · lo administra {s.school_name}</h2>
     <p className="text-sm">Los estudiantes que el POS puede atender los comparte y habilita el colegio, no la cafetería. Si el POS no encuentra estudiantes, pide al administrador de {s.school_name} que comparta {s.cafeteria_name} y habilite estudiantes.</p>
     <p className="mt-2 text-xs text-slate-500">Esto no cambia tu Puesta en marcha: «Lista para operar» solo depende de lo que administras aquí.</p>
+  </section>;
+  const copy = studentServiceCopy(status, s.school_name, s.cafeteria_name);
+  return <section aria-labelledby="student-service-title" className="hoy-panel hoy-service" data-tone={copy.tone}>
+    <div className="hoy-panel-head"><h2 id="student-service-title" className="hoy-h2">Servicio a estudiantes</h2><span className="hoy-pill" data-state={copy.tone === 'ready' ? 'open' : copy.tone === 'off' ? 'stale' : 'closed'} role="status">{copy.label}</span></div>
+    <p className="text-sm">{copy.detail}</p>
+    <p className="mt-2 text-xs text-slate-500">Lo administra {s.school_name}. Esto no cambia tu Puesta en marcha: «Lista para operar» solo depende de lo que administras aquí.</p>
   </section>;
 }

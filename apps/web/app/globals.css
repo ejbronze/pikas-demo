@@ -92,6 +92,7 @@
 .hoy-chain-l{font-size:.875rem;font-weight:700}
 .hoy-readiness-context{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem 1rem;margin:.75rem 0 0;font-size:.875rem;color:var(--foreground)}
 .hoy-readiness-context i{display:inline-grid;place-items:center;width:1.2rem;height:1.2rem;margin-right:.35rem;border-radius:50%;background:#ddf5f4;color:#06605f;font-style:normal;font-size:.75rem;font-weight:900}
+.hoy-service{border-left:4px solid var(--border)}.hoy-service[data-tone="ready"]{border-left-color:var(--tender-wallet)}.hoy-service[data-tone="school"]{border-left-color:var(--brand-yellow)}.hoy-service[data-tone="off"]{border-left-color:var(--attention-ink)}
 .hoy-trail{border-bottom:1px solid var(--border);background:var(--surface);padding:.35rem 1rem;font-size:.8rem}
 @media(min-width:768px){.hoy-trail{padding-left:1.5rem;padding-right:1.5rem}}
 .hoy-trail ol{display:flex;flex-wrap:wrap;align-items:center;gap:.15rem .35rem;margin:0 auto;padding:0;list-style:none;max-width:80rem}
