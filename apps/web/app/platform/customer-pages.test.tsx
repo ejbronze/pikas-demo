@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({ requirePlatform: vi.fn(), readPlatform: vi.fn(
 vi.mock("@/lib/platform/customer-console", () => ({ requirePlatform: mocks.requirePlatform, readPlatform: mocks.readPlatform }));
 vi.mock("@/lib/platform/sandbox-launcher", async () => ({ ...(await import("../../lib/platform/sandbox-launcher")), loadSandboxLauncherState: mocks.launcher }));
 // No vitest alias config: resolve the Demo workspace component to its real implementation.
-vi.mock("@/components/demo-workspace", async () => await import("../../components/demo-workspace"));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {}, replace() {}, push() {} }), usePathname: () => "/platform/demostracion" }));
 (globalThis as { React?: typeof React }).React = React;
 import CustomersPage from "./clientes/page";
@@ -175,15 +174,18 @@ describe("customer server screens", () => {
     await CustomerPage({ params: Promise.resolve({ accountId: "not-an-id" }) });
     expect(mocks.readPlatform).not.toHaveBeenCalled();
   });
-  it("Demo workspace keeps the real operator identity and the Foundation B experiences", async () => {
-    const target = { account_id: "03e71159-69e9-4387-9b3b-65799d49faf0", account_name: "Colegio Horizonte", cafeteria_id: "b9496342-5079-46ae-83b8-05c39bcbd7fe", cafeteria_name: "Cafetería Escolar", school_id: "df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488", persona_display_name: "José Ramírez" };
-    const rpc = vi.fn().mockResolvedValue({ data: ["cashier", "school_admin", "cafeteria_admin"].map(pov_code => ({ ...target, pov_code })), error: null });
+  it("Demo Lab keeps the real operator identity and shows the sandbox personas with Abrir como", async () => {
+    const persona = (pov_code: string, display_name: string) => ({ persona_id: `4d600000-0000-4000-8000-0000000000${pov_code === "cashier" ? "23" : pov_code === "school_admin" ? "21" : "22"}`, pov_code, display_name, school_id: "df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488", cafeteria_id: "b9496342-5079-46ae-83b8-05c39bcbd7fe", cafeteria_name: "Cafetería Escolar", location_name: "Campus principal", membership_status: "active", valid: true, registers: pov_code === "cashier" ? ["Caja demo Horizonte"] : [] });
+    const lab = { can_reset: true, active: null, sandboxes: [{ account_id: "03e71159-69e9-4387-9b3b-65799d49faf0", name: "Colegio Horizonte", code: "COLEGIO-HORIZONTE", status: "active", baseline: "horizonte-v1", school: { school_id: "df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488", name: "Colegio Horizonte", status: "active" },
+      locations: [{ location_id: "cc7ca5f3-d27e-43ea-b3c9-8a6ef4e327d4", name: "Campus principal", status: "active", cafeterias: [{ cafeteria_id: "b9496342-5079-46ae-83b8-05c39bcbd7fe", name: "Cafetería Escolar", status: "active", registers: [{ register_id: "4c000000-0000-4000-8000-000000000010", name: "Caja demo Horizonte", code: "HZ-01", status: "active" }], products: 6, staff: 1, purchases: 0, open_sessions: 0 }] }],
+      students: 4, eligible_students: 4, personas: [persona("school_admin", "María Carey"), persona("cafeteria_admin", "Bruno Mars"), persona("cashier", "José Ramírez")], sandbox_staff: [], last_reset: null, last_entered: null }] };
+    const rpc = vi.fn().mockResolvedValue({ data: lab, error: null });
     mocks.requirePlatform.mockResolvedValue({ ...session, supabase: { rpc } });
-    mocks.launcher.mockResolvedValue({ kind: "targets", targets: [] });
     const html = renderToStaticMarkup(await DemonstrationPage());
-    expect(html).toContain("Explorar PIKAS"); expect(html).toContain("Sigues actuando como Operador");
-    for (const label of ["Administración", "Operaciones", "Caja / POS", "Próximamente"]) expect(html).toContain(label);
-    expect(mocks.launcher).toHaveBeenCalledWith({ rpc }, session.identity);
+    expect(rpc).toHaveBeenCalledWith("platform_demo_lab_read");
+    expect(html).toContain("Demo Lab"); expect(html).toContain("Sigues actuando como Operador"); expect(html).toContain("sin afectar operaciones reales");
+    for (const label of ["María Carey", "Bruno Mars", "José Ramírez", "Abrir como José", "Restaurar escenario inicial", "Listo para demostrar"]) expect(html).toContain(label);
+    expect(html).not.toContain("Próximamente");
   });
   it("lifecycle: status, history and only the valid actions for operators with the manage capability; none without it", async () => {
     mocks.requirePlatform.mockResolvedValue({ ...session, capabilities: [...session.capabilities, "platform:tenant:lifecycle:manage"] });

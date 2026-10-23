@@ -33,7 +33,7 @@ describe("6–11. Platform shell modes", () => {
     expect(mocks.require).toHaveBeenCalledWith({ demo: "allow" });
     expect(navHrefs(html)).toEqual(["/platform/demostracion"]);
     for (const absent of ["/platform/clientes", "/platform/equipo", "/platform/identidades", "/platform/finanzas", 'href="/platform"']) expect(html).not.toContain(absent);
-    for (const present of ["Demo activo", "Inicio Demo", "Administrador de cafetería", "· Administrador de cafetería · Cafetería Escolar", "Colegio Horizonte", "Salir del Demo", 'aria-label="Entorno Demo"', "Operador de PIKAS · Demo"]) expect(html).toContain(present);
+    for (const present of ["Demo activo", "Demo Lab", "Administrador de cafetería", "· Administrador de cafetería · Marta Demo · Colegio Horizonte", "Colegio Horizonte", "Salir del Demo", 'aria-label="Entorno Demo"', "Operador de PIKAS · Demo"]) expect(html).toContain(present);
     expect(html).toContain("Cerrar sesión");
   });
   it("the Platform home redirects to the Demo workspace while Demo is active, and stays the cockpit otherwise", async () => {

@@ -16,7 +16,7 @@ const destinations = [
   { href: "/platform/clientes/nuevo", title: "Agregar colegio", text: "Registra un colegio y prepara a su administrador.", allowed: (c: string[]) => c.includes("platform:tenant:provision") && c.includes("platform:customer_admin:provision") },
   { href: "/platform/finanzas", title: "Finanzas", text: "Verifica transferencias bancarias de PIKAS Cash y revisa decisiones recientes.", allowed: (c: string[]) => c.includes("platform:finance:read") },
   { href: "/platform/equipo", title: "Equipo", text: "Operadores internos de PIKAS y sus accesos.", allowed: (c: string[]) => c.includes("platform:team:manage") },
-  { href: "/platform/demostracion", title: "Demo", text: "Explora PIKAS en el entorno de demostración, separado de los clientes.", allowed: (c: string[]) => c.includes("platform:sandbox:pov:enter") },
+  { href: "/platform/demostracion", title: "Demo Lab", text: "Explora PIKAS con clientes y datos ficticios sin afectar operaciones reales.", allowed: (c: string[]) => c.includes("platform:sandbox:pov:enter") },
 ];
 export default async function PlatformHomePage() {
   // UX 11: in Demo mode the home of the Platform is the Demo workspace, never the real cockpit.

@@ -11,8 +11,8 @@ export type DemoDepartureGuard = () => boolean;
 // Cafetería Admin Demo and POS Demo. The same guarded action handles exit and switch. On uncertain
 // transport, only the exact original key/body may be retried. Navigation always comes from the
 // server; exit lands on the real Platform home.
-export function DemoEnvironmentBar({ pov, context, beforeLeave }: {
-  pov: { session_id: string; pov_code: SandboxPovCode }; context?: string; beforeLeave?: DemoDepartureGuard;
+export function DemoEnvironmentBar({ pov, context, persona, beforeLeave }: {
+  pov: { session_id: string; pov_code: SandboxPovCode }; context?: string; persona?: string; beforeLeave?: DemoDepartureGuard;
 }) {
   const [blocked, setBlocked] = useState(false);
   const [busy, setBusy] = useState(false), [failed, setFailed] = useState(false);
@@ -46,7 +46,7 @@ export function DemoEnvironmentBar({ pov, context, beforeLeave }: {
   return <aside aria-label="Entorno Demo" className="sticky top-0 z-40 border-b border-amber-300 bg-amber-100 text-sm text-amber-950">
     <div className="flex min-h-11 min-w-0 items-center gap-1 px-3">
       <span role="status" className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-300/70 px-2 py-0.5 text-xs font-bold" title="Datos ficticios de demostración"><span aria-hidden>●</span>Demo activo</span>
-      <span className="hidden min-w-0 truncate text-xs sm:inline">· {experienceLabel[pov.pov_code]}{context ? ` · ${context}` : ""}</span>
+      <span className="hidden min-w-0 truncate text-xs sm:inline">· {experienceLabel[pov.pov_code]}{persona ? ` · ${persona}` : ""}{context ? ` · ${context}` : ""}</span>
       <DemoPersonaSwitcher current={pov.pov_code} disabled={busy || failed} onSwitch={e => void run(e)} />
       <button className="ml-auto min-h-11 shrink-0 px-1 font-semibold underline disabled:opacity-50" disabled={busy || failed} onClick={() => void run()}>{busy ? "Saliendo…" : "Salir del Demo"}</button>
     </div>

@@ -17,7 +17,7 @@ const tenderName = (t: "cash" | "student_wallet") => t === "cash" ? "Efectivo" :
 
 export function PosAccessBanner({ context }: { context: PosAccessContext }) {
   if (!context.pov) return null;
-  return <DemoEnvironmentBar pov={context.pov} />;
+  return <DemoEnvironmentBar pov={context.pov} persona={context.actor.display_name} context={context.memberships[0]?.account_name} />;
 }
 
 export function ConnectedPosDashboard({ context, initialWorkspace = "sale" }: { context: PosAccessContext; initialWorkspace?: "sale" | "register" }) {
@@ -80,7 +80,7 @@ export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { s
   return (
     <main className="pos-surface min-h-screen overflow-x-clip bg-slate-100 pb-28 sm:pb-16">
       <div className="sticky top-0 z-30">
-        {context.pov ? <><header className="flex h-14 min-w-0 items-center gap-2 bg-pikas-navy px-3 text-white"><strong className="min-w-0 truncate">PIKAS · {scopes[0].cafeteria_name}</strong><span className="ml-auto shrink-0 text-xs">{context.actor.display_name} · {roleLabel(context)}</span></header><DemoEnvironmentBar pov={context.pov} beforeLeave={() => {
+        {context.pov ? <><header className="flex h-14 min-w-0 items-center gap-2 bg-pikas-navy px-3 text-white"><strong className="min-w-0 truncate">PIKAS · {scopes[0].cafeteria_name}</strong><span className="ml-auto shrink-0 text-xs">{context.actor.display_name} · {roleLabel(context)}</span></header><DemoEnvironmentBar pov={context.pov} persona={context.actor.display_name} context={scopes[0].account_name} beforeLeave={() => {
           const current = sale.getSnapshot();
           if (current.busy || current.registerPending || current.recoveryBlocked || (current.pending && !current.receipt)) {
             setDepartureNotice("Hay una operación pendiente de confirmar. Resuélvela antes de cambiar de experiencia o salir del demo."); return false;
@@ -99,6 +99,7 @@ export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { s
           <div className="flex items-center gap-3"><strong>{context.actor.display_name} · {roleLabel(context)}</strong><form action="/api/auth/logout" method="post"><button className="btn">Cerrar sesión</button></form></div>
         </header>
         <PosAccessBanner context={context} />
+        {scopes[0].tenant_kind === "sandbox" && <p role="status" className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-950">DEMO / SANDBOX · {scopes[0].cafeteria_name} · Datos de prueba</p>}
         <p className="border-b bg-white px-4 py-2 text-sm font-bold">Acceso POS autorizado{session ? ` · ${session.register_name_snapshot}` : ""}</p>
 </>}
       </div>

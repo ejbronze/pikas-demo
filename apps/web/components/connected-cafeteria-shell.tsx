@@ -25,7 +25,7 @@ export function ConnectedCafeteriaShell({ context, cafeteriaId, walletNav = fals
     switcher={context.pov ? undefined : { id: 'workspace-cafeteria', name: 'cafeteria', label: 'Cafetería', value: cafeteriaId, options: context.cafeterias.map(c => ({ value: c.cafeteria_id, label: c.cafeteria_name })) }}
     account={context.pov ? { name: context.pov.operator_name, role: 'Operador de PIKAS · Demo' } : { name: context.display_name, role: 'Administrador de cafetería' }}
     logout={!context.pov}
-    demo={context.pov ? <DemoEnvironmentBar pov={context.pov} /> : undefined}
+    demo={context.pov ? <DemoEnvironmentBar pov={context.pov} persona={context.display_name} context={scope.account_name} /> : undefined}
     notice={!context.pov && scope.tenant_kind === 'sandbox' ? <div className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-950" role="status">DEMO / SANDBOX · {scope.cafeteria_name} · Datos de prueba</div> : undefined}
     trail={<HierarchyTrail levels={[{ label: 'Colegio', name: scope.school_name }, { label: 'Sede', name: scope.location_name }, { label: 'Cafetería', name: scope.cafeteria_name }]} current={currentArea(path, walletNav)} />}>
     {children}

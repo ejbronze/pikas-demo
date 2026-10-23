@@ -81,7 +81,7 @@ export function PlatformCockpit({ data, activity, recent = null, canAdd, demoHre
         {data.sandbox.length === 0 ? <p className="text-sm text-slate-600">No hay entornos de demostración.</p>
           : <><ul className="space-y-1">{data.sandbox.map(s => <li key={s.account_id} className="break-words"><span className="font-semibold">{s.name}</span> <span className="chip bg-amber-100 text-amber-900">Sandbox</span></li>)}</ul>
             <p className="mt-2 text-sm text-slate-600">Separado de los clientes: no se cuenta en la red ni en sus ventas.</p></>}
-        {demoHref && <Link className="net-action mt-1" href={demoHref}>Ir a Demo</Link>}
+        {demoHref && <Link className="net-action mt-1" href={demoHref}>Ir a Demo Lab</Link>}
       </section>
     </div>
   </div>;

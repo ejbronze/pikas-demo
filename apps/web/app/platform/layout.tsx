@@ -11,11 +11,11 @@ import { experienceLabel } from "../../lib/platform/sandbox-pov";
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { identity, capabilities, demo } = await requirePlatform({ demo: "allow" });
   if (demo) {
-    const nav: ShellNavItem[] = [{ href: DEMO_HOME, label: "Inicio Demo", icon: "demo", match: DEMO_HOME }];
+    const nav: ShellNavItem[] = [{ href: DEMO_HOME, label: "Demo Lab", icon: "demo", match: DEMO_HOME }];
     return <AdministrativeShell tone="navy" area="Plataforma · Demo" homeHref={DEMO_HOME} navLabel="Demo" nav={nav}
-      context={{ label: "Demo activo", name: demo.accountName, detail: experienceLabel[demo.povCode] }}
+      context={{ label: "Demo activo", name: demo.personaName, detail: `${experienceLabel[demo.povCode]} · ${demo.accountName}` }}
       account={{ name: identity.person.displayName, role: "Operador de PIKAS · Demo" }} logout
-      demo={<DemoEnvironmentBar pov={{ session_id: demo.sessionId, pov_code: demo.povCode }} context={demo.cafeteriaName} />}>
+      demo={<DemoEnvironmentBar pov={{ session_id: demo.sessionId, pov_code: demo.povCode }} persona={demo.personaName} context={demo.accountName} />}>
       {children}
     </AdministrativeShell>;
   }
@@ -25,7 +25,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     ...(capabilities.includes("platform:team:manage") ? [{ href: "/platform/equipo", label: "Equipo", icon: "team", match: "/platform/equipo" } as const] : []),
     ...(capabilities.includes("platform:finance:read") ? [{ href: "/platform/finanzas", label: "Finanzas", icon: "wallet", match: "/platform/finanzas" } as const] : []),
     ...(capabilities.includes("platform:identity:support") ? [{ href: "/platform/identidades", label: "Identidades", icon: "shield", match: "/platform/identidades" } as const] : []),
-    ...(capabilities.includes("platform:sandbox:pov:enter") ? [{ href: "/platform/demostracion", label: "Demo", icon: "demo", match: "/platform/demostracion" } as const] : []),
+    ...(capabilities.includes("platform:sandbox:pov:enter") ? [{ href: "/platform/demostracion", label: "Demo Lab", icon: "demo", match: "/platform/demostracion" } as const] : []),
   ];
   return <AdministrativeShell tone="navy" area="Plataforma" homeHref="/platform" navLabel="Plataforma" nav={nav}
     context={{ label: "PIKAS Admin", name: "Plataforma PIKAS" }}
