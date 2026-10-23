@@ -213,18 +213,38 @@ describe("Cajas configuration", () => {
 });
 
 describe("Personal POS", () => {
-  it("collection filters with empty/no-match; add employee task offers only the existing POS roles; status change via task", async () => {
+  it("collection filters with empty/no-match; one-step access task: suggested username, optional email, caja, one request, password shown once; status change via task", async () => {
     await mountCafeteria("staff"); await page.getByText("2 de 2 empleados").waitFor();
     await page.getByLabel("Filtrar por rol").selectOption("pos_supervisor"); await page.getByText("1 de 2 empleados").waitFor();
     await page.getByLabel("Buscar empleados").fill("zzz"); await page.getByText("No encontramos empleados con estos filtros.").waitFor(); await page.getByRole("button", { name: "Limpiar filtros" }).first().click();
     await page.getByRole("button", { name: "Agregar personal a" }).click();
     expect(await dlg().getByLabel("Rol POS").locator("option").allInnerTexts()).toEqual(["Cajero", "Supervisor"]);
-    await dlg().getByLabel(/^Usuario PIKAS/).fill("cajero.norte"); await dlg().getByLabel("Correo *").fill("cajero@example.invalid"); await dlg().getByLabel("Rol POS").selectOption("pos_supervisor"); await dlg().getByRole("button", { name: "Continuar" }).click();
-    await dlg().getByRole("button", { name: "Preparar acceso" }).click(); await dlg().getByText("Acceso preparado").first().waitFor();
-    expect((await calls()).filter(c => c.url === "/api/cafeteria")[0].body).toEqual({ cafeteriaId: caf, operation: "staff_prepare", payload: { email: "cajero@example.invalid", role: "pos_supervisor", username: "cajero.norte" } });
-    await dlg().getByRole("button", { name: "Cerrar", exact: true }).click(); await page.getByRole("button", { name: "Cambiar acceso de Cajera Ficticia" }).first().click();
+    await dlg().getByLabel("Nombre completo *").fill("María José Pérez García"); expect(await dlg().getByLabel(/^Usuario PIKAS/).inputValue()).toBe("maria.garcia");
+    await dlg().getByLabel(/^Usuario PIKAS/).fill("maria.perez"); await dlg().getByLabel("Rol POS").selectOption("pos_supervisor");
+    expect(await dlg().getByLabel("Correo (opcional)").inputValue()).toBe(""); await dlg().getByRole("button", { name: "Continuar" }).click();
+    await dlg().getByRole("radio", { name: /Caja Patio/ }).check(); await dlg().getByRole("button", { name: "Continuar" }).click();
+    expect(await dlg().innerText()).toContain("Sin correo · entra solo con su usuario");
+    await win(`w => w.next("/api/cafeteria/staff-access", { body: { result: { membership_id: "${U(130)}", person_id: "${U(131)}", display_name: "María José Pérez García", username: "maria.perez", role: "pos_supervisor", email_kind: "internal", existing_identity: false, must_change_password: true, register: { register_id: "${U(111)}", assigned: true } }, temporary_password: "Temp-fictional-418xyz" } })`);
+    await dlg().getByRole("button", { name: "Crear acceso" }).click(); await dlg().getByText("Listo para iniciar sesión").first().waitFor();
+    const sent = (await calls()).filter(c => c.url === "/api/cafeteria/staff-access"); expect(sent).toHaveLength(1); expect(sent[0].key).toMatch(/^[0-9a-f-]{36}$/);
+    expect(sent[0].body).toEqual({ cafeteriaId: caf, display_name: "María José Pérez García", email: null, role: "pos_supervisor", username: "maria.perez", register_id: U(111) });
+    const outcome = await dlg().innerText(); expect(outcome).toContain("Temp-fictional-418xyz"); expect(outcome).toContain("Caja Patio"); expect(outcome).toContain("no se volverá a mostrar");
+    await dlg().getByRole("button", { name: "Cerrar", exact: true }).click(); expect(await page.getByText("Temp-fictional-418xyz").count()).toBe(0);
+    await page.getByRole("button", { name: "Cambiar acceso de Cajera Ficticia" }).first().click();
     await dlg().getByLabel("Estado").selectOption("suspended"); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Cambiar a suspendido" }).click();
-    await dlg().getByText("Acceso POS actualizado").first().waitFor(); expect((await calls()).filter(c => c.url === "/api/cafeteria")[1].body).toMatchObject({ operation: "staff_status", payload: { membership_id: U(120), status: "suspended" } });
+    await dlg().getByText("Acceso POS actualizado").first().waitFor(); expect((await calls()).filter(c => c.url === "/api/cafeteria")[0].body).toMatchObject({ operation: "staff_status", payload: { membership_id: U(120), status: "suspended" } });
+  });
+  it("a username collision returns to the form with the explanation; an uncertain result retries with the same key", async () => {
+    await mountCafeteria("staff"); await page.getByRole("button", { name: "Agregar personal a" }).click();
+    await dlg().getByLabel("Nombre completo *").fill("Ana Ficticia"); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Continuar" }).click();
+    await win(`w => w.next("/api/cafeteria/staff-access", { status: 422, body: { error: "username_unavailable" } }, { status: 503, body: { error: "operation_uncertain" } })`);
+    await dlg().getByRole("button", { name: "Crear acceso" }).click(); await dlg().getByRole("alert").filter({ hasText: "ya pertenece a otra persona" }).waitFor();
+    await dlg().getByLabel(/^Usuario PIKAS/).fill("ana.ficticia2"); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Continuar" }).click(); await dlg().getByRole("button", { name: "Crear acceso" }).click();
+    await dlg().getByText("Pendiente de confirmar").first().waitFor();
+    await win(`w => w.next("/api/cafeteria/staff-access", { body: { result: { membership_id: "${U(130)}", person_id: "${U(131)}", display_name: "Ana Ficticia", username: "ana.ficticia2", role: "pos_cashier", email_kind: "internal", existing_identity: false, must_change_password: true, register: null }, temporary_password: "Temp-fictional-418abc" } })`);
+    await dlg().getByRole("button", { name: "Reintentar la misma solicitud" }).click(); await dlg().getByText("Listo para iniciar sesión").first().waitFor();
+    const sent = (await calls()).filter(c => c.url === "/api/cafeteria/staff-access"); expect(sent).toHaveLength(3); expect(new Set(sent.map(c => c.key)).size).toBe(1); expect(sent[2].body?.username).toBe("ana.ficticia2");
+    expect(await dlg().innerText()).toContain("Sin caja asignada todavía");
   });
   it("another unconfirmed cafeteria request keeps the existing lock: no new task, only its explicit retry", async () => {
     await page.evaluate(([k, v]) => sessionStorage.setItem(k, v), [`pikas:cafeteria:request:${actor}:${caf}`, JSON.stringify({ key: U(130), command: { cafeteriaId: caf, operation: "category_save", payload: { id: U(131), version: null, name: "Postres", display_order: 0, status: "active" } } })] as const);

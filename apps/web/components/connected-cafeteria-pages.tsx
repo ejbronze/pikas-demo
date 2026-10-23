@@ -14,8 +14,11 @@ import { CafeteriaToday } from './cafeteria-today';
 import { CashierRefundLimits } from './cashier-refund-limits';
 import { DataList } from './data-list';
 import { EmptyState } from './state-panels';
-import { RegisterTask, StaffPrepareTask, StaffStatusTask, roleLabel } from './cafeteria-admin-tasks';
-import { MemberCredentialsTask } from './identity-credentials';
+import { RegisterTask, StaffAccessTask, StaffPrepareTask, StaffStatusTask, roleLabel } from './cafeteria-admin-tasks';
+import { MemberCredentialsTask, identityRequest } from './identity-credentials';
+import { accessState } from '../lib/identity/staff-access';
+import type { IdentitySummary } from '../lib/identity/contracts';
+import { useEffect } from 'react';
 export type CafeteriaSection='summary'|'products'|'menus'|'shifts'|'staff'|'registers'|'settings'|'transactions'|'schools'|'reports';
 const statusLabel=(s:string)=>({active:'Activo',inactive:'Inactivo',suspended:'Suspendido',archived:'Archivado',pending:'Pendiente',accepted:'Completado',expired:'Vencido',revoked:'Revocado'})[s]??s;
 const value=(data:FormData,key:string)=>String(data.get(key)??'').trim();
@@ -29,6 +32,18 @@ function CommandForm({operation,payload,label,children,confirmation,onSuccess}:{
  return <form className="space-y-4" onSubmit={async e=>{e.preventDefault();if(confirmation&&!confirmed.current){setConfirming(true);return;}confirmed.current=false;setConfirming(false);const result=await execute(operation,payload(new FormData(e.currentTarget)));if(result.ok)onSuccess?.();}}>{children}
  {confirming?<div role="alertdialog" aria-label={label} className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3"><p className="font-bold">{confirmation}</p><div className="flex flex-wrap gap-2"><button type="button" className="btn-secondary" onClick={()=>setConfirming(false)}>Cancelar</button><button type="button" className="btn" onClick={e=>{confirmed.current=true;e.currentTarget.form?.requestSubmit();}}>{label}</button></div></div>:<button className="btn" type="submit">{label}</button>}</form>;
 }
+// UX 12B: the access state of one POS member, read lazily through the existing tenant-scoped
+// identity read (identity_support_read_membership). Customer tenants only; never in sandbox.
+const accessTone={ready:'bg-emerald-100 text-emerald-900',pending:'bg-amber-100 text-amber-900',blocked:'bg-red-50 text-red-900',off:'bg-slate-100 text-slate-700'} as const;
+const when=(iso:string|null)=>iso?new Date(iso).toLocaleString('es-DO',{dateStyle:'medium',timeStyle:'short'}):'Nunca';
+function AccessCell({membershipId,status}:{membershipId:string;status:'active'|'suspended'|'inactive'}) {
+ const [state,setState]=useState<{summary?:IdentitySummary;error?:boolean}>({});
+ useEffect(()=>{let live=true;identityRequest({operation:'read_membership',membership_id:membershipId}).then(r=>{if(live)setState(r.summary?{summary:r.summary}:{error:true});},()=>{if(live)setState({error:true});});return()=>{live=false;};},[membershipId]);
+ if(state.error)return <span className="text-sm text-slate-500">Acceso no disponible</span>;
+ if(!state.summary)return <span className="text-sm text-slate-500" role="status">Consultando…</span>;
+ const a=accessState(state.summary,status);
+ return <span className="block"><span className={`chip ${accessTone[a.tone]}`} title={a.detail}>{a.label}</span><span className="mt-1 block text-xs text-slate-600">{state.summary.username?`Usuario ${state.summary.username} · `:''}Último acceso: {when(state.summary.last_sign_in_at)}</span></span>;
+}
 function Staff({data}:{data:CafeteriaRead}) {
  const [query,setQuery]=useState(''),[role,setRole]=useState(''),[status,setStatus]=useState(''),[task,setTask]=useState<{kind:'new'}|{kind:'status'|'credentials';id:string}|null>(null),[notice,setNotice]=useState('');
  const staff=data.staff.filter(m=>(!role||m.role===role)&&(!status||m.status===status)&&m.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
@@ -37,7 +52,7 @@ function Staff({data}:{data:CafeteriaRead}) {
  const close=(message?:string)=>{setTask(null);if(message)setNotice(message);};
  return <div className="space-y-5"><AppPageHeader title="Personal POS" description={`Personal de ${data.scope.cafeteria_name}: identidad, estado y acceso a cajas.`} action={<button className="btn" onClick={()=>{setNotice('');setTask({kind:'new'});}}>Agregar personal a {data.scope.cafeteria_name}</button>}/>
  {notice&&<p role="status" className="rounded-xl bg-emerald-50 p-3 font-bold text-emerald-900">{notice}</p>}
- <p className="rounded-xl bg-amber-50 p-3 text-sm">{data.scope.tenant_kind==='sandbox'?'No se emiten enlaces de activación en sandbox. Solo puede completarse acceso para una identidad elegible ya existente.':'Prepara el acceso y genera un enlace privado de activación. No se envía correo. El destinatario guarda su contraseña y después confirmas este mismo acceso.'} Supervisor es un rol operativo y no concede administración.</p>
+ <p className="rounded-xl bg-amber-50 p-3 text-sm">{data.scope.tenant_kind==='sandbox'?'No se emiten enlaces de activación en sandbox. Solo puede completarse acceso para una identidad elegible ya existente.':'Agrega personal en un paso: usuario sugerido, contraseña temporal de un solo uso y caja. No se envía correo. Al entrar, la persona crea su propia contraseña. Desde Credenciales puedes ver su usuario y emitirle otra contraseña temporal; con Cambiar acceso lo suspendes o reactivas.'}</p>
  <div role="search" aria-label="Filtros de personal" className="grid gap-3 sm:grid-cols-3"><label className="font-bold">Buscar empleados<input className="field mt-1 w-full" type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nombre"/></label><label className="font-bold">Filtrar por rol<select className="field mt-1 w-full" value={role} onChange={e=>setRole(e.target.value)}><option value="">Todos los roles</option><option value="pos_cashier">Cajero</option><option value="pos_supervisor">Supervisor</option></select></label><label className="font-bold">Filtrar por estado<select className="field mt-1 w-full" value={status} onChange={e=>setStatus(e.target.value)}><option value="">Todos los estados</option>{['active','suspended','inactive'].map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></label></div>
  <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600"><p role="status">{staff.length} de {data.staff.length} empleados</p>{filtered&&<button type="button" className="min-h-11 font-bold text-teal-800 underline" onClick={clear}>Limpiar filtros</button>}</div>
  {!data.staff.length?<EmptyState title={`Aún no hay personal POS en ${data.scope.cafeteria_name}.`} description="Agrega una persona para preparar su acceso al POS. Después la asignas a una caja en Cajas."/>:!staff.length?<EmptyState title="No encontramos empleados con estos filtros." action={<button type="button" className="btn-secondary" onClick={clear}>Limpiar filtros</button>}/>
@@ -45,11 +60,12 @@ function Staff({data}:{data:CafeteriaRead}) {
   {header:'Empleado',primary:true,cell:m=>m.name},
   {header:'Rol',cell:m=>roleLabel(m.role)},
   {header:'Estado',cell:m=><span className="chip">{statusLabel(m.status)}</span>},
+  ...(data.scope.tenant_kind==='customer'?[{header:'Acceso',cell:(m:CafeteriaRead['staff'][number])=><AccessCell membershipId={m.id} status={m.status}/>}]:[]),
   {header:'Cajas',cell:m=>data.assignments.filter(a=>a.membership_id===m.id&&a.status==='active').map(a=>data.registers.find(r=>r.id===a.register_id)?.name).join(', ')||'Sin asignación'},
   {header:'Sesión',cell:m=>m.open?'Sesión abierta':'Sin sesión abierta'},
  ]} actions={m=><><button className="btn-secondary" aria-label={`Cambiar acceso de ${m.name}`} onClick={()=>{setNotice('');setTask({kind:'status',id:m.id});}}>Cambiar acceso</button>{data.scope.tenant_kind!=='sandbox'&&<button className="btn-secondary" aria-label={`Credenciales de ${m.name}`} onClick={()=>{setNotice('');setTask({kind:'credentials',id:m.id});}}>Credenciales</button>}</>}/>}
- <h2 className="text-xl font-black">Accesos preparados</h2>{data.invitations.map(i=><article className="card space-y-3 p-4" key={i.id}><p className="break-all font-bold">{i.email}</p><p>{roleLabel(i.role)} · {statusLabel(i.status)} · Vence {new Date(i.expires_at).toLocaleDateString('es-DO',{timeZone:'UTC'})}</p>{data.scope.tenant_kind==='sandbox'?(i.status==='pending'&&<CommandForm operation="staff_complete" label="Confirmar identidad y conceder acceso POS" confirmation="¿Conceder acceso operativo exclusivamente a esta cafetería?" payload={d=>({invitation_id:i.id,display_name:value(d,'display_name')})}><Input label="Nombre completo" name="display_name" maxLength={200}/></CommandForm>):<StaffActivationCard invitationId={i.id} pending={i.status==='pending'} sandbox={false}/>}</article>)}{!data.invitations.length&&<EmptyState title="No hay accesos preparados."/>}
- {task?.kind==='new'&&<StaffPrepareTask data={data} onClose={close}/>}
+ {!!data.invitations.length&&<h2 className="text-xl font-black">Accesos preparados por enlace</h2>}{data.invitations.map(i=><article className="card space-y-3 p-4" key={i.id}><p className="break-all font-bold">{i.email}</p><p>{roleLabel(i.role)} · {statusLabel(i.status)} · Vence {new Date(i.expires_at).toLocaleDateString('es-DO',{timeZone:'UTC'})}</p>{data.scope.tenant_kind==='sandbox'?(i.status==='pending'&&<CommandForm operation="staff_complete" label="Confirmar identidad y conceder acceso POS" confirmation="¿Conceder acceso operativo exclusivamente a esta cafetería?" payload={d=>({invitation_id:i.id,display_name:value(d,'display_name')})}><Input label="Nombre completo" name="display_name" maxLength={200}/></CommandForm>):<StaffActivationCard invitationId={i.id} pending={i.status==='pending'} sandbox={false}/>}</article>)}{!data.invitations.length&&<EmptyState title="No hay accesos preparados."/>}
+ {task?.kind==='new'&&(data.scope.tenant_kind==='customer'?<StaffAccessTask data={data} onClose={close}/>:<StaffPrepareTask data={data} onClose={close}/>)}
  {member&&<StaffStatusTask member={member} onClose={close}/>}
  {credentials&&<MemberCredentialsTask membershipId={credentials.id} name={credentials.name} onClose={()=>setTask(null)}/>}
  </div>;

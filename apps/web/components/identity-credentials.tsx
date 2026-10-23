@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { sessionFetch } from '../lib/auth/session-fetch';
 import { auditLabels, identityErrors, identityResponseSchema, roleLabels, type IdentityCommand, type IdentitySummary } from '../lib/identity/contracts';
 import { isValidUsername, normalizeUsername, usernameRules } from '../lib/identity/username';
+import { isInternalEmail } from '../lib/identity/staff-access';
 import { TaskActions, TaskCancelButton, TaskOutcome, TaskSummary, TaskWindow } from './task-window';
 import { EmptyState, ErrorState } from './state-panels';
 
@@ -33,7 +34,7 @@ export function IdentityCredentials({ initial }: { initial: IdentitySummary }) {
         <span className={`rounded-full px-3 py-1 text-sm font-bold ${identity.login_suspended ? 'bg-red-50 text-red-900' : identity.must_change_password ? 'bg-amber-50 text-amber-900' : 'bg-emerald-50 text-emerald-900'}`}>{status}</span></div>
       <TaskSummary rows={[
         ['Usuario', identity.username ?? <span className="font-normal text-slate-600">Sin usuario</span>],
-        ['Correo', <span key="e" className="break-all">{identity.email ?? 'Sin correo'}</span>],
+        ['Correo', <span key="e" className="break-all">{isInternalEmail(identity.email) ? 'Sin correo · entra solo con su usuario' : identity.email ?? 'Sin correo'}</span>],
         ['Último inicio de sesión', when(identity.last_sign_in_at)],
         ...(identity.pending_email ? [['Cambio de correo pendiente', identity.pending_email] as [string, React.ReactNode]] : []),
       ]} />

@@ -517,6 +517,19 @@ Personal manages PIKAS access and cafeteria operational responsibility, not
 employment records. It is not an HR system, employee directory, scheduling or
 payroll system, or employee-performance leaderboard.
 
+### Implemented (UX 12B): one-step POS access
+
+«Agregar personal a {cafetería}» is a three-page task (Persona → Caja →
+Revisar): full name, POS role, a username PIKAS suggests from the name
+(editable), optional email and an optional caja among the active ones. On
+confirmation the person is ready to sign in: the one-time temporary password
+is shown once with a copy control; the first sign-in forces a personal
+password and lands on the POS with the assigned caja. The Personal POS list
+shows each person's access state, username and last sign-in through the
+existing cafetería-scoped identity read. Credenciales and Cambiar acceso
+remain the management surfaces. Link-based prepared accesses still appear
+and complete as before; sandbox keeps its existing flow.
+
 ### Human-facing access concepts
 
 Do not expose internal authorization architecture in the normal UI. Users

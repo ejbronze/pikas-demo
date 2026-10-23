@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { CafeteriaRead, Operation } from '../lib/cafeteria/contracts';
 import { useCafeteriaMutation } from './connected-cafeteria-provider';
 import { useCatalogEditor } from './cafeteria-editor-context';
@@ -8,6 +9,10 @@ import { TaskSummary } from './task-window';
 import { useSessionDraft } from '../lib/session-draft';
 import { ProvisioningUsernameField, usernameProblem } from './provisioning-username-field';
 import { normalizeUsername } from '../lib/identity/username';
+import { sessionFetch } from '../lib/auth/session-fetch';
+import { isUsernameRejection, usernameRejectionMessage } from '../lib/identity/provisioning';
+import { staffAccessErrors, staffAccessResponseSchema, suggestUsername, type StaffAccessResult } from '../lib/identity/staff-access';
+import { TaskActions, TaskCancelButton, TaskOutcome, TaskWindow } from './task-window';
 
 const statusLabel = (s: string) => ({ active: 'Activo', inactive: 'Inactivo', suspended: 'Suspendido' })[s] ?? s;
 export const roleLabel = (s: string) => s === 'pos_supervisor' ? 'Supervisor' : 'Cajero';
@@ -42,6 +47,98 @@ export function StaffPrepareTask({ data, onClose }: { data: CafeteriaRead; onClo
       <p className="text-sm text-slate-600">{data.scope.tenant_kind === 'sandbox' ? 'No se emiten enlaces de activación en sandbox. Solo puede completarse acceso para una identidad elegible ya existente.' : 'Preparar no concede acceso ni envía correo. Después generas un enlace privado de activación y confirmas este mismo acceso.'}</p></>}
     finalLabel="Preparar acceso" sendingLabel="Preparando acceso…" blocked={command.blocked} submit={() => command.submit('staff_prepare', data.scope.tenant_kind === 'sandbox' ? { email: email.trim(), role } : { email: email.trim(), role, username: normalizeUsername(username) })}
     dirty={!!email || !!username || role !== 'pos_cashier'} success={{ title: 'Acceso preparado', body: <p>Aparece en Accesos preparados con el usuario reservado. No se ha concedido acceso.</p>, closeMessage: 'Acceso POS preparado.' }} onClose={onClose} />;
+}
+
+// UX 12B: one-step POS staff access. Persona → Caja → Revisar → «Crear acceso». One request key for
+// the task's lifetime: an uncertain result is retried with exactly the same key (the server replays
+// each step). The one-time password is shown once, here only; it is never kept in component state
+// after the task closes.
+type AccessPhase = 0 | 1 | 'review' | 'sending' | 'success' | 'rejected' | 'uncertain';
+type AccessOutcome = { result: StaffAccessResult; temporary?: string };
+const emailOk = (value: string) => !value.trim() || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
+export function StaffAccessTask({ data, onClose }: { data: CafeteriaRead; onClose: (message?: string) => void }) {
+  const { pendingMutation } = useCatalogEditor(), router = useRouter();
+  const [key] = useState(() => crypto.randomUUID());
+  const [name, setName] = useState(''), [email, setEmail] = useState(''), [role, setRole] = useState('pos_cashier'), [username, setUsername] = useState(''), [touched, setTouched] = useState(false), [registerId, setRegisterId] = useState('');
+  const [phase, setPhase] = useState<AccessPhase>(0), [problem, setProblem] = useState(''), [message, setMessage] = useState(''), [outcome, setOutcome] = useState<AccessOutcome | null>(null), [copied, setCopied] = useState('');
+  const sending = useRef(false);
+  const registers = data.registers.filter(r => r.status === 'active');
+  const suggested = suggestUsername(name), effectiveUsername = normalizeUsername(touched ? username : suggested);
+  const blocked = pendingMutation ? 'Hay otra solicitud pendiente de confirmar en esta cafetería. Confírmala antes de crear este acceso.' : '';
+  const validate = (): string | null => !name.trim() ? 'Escribe el nombre completo.' : usernameProblem(effectiveUsername) ?? (!emailOk(email) ? 'Ese correo no es válido. Déjalo vacío si no tiene.' : null);
+  const send = async () => {
+    if (sending.current || blocked) return;
+    sending.current = true; setPhase('sending'); setMessage('');
+    try {
+      const response = await sessionFetch('/api/cafeteria/staff-access', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
+        body: JSON.stringify({ cafeteriaId: data.scope.cafeteria_id, display_name: name.trim(), email: email.trim() ? email.trim().toLowerCase() : null, role, username: effectiveUsername, register_id: registerId || null }) });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) {
+        const parsed = staffAccessResponseSchema.safeParse(payload);
+        if (!parsed.success) { setMessage(staffAccessErrors.operation_uncertain); setPhase('uncertain'); return; }
+        setOutcome({ result: parsed.data.result, temporary: parsed.data.temporary_password }); setPhase('success'); return;
+      }
+      const code = typeof payload.error === 'string' ? payload.error : '';
+      if (isUsernameRejection(code)) { setProblem(usernameRejectionMessage(code)); setTouched(true); setUsername(effectiveUsername); setPhase(0); return; }
+      if (response.status >= 500 || code === 'operation_uncertain' || code === 'authorization_unavailable') { setMessage(staffAccessErrors.operation_uncertain); setPhase('uncertain'); return; }
+      setMessage(staffAccessErrors[code] ?? 'No se pudo crear el acceso. Revisa los datos.'); setPhase('rejected');
+    } catch { setMessage(staffAccessErrors.operation_uncertain); setPhase('uncertain'); }
+    finally { sending.current = false; }
+  };
+  const next = (index: 0 | 1) => { if (index === 0) { const issue = validate(); if (issue) { setProblem(issue); return; } } setProblem(''); setPhase(index === 0 ? 1 : 'review'); };
+  // After a success the server read is stale (new person, assignment, readiness): refresh it on close.
+  const close = () => { const done = phase === 'success'; setOutcome(null); onClose(done ? 'Acceso POS creado.' : undefined); if (done) router.refresh(); };
+  const registerName = (id: string | null | undefined) => registers.find(r => r.id === id)?.name ?? '';
+  const editing = typeof phase === 'number' || phase === 'review';
+  const footer = typeof phase === 'number'
+    ? <>{phase > 0 ? <button type="button" className="btn-secondary" onClick={() => setPhase(0)}>Atrás</button> : <TaskCancelButton>Cancelar</TaskCancelButton>}<button type="button" className="btn" onClick={() => next(phase)}>Continuar</button></>
+    : {
+      review: <><button type="button" className="btn-secondary" onClick={() => setPhase(1)}>Atrás</button><button type="button" className="btn" disabled={!!blocked} onClick={() => void send()}>Crear acceso</button></>,
+      sending: <button type="button" className="btn" disabled>Creando acceso…</button>,
+      success: <button type="button" className="btn" data-autofocus onClick={close}>Cerrar</button>,
+      rejected: <><button type="button" className="btn-secondary" onClick={close}>Cerrar</button><button type="button" className="btn" onClick={() => setPhase(0)}>Revisar datos</button></>,
+      uncertain: <><button type="button" className="btn-secondary" onClick={close}>Cerrar</button><button type="button" className="btn" disabled={!!blocked} onClick={() => void send()}>Reintentar la misma solicitud</button></>,
+    }[phase];
+  const r = outcome?.result;
+  return <TaskWindow title="Agregar personal POS" context={data.scope.cafeteria_name} steps={editing ? ['Persona', 'Caja', 'Revisar'] : undefined} step={typeof phase === 'number' ? phase : 2}
+    busy={phase === 'sending'} dirty={editing && (!!name || !!email || touched || !!registerId)} onClose={close} footer={<TaskActions>{footer}</TaskActions>}>
+    <section hidden={phase !== 0} className="space-y-4">
+      <p className="text-sm text-slate-600">Se crea el acceso en un paso: PIKAS sugiere el usuario, genera una contraseña temporal de un solo uso y concede el rol en {data.scope.cafeteria_name}. No se envía correo.</p>
+      <label className="block font-bold">Nombre completo *<input className="field mt-1 w-full" data-autofocus required maxLength={200} value={name} onChange={e => setName(e.target.value)} autoComplete="off" /></label>
+      <label className="block font-bold">Rol POS<select className="field mt-1 w-full" value={role} onChange={e => setRole(e.target.value)}><option value="pos_cashier">Cajero</option><option value="pos_supervisor">Supervisor</option></select>
+        <span className="mt-1 block text-sm font-normal text-slate-600">Supervisor es un rol operativo y no concede administración.</span></label>
+      <ProvisioningUsernameField value={touched ? username : suggested} onChange={value => { setTouched(true); setUsername(value); }} />
+      {!touched && suggested && <p className="text-sm text-slate-600">Sugerido por PIKAS a partir del nombre; puedes cambiarlo antes de confirmar.</p>}
+      <label className="block font-bold">Correo (opcional)<input className="field mt-1 w-full" type="email" maxLength={254} value={email} onChange={e => setEmail(e.target.value)} autoCapitalize="none" autoComplete="off" />
+        <span className="mt-1 block text-sm font-normal text-slate-600">Sin correo, la persona entra solo con su usuario y no podrá recuperar la contraseña por correo; tú puedes emitirle una temporal desde Credenciales.</span></label>
+    </section>
+    <section hidden={phase !== 1} className="space-y-4">
+      <p className="font-bold">Caja en {data.scope.cafeteria_name}</p>
+      {registers.length ? <fieldset className="space-y-2"><legend className="text-sm text-slate-600">La persona solo podrá abrir las cajas que tenga asignadas. Puedes cambiarlo después en Cajas.</legend>
+        <label className="flex min-h-11 items-center gap-3"><input type="radio" name="staff-access-register" checked={registerId === ''} onChange={() => setRegisterId('')} /><span>Asignar después</span></label>
+        {registers.map(reg => <label key={reg.id} className="flex min-h-11 items-center gap-3"><input type="radio" name="staff-access-register" checked={registerId === reg.id} onChange={() => setRegisterId(reg.id)} /><span>{reg.name} <span className="text-slate-500">· {reg.code}</span></span></label>)}</fieldset>
+        : <p className="text-sm text-slate-600">Aún no hay cajas activas en esta cafetería. Crea una en Cajas y asigna a la persona desde allí.</p>}
+    </section>
+    {problem && typeof phase === 'number' && <p role="alert" className="rounded-xl bg-red-50 p-3 font-bold text-red-800">{problem}</p>}
+    {phase === 'review' && <><TaskSummary rows={[['Nombre', name.trim()], ['Rol POS', roleLabel(role)], ['Usuario', effectiveUsername], ['Correo', email.trim() ? email.trim().toLowerCase() : 'Sin correo · entra solo con su usuario'], ['Cafetería', data.scope.cafeteria_name], ['Caja', registerId ? registerName(registerId) : 'Asignar después']]} />
+      <p className="text-sm text-slate-600">Al confirmar se crea el inicio de sesión y verás una contraseña temporal una sola vez. La persona deberá crear su propia contraseña al entrar.</p>
+      {blocked && <p role="alert" className="text-sm font-bold text-red-800">{blocked}</p>}</>}
+    {phase === 'sending' && <TaskOutcome kind="pending" title="Creando acceso…"><p>No cierres esta ventana.</p></TaskOutcome>}
+    {phase === 'success' && r && <TaskOutcome kind="success" title="Listo para iniciar sesión">
+      <TaskSummary rows={[['Nombre', r.display_name], ['Usuario', r.username ?? effectiveUsername], ['Rol POS', roleLabel(r.role)], ['Cafetería', data.scope.cafeteria_name],
+        ['Caja', r.register ? (r.register.assigned ? registerName(r.register.register_id) : `No se pudo asignar ${registerName(r.register.register_id)}: asígnala en Cajas.`) : 'Sin caja asignada todavía: asígnala en Cajas.'],
+        ['Correo', r.email_kind === 'real' ? email.trim().toLowerCase() : 'Sin correo · entra solo con su usuario']]} />
+      {outcome.temporary ? <>
+        <p className="font-bold">Contraseña temporal (una sola vez)</p>
+        <p className="rounded-lg border bg-white p-3 text-center font-mono text-xl font-black tracking-wider" aria-label="Contraseña temporal">{outcome.temporary}</p>
+        <div className="flex flex-wrap items-center gap-2"><button type="button" className="btn-secondary" onClick={async () => { try { await navigator.clipboard.writeText(outcome.temporary ?? ''); setCopied('Contraseña copiada.'); } catch { setCopied('No se pudo copiar; selecciónala y cópiala a mano.'); } }}>Copiar contraseña</button>{copied && <span role="status" className="text-sm">{copied}</span>}</div>
+        <p className="text-sm font-bold">Cópiala ahora: PIKAS no la guarda y no se volverá a mostrar. Entrégala por un canal seguro.</p>
+        <p className="text-sm">Cómo entra: en la pantalla de inicio de sesión escribe su usuario «{r.username ?? effectiveUsername}» y esta contraseña; PIKAS le pedirá crear una contraseña personal y luego podrá abrir su caja en el POS.</p>
+      </> : <p>Esta persona ya tenía acceso a PIKAS y conserva su contraseña: solo se le concedió el rol en esta cafetería.</p>}
+    </TaskOutcome>}
+    {phase === 'rejected' && <TaskOutcome kind="failure" title="No se creó el acceso">{message && <p>{message}</p>}</TaskOutcome>}
+    {phase === 'uncertain' && <TaskOutcome kind="uncertain" title="Pendiente de confirmar"><p>{message}</p><p className="text-sm">Si cierras sin confirmar, cualquier acceso preparado aparecerá en Personal POS.</p></TaskOutcome>}
+  </TaskWindow>;
 }
 
 export function StaffStatusTask({ member, onClose }: { member: Staff; onClose: (message?: string) => void }) {
