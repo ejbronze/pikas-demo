@@ -58,7 +58,7 @@ describe("Puesta en marcha", () => {
     const html = renderToStaticMarkup(<LaunchChecklist customer={cepointLike} />);
     expect(html).toContain('id="puesta-en-marcha"'); expect(html).toContain("2 de 7 listos"); expect(html).toContain("Siguiente paso: Administrador.");
     expect(html).toMatch(/data-state="attention" data-next="true"/); expect(html).toContain("Requiere atención");
-    expect(html).toContain("Ver administrador"); expect(html).toContain('href="/platform/clientes/7e00d000-0000-4000-8000-000000000001#customer-access"');
+    expect(html).toContain("Ver administrador"); expect(html).toContain('href="/platform/clientes/7e00d000-0000-4000-8000-000000000001?seccion=personas#customer-access"');
     expect(html).not.toContain("Ver perfil"); expect(html).toContain("Se completa sola con la primera venta real en el POS.");
     expect(html).toContain("En configuración");
   });

@@ -164,7 +164,24 @@
 .ws-nav ul{display:flex;gap:.35rem;margin:0;padding:0;list-style:none;overflow-x:auto;scrollbar-width:none}
 .ws-nav a{display:inline-flex;align-items:center;min-height:2.5rem;padding:0 .85rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--foreground-muted);font-size:.875rem;font-weight:700;white-space:nowrap}
 .ws-nav a:hover{color:var(--primary);border-color:var(--accent)}
-.ws-nav a[aria-current="location"]{background:var(--primary);border-color:var(--primary);color:#fff}
+.ws-nav a[aria-current="location"],.ws-nav a[aria-current="page"]{background:var(--primary);border-color:var(--primary);color:#fff}
+/* UX 15: persistent customer context above the workspace sections. */
+.ws-context{position:sticky;top:3.5rem;z-index:20;margin:-1rem -1rem 0;padding:.75rem 1rem 0;background:color-mix(in srgb,var(--background) 94%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
+@media (min-width:640px){.ws-context{margin:-1.25rem -1.25rem 0;padding:.9rem 1.25rem 0}}
+@media (min-width:768px){.ws-context{margin:-1.5rem -1.5rem 0;padding:1rem 1.5rem 0}}
+.ws-context-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:.5rem 1rem}
+.ws-context-eyebrow{margin:0;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--foreground-muted)}
+.ws-context-name{margin:0;font-family:var(--font-display,inherit);font-size:1.4rem;line-height:1.15;font-weight:900;color:var(--primary);overflow-wrap:anywhere}
+@media (min-width:640px){.ws-context-name{font-size:1.75rem}}
+.ws-context-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .6rem;margin:.4rem 0 0}
+.ws-context-code{font-size:.72rem;color:var(--foreground-muted)}
+.ws-context-next{flex:0 1 18rem;min-width:0;display:grid;gap:.15rem;padding:.6rem .8rem;border-radius:.9rem;background:var(--brand-cream);border:1px solid var(--attention-border)}
+@media (max-width:639px){.ws-context-next{display:none}} /* on phones the next step lives in Resumen; the sticky context stays short */
+.ws-context-nav{position:static;margin:.6rem -.25rem 0;padding:.25rem;background:none;backdrop-filter:none}
+.ws-trail{margin:-1rem -1rem 0;border-radius:0}
+@media (min-width:640px){.ws-trail{margin:-1.25rem -1.25rem 0}}
+@media (min-width:768px){.ws-trail{margin:-1.5rem -1.5rem 0}}
+.ws [id]{scroll-margin-top:13rem}
 .ws-meta{font-size:.78rem;color:var(--foreground-muted)}
 .ws-kind{margin-right:.35rem;font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--foreground-muted)}
 .ws-tree{display:grid;gap:.5rem}

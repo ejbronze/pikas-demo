@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ requirePlatform: vi.fn(), readPlatform: vi.fn() }));
 vi.mock("@/lib/platform/customer-console", () => ({ requirePlatform: mocks.requirePlatform, readPlatform: mocks.readPlatform }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {} }), usePathname: () => "/platform/clientes" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {} }), usePathname: () => "/platform/clientes", redirect: (href: string) => { throw new Error(`redirect:${href}`); } }));
 vi.mock("../../components/connected-cafeteria-provider", () => ({ ConnectedCafeteriaProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="support-cafeteria-provider">{children}</div> }));
 vi.mock("../../components/connected-cafeteria-pages", () => ({ SupportCafeteriaManagement: ({ section }: { section: string }) => <div>Editor de soporte: {section}</div> }));
 (globalThis as { React?: typeof React }).React = React;
@@ -32,21 +32,24 @@ const cafeteria = (seccion?: string) => CafeteriaPage({ params: Promise.resolve(
 beforeEach(() => { vi.clearAllMocks(); mocks.requirePlatform.mockResolvedValue(session()); reads(); });
 
 describe("Backoffice Customer Management (M1)", () => {
-  it("customer detail offers Administrar cliente only with operations:read", async () => {
-    reads({ detail: { account: { id: A, name: "Colegio", code: "C", status: "active" }, tenant_kind: "customer", schools: [], administrators: [], customer_admin_onboarding: [], administrator_intents: [] } });
+  it("UX 15: the customer's Operación section is the one entry to management; the old gestión landing redirects there", async () => {
+    await expect(ManagementPage({ params: Promise.resolve({ accountId: A }) })).rejects.toThrow(`redirect:/platform/clientes/${A}?seccion=operacion`);
     mocks.readPlatform.mockImplementation(async (_s: unknown, _c: unknown, rpc: string) => ({ kind: "ready", value: rpc === "platform_customer_lifecycle_history" ? { events: [] } : rpc === "platform_customer_readiness" ? { customers: [], sandbox: [], truncated: false } : { account: { id: A, name: "Colegio", code: "C", status: "active" }, tenant_kind: "customer", schools: [], administrators: [], customer_admin_onboarding: [], administrator_intents: [] } }));
-    expect(await html(CustomerPage({ params: Promise.resolve({ accountId: A }) }))).toContain(`href="/platform/clientes/${A}/gestion"`);
+    const ops = await html(CustomerPage({ params: Promise.resolve({ accountId: A }), searchParams: Promise.resolve({ seccion: "operacion" }) }));
+    expect(ops).toContain('id="operacion"'); expect(ops).toContain("no como usuario del cliente"); expect(ops).not.toContain(`href="/platform/clientes/${A}/gestion"`); expect(ops).not.toContain("Administrar operación");
     mocks.requirePlatform.mockResolvedValue(session(["platform:tenant:lifecycle:read"]));
-    expect(await html(CustomerPage({ params: Promise.resolve({ accountId: A }) }))).not.toContain("Administrar cliente");
+    const noOps = await html(CustomerPage({ params: Promise.resolve({ accountId: A }), searchParams: Promise.resolve({ seccion: "operacion" }) }));
+    expect(noOps).not.toContain('id="operacion"'); expect(noOps).not.toContain("Administrar cliente");
   });
-  it("workspace shows truthful support context and cafeteria links, never school roster management", async () => {
-    const h = await html(ManagementPage({ params: Promise.resolve({ accountId: A }) })), t = text(h);
+  it("cafetería management shows truthful support context, the hierarchy trail and the way back, never school roster management", async () => {
+    const h = await html(cafeteria()), t = text(h);
     expect(t).toContain("Gestionando Colegio Ficticio Dos Sedes"); expect(t).toContain("Estás gestionando el contexto del cliente como personal de PIKAS.");
     expect(t).not.toMatch(/Actuando como|Vista de administrador|impersonar/i);
     expect(h).not.toContain("/gestion/escuelas/"); expect(t).not.toMatch(/Gestionar escuela|Crear estudiante|Importar estudiantes|Agregar padre|Agregar personal/i);
-    expect(t).toContain("Estudiantes, padres y personal los administra el colegio.");
-    expect(h).toContain(`href="/platform/clientes/${A}/gestion/cafeterias/${C1}"`); expect(h).toContain(`href="/platform/clientes/${A}/gestion/cafeterias/${C2}"`);
-    expect(h).toContain(`href="/platform/clientes/${A}"`); expect((h.match(/<h1/g) ?? []).length).toBe(1);
+    // UX 15: Cliente → Colegio → Sede → Cafetería → area, inherited levels as text; the customer link returns to Operación.
+    expect(h).toContain('aria-label="Ubicación en la estructura"'); expect(t).toMatch(/Cliente\s+Colegio Ficticio Dos Sedes.*Colegio\s+Colegio Ficticio.*Sede\s+Sede Norte.*Cafetería\s+Cafetería Norte.*Resumen/);
+    expect(h).toContain(`href="/platform/clientes/${A}?seccion=operacion"`); expect(h).not.toContain(`href="/platform/clientes/${A}/gestion"`);
+    expect(h).toContain(`href="/platform/clientes/${A}/gestion/cafeterias/${C2}`); expect((h.match(/<h1/g) ?? []).length).toBe(1);
     expect(mocks.readPlatform).toHaveBeenCalledWith(expect.anything(), "platform:customer:operations:read", "platform_customer_operations_overview", { p_account_id: A }, expect.anything());
   });
   it("active managers receive bounded catalog controls while read-only and suspended contexts do not", async () => {
@@ -61,7 +64,6 @@ describe("Backoffice Customer Management (M1)", () => {
   });
   it("unauthorized Platform operator is denied before any read", async () => {
     mocks.requirePlatform.mockResolvedValue(session(["platform:tenant:lifecycle:read"]));
-    expect(text(await html(ManagementPage({ params: Promise.resolve({ accountId: A }) })))).toContain("No tienes permiso para gestionar la operación de clientes.");
     expect(text(await html(cafeteria()))).toContain("No tienes permiso");
     expect(mocks.readPlatform).not.toHaveBeenCalled();
   });

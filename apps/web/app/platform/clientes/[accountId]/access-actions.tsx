@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { sessionFetch } from "../../../../lib/auth/session-fetch";
 import { grantResultSchema, provisioningMessages, renamePersonResultSchema, renamePersonSchema, staffCommandSchema, staffResultSchema, type StaffCommand } from "../../../../lib/platform/customer-provisioning";
 import { usernameRejectionMessage } from "../../../../lib/identity/provisioning";
-import { ProvisioningUsernameField } from "../../../../components/provisioning-username-field";
 import { TaskActions, TaskCancelButton, TaskOutcome, TaskWindow } from "../../../../components/task-window";
 import { useKeyedSend } from "./profile-actions";
 
@@ -16,34 +15,9 @@ const nameHelp = "Nombre de la persona como aparecerá en PIKAS. Se guarda al co
 const Failure = ({ kind, message, title }: { kind: string; message?: string; title: string }) =>
   <TaskOutcome kind={kind === "failure" ? "failure" : "uncertain"} title={kind === "failure" ? title : "Resultado sin confirmar"}><p>{message}</p></TaskOutcome>;
 
-export function AddStaffAction({ accountId, cafeterias }: { accountId: string; cafeterias: Cafeteria[] }) {
-  const [open, setOpen] = useState(false);
-  return <><button type="button" className="btn" onClick={() => setOpen(true)}>Agregar personal de caja</button>
-    {open && <AddStaffTask accountId={accountId} cafeterias={cafeterias} onClose={() => setOpen(false)} />}</>;
-}
-function AddStaffTask({ accountId, cafeterias, onClose }: { accountId: string; cafeterias: Cafeteria[]; onClose: () => void }) {
-  const [f, setF] = useState({ displayName: "", email: "", username: "", cafeteriaId: cafeterias.length === 1 ? cafeterias[0].id : "" });
-  const body: StaffCommand = { operation: "staff_prepare", accountId, ...f };
-  const parsed = staffCommandSchema.safeParse(body);
-  const { send, busy, outcome, locked } = useKeyedSend<StaffCommand>("/api/platform/customer-access/staff", staffResultSchema, messages);
-  const done = outcome?.kind === "success", dirty = Object.values(f).some(Boolean) && !done && !locked;
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
-  return <TaskWindow title="Agregar personal de caja" context="Personal de caja (cajero o cajera)" busy={busy} dirty={dirty} onClose={onClose}
-    footer={done ? <TaskActions><button type="button" className="btn" onClick={onClose}>Listo</button></TaskActions>
-      : <TaskActions><TaskCancelButton>Cancelar</TaskCancelButton><button type="button" className="btn" disabled={busy || (!locked && !parsed.success)} onClick={() => send(parsed.success ? body : null)}>{busy ? "Preparando…" : outcome?.kind === "uncertain" ? "Reintentar la misma solicitud" : "Preparar acceso"}</button></TaskActions>}>
-    {done ? <TaskOutcome kind="success" title="Acceso preparado"><p>Aparece en Pendientes. Genera allí su enlace de activación; cuando guarde su contraseña, completa el acceso. Preparar no concede acceso.</p></TaskOutcome> : <>
-      <fieldset className="space-y-3" disabled={locked}>
-        <div><label className="block font-bold">Nombre *<input className="field mt-1 w-full" value={f.displayName} onChange={set("displayName")} maxLength={200} required data-autofocus autoComplete="off" aria-describedby="staff-name-help" /></label><p id="staff-name-help" className="mt-1 text-sm text-slate-600">{nameHelp}</p></div>
-        <label className="block font-bold">Correo *<input className="field mt-1 w-full" type="email" value={f.email} onChange={set("email")} maxLength={254} required autoComplete="off" /></label>
-        <ProvisioningUsernameField value={f.username} onChange={(v) => setF({ ...f, username: v })} />
-        <label className="block font-bold">Cafetería *<select className="field mt-1 w-full" value={f.cafeteriaId} onChange={set("cafeteriaId")} required><option value="">Seleccionar cafetería</option>{cafeterias.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-        <p className="text-sm text-slate-600">Rol: Personal de caja. Después podrás asignarle una caja en Administrar cliente → Cajas.</p>
-      </fieldset>
-      {outcome && <Failure kind={outcome.kind} message={outcome.message} title="No se preparó el acceso" />}
-    </>}
-  </TaskWindow>;
-}
-
+// UX 15: link-based creation of Personal POS was retired from the Platform UI; the canonical path is the
+// one-step StaffAccessTask (components/platform/staff-access-task). Recovery of an existing pending
+// invitation (activation link, completion) stays below.
 export function StaffActivationAction({ accountId, cafeteriaId, invitationId, hasLink }: { accountId: string; cafeteriaId: string; invitationId: string; hasLink: boolean }) {
   const router = useRouter(), inFlight = useRef(false);
   const [busy, setBusy] = useState(false), [link, setLink] = useState(""), [message, setMessage] = useState("");

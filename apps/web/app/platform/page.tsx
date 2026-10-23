@@ -7,16 +7,9 @@ import { ReadFailure } from "./console-views";
 import { AppPageHeader } from "../../components/app-page-header";
 import { PlatformCockpit, type ActivityItem } from "../../components/platform/cockpit";
 import { READINESS_CAPABILITY, readinessSchema } from "../../lib/platform/readiness";
+import { activityLabel, recentCustomers } from "../../lib/platform/workspace";
 
 const auditSchema = z.array(z.object({ id: z.uuid(), occurred_at: z.string(), action: z.string(), target_account_id: z.uuid().nullish() }));
-const activityLabels: Record<string, string> = {
-  tenant_provisioned: "Cliente creado", customer_admin_intent_prepared: "Administrador preparado",
-  customer_admin_identity_linked: "Identidad de administrador vinculada", customer_admin_membership_granted: "Acceso de administrador otorgado",
-  school_location_added: "Ubicación agregada", sandbox_pov_entered: "Demostración iniciada", sandbox_pov_exited: "Demostración finalizada",
-  customer_profile_updated: "Perfil del cliente actualizado", customer_structure_renamed: "Sede o cafetería renombrada", customer_person_renamed: "Nombre de persona corregido",
-  cafeteria_admin_granted: "Administrador de cafetería asignado",
-  school_onboarded: "Colegio agregado", customer_suspended: "Cliente suspendido", customer_reactivated: "Cliente reactivado", customer_closed: "Cliente cerrado", customer_reopened: "Cliente reabierto",
-};
 // Each card appears only with the capability its destination requires, so none leads to a 403.
 const destinations = [
   { href: "/platform/clientes", title: "Clientes", text: "Consulta cuentas, su estructura y sus administradores.", allowed: (c: string[]) => c.includes("platform:tenant:lifecycle:read") },
@@ -30,16 +23,18 @@ export default async function PlatformHomePage() {
   const session = await requirePlatform({ demo: "allow" });
   if (session.demo) redirect(DEMO_HOME);
   const activity = session.capabilities.includes("platform:audit:read")
-    ? await readPlatform(session, "platform:audit:read", "platform_read_audit", { p_limit: 5 }, auditSchema) : null;
+    ? await readPlatform(session, "platform:audit:read", "platform_read_audit", { p_limit: 50 }, auditSchema) : null;
   const when = (iso: string) => new Date(iso).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", dateStyle: "medium", timeStyle: "short" });
   // The cockpit needs the customer-operations read; without it the destination cards remain.
   if (session.capabilities.includes(READINESS_CAPABILITY)) {
     const readiness = await readPlatform(session, READINESS_CAPABILITY, "platform_customer_readiness", { p_account_id: null }, readinessSchema);
     if (readiness.kind === "ready") {
       const names = new Map(readiness.value.customers.map(c => [c.account_id, c.name] as const));
-      const items: ActivityItem[] | null = activity?.kind === "ready" ? activity.value.map(e => ({ id: e.id, label: activityLabels[e.action] ?? "Actividad de plataforma",
+      const items: ActivityItem[] | null = activity?.kind === "ready" ? activity.value.map(e => ({ id: e.id, label: activityLabel(e.action),
         customer: e.target_account_id ? names.get(e.target_account_id) ?? null : null, when: when(e.occurred_at) })) : null;
-      return <PlatformCockpit data={readiness.value} activity={items} canAdd={destinations[1].allowed(session.capabilities)}
+      // "Recent customers" = customers with recent Platform activity (audit), not a page-view history.
+      const recent = activity?.kind === "ready" ? recentCustomers(activity.value).filter(r => names.has(r.account_id)).map(r => ({ account_id: r.account_id, name: names.get(r.account_id)!, label: activityLabel(r.last.action), when: when(r.last.occurred_at) })) : null;
+      return <PlatformCockpit data={readiness.value} activity={items} recent={recent} canAdd={destinations[1].allowed(session.capabilities)}
         demoHref={session.capabilities.includes("platform:sandbox:pov:enter") ? "/platform/demostracion" : null} />;
     }
   }
@@ -51,7 +46,7 @@ export default async function PlatformHomePage() {
       {available.map((d) => <Link key={d.href} className="card p-5" href={d.href}><h2 className="font-bold">{d.title}</h2><p>{d.text}</p></Link>)}
     </div>}
     {activity && <section className="card p-5"><h2 className="text-lg font-bold">Actividad reciente</h2>
-      {activity.kind !== "ready" ? <ReadFailure kind={activity.kind} /> : activity.value.length === 0 ? <p className="mt-3">Todavía no hay actividad registrada.</p> : <ul className="mt-3 space-y-3">{activity.value.map((event) => <li key={event.id}>{activityLabels[event.action] ?? "Actividad de plataforma"}<span className="ml-2 text-sm text-slate-600">{new Date(event.occurred_at).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", dateStyle: "medium", timeStyle: "short" })}</span></li>)}</ul>}
+      {activity.kind !== "ready" ? <ReadFailure kind={activity.kind} /> : activity.value.length === 0 ? <p className="mt-3">Todavía no hay actividad registrada.</p> : <ul className="mt-3 space-y-3">{activity.value.map((event) => <li key={event.id}>{activityLabel(event.action)}<span className="ml-2 text-sm text-slate-600">{new Date(event.occurred_at).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", dateStyle: "medium", timeStyle: "short" })}</span></li>)}</ul>}
     </section>}
   </>;
 }

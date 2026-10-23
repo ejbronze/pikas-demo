@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import type { CafeteriaRead } from '../lib/cafeteria/contracts';
 import { cafeteriaHref, managedCounts, readinessLabel, type CafeteriaReadiness, type ReadinessStep } from '../lib/cafeteria/readiness';
+import { studentServiceCopy } from '../lib/cafeteria/student-service';
 
 // PIKAS UX 12A: orientation for the Cafetería Admin. The map states the inherited context
 // (colegio → sede → cafetería, established by PIKAS and never editable here) and where the admin's
@@ -66,18 +67,7 @@ export function HierarchyTrail({ levels, current }: { levels: { label: string; n
 // UX 13 / 13B: student service is School-owned. With the read's student_service status (13B) the
 // block shows the live operational truth for THIS cafetería; without it, only the ownership. It is
 // never a Cafetería setup step and never carries a Cafetería CTA: the School completes it.
-export type StudentServiceStatus = NonNullable<CafeteriaRead['student_service']>;
-export function studentServiceCopy(status: StudentServiceStatus, school: string, cafeteria: string): { label: string; tone: 'ready' | 'school' | 'off'; detail: string } {
-  const n = status.enabled_students;
-  switch (status.state) {
-    case 'ready': return { label: n === 1 ? '1 estudiante habilitado' : `${n} estudiantes habilitados`, tone: 'ready', detail: `${school} ya comparte esta cafetería y habilitó estudiantes: el POS puede encontrarlos.` };
-    case 'no_students_enabled': return { label: '0 estudiantes habilitados', tone: 'school', detail: `${school} debe habilitar estudiantes para ${cafeteria}; hasta entonces el POS no encontrará ninguno.` };
-    case 'no_students': return { label: 'Requiere acción del colegio', tone: 'school', detail: `${school} todavía no ha agregado estudiantes.` };
-    case 'identification_not_shared': return { label: 'Requiere acción del colegio', tone: 'school', detail: `${school} comparte esta cafetería sin «Identificación básica»: el POS no puede buscar estudiantes por nombre hasta que la incluya.` };
-    case 'sharing_revoked': return { label: 'Compartición revocada', tone: 'off', detail: `${school} debe volver a compartir ${cafeteria} para que los estudiantes aparezcan en el POS.` };
-    default: return { label: 'Requiere acción del colegio', tone: 'school', detail: `${school} todavía no ha compartido estudiantes con ${cafeteria}.` };
-  }
-}
+export { studentServiceCopy, type StudentServiceStatus } from '../lib/cafeteria/student-service';
 export function StudentServiceNote({ data }: { data: CafeteriaRead }) {
   const s = data.scope, status = data.student_service;
   if (!status) return <section aria-labelledby="student-service-title" className="hoy-panel">

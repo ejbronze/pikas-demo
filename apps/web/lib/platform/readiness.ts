@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workspaceHref } from "./workspace";
 
 // PIKAS UX 2: launch readiness over platform_customer_readiness (platform:customer:operations:read).
 // The database returns observable facts only; every step state, launch status and attention item
@@ -31,7 +32,8 @@ export const launchLabel: Record<LaunchStatus, string> = { configuring: "En conf
 
 const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
 export const shortDate = (iso: string) => new Date(iso).toLocaleDateString("es-DO", { timeZone: "America/Santo_Domingo", day: "numeric", month: "short", year: "numeric" });
-export const customerHref = (accountId: string, anchor?: string) => `/platform/clientes/${accountId}${anchor ? `#${anchor}` : ""}`;
+// UX 15: anchors resolve to their workspace section (lib/platform/workspace), so older deep links still land.
+export const customerHref = (accountId: string, anchor?: string) => workspaceHref(accountId, undefined, anchor);
 // Same route as components/platform/customer-operations cafeteriaHref (kept here so this module stays UI-free).
 const cafeteriaHref = (accountId: string, cafeteriaId: string, section: string) => `/platform/clientes/${accountId}/gestion/cafeterias/${cafeteriaId}?seccion=${section}`;
 

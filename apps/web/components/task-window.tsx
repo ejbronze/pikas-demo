@@ -12,9 +12,12 @@ const RequestClose = createContext<() => void>(() => {});
 // It holds no data: tasks keep typed values in component memory only.
 // onKeepDraft (non-financial tasks only) adds "Cerrar y conservar borrador" to the discard prompt;
 // financial tasks never pass it, so their close rules are unchanged.
-export function TaskWindow({ title, context, steps, step, busy = false, dirty = false, onClose, onKeepDraft, children, footer }: {
+// variant "sheet" (UX 15): the same modal dialog, focus trap, close gate and focus return, laid out
+// as a side panel on wide screens so the parent workspace stays visible behind it; full screen on
+// phones. It is for inspecting/managing a child resource in context, never for long workflows.
+export function TaskWindow({ title, context, steps, step, busy = false, dirty = false, onClose, onKeepDraft, children, footer, variant = 'task' }: {
   title: string; context?: React.ReactNode; steps?: string[]; step?: number;
-  busy?: boolean; dirty?: boolean; onClose: () => void; onKeepDraft?: () => void; children: React.ReactNode; footer: React.ReactNode;
+  busy?: boolean; dirty?: boolean; onClose: () => void; onKeepDraft?: () => void; children: React.ReactNode; footer: React.ReactNode; variant?: 'task' | 'sheet';
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -48,8 +51,11 @@ export function TaskWindow({ title, context, steps, step, busy = false, dirty = 
       else if (!event.shiftKey && (active === last || !items.includes(active as HTMLElement))) { event.preventDefault(); first.focus(); }
     }}
     onClick={event => { if (event.target === dialog.current) requestClose(); }}
-    className="task-window m-0 h-[100dvh] max-h-none w-full max-w-none overflow-hidden bg-white p-0 text-slate-900 backdrop:bg-slate-950/50 sm:m-auto sm:h-fit sm:max-h-[90dvh] sm:max-w-lg sm:rounded-2xl sm:border">
-    <div className="flex h-full max-h-[inherit] flex-col sm:max-h-[90dvh]">
+    data-variant={variant}
+    className={variant === 'sheet'
+      ? "task-window m-0 h-[100dvh] max-h-none w-full max-w-none overflow-hidden bg-white p-0 text-slate-900 backdrop:bg-slate-950/40 sm:ml-auto sm:mr-0 sm:mt-0 sm:h-[100dvh] sm:max-h-[100dvh] sm:max-w-xl sm:rounded-l-2xl sm:border-l"
+      : "task-window m-0 h-[100dvh] max-h-none w-full max-w-none overflow-hidden bg-white p-0 text-slate-900 backdrop:bg-slate-950/50 sm:m-auto sm:h-fit sm:max-h-[90dvh] sm:max-w-lg sm:rounded-2xl sm:border"}>
+    <div className={`flex h-full max-h-[inherit] flex-col ${variant === 'sheet' ? 'sm:max-h-[100dvh]' : 'sm:max-h-[90dvh]'}`}>
       <header className="flex shrink-0 items-start gap-3 border-b px-4 py-3 sm:px-6">
         <div className="min-w-0 flex-1">
           <h2 id={titleId} tabIndex={-1} className="break-words text-xl font-black outline-none">{title}</h2>

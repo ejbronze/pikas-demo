@@ -4,6 +4,7 @@ import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
 import { CUSTOMER_OPERATIONS_MANAGE, CUSTOMER_OPERATIONS_READ, operationsOverviewSchema, supportCafeteriaReadSchema } from "../../../../../../../lib/platform/customer-operations";
 import { CafeteriaSwitcher, SectionNav, SupportContext, SupportProducts, SupportRegisters, SupportStaff, SupportSummary, sections, managementHref, cafeteriaHref, type Section } from "../../../../../../../components/platform/customer-operations";
 import { CafeteriaTransactions } from "../../../../../../../components/cafeteria-transactions";
+import { PlatformTrail } from "../../../../../../../components/platform/customer-context";
 import { CafeteriaReports } from "../../../../../../../components/cafeteria-reports";
 import { ErrorState, LoadFailure } from "../../../../../../../components/state-panels";
 import { ConnectedCafeteriaProvider } from "../../../../../../../components/connected-cafeteria-provider";
@@ -35,7 +36,9 @@ export default async function CustomerCafeteriaPage({ params, searchParams }: { 
   const canManage=session.capabilities.includes(CUSTOMER_OPERATIONS_MANAGE)&&d.scope.account_status==="active";
   const current:Section=!canManage&&(["menus","turnos","configuracion"] as Section[]).includes(section)?"resumen":section;
   const managed=(view:'products'|'menus'|'shifts'|'registers'|'settings')=><ConnectedCafeteriaProvider data={d as CafeteriaRead} recoveryActorId={d.scope.actor_id} source={{endpoint:"/api/platform/customer-operations/cafeteria",accountId:a}}><SupportCafeteriaManagement section={view} data={d as CafeteriaRead}/></ConnectedCafeteriaProvider>;
+  const sectionLabel = sections.find(([k]) => k === current)?.[1] ?? "Resumen";
   return <div className="space-y-5">
+    <PlatformTrail accountId={a} levels={[{ label: "Cliente", name: d.scope.account_name }, { label: "Colegio", name: d.scope.school_name }, { label: "Sede", name: d.scope.location_name }, { label: "Cafetería", name: d.scope.cafeteria_name }]} current={sectionLabel} />
     <SupportContext accountId={a} accountName={d.scope.account_name} accountStatus={d.scope.account_status} cafeteriaName={`${d.scope.cafeteria_name} · ${d.scope.location_name}`} canManage={canManage} />
     <CafeteriaSwitcher overview={overview.value} accountId={a} selected={c} section={current} />
     <SectionNav accountId={a} cafeteriaId={c} current={current} canManage={canManage} />

@@ -50,12 +50,12 @@ describe("step rules", () => {
     expect(state(readinessSteps(fx(1, "configured", { products: { available: 0 } })), "productos").state).toBe("pending");
     expect(state(readinessSteps(fx(1)), "productos").detail).toBe("12 productos disponibles");
     expect(state(readinessSteps(fx(1, "configured", { profile: { missing_tax_id: 1, missing_province: 1 } })), "perfil")).toMatchObject({ state: "complete", detail: "Colegio registrado. RNC, dirección o provincia sin registrar (opcional)." });
-    expect(state(readinessSteps(fx(1, "configured", { structure: { operating_cafeterias: 0, first_cafeteria_id: null } })), "cajas").action?.href).toBe("/platform/clientes/7e00d000-0000-4000-8000-000000000001#estructura");
+    expect(state(readinessSteps(fx(1, "configured", { structure: { operating_cafeterias: 0, first_cafeteria_id: null } })), "cajas").action?.href).toBe("/platform/clientes/7e00d000-0000-4000-8000-000000000001?seccion=estructura#estructura");
   });
   it("links go to existing controls; the caja and product links open the first operating cafetería", () => {
     const steps = readinessSteps(fx(1));
-    expect(state(steps, "administrador").action?.href).toBe("/platform/clientes/7e00d000-0000-4000-8000-000000000001#administrador-inicial");
-    expect(state(steps, "personal").action?.href).toBe("/platform/clientes/7e00d000-0000-4000-8000-000000000001#customer-access");
+    expect(state(steps, "administrador").action?.href).toBe("/platform/clientes/7e00d000-0000-4000-8000-000000000001?seccion=personas#administrador-inicial");
+    expect(state(steps, "personal").action?.href).toBe("/platform/clientes/7e00d000-0000-4000-8000-000000000001?seccion=personas#customer-access");
     expect(state(steps, "cajas").action?.href).toBe("/platform/clientes/7e00d000-0000-4000-8000-000000000001/gestion/cafeterias/7e00d000-0000-4000-8000-000000000101?seccion=cajas");
     expect(state(steps, "venta").action).toBeNull();
   });

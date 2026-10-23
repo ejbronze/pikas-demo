@@ -6,6 +6,7 @@ import { MetricCard } from "../metric-card";
 import { MoneyValue } from "../money-value";
 import { EmptyState } from "../state-panels";
 import { LifecycleBadge } from "../../app/platform/console-views";
+import { workspaceHref } from "../../lib/platform/workspace";
 
 // Backoffice Customer Management (M1). Read-only presentation of a customer's cafeteria operations
 // for PIKAS support. No edit, command, money or access controls are rendered here, and none of the
@@ -26,8 +27,7 @@ export function SupportContext({ accountId, accountName, accountStatus, cafeteri
     <p className="text-sm">Estás gestionando el contexto del cliente como personal de PIKAS. {canManage && accountStatus === "active" ? "Puedes realizar únicamente la configuración no financiera permitida." : "Solo consulta: no se realizan cambios desde aquí."}</p>
     {lifecycleNotice[accountStatus] && <p className="text-sm font-bold">{lifecycleNotice[accountStatus]}</p>}
     <div className="flex flex-wrap gap-2">
-      {cafeteriaName && <Link href={managementHref(accountId)} className="btn-secondary bg-white">Todas las cafeterías</Link>}
-      <Link href={`/platform/clientes/${accountId}`} className="btn-secondary bg-white">Volver al cliente</Link>
+      <Link href={workspaceHref(accountId, "operacion")} className="btn-secondary bg-white">Volver al cliente</Link>
     </div>
   </section>;
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { cafeteriaHref, managementHref } from "./customer-operations";
+import { cafeteriaHref } from "./customer-operations";
+import { EmptyState } from "../state-panels";
 
 // Operación: the entry to the existing Platform support workspace (platform:customer:operations:read
 // and, where granted, :manage). It explains the boundary: PIKAS staff act as themselves, never as a
@@ -10,13 +11,14 @@ export function CustomerOperationsEntry({ accountId, cafeterias, canManage }: { 
       <div className="min-w-0 flex-1 basis-64"><h2 id="operacion-title" className="text-lg font-bold">Operación</h2>
         <p className="text-sm text-slate-600">{canManage ? "Consulta y configura sus cafeterías como personal de PIKAS: productos, menús, cajas y personal. Transacciones y reportes son de solo consulta."
           : "Consulta sus cafeterías como personal de PIKAS: productos, cajas, personal, transacciones y reportes."} Actúas con tu propia cuenta de PIKAS, no como usuario del cliente.</p></div>
-      <Link className="btn" href={managementHref(accountId)}>Administrar operación</Link>
     </div>
-    {cafeterias.length > 0 && <ul className="ws-rows" aria-label="Cafeterías del cliente">{cafeterias.map(c => <li key={c.id}>
+    {cafeterias.length === 0 ? <EmptyState title="Este cliente aún no tiene cafeterías activas." description="La operación se consulta por cafetería. Cuando la estructura tenga una cafetería activa, aparecerá aquí." />
+      : <ul className="ws-rows" aria-label="Cafeterías del cliente">{cafeterias.map(c => <li key={c.id}>
       <div className="min-w-0"><p className="font-semibold break-words">{c.name}</p><p className="text-sm text-slate-600 break-words">{c.location}</p></div>
       <div className="ws-links"><Link className="btn-tertiary" href={cafeteriaHref(accountId, c.id)} aria-label={`Abrir ${c.name}`}>Abrir</Link>
         <Link className="btn-tertiary" href={cafeteriaHref(accountId, c.id, "cajas")} aria-label={`Cajas de ${c.name}`}>Cajas</Link>
-        <Link className="btn-tertiary" href={cafeteriaHref(accountId, c.id, "productos")} aria-label={`Productos de ${c.name}`}>Productos</Link></div>
+        <Link className="btn-tertiary" href={cafeteriaHref(accountId, c.id, "productos")} aria-label={`Productos de ${c.name}`}>Productos</Link>
+        <Link className="btn-tertiary" href={cafeteriaHref(accountId, c.id, "personal")} aria-label={`Personal de ${c.name}`}>Personal</Link></div>
     </li>)}</ul>}
   </section>;
 }

@@ -20,7 +20,8 @@ export function StepMeter({ steps }: { steps: Step[] }) {
     <span className="net-meter-text">{completeCount(steps)} de {steps.length} listos</span></span>;
 }
 
-export function PlatformCockpit({ data, activity, canAdd, demoHref }: { data: Readiness; activity: ActivityItem[] | null; canAdd: boolean; demoHref: string | null }) {
+export type RecentCustomer = { account_id: string; name: string; label: string; when: string };
+export function PlatformCockpit({ data, activity, recent = null, canAdd, demoHref }: { data: Readiness; activity: ActivityItem[] | null; recent?: RecentCustomer[] | null; canAdd: boolean; demoHref: string | null }) {
   const summary = networkSummary(data.customers), attention = attentionItems(data.customers);
   const rows = data.customers.map(c => { const steps = readinessSteps(c); return { c, steps, status: launchStatus(c, steps) }; })
     .sort((a, b) => order[a.status] - order[b.status] || a.c.name.localeCompare(b.c.name, "es"));
@@ -47,12 +48,19 @@ export function PlatformCockpit({ data, activity, canAdd, demoHref }: { data: Re
         {attention.length === 0 ? <p className="net-calm"><span aria-hidden>✓</span> Ningún cliente activo tiene pasos de puesta en marcha pendientes.</p>
           : <ul className="net-list">{attention.map(item => <li key={item.customer.account_id} data-severity={item.severity}>
             <div className="min-w-0 flex-1"><p className="font-bold break-words">{item.customer.name}</p>
-              <p className="net-issue-tag">{item.severity === "attention" ? "Requiere atención" : "Siguiente paso"} · {item.step.label}</p>
+              <p className="net-issue-tag">{item.severity === "attention" ? "Requiere atención" : "Siguiente paso"} · {item.step.label} · {item.step.owner === "PIKAS" ? "PIKAS" : "cafetería"}</p>
               <p className="net-issue">{item.step.detail}</p></div>
             <div className="net-item-end">{item.others.length > 0 && <span className="net-more">+{item.others.length} {item.others.length === 1 ? "pendiente" : "pendientes"}</span>}
               <Link className="net-action" href={customerHref(item.customer.account_id, "puesta-en-marcha")}>Abrir puesta en marcha<span className="sr-only"> de {item.customer.name}</span></Link></div></li>)}</ul>}
       </section>}
 
+    {recent && recent.length > 0 && <section aria-labelledby="net-recent" className="net-panel">
+      <h2 id="net-recent" className="net-h2">Clientes con actividad reciente</h2>
+      <p className="text-sm text-slate-600">Los últimos clientes sobre los que PIKAS actuó, según el registro de actividad de la plataforma.</p>
+      <ul className="net-rows" aria-label="Clientes con actividad reciente">{recent.map(r => <li key={r.account_id}>
+        <div className="min-w-0 flex-1"><Link className="font-bold break-words text-[var(--primary)] hover:underline" href={customerHref(r.account_id)}>{r.name}</Link><span className="block text-xs text-slate-500">{r.label} · {r.when}</span></div>
+        <Link className="net-action" href={customerHref(r.account_id)}>Abrir<span className="sr-only"> {r.name}</span></Link></li>)}</ul>
+    </section>}
     {data.customers.length > 0 && <section aria-labelledby="net-customers" className="net-panel">
       <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="net-customers" className="net-h2">Clientes</h2><Link className="net-action" href="/platform/clientes">Buscar y filtrar</Link></div>
       <ul className="net-rows">{rows.map(({ c, steps, status }) => { const next = nextStep(steps); return <li key={c.account_id}>
