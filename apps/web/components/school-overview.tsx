@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { PikasMascot } from "@pikas/ui/mascot";
 import { money } from "../lib/cafeteria/operations";
 import { schoolAttention, serviceReadiness, sharingLabel, type OverviewInputs } from "../lib/school/overview";
 import type { SchoolRead } from "../lib/school/contracts";
@@ -26,7 +26,7 @@ export function SchoolOverview({ data, overview }: { data: SchoolRead; overview:
     <section aria-labelledby="sch-students" className="sch-ledger">
       <h2 id="sch-students" className="sch-h2">Estudiantes</h2>
       {counts.students === 0
-        ? <div className="sch-empty"><Image src="/brand/pikas-logo-mark-full-color.png" alt="" width={44} height={44} className="rounded-xl" />
+        ? <div className="sch-empty"><PikasMascot id="EMP-02" size={120} className="sch-mascot" />
             <div><p className="font-bold">Aún no hay estudiantes en este colegio.</p><p className="text-sm text-slate-600">Agrégalos uno por uno o importa un archivo CSV desde Estudiantes.</p></div></div>
         : <dl className="sch-figures">
           <div><dt>Estudiantes activos</dt><dd className="num-display"><TraceLink href={`/admin/escuela/reportes/estudiantes?school=${data.scope.school_id}&status=active`} label={`${counts.active} estudiantes activos: ver el reporte de estudiantes activos`}>{counts.active.toLocaleString("es-DO")}</TraceLink></dd>

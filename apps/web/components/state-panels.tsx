@@ -2,11 +2,12 @@ import Link from "next/link";
 
 // Wave C shared states. EmptyState is a legitimate zero result (status); ErrorState is a failure
 // (alert) and never renders data or zeros. Specialized financial errors keep their own copy.
-export function EmptyState({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) {
-  return <div role="status" className="card p-5">
-    <p className="font-bold">{title}</p>
+export function EmptyState({ title, description, action, illustration }: { title: string; description?: string; action?: React.ReactNode; illustration?: React.ReactNode }) {
+  return <div role="status" className={`card p-5${illustration ? " flex flex-wrap items-center gap-4" : ""}`}>
+    {illustration && <div className="shrink-0" aria-hidden>{illustration}</div>}
+    <div className="min-w-0 flex-1 basis-56"><p className="font-bold">{title}</p>
     {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
-    {action && <div className="mt-3">{action}</div>}
+    {action && <div className="mt-3">{action}</div>}</div>
   </div>;
 }
 

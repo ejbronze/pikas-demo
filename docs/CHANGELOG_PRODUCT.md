@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## Mascota PIKAS: fundación compartida y primeros estados vacíos (Mascota fase 1, local)
+
+- **Sistema de mascota compartido**: los 36 activos del catálogo (`docs/pikas-mascot-system/`, fuente de diseño) se publican como copia idéntica en `packages/ui/assets/mascot/` mediante `npm run mascot:sync -w @pikas/ui`; `npm run mascot:check` falla ante cualquier desvío. Nada se copia en tiempo de build ni a `public/`.
+- **Componentes en `@pikas/ui`**: `PikasMascot` (cualquier activo por id del manifiesto; decorativo por defecto con `alt=""` y `aria-hidden`; `meaningful` usa el texto alternativo en español del manifiesto; avisos en desarrollo ante ids desconocidos o tamaños fuera de rango) y `PikasLoader` (LOAD-01: nada durante el primer segundo, animación hasta los 10 s y luego texto; el texto `role="status"` siempre está presente). La animación es CSS dentro del SVG y se detiene con `prefers-reduced-motion`.
+- **Pantallas**: la mascota sustituye al logotipo en los estados vacíos donde el logo hacía de ilustración: Escuela · Resumen (sin estudiantes), Escuela · Estudiantes (sin estudiantes), Escuela · PIKAS Cash (sin monederos), Plataforma · Inicio (sin clientes) con EMP-02; Plataforma · Identidades sin resultado con SUP-02; carga global y de Plataforma con el cargador LOAD-01. El texto sigue diciendo qué es el estado y qué hacer; la mascota nunca es la única portadora de información.
+- Sin mascota (por decisión): barra de modo Demo (UX 11), Cafetería Admin y POS (hitos congelados), finanzas, pantallas de error, permisos o credenciales, y el logotipo, que no cambia. La cuenta regresiva de sesión (ATT-01) queda para la fase 2.
+- Sin migración, sin capacidades, permisos ni roles nuevos.
+
 ## Escuela y cafetería: servicio a estudiantes claro entre roles (UX 13, local)
 
 - **Compartición con la verdad del colegio**: «Cafeterías conectadas» distingue **Sin compartir todavía** (nunca se compartió), **Compartición activa** y **Compartición revocada** (hubo compartición y se retiró), leyendo las filas de compartición propias del colegio (misma autoridad `school:sharing:read`). Antes una relación nueva aparecía como «revocada». Cada cafetería explica qué significa compartir («permite que esta cafetería vea únicamente los estudiantes que el colegio habilite…»), la acción principal dice «Compartir con {cafetería}» / «Volver a compartir con…», y «Identificación básica» queda preseleccionada porque el POS la necesita para encontrar estudiantes.

@@ -1,0 +1,112 @@
+<title>PIKAS Mascot Catalog</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column of labelled sets; each set a responsive grid of figure cards on a light "valley" stage */
+:root{
+  --bg:#FFFDF8; --ink:#0E1E4A; --muted:#4A5677; --rule:#E7E1D2; --stage:#FBF5E7; --accent:#FFC72C; --teal:#0A7C82; --chip:#E6F7F7;
+  --display:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1638; --ink:#F4EEDF; --muted:#AEB7D0; --rule:#24346A; --stage:#F6EEDB; --accent:#FFC72C; --teal:#5FD6DA; --chip:#14305A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1638; --ink:#F4EEDF; --muted:#AEB7D0; --rule:#24346A; --stage:#F6EEDB; --accent:#FFC72C; --teal:#5FD6DA; --chip:#14305A; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px;display:grid;gap:48px}
+header{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+header img{width:88px;height:88px;border-radius:20px}
+h1{font:600 clamp(2rem,4vw,2.75rem)/1.05 var(--display);margin:0;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.lede b{color:var(--ink)}
+h2{font:600 1.5rem/1.2 var(--display);margin:0 0 16px;display:flex;align-items:center;gap:12px}
+.letter{font:500 .8rem/1 var(--mono);background:var(--accent);color:#0E1E4A;border-radius:6px;padding:5px 7px}
+h3{font:600 1.1rem/1.2 var(--display);margin:0}
+p{margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.asset,.motion{display:grid;grid-template-rows:auto 1fr;align-content:start;border:1px solid var(--rule);border-radius:14px;overflow:hidden;min-width:0}
+.stage{background:var(--stage);padding:16px;height:240px;max-width:100%}
+.stage img{display:block;width:100%;height:100%;object-fit:contain}
+.meta{padding:12px 14px 14px;display:grid;gap:6px;align-content:start}
+.meta p{color:var(--muted);font-size:.92rem}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+code{font:500 .78rem/1 var(--mono);letter-spacing:.02em;color:var(--teal)}
+.chip{font:700 .7rem/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:4px 7px;border-radius:999px;background:var(--chip);color:var(--teal)}
+button{font:700 .85rem/1 var(--body);color:var(--ink);background:transparent;border:1.5px solid var(--ink);border-radius:999px;padding:8px 12px;cursor:pointer;justify-self:start}
+button:hover{background:var(--accent);color:#0E1E4A;border-color:var(--accent)}
+button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.meta button+button{margin-top:0}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.motion-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.motion.wide{grid-column:1/-1;grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-rows:auto}
+.motion.wide .stage{height:300px}
+@media (max-width:640px){.motion.wide{grid-template-columns:1fr}}
+.palette{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.palette li{display:grid;grid-template-columns:40px 1fr;grid-template-rows:auto auto auto;column-gap:10px;align-items:center}
+.sw{grid-row:1/4;width:40px;height:40px;border-radius:10px;border:1px solid var(--rule)}
+.pn{font-weight:700}
+.hex{font:500 .78rem/1 var(--mono);padding:3px 0;border:0;border-radius:4px;justify-self:start}
+.hex:hover{background:transparent;color:var(--teal)}
+.pr{font-size:.82rem;color:var(--muted)}
+.pending{columns:3 200px;margin:0;padding-left:20px;color:var(--muted)}
+.note{color:var(--muted);font-size:.92rem;max-width:70ch}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700}
+textarea.fallback{width:100%;min-height:120px;font:12px var(--mono)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <img src="%%MARK%%" alt="PIKAS logo mark">
+    <div>
+      <h1>PIKAS Mascot Catalog</h1>
+      <p class="lede"><b>All 35 planned assets are drawn</b>: %%DRAWN%% poses and the loader, plus six more animations. Version 0.1 for owner review. Every pose is built from the same vector parts, so a change to the head or body carries through all of them. Use <b>Copy SVG</b> to take any file.</p>
+    </div>
+  </header>
+
+  <section>
+    <h2>Motion</h2>
+    <div class="motion-grid">%%MOTION%%</div>
+    <p class="note" style="margin-top:14px">All animation is CSS inside the SVG: no player library needed. Each file turns its motion off when the viewer's device asks for reduced motion, leaving a still pose.</p>
+  </section>
+
+  %%SETS%%
+
+  <section>
+    <h2>Palette</h2>
+    <ul class="palette">%%PALETTE%%</ul>
+  </section>
+
+  <section>
+    <h2>Still to build</h2>
+    <ul class="pending">%%PENDING%%</ul>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const SOURCES = %%SOURCES%%;
+const toast = document.getElementById('toast'); let tt;
+function say(msg){ toast.textContent = msg; toast.hidden = false; clearTimeout(tt); tt = setTimeout(() => toast.hidden = true, 1800); }
+async function copyText(text, label, btn){
+  try { await navigator.clipboard.writeText(text); say(label + ' copied'); }
+  catch (e) {
+    let ta = btn.parentElement.querySelector('textarea.fallback');
+    if (!ta) { ta = document.createElement('textarea'); ta.className = 'fallback'; ta.readOnly = true; ta.id = 'fb-' + Math.random().toString(36).slice(2); btn.after(ta); }
+    ta.value = text; ta.focus(); ta.select(); say('Press Ctrl+C or ⌘C to copy');
+  }
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest('button.copy');
+  if (c) { copyText(SOURCES[c.dataset.id], c.dataset.file, c); return; }
+  const h = e.target.closest('button.hex');
+  if (h) { copyText(h.dataset.hex, h.dataset.hex, h); return; }
+  const r = e.target.closest('button.replay');
+  if (r) { const img = document.getElementById(r.dataset.target); const s = img.dataset.src; img.src = ''; requestAnimationFrame(() => img.src = s); }
+});
+document.querySelectorAll('.motion .meta').forEach(m => {
+  const bs = m.querySelectorAll('button'); if (bs.length) { const w = document.createElement('div'); w.className = 'btns'; bs[0].before(w); bs.forEach(b => w.append(b)); }
+});
+</script>

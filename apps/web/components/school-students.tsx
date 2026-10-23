@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import { PikasMascot } from "@pikas/ui/mascot";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -61,7 +61,7 @@ export function SchoolStudents({ data, students, query, status, location, grade,
     </header>
     {notice && <p role="status" className="rounded-xl bg-emerald-50 p-3 font-bold text-emerald-900">{notice}</p>}
     {pendingCreate && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3"><p className="flex-1 basis-60 text-sm"><strong>Hay una creación de estudiante pendiente de confirmar.</strong> Revísala antes de crear otro.</p><button type="button" className="btn-secondary" onClick={create}>Revisar solicitud pendiente</button></div>}
-    {noStudents ? <div className="stu-empty"><Image src="/brand/pikas-logo-mark-full-color.png" alt="" width={48} height={48} className="rounded-xl" />
+    {noStudents ? <div className="stu-empty"><PikasMascot id="EMP-02" size={120} className="sch-mascot" />
         <div className="min-w-0 flex-1"><p className="font-bold">Aún no hay estudiantes en este colegio.</p><p className="text-sm text-slate-600">Créalos uno por uno o importa varios desde un archivo CSV. Cada estudiante necesita nombre, apellido y código estudiantil.</p>
           <div className="mt-3 flex flex-wrap gap-2"><button type="button" className="btn" onClick={create}>Crear estudiante</button><button type="button" className="btn-secondary" onClick={() => setImporting(true)}>Importar CSV</button></div></div></div>
     : <>

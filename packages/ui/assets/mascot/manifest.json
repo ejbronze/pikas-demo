@@ -1,0 +1,671 @@
+{
+  "version": "0.1",
+  "generated": "2026-10-22",
+  "basePath": "brand/mascot",
+  "rules": {
+    "decorativeByDefault": true,
+    "hatOnSets": [
+      "onboarding",
+      "cafeteria",
+      "pos"
+    ],
+    "minSizePx": 24,
+    "noMascot": [
+      "declined payments",
+      "failed transfers",
+      "insufficient balance",
+      "suspicious activity",
+      "permission errors",
+      "data loss",
+      "security failures"
+    ]
+  },
+  "assets": [
+    {
+      "id": "FND-01",
+      "name": "Neutral front",
+      "file": "poses/foundation/pikas-fnd-01-neutral.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "all"
+      ],
+      "use": "Base reference, about pages, avatars",
+      "sizePx": "96-400",
+      "motionFile": "motion/pikas-fnd-01-neutral-blink.svg",
+      "altWhenMeaningful": "PIKAS, la mascota de PIKAS, de pie y sonriendo",
+      "never": null
+    },
+    {
+      "id": "FND-02",
+      "name": "Three-quarter",
+      "file": "poses/foundation/pikas-fnd-02-three-quarter.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "all"
+      ],
+      "use": "Beside text blocks and cards",
+      "sizePx": "96-320",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS mira hacia un lado",
+      "never": null
+    },
+    {
+      "id": "FND-03",
+      "name": "Wave",
+      "file": "poses/foundation/pikas-fnd-03-wave.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "onboarding",
+        "login",
+        "website"
+      ],
+      "use": "Welcome, sign-in, website hero",
+      "sizePx": "120-400",
+      "motionFile": "motion/pikas-fnd-03-wave-anim.svg",
+      "altWhenMeaningful": "PIKAS saluda con la mano",
+      "never": null
+    },
+    {
+      "id": "FND-04",
+      "name": "Point right",
+      "file": "poses/foundation/pikas-fnd-04-point-right.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "all"
+      ],
+      "use": "Directs attention to a CTA or panel on the right",
+      "sizePx": "96-320",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "FND-05",
+      "name": "Point left",
+      "file": "poses/foundation/pikas-fnd-05-point-left.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "all"
+      ],
+      "use": "Directs attention to a CTA or panel on the left",
+      "sizePx": "96-320",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "FND-06",
+      "name": "Present",
+      "file": "poses/foundation/pikas-fnd-06-present.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "website",
+        "presentations"
+      ],
+      "use": "Introducing a screen or feature",
+      "sizePx": "160-480",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS presenta una pantalla",
+      "never": null
+    },
+    {
+      "id": "FND-07",
+      "name": "Think",
+      "file": "poses/foundation/pikas-fnd-07-think.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "support",
+        "setup"
+      ],
+      "use": "Decision points, help prompts",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "FND-08",
+      "name": "Head mark",
+      "file": "poses/foundation/pikas-fnd-08-head.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "all"
+      ],
+      "use": "Avatars, toasts, navigation",
+      "sizePx": "24-64",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "FND-08c",
+      "name": "Head mark, cap",
+      "file": "poses/foundation/pikas-fnd-08-head-cap.svg",
+      "set": "foundation",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "onboarding",
+        "cafeteria",
+        "pos"
+      ],
+      "use": "Head mark in role contexts",
+      "sizePx": "48-64",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "FND-08s",
+      "name": "Head mark, cap, small",
+      "file": "poses/foundation/pikas-fnd-08-head-cap-small.svg",
+      "set": "foundation",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "pos"
+      ],
+      "use": "Cap head mark at 32-48 px (no triangle)",
+      "sizePx": "32-48",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "FND-09",
+      "name": "Flower",
+      "file": "poses/foundation/pikas-fnd-09-flower.svg",
+      "set": "foundation",
+      "cap": false,
+      "prop": "flower",
+      "contexts": [
+        "students",
+        "website",
+        "progress"
+      ],
+      "use": "Student home, progress, story chapters",
+      "sizePx": "96-320",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS sostiene una flor amarilla",
+      "never": null
+    },
+    {
+      "id": "SUC-01",
+      "name": "Done",
+      "file": "poses/success/pikas-suc-01-done.svg",
+      "set": "success",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "all"
+      ],
+      "use": "Saved, configured, task complete",
+      "sizePx": "64-200",
+      "motionFile": "motion/pikas-suc-01-done-pop.svg",
+      "altWhenMeaningful": null,
+      "never": "No thumb or finger gestures, ever"
+    },
+    {
+      "id": "SUC-02",
+      "name": "Celebrate",
+      "file": "poses/success/pikas-suc-02-celebrate.svg",
+      "set": "success",
+      "cap": false,
+      "prop": "flower",
+      "contexts": [
+        "onboarding",
+        "go-live",
+        "website"
+      ],
+      "use": "Setup complete, go-live; once per milestone",
+      "sizePx": "160-400",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS celebra con los brazos arriba",
+      "never": null
+    },
+    {
+      "id": "SUC-03",
+      "name": "Checklist done",
+      "file": "poses/success/pikas-suc-03-checklist-done.svg",
+      "set": "success",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "readiness"
+      ],
+      "use": "Readiness 100%, cashier ready",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "ONB-01",
+      "name": "Checklist",
+      "file": "poses/onboarding/pikas-onb-01-checklist.svg",
+      "set": "onboarding",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "readiness",
+        "setup"
+      ],
+      "use": "Header of a setup checklist",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "ONB-02",
+      "name": "Map",
+      "file": "poses/onboarding/pikas-onb-02-map.svg",
+      "set": "onboarding",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "onboarding"
+      ],
+      "use": "First onboarding step",
+      "sizePx": "160-320",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS sostiene un mapa con la ruta",
+      "never": null
+    },
+    {
+      "id": "ONB-03",
+      "name": "Next step",
+      "file": "poses/onboarding/pikas-onb-03-next-step.svg",
+      "set": "onboarding",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "multi-step flows"
+      ],
+      "use": "Between steps",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "CAF-01",
+      "name": "Tray",
+      "file": "poses/cafeteria/pikas-caf-01-tray.svg",
+      "set": "cafeteria",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "products",
+        "menus"
+      ],
+      "use": "Product and menu headers",
+      "sizePx": "96-320",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS lleva una bandeja con comida",
+      "never": null
+    },
+    {
+      "id": "CAF-02",
+      "name": "Caja",
+      "file": "poses/cafeteria/pikas-caf-02-caja.svg",
+      "set": "cafeteria",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "cajas"
+      ],
+      "use": "Caja configuration, no-Caja empty state",
+      "sizePx": "120-280",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Inside Caja settings forms"
+    },
+    {
+      "id": "CAF-03",
+      "name": "Staff",
+      "file": "poses/cafeteria/pikas-caf-03-staff.svg",
+      "set": "cafeteria",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "staff"
+      ],
+      "use": "Staff list, invite cashier",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Permission or role screens"
+    },
+    {
+      "id": "POS-01",
+      "name": "Ready",
+      "file": "poses/pos/pikas-pos-01-ready.svg",
+      "set": "pos",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "pos"
+      ],
+      "use": "\"Caja lista\" at shift start",
+      "sizePx": "32-64",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Product grid or cart"
+    },
+    {
+      "id": "POS-02",
+      "name": "Sale complete",
+      "file": "poses/pos/pikas-pos-02-sale-complete.svg",
+      "set": "pos",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "pos"
+      ],
+      "use": "Payment accepted; show 1.5 s, never block the next sale",
+      "sizePx": "32-64",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Declined payments"
+    },
+    {
+      "id": "POS-03",
+      "name": "Offline",
+      "file": "poses/pos/pikas-pos-03-offline.svg",
+      "set": "pos",
+      "cap": true,
+      "prop": null,
+      "contexts": [
+        "pos"
+      ],
+      "use": "Beside the offline banner text",
+      "sizePx": "32-48",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Declined payments"
+    },
+    {
+      "id": "FIN-01",
+      "name": "Card",
+      "file": "poses/finance/pikas-fin-01-card.svg",
+      "set": "finance",
+      "cap": false,
+      "prop": "card",
+      "contexts": [
+        "pikas-cash",
+        "pos"
+      ],
+      "use": "Paying: wallet intro, top-up prompt",
+      "sizePx": "96-320",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS sostiene su tarjeta PIKAS Cash",
+      "never": "Beside amounts, refunds or reversals"
+    },
+    {
+      "id": "FIN-02",
+      "name": "Receipt review",
+      "file": "poses/finance/pikas-fin-02-receipt.svg",
+      "set": "finance",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "transactions",
+        "reports"
+      ],
+      "use": "Transaction history header, no receipts yet",
+      "sizePx": "96-200",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Beside any amount"
+    },
+    {
+      "id": "FIN-03",
+      "name": "Transfer",
+      "file": "poses/finance/pikas-fin-03-transfer.svg",
+      "set": "finance",
+      "cap": false,
+      "prop": "card",
+      "contexts": [
+        "recargas"
+      ],
+      "use": "Explaining a top-up, before the form",
+      "sizePx": "120-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Confirmation, failure or fraud screens"
+    },
+    {
+      "id": "FIN-04",
+      "name": "Wallet",
+      "file": "poses/finance/pikas-fin-04-wallet.svg",
+      "set": "finance",
+      "cap": false,
+      "prop": "wallet",
+      "contexts": [
+        "pikas-cash"
+      ],
+      "use": "Wallet home, balance intro",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Beside balances"
+    },
+    {
+      "id": "FIN-05",
+      "name": "Coin purse",
+      "file": "poses/finance/pikas-fin-05-purse.svg",
+      "set": "finance",
+      "cap": false,
+      "prop": "purse",
+      "contexts": [
+        "students",
+        "family-controls"
+      ],
+      "use": "\"Para hoy\" daily limit, allowance",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Beside balances"
+    },
+    {
+      "id": "ATT-01",
+      "name": "Session ending",
+      "file": "poses/attention/pikas-att-01-worried.svg",
+      "set": "attention",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "session-timeout"
+      ],
+      "use": "\"Tu sesión está por terminar\" dialog",
+      "sizePx": "96-200",
+      "motionFile": "motion/pikas-att-01-worried-countdown.svg",
+      "altWhenMeaningful": null,
+      "never": "Any error or security screen"
+    },
+    {
+      "id": "ATT-02",
+      "name": "Still there?",
+      "file": "poses/attention/pikas-att-02-bored.svg",
+      "set": "attention",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "idle",
+        "students"
+      ],
+      "use": "\"¿Sigues ahí?\" before the countdown; student views only",
+      "sizePx": "96-200",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Staff or finance screens"
+    },
+    {
+      "id": "SUP-01",
+      "name": "Helper",
+      "file": "poses/support/pikas-sup-01-helper.svg",
+      "set": "support",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "support"
+      ],
+      "use": "Help centre, contact support",
+      "sizePx": "96-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Incident or outage notices"
+    },
+    {
+      "id": "SUP-02",
+      "name": "Magnifier",
+      "file": "poses/support/pikas-sup-02-magnifier.svg",
+      "set": "support",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "search",
+        "diagnostics"
+      ],
+      "use": "No search results, checking setup",
+      "sizePx": "96-200",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": null
+    },
+    {
+      "id": "SUP-03",
+      "name": "Needs attention",
+      "file": "poses/support/pikas-sup-03-needs-attention.svg",
+      "set": "support",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "missing-configuration"
+      ],
+      "use": "Recoverable warnings only",
+      "sizePx": "64-160",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Financial or security failures"
+    },
+    {
+      "id": "EMP-01",
+      "name": "Empty tray",
+      "file": "poses/empty-states/pikas-emp-01-empty-tray.svg",
+      "set": "empty-states",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "products",
+        "menus"
+      ],
+      "use": "No products / no menu + create CTA",
+      "sizePx": "120-240",
+      "motionFile": null,
+      "altWhenMeaningful": null,
+      "never": "Without a sentence saying what is empty"
+    },
+    {
+      "id": "EMP-02",
+      "name": "Empty box",
+      "file": "poses/empty-states/pikas-emp-02-empty-box.svg",
+      "set": "empty-states",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "lists"
+      ],
+      "use": "Any list with no records + create CTA",
+      "sizePx": "120-240",
+      "motionFile": "motion/pikas-emp-02-empty-box-bounce.svg",
+      "altWhenMeaningful": null,
+      "never": "Without a sentence saying what is empty"
+    },
+    {
+      "id": "DEM-01",
+      "name": "Demo PIKAS",
+      "file": "poses/demo/pikas-dem-01-demo.svg",
+      "set": "demo",
+      "cap": false,
+      "prop": null,
+      "contexts": [
+        "demo-lab",
+        "sandbox"
+      ],
+      "use": "Demo banners, sandbox login",
+      "sizePx": "24-240",
+      "motionFile": null,
+      "altWhenMeaningful": "PIKAS en modo demostración",
+      "never": "Production screens"
+    }
+  ],
+  "motion": [
+    {
+      "id": "LOAD-01",
+      "name": "Collecting flowers (loader)",
+      "file": "motion/pikas-load-01-collecting.svg",
+      "timing": "loop 3.6 s",
+      "notes": "Show only after 1 s of waiting; swap to text after 10 s; role=status text always present"
+    },
+    {
+      "id": "BLINK",
+      "name": "Idle blink",
+      "file": "motion/pikas-fnd-01-neutral-blink.svg",
+      "timing": "loop, every 5.5 s",
+      "notes": "Welcome and empty states only"
+    },
+    {
+      "id": "WAVE",
+      "name": "Wave",
+      "file": "motion/pikas-fnd-03-wave-anim.svg",
+      "timing": "one-shot, 2 swings",
+      "notes": "Welcome, sign-in, website hero"
+    },
+    {
+      "id": "BOUNCE",
+      "name": "Bounce-in",
+      "file": "motion/pikas-emp-02-empty-box-bounce.svg",
+      "timing": "one-shot 0.45 s",
+      "notes": "On entering an empty state"
+    },
+    {
+      "id": "POP",
+      "name": "Success pop",
+      "file": "motion/pikas-suc-01-done-pop.svg",
+      "timing": "one-shot 0.35 s",
+      "notes": "Saved / done moments"
+    },
+    {
+      "id": "COUNTDOWN",
+      "name": "Session countdown",
+      "file": "motion/pikas-att-01-worried-countdown.svg",
+      "timing": "runs over --countdown",
+      "notes": "Inline SVG so --countdown can be set to the seconds left"
+    },
+    {
+      "id": "WALK-01",
+      "name": "Walk cycle",
+      "file": "motion/pikas-walk-01.svg",
+      "timing": "loop 0.64 s",
+      "notes": "Website valley only; position driven by scroll"
+    }
+  ]
+}

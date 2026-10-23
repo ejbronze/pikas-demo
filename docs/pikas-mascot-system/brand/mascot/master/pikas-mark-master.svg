@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <title>PIKAS logo mark — vector master v0.1</title>
+  <defs>
+    <style>
+      :root{--pk-yellow:#FFC72C;--pk-navy:#0E1E4A;--pk-teal:#16C2C7;--pk-cream:#FFF4E0;--pk-blush:#F47C7C}
+    </style>
+    <clipPath id="tile"><rect width="320" height="320" rx="60"/></clipPath>
+    <clipPath id="mouth"><path d="M143 150 Q160 153 177 150 Q175 177 160 177 Q145 177 143 150 Z"/></clipPath>
+    <clipPath id="face"><path id="head-shape" d="M160 50 C214 50 254 72 262 110 C265 124 267 134 266 144 L280 154 C273 156 269 160 267 164 C259 196 218 213 160 213 C102 213 61 196 53 164 C51 160 47 156 40 154 L54 144 C53 134 55 124 58 110 C66 72 106 50 160 50 Z"/></clipPath>
+  </defs>
+
+  <g id="tile-bg"><rect width="320" height="320" rx="60" fill="#16C2C7"/></g>
+
+  <g clip-path="url(#tile)" stroke="#0E1E4A" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+    <!-- body -->
+    <g id="body"><path d="M50 330 L56 252 C62 216 100 200 160 200 C220 200 258 216 264 252 L270 330 Z" fill="#FFC72C"/></g>
+
+    <!-- ears (behind head) -->
+    <g id="ear-l"><circle cx="72" cy="60" r="49" fill="#0E1E4A" stroke="none"/><circle cx="68" cy="56" r="35" fill="#FFF4E0" stroke="none"/></g>
+    <g id="ear-r"><circle cx="248" cy="60" r="49" fill="#0E1E4A" stroke="none"/><circle cx="252" cy="56" r="35" fill="#FFF4E0" stroke="none"/></g>
+
+    <!-- crown tufts -->
+    <g id="tufts" fill="#FFC72C">
+      <path d="M90 76 L106 34 L128 64 Z"/>
+      <path d="M230 76 L214 34 L192 64 Z"/>
+    </g>
+
+    <!-- head -->
+    <g id="head">
+      <use href="#head-shape" fill="#FFC72C"/>
+      <path clip-path="url(#face)" stroke="none" fill="#FFF4E0" d="M98 156 C98 130 130 124 160 133 C190 124 222 130 222 156 C224 186 198 206 160 206 C122 206 96 186 98 156 Z"/>
+      <use href="#head-shape" fill="none"/>
+    </g>
+
+    <!-- whiskers -->
+    <g id="whiskers" stroke-width="6">
+      <path d="M18 124 L80 134"/><path d="M12 146 L78 146"/><path d="M20 168 L80 157"/>
+      <path d="M302 124 L240 134"/><path d="M308 146 L242 146"/><path d="M300 168 L240 157"/>
+    </g>
+
+    <!-- face -->
+    <g id="eyes" stroke="none">
+      <ellipse cx="118" cy="112" rx="10.5" ry="13" fill="#0E1E4A"/><circle cx="114.5" cy="106.5" r="3.6" fill="#FFFFFF"/>
+      <ellipse cx="202" cy="112" rx="10.5" ry="13" fill="#0E1E4A"/><circle cx="198.5" cy="106.5" r="3.6" fill="#FFFFFF"/>
+    </g>
+    <g id="nose" stroke="none"><path d="M148 123 L172 123 Q175 125 172 129 L163 138 Q160 141 157 138 L148 129 Q145 125 148 123 Z" fill="#0E1E4A"/></g>
+    <g id="mouth-g">
+      <path d="M160 138 L160 149" stroke-width="6"/>
+      <path d="M143 150 Q160 153 177 150 Q175 177 160 177 Q145 177 143 150 Z" fill="#0E1E4A" stroke-width="5"/>
+      <ellipse clip-path="url(#mouth)" cx="160" cy="174" rx="12" ry="9" fill="#F47C7C" stroke="none"/>
+      <path d="M126 142 Q134 152 145 150" fill="none" stroke-width="6"/>
+      <path d="M194 142 Q186 152 175 150" fill="none" stroke-width="6"/>
+    </g>
+
+    <!-- card + paw -->
+    <g id="card" transform="rotate(-14 192 244)">
+      <rect x="130" y="204" width="132" height="86" rx="13" fill="#16C2C7"/>
+      <rect x="152" y="236" width="22" height="17" rx="4" fill="#FFC72C" stroke="none"/>
+      <g fill="none" stroke="#FFFFFF" stroke-width="5.5">
+        <path d="M206 236 Q212 245 206 254"/><path d="M216 230 Q225 245 216 260"/><path d="M226 224 Q238 245 226 266"/>
+      </g>
+    </g>
+    <g id="paw">
+      <path d="M98 262 C96 240 122 230 140 242 C158 254 154 282 134 290 C114 297 100 282 98 262 Z" fill="#FFC72C"/>
+      <path d="M127 247 Q141 249 142 262" fill="none" stroke-width="6"/>
+    </g>
+  </g>
+</svg>

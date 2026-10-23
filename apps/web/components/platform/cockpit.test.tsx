@@ -36,6 +36,7 @@ describe("Platform cockpit", () => {
     const html = cockpit(data([]));
     expect(html).toContain("Todavía no hay clientes en la red."); expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display">0</);
     expect(html).not.toContain("Requiere atención"); expect(html).toContain("Colegio Horizonte"); expect(html).toContain('href="/platform/clientes/nuevo"');
+    expect(html).toMatch(/<img[^>]*alt=""[^>]*aria-hidden="true"[^>]*data-mascot="EMP-02"/); expect(cockpit(data([fx(2)]))).not.toContain("data-mascot"); // mascot Phase 1: only the empty network
   });
   it("suspended customers are not counted and never listed as needing setup", () => {
     const html = cockpit(data([fx(4, "empty", { status: "suspended" })]));

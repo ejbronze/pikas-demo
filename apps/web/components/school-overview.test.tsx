@@ -37,6 +37,7 @@ describe("School Overview", () => {
   it("new / low-data school: explanatory empty states instead of a wall of zeros", () => {
     const html = render(inputs({ counts: { students: 0, active: 0, suspended: 0, inactive: 0, cafeterias: 0 }, cafeterias: [], wallet: wallet({ active_wallets: 0, total_balance_minor: "0", wallets_with_movement: 0 }) }));
     expect(html).toContain("Aún no hay estudiantes en este colegio."); expect(html).not.toContain("RD$ 0.00"); expect(figures(html)).toEqual([]);
+    expect(html).toMatch(/<img[^>]*alt=""[^>]*aria-hidden="true"[^>]*data-mascot="EMP-02"/); expect(html).not.toContain("pikas-logo-mark"); // mascot Phase 1: decorative, text carries the state
     expect(html).toContain("Todavía no hay cafeterías en este colegio."); expect(html).toContain("Servicio a estudiantes"); expect(html.match(/<li data-state="pending"/g)).toHaveLength(3);
   });
   it("one cafetería without active sharing is stated, and attention links to the place to act", () => {

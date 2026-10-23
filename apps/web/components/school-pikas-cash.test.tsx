@@ -37,7 +37,9 @@ describe("School PIKAS Cash", () => {
     expect(t).toContain("Sin monedero"); expect(t).toContain(long); expect(t).toContain("Suspendido"); expect(t).toMatch(/RD\$\s?0\.00|0\.00/);
   });
   it("low-data states: no wallets, no students, empty search, empty attention, load errors", () => {
-    expect(text(html({ overview: { ...overview, wallet_count: 0, active: 0, frozen: 0, negative: 0, total_balance_minor: "0", with_movement: 0 } }))).toContain("Aún no hay monederos de PIKAS Cash");
+    const noWallets = html({ overview: { ...overview, wallet_count: 0, active: 0, frozen: 0, negative: 0, total_balance_minor: "0", with_movement: 0 } });
+    expect(text(noWallets)).toContain("Aún no hay monederos de PIKAS Cash"); expect(noWallets).toMatch(/<img[^>]*alt=""[^>]*aria-hidden="true"[^>]*data-mascot="EMP-02"/); // mascot Phase 1: no amounts in this state
+    expect(html({})).not.toContain("data-mascot"); // wallets with balances: no mascot beside amounts
     expect(text(html({ students: [] }))).toContain("Aún no hay estudiantes en este colegio");
     expect(text(html({ students: [], query: "zz" }))).toContain("No encontramos estudiantes");
     expect(text(html({ students: [], view: "atencion" }))).toContain("Ningún monedero requiere atención");

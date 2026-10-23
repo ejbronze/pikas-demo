@@ -60,3 +60,11 @@ Implement only the explicitly approved milestone.
 
 Targeted follow-up: newly enrolled **Sol Ficticia Beta** was absent from POS student
 search during 4D.8. Do not investigate/fix unless directly relevant to approved work.
+
+## PIKAS mascot
+The mascot system lives in docs/pikas-mascot-system/.
+Before any UI work involving the mascot, loaders, empty states, success
+messages, session timeouts or the public website, read
+docs/pikas-mascot-system/AGENT_BRIEF.md and follow it.
+Asset metadata: docs/pikas-mascot-system/brand/mascot/manifest.json.
+Never edit the approved PIKAS logo.

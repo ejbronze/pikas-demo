@@ -48,3 +48,5 @@ export function MockDataNotice() {
     </section>
   </div>;
 }
+
+// PIKAS mascot system: imported from "@pikas/ui/mascot" (its own entry, so bundles without the mascot never reference the SVG assets).

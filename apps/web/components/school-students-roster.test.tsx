@@ -57,10 +57,11 @@ describe("Estudiantes roster", () => {
     const html = render({ students: [], counts: { students: 0, active: 0, suspended: 0, inactive: 0, cafeterias: 0 } });
     expect(html).toContain("Aún no hay estudiantes en este colegio."); expect(html.match(/>Crear estudiante<\/button>/g)?.length).toBe(2); expect(html.match(/>Importar CSV<\/button>/g)?.length).toBe(2);
     expect(html).not.toContain("Filtros de estudiantes"); expect(html).not.toContain("Exportar estudiantes"); expect(html).not.toContain("0 activos de 0");
+    expect(html).toMatch(/<img[^>]*alt=""[^>]*aria-hidden="true"[^>]*data-mascot="EMP-02"/); expect(html).not.toContain("pikas-logo-mark"); // mascot Phase 1
   });
   it("no search results is distinct from an empty school", () => {
     const html = render({ students: [], query: "Zzz" });
-    expect(html).toContain("No encontramos estudiantes con estos filtros."); expect(html).not.toContain("Aún no hay estudiantes");
+    expect(html).toContain("No encontramos estudiantes con estos filtros."); expect(html).not.toContain("Aún no hay estudiantes"); expect(html).not.toContain("data-mascot");
   });
   it("many students and long names: wrap, no internal IDs or commercial data in visible text", () => {
     const many = Array.from({ length: 50 }, (_, i) => student(i + 1, i === 0 ? { display_name: "Estudiante Ficticia con un Nombre Extraordinariamente Largo de Santiago de los Caballeros" } : {}));

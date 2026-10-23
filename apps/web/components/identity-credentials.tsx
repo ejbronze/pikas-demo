@@ -6,6 +6,7 @@ import { isValidUsername, normalizeUsername, usernameRules } from '../lib/identi
 import { isInternalEmail } from '../lib/identity/staff-access';
 import { TaskActions, TaskCancelButton, TaskOutcome, TaskSummary, TaskWindow } from './task-window';
 import { EmptyState, ErrorState } from './state-panels';
+import { PikasMascot } from '@pikas/ui/mascot';
 
 // Phase 6A identity support. One Person, one Auth identity: username, email and password changes
 // never create another Person and never grant memberships. The server decides the scope
@@ -116,7 +117,7 @@ export function IdentitySearch() {
       <p className="basis-full text-sm text-slate-600">Solo coincidencias exactas. Las identidades de la Plataforma no se gestionan aquí.</p>
     </form>
     {error && <ErrorState title={error} />}
-    {result === null && <EmptyState title="No hay una identidad con ese correo o usuario." description="Revisa que esté escrito completo." />}
+    {result === null && <EmptyState title="No hay una identidad con ese correo o usuario." description="Revisa que esté escrito completo." illustration={<PikasMascot id="SUP-02" size={120} />} />}
     {result && <IdentityCredentials key={result.person_id} initial={result} />}
   </div>;
 }

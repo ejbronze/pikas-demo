@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { PikasMascot } from "@pikas/ui/mascot";
 import Link from "next/link";
 import { attentionItems, completeCount, customerHref, launchLabel, launchStatus, networkSummary, nextStep, readinessSteps, shortDate,
   type CustomerReadiness, type LaunchStatus, type Readiness, type Step } from "../../lib/platform/readiness";
@@ -40,7 +40,7 @@ export function PlatformCockpit({ data, activity, canAdd, demoHref }: { data: Re
       <p className="net-band-note">Operando: con al menos una venta real. {summary.inactive > 0 ? `${summary.inactive} ${summary.inactive === 1 ? "cliente suspendido o cerrado no se cuenta" : "clientes suspendidos o cerrados no se cuentan"}. ` : ""}Las demostraciones no se cuentan.</p>
     </section>
 
-    {data.customers.length === 0 ? <div className="net-empty"><Image src="/brand/pikas-logo-mark-full-color.png" alt="" width={48} height={48} className="rounded-xl" />
+    {data.customers.length === 0 ? <div className="net-empty"><PikasMascot id="EMP-02" size={120} className="sch-mascot" />
         <div><p className="font-bold">Todavía no hay clientes en la red.</p><p className="text-sm text-slate-600">Cuando agregues el primer colegio, aquí verás su puesta en marcha y lo que necesita.</p></div></div>
       : <section aria-labelledby="net-attention" className={attention.length ? "net-attention" : "net-panel"}>
         <h2 id="net-attention" className="net-h2">{attention.length ? `Requiere atención · ${attention.length}` : "Todo en orden"}</h2>

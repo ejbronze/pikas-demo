@@ -13,7 +13,7 @@ const win = <T,>(fn: string) => page.evaluate(`(${fn})(window)`) as Promise<T>;
 const U = (n: number) => `d3000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 beforeAll(async () => {
-  const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", define: { "process.env.NODE_ENV": '"test"' },
+  const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", loader: { ".svg": "dataurl" } /* mascot SVGs from @pikas/ui/mascot */, define: { "process.env.NODE_ENV": '"test"' },
     plugins: [{ name: "stubs", setup(b) {
       b.onResolve({ filter: /^next\/link$/ }, () => ({ path: "link", namespace: "stub" }));
       b.onLoad({ filter: /^link$/, namespace: "stub" }, () => ({ resolveDir: process.cwd(), contents: "import React from 'react'; export default ({href, children, prefetch, ...rest}) => React.createElement('a', {href, ...rest, onClick: e => { e.preventDefault(); rest.onClick?.(e); window.navigated = href; }}, children)", loader: "js" }));

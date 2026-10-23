@@ -1,0 +1,13 @@
+:root {
+  --pikas-yellow: #FFC72C; /* Body fill, wordmark triangle; never text on white */
+  --pikas-navy: #0E1E4A; /* Outline, eyes, cap, monochrome */
+  --pikas-teal: #16C2C7; /* Props, tile, cap brim; never text on white */
+  --pikas-teal-deep: #0A7C82; /* Teal for text and icons on white (5.0:1) */
+  --pikas-cream: #FFF4E0; /* Ears, muzzle, belly, light backgrounds */
+  --pikas-blush: #F47C7C; /* Tongue only */
+  --pikas-night-line: #2A3F7A; /* Outline on dark backgrounds, with a cream keyline */
+  --pikas-flower-yellow: #FFE066; /* Flower petals */
+  --pikas-flower-orange: #E8731C; /* Flower centre */
+  --pikas-leaf-green: #3BAA6E; /* Stem, leaf, haypile */
+  --pikas-warning-placeholder: #F5A524; /* Replace with the product warning token */
+}

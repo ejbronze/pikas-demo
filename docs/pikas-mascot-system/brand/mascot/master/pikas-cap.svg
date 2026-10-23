@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="110 16 100 72" width="200" height="144">
+  <title>gorra PIKAS</title>
+  <defs>
+    <clipPath id="mouth"><path d="M143 150 Q160 153 177 150 Q175 177 160 177 Q145 177 143 150 Z"/></clipPath>
+    <clipPath id="face"><path id="head-shape" d="M160 50 C214 50 254 72 262 110 C265 124 267 134 266 144 L280 154 C273 156 269 160 267 164 C259 196 218 213 160 213 C102 213 61 196 53 164 C51 160 47 156 40 154 L54 144 C53 134 55 124 58 110 C66 72 106 50 160 50 Z"/></clipPath>
+    <clipPath id="body-clip"><path id="body-shape" d="M108 196 C80 218 62 268 62 318 C62 368 102 394 160 394 C218 394 258 368 258 318 C258 268 240 218 212 196 Z"/></clipPath>
+  </defs>
+  <g stroke="#0E1E4A" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+    <g id="cap"><path d="M127 60 C125 36 140 28 160 28 C180 28 195 36 193 60 Z" fill="#0E1E4A" stroke-width="7"/><path d="M160 36 L170 52 Q171 55 168 55 L152 55 Q149 55 150 52 Z" fill="#FFC72C" stroke="none"/><path d="M122 58 C142 68 178 68 198 58 C203 66 194 77 160 79 C126 77 117 66 122 58 Z" fill="#16C2C7" stroke-width="7"/><circle cx="160" cy="27" r="5" fill="#0E1E4A" stroke="none"/></g>
+  </g>
+</svg>

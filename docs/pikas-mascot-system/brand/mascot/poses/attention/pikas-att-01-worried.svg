@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 424" width="320" height="424">
+  <title>PIKAS ATT-01 — session ending, worried (v0.1)</title>
+  <defs>
+    <clipPath id="mouth"><path d="M143 150 Q160 153 177 150 Q175 177 160 177 Q145 177 143 150 Z"/></clipPath>
+    <clipPath id="face"><path id="head-shape" d="M160 50 C214 50 254 72 262 110 C265 124 267 134 266 144 L280 154 C273 156 269 160 267 164 C259 196 218 213 160 213 C102 213 61 196 53 164 C51 160 47 156 40 154 L54 144 C53 134 55 124 58 110 C66 72 106 50 160 50 Z"/></clipPath>
+    <clipPath id="body-clip"><path id="body-shape" d="M108 196 C80 218 62 268 62 318 C62 368 102 394 160 394 C218 394 258 368 258 318 C258 268 240 218 212 196 Z"/></clipPath>
+  </defs>
+  <g stroke="#0E1E4A" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+    <g id="feet" fill="#FFC72C">
+      <ellipse cx="120" cy="398" rx="32" ry="15"/>
+      <ellipse cx="200" cy="398" rx="32" ry="15"/>
+    </g>
+    <g id="body">
+      <use href="#body-shape" fill="#FFC72C"/>
+      <ellipse clip-path="url(#body-clip)" cx="160" cy="312" rx="60" ry="70" fill="#FFF4E0" stroke="none"/>
+      <use href="#body-shape" fill="none"/>
+    </g>
+    <g id="arm-r"><path d="M 230 232 C 250 254 258 292 250 316 C 242 336 214 334 210 314 C 206 294 210 262 208 240 Z" fill="#FFC72C" stroke="none"/><path d="M 230 232 C 250 254 258 292 250 316 C 242 336 214 334 210 314 C 207 298 209 278 210 262" fill="none"/></g>
+    <g id="arm-l-bent"><path d="M90 232 C74 252 80 280 104 284 L122 268 C110 262 106 248 110 236 Z" fill="#FFC72C" stroke="none"/><path d="M90 232 C74 252 80 280 104 284" fill="none"/></g>
+    <g id="ear-l"><circle cx="72" cy="60" r="49" fill="#0E1E4A" stroke="none"/><circle cx="68" cy="56" r="35" fill="#FFF4E0" stroke="none"/></g>
+    <g id="ear-r"><circle cx="248" cy="60" r="49" fill="#0E1E4A" stroke="none"/><circle cx="252" cy="56" r="35" fill="#FFF4E0" stroke="none"/></g>
+    <g id="tufts" fill="#FFC72C">
+      <path d="M90 76 L106 34 L128 64 Z"/>
+      <path d="M230 76 L214 34 L192 64 Z"/>
+    </g>
+    <g id="head">
+      <use href="#head-shape" fill="#FFC72C"/>
+      <path clip-path="url(#face)" stroke="none" fill="#FFF4E0" d="M98 156 C98 130 130 124 160 133 C190 124 222 130 222 156 C224 186 198 206 160 206 C122 206 96 186 98 156 Z"/>
+      <use href="#head-shape" fill="none"/>
+    </g>
+    <g id="whiskers" stroke-width="6">
+      <path d="M18 124 L80 134"/><path d="M12 146 L78 146"/><path d="M20 168 L80 157"/>
+      <path d="M302 124 L240 134"/><path d="M308 146 L242 146"/><path d="M300 168 L240 157"/>
+    </g>
+    <g id="eyes" stroke="none"><ellipse cx="121" cy="110" rx="10.5" ry="13" fill="#0E1E4A"/><circle cx="118" cy="104" r="3.6" fill="#FFFFFF"/><ellipse cx="205" cy="110" rx="10.5" ry="13" fill="#0E1E4A"/><circle cx="202" cy="104" r="3.6" fill="#FFFFFF"/></g><g fill="none" stroke-width="5"><path d="M104 88 Q114 82 128 86"/><path d="M192 86 Q206 82 216 88"/></g>
+    <g id="nose" stroke="none"><path d="M148 123 L172 123 Q175 125 172 129 L163 138 Q160 141 157 138 L148 129 Q145 125 148 123 Z" fill="#0E1E4A"/></g>
+    <g id="mouth-g"><path d="M160 138 L160 148" stroke-width="6"/><path d="M144 156 Q152 149 160 156 Q168 163 176 156" fill="none" stroke-width="6"/></g>
+    <g transform="translate(24 0)"><g id="hourglass"><path d="M134 236 L170 236 L154 266 L170 296 L134 296 L150 266 Z" fill="#16C2C7" stroke-width="6"/><path id="sand-bottom" d="M140 290 L164 290 L152 274 Z" fill="#FFC72C" stroke="none"/><path id="sand-stream" d="M152 257 V289" stroke="#FFC72C" stroke-width="2.5"/><path id="sand-top" d="M144 244 L160 244 L152 256 Z" fill="#FFC72C" stroke="none"/><rect x="126" y="226" width="52" height="12" rx="5" fill="#0E1E4A"/><rect x="126" y="294" width="52" height="12" rx="5" fill="#0E1E4A"/></g></g>
+    <g transform="translate(-14 46)"><g id="paw"><path d="M98 262 C96 240 122 230 140 242 C158 254 154 282 134 290 C114 297 100 282 98 262 Z" fill="#FFC72C"/><path d="M127 247 Q141 249 142 262" fill="none" stroke-width="6"/></g></g>
+  </g>
+</svg>

@@ -1,0 +1,68 @@
+[
+  {
+    "token": "yellow",
+    "name": "PIKAS Yellow",
+    "hex": "#FFC72C",
+    "role": "Body fill, wordmark triangle; never text on white"
+  },
+  {
+    "token": "navy",
+    "name": "PIKAS Navy",
+    "hex": "#0E1E4A",
+    "role": "Outline, eyes, cap, monochrome"
+  },
+  {
+    "token": "teal",
+    "name": "PIKAS Teal",
+    "hex": "#16C2C7",
+    "role": "Props, tile, cap brim; never text on white"
+  },
+  {
+    "token": "teal-deep",
+    "name": "Teal Deep",
+    "hex": "#0A7C82",
+    "role": "Teal for text and icons on white (5.0:1)"
+  },
+  {
+    "token": "cream",
+    "name": "Cream",
+    "hex": "#FFF4E0",
+    "role": "Ears, muzzle, belly, light backgrounds"
+  },
+  {
+    "token": "blush",
+    "name": "Blush",
+    "hex": "#F47C7C",
+    "role": "Tongue only"
+  },
+  {
+    "token": "night-line",
+    "name": "Night Line",
+    "hex": "#2A3F7A",
+    "role": "Outline on dark backgrounds, with a cream keyline"
+  },
+  {
+    "token": "flower-yellow",
+    "name": "Flower Yellow",
+    "hex": "#FFE066",
+    "role": "Flower petals"
+  },
+  {
+    "token": "flower-orange",
+    "name": "Flower Orange",
+    "hex": "#E8731C",
+    "role": "Flower centre"
+  },
+  {
+    "token": "leaf-green",
+    "name": "Leaf Green",
+    "hex": "#3BAA6E",
+    "role": "Stem, leaf, haypile"
+  },
+  {
+    "token": "warning-placeholder",
+    "name": "Warning (placeholder)",
+    "hex": "#F5A524",
+    "role": "Replace with the product warning token"
+  }
+]

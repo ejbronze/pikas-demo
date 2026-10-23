@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 424" width="320" height="424">
+  <title>PIKAS WALK-01 — walk cycle, three-quarter facing right (loop, 0.64 s)</title>
+  <style>#foot-near{transform-box:fill-box;transform-origin:50% 100%;animation:stepA .64s ease-in-out infinite}#foot-far{transform-box:fill-box;transform-origin:50% 100%;animation:stepB .64s ease-in-out infinite}#arm-l{transform-box:view-box;transform-origin:96px 236px;animation:swing .64s ease-in-out infinite}svg>g{animation:bob .32s ease-in-out infinite alternate}@keyframes stepA{0%,100%{transform:translate(-10px,0)}25%{transform:translate(0,-9px)}50%{transform:translate(10px,0)}75%{transform:translate(0,0)}}@keyframes stepB{0%,100%{transform:translate(8px,0)}25%{transform:translate(0,0)}50%{transform:translate(-8px,0)}75%{transform:translate(0,-8px)}}@keyframes swing{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-4px)}}@media (prefers-reduced-motion: reduce){*{animation:none!important}}</style><defs>
+    <clipPath id="mouth"><path d="M143 150 Q160 153 177 150 Q175 177 160 177 Q145 177 143 150 Z"/></clipPath>
+    <clipPath id="face"><path id="head-shape" d="M160 50 C214 50 254 72 262 110 C265 124 267 134 266 144 L280 154 C273 156 269 160 267 164 C259 196 218 213 160 213 C102 213 61 196 53 164 C51 160 47 156 40 154 L54 144 C53 134 55 124 58 110 C66 72 106 50 160 50 Z"/></clipPath>
+    <clipPath id="body-clip"><path id="body-shape" d="M108 196 C80 218 62 268 62 318 C62 368 102 394 160 394 C218 394 258 368 258 318 C258 268 240 218 212 196 Z"/></clipPath>
+  </defs>
+  <g stroke="#0E1E4A" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+    <g id="foot-far"><ellipse cx="204" cy="392" rx="27" ry="13" fill="#FFC72C"/></g>
+    <g id="arm-far" transform="translate(-8 4)"><path d="M228 236 C246 258 252 292 246 314 C240 332 218 330 214 312 Z" fill="#FFC72C"/></g>
+    <g id="foot-near"><ellipse cx="124" cy="399" rx="34" ry="15" fill="#FFC72C"/></g>
+    <g id="body"><path d="M104 196 C74 220 58 268 60 318 C62 370 100 394 162 394 C214 394 248 368 250 318 C250 270 236 220 214 196 Z" fill="#FFC72C"/><clipPath id="tq-body"><path d="M104 196 C74 220 58 268 60 318 C62 370 100 394 162 394 C214 394 248 368 250 318 C250 270 236 220 214 196 Z"/></clipPath><ellipse clip-path="url(#tq-body)" cx="180" cy="312" rx="54" ry="70" fill="#FFF4E0" stroke="none"/><path d="M104 196 C74 220 58 268 60 318 C62 370 100 394 162 394 C214 394 248 368 250 318 C250 270 236 220 214 196 Z" fill="none"/></g>
+    <g id="arm-l"><path d="M90 232 C70 254 62 292 70 316 C78 336 106 334 110 314 C114 294 110 262 112 240 Z" fill="#FFC72C" stroke="none"/><path d="M90 232 C70 254 62 292 70 316 C78 336 106 334 110 314 C113 298 111 278 110 262" fill="none"/></g>
+    <g id="ear-r-far"><circle cx="236" cy="64" r="42" fill="#0E1E4A" stroke="none"/><circle cx="239" cy="60" r="29" fill="#FFF4E0" stroke="none"/></g><g id="ear-l"><circle cx="72" cy="60" r="49" fill="#0E1E4A" stroke="none"/><circle cx="68" cy="56" r="35" fill="#FFF4E0" stroke="none"/></g><g id="tufts" fill="#FFC72C">
+      <path d="M90 76 L106 34 L128 64 Z"/>
+      <path d="M230 76 L214 34 L192 64 Z"/>
+    </g><g id="head">
+      <use href="#head-shape" fill="#FFC72C"/>
+      <path clip-path="url(#face)" stroke="none" fill="#FFF4E0" transform="translate(16 0)" d="M98 156 C98 130 130 124 160 133 C190 124 222 130 222 156 C224 186 198 206 160 206 C122 206 96 186 98 156 Z"/>
+      <use href="#head-shape" fill="none"/>
+    </g>
+    <g id="whiskers" stroke-width="6"><path d="M26 128 L84 136"/><path d="M20 148 L82 148"/><path d="M28 168 L84 158"/><path d="M300 126 L262 134"/><path d="M304 146 L264 146"/><path d="M298 164 L262 156"/></g>
+    <g id="eyes" stroke="none"><ellipse cx="134" cy="112" rx="10.5" ry="13" fill="#0E1E4A"/><circle cx="131" cy="106.5" r="3.6" fill="#FFFFFF"/><ellipse cx="212" cy="112" rx="9.5" ry="12.5" fill="#0E1E4A"/><circle cx="209.5" cy="106.5" r="3.4" fill="#FFFFFF"/></g>
+    <g transform="translate(16 0)"><g id="nose" stroke="none"><path d="M148 123 L172 123 Q175 125 172 129 L163 138 Q160 141 157 138 L148 129 Q145 125 148 123 Z" fill="#0E1E4A"/></g><g id="mouth-g"><path d="M160 138 L160 148" stroke-width="6"/><path d="M128 142 Q144 162 160 148 Q176 162 192 142" fill="none" stroke-width="6"/></g></g>
+  </g>
+</svg>

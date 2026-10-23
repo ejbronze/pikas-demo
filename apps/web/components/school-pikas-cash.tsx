@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { PikasMascot } from "@pikas/ui/mascot";
 import Link from "next/link";
 import { money } from "../lib/cafeteria/operations";
 import { needsAttention, walletLabel, type WalletOverview, type WalletStudent } from "../lib/school/wallets";
@@ -25,7 +25,7 @@ export function SchoolPikasCash({ schoolId, schoolName, overview, students, view
     <section aria-labelledby="pc-overview" className="sch-ledger">
       <h2 id="pc-overview" className="sch-h2">Monederos</h2>
       {!overview ? <p className="text-sm text-slate-600" role="alert">No pudimos cargar el resumen de monederos. Intenta de nuevo.</p>
-        : overview.wallet_count === 0 ? <div className="sch-empty"><Image src="/brand/pikas-logo-mark-full-color.png" alt="" width={44} height={44} className="rounded-xl" />
+        : overview.wallet_count === 0 ? <div className="sch-empty"><PikasMascot id="EMP-02" size={120} className="sch-mascot" />
             <div><p className="font-bold">Aún no hay monederos de PIKAS Cash en este colegio.</p><p className="text-sm text-slate-600">El monedero de un estudiante activo y matriculado se crea con su primera recarga, desde su PIKAS Cash.</p></div></div>
         : <dl className="sch-figures">
           <div><dt>Monederos activos</dt><dd className="num-display">{overview.active.toLocaleString("es-DO")}</dd><dd className="sch-help">de {n(overview.wallet_count, "monedero", "monederos")}{overview.frozen ? ` · ${n(overview.frozen, "congelado", "congelados")}` : ""}</dd></div>

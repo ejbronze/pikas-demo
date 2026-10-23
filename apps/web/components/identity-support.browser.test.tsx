@@ -12,7 +12,7 @@ const win = <T,>(fn: string) => page.evaluate(`(${fn})(window)`) as Promise<T>;
 const person = "6a000000-0000-4000-8000-000000000001", cafA = "6a000000-0000-4000-8000-0000000000c1", cafB = "6a000000-0000-4000-8000-0000000000c2";
 
 beforeAll(async () => {
-  const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", define: { "process.env.NODE_ENV": '"test"', "process.env": "{}" },
+  const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", loader: { ".svg": "dataurl" } /* mascot SVGs from @pikas/ui/mascot */, define: { "process.env.NODE_ENV": '"test"', "process.env": "{}" },
     plugins: [{ name: "stubs", setup(b) {
       b.onResolve({ filter: /^next\/link$/ }, () => ({ path: "link", namespace: "stub" }));
       b.onLoad({ filter: /^link$/, namespace: "stub" }, () => ({ resolveDir: process.cwd(), contents: "import React from 'react'; export default ({href, children, prefetch, ...rest}) => React.createElement('a', {href, ...rest}, children)", loader: "js" }));
