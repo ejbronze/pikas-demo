@@ -1,3 +1,4 @@
+import { classifyError, type FailureKind } from "../ux/state-classes";
 import { z } from "zod";
 import { readSchema, type SchoolRead } from "./contracts";
 import { exportResultSchema, type ExportStudent } from "./student-export";
@@ -12,7 +13,8 @@ import { csvAmount, csvDocument } from "../reports/csv";
 // call the same loader, so the export always matches what the report shows. No cafetería commercial
 // data, purchases or per-student spending: School sees its students and its service relationships.
 type Rpc = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }> };
-export type Loaded<T> = { status: "ok"; value: T } | { status: "too_many" } | { status: "error"; message?: string };
+// UX 14: a failed load names its kind (lib/ux/state-classes) so the page can say what happened.
+export type Loaded<T> = { status: "ok"; value: T } | { status: "too_many" } | { status: "error"; message?: string; kind?: FailureKind };
 const statuses = ["active", "suspended", "inactive"] as const;
 export const studentStatusLabel = { active: "Activo", suspended: "Suspendido", inactive: "Inactivo" } as const;
 
@@ -33,7 +35,7 @@ export async function loadStudentsReport(client: Rpc, schoolId: string, actorId:
   ]);
   if (exported.error?.code === "54000") return { status: "too_many" };
   const result = exportResultSchema.safeParse(exported.data), opts = readSchema.safeParse(options.data);
-  if (exported.error || !result.success || result.data.school_id !== schoolId || result.data.actor_id !== actorId) return { status: "error" };
+  if (exported.error || !result.success || result.data.school_id !== schoolId || result.data.actor_id !== actorId) return { status: "error", kind: exported.error ? classifyError(exported.error) : "temporary" };
   const rows = [...result.data.rows].sort((a, b) => a.display_name.localeCompare(b.display_name, "es") || a.student_code.localeCompare(b.student_code));
   const groups = new Map<string | null, number>(); for (const r of rows) groups.set(r.grade, (groups.get(r.grade) ?? 0) + 1);
   const byGrade = [...groups].map(([grade, count]) => ({ grade, count })).sort((a, b) => a.grade === null ? 1 : b.grade === null ? -1 : a.grade.localeCompare(b.grade, "es", { numeric: true }));
@@ -49,9 +51,9 @@ export const studentsCsv = (rows: ExportStudent[]) => csvDocument(["Nombre compl
 // per-cafetería breakdown is validated with the whole result and then dropped (UX 7 boundary).
 export async function loadWalletReport(client: Rpc, schoolId: string, p: PeriodFilter): Promise<Loaded<WalletReportView>> {
   const { data, error } = await client.rpc("school_wallet_report", { p_school_id: schoolId, p_period: p.period, p_from: p.from, p_to: p.to });
-  if (error) return { status: "error", message: error.code === "22023" && error.message ? reportErrors[error.message] : undefined };
+  if (error) return { status: "error", kind: classifyError(error), message: error.code === "22023" && error.message ? reportErrors[error.message] : undefined };
   const parsed = walletReportSchema.safeParse(data);
-  if (!parsed.success || parsed.data.school_id !== schoolId || parsed.data.period !== p.period) return { status: "error" };
+  if (!parsed.success || parsed.data.school_id !== schoolId || parsed.data.period !== p.period) return { status: "error", kind: "temporary" };
   const { cafeterias, ...report } = parsed.data; void cafeterias;
   return { status: "ok", value: report };
 }
@@ -82,7 +84,7 @@ type CafeteriaReadRow = Extract<NonNullable<SchoolRead["rows"]>[number], { shari
 export async function loadServiceReport(client: Rpc, schoolId: string, actorId: string): Promise<Loaded<ServiceReportRow[]>> {
   const r = await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "cafeterias", p_query: "", p_status: "", p_after: null, p_limit: 50 });
   const p = readSchema.safeParse(r.data);
-  if (r.error || !p.success || p.data.scope.school_id !== schoolId || p.data.scope.actor_id !== actorId) return { status: "error" };
+  if (r.error || !p.success || p.data.scope.school_id !== schoolId || p.data.scope.actor_id !== actorId) return { status: "error", kind: r.error ? classifyError(r.error) : "temporary" };
   const raw = (p.data.rows ?? []).filter((x): x is CafeteriaReadRow => "sharing_status" in x);
   const rows = serviceRows(raw).map((s, i) => ({ ...s, shared: s.sharing ? raw[i].categories.filter((c): c is keyof typeof shareCategories => c in shareCategories).map(c => shareCategories[c]) : [] }));
   return { status: "ok", value: rows.sort((a, b) => a.name.localeCompare(b.name, "es")) };

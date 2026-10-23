@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirectDemoDenial } from "../lib/platform/demo-recovery";
 import "server-only";
 import { redirect } from "next/navigation";
@@ -8,7 +9,8 @@ import { readSchema, type SchoolSection, type SchoolStudent } from "../lib/schoo
 import { ConnectedSchoolShell } from "./connected-school-shell";
 import { ConnectedSchoolPages } from "./connected-school-pages";
 import { readSchoolWalletAccess } from "../lib/wallet/access";
-import { ErrorState } from "./state-panels";
+import { ErrorState, LoadFailure } from "./state-panels";
+import { classifyError } from "../lib/ux/state-classes";
 import { walletReportSchema } from "../lib/school/wallet-report";
 import { serviceRows, walletSummary, type OverviewInputs, type SharingRows } from "../lib/school/overview";
 // UX 13: never-shared vs revoked comes from the School's own share rows (the sharing read coalesces both to "revoked").
@@ -29,10 +31,20 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
   const cursor = z.uuid().nullable().safeParse(params.after ?? null);
   const location = z.uuid().nullable().safeParse(params.location || null);
   const grade = z.string().min(1).max(80).nullable().safeParse(params.grade || null);
-  if (!query.success || !status.success || !cursor.success || !location.success || !grade.success) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ErrorState title="Los filtros no son válidos." description="Vuelve a la sección para repetir la búsqueda." retryHref={`/admin/escuela${sectionPath[section]}?school=${schoolId}`} /></ConnectedSchoolShell>;
+  if (!query.success || !status.success || !cursor.success || !location.success || !grade.success) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ErrorState kind="validation" title="Los filtros no son válidos." description="La dirección trae filtros que no existen. Restablécelos para volver a la sección." action={<Link className="btn-secondary" href={`/admin/escuela${sectionPath[section]}?school=${schoolId}`}>Restablecer filtros</Link>} /></ConnectedSchoolShell>;
   const response = await client.rpc(section === "students" ? "school_student_roster" : "school_admin_read", { p_school_id: schoolId, ...(section === "students" ? { p_location_id: location.data, p_grade: grade.data } : { p_section: section }), p_query: query.data, p_status: status.data, p_after: cursor.data, p_limit: 50 });
   const parsed = readSchema.safeParse(response.data);
-  if (response.error || !parsed.success || parsed.data.scope.school_id !== schoolId || parsed.data.scope.actor_id !== access.context.person_id) return <ConnectedSchoolShell context={access.context} schoolId={schoolId}><ErrorState title="No pudimos cargar esta sección." description="Puede ser un problema temporal o un cambio en tus permisos." retryHref={`/admin/escuela${sectionPath[section]}?school=${schoolId}`} /></ConnectedSchoolShell>;
+  // UX 14: the read's own answer decides the state. A refusal is a permission state (the access the
+  // layout resolved no longer holds), a missing school is not found, an unreadable or out-of-scope
+  // response is named as such; only a failed call is a plain temporary failure. All but the refusals retry.
+  if (response.error || !parsed.success || parsed.data.scope.school_id !== schoolId || parsed.data.scope.actor_id !== access.context.person_id) {
+    const kind = response.error ? classifyError(response.error) : "temporary";
+    const href = `/admin/escuela${sectionPath[section]}?school=${schoolId}`;
+    return <ConnectedSchoolShell context={access.context} schoolId={schoolId}>{kind === "permission"
+      ? <ErrorState kind="permission" title="Ya no tienes acceso a esta sección del colegio." description="Tu rol o tu acceso cambiaron después de entrar. Vuelve a iniciar sesión; si el problema continúa, pídelo al administrador de la cuenta." action={<Link className="btn-secondary" href="/login?next=%2Fadmin%2Fescuela">Volver a iniciar sesión</Link>} />
+      : kind === "not_found" ? <ErrorState kind="not_found" title="No encontramos este colegio." description="Puede haber sido desactivado o la dirección ya no es válida." action={<Link className="btn-secondary" href="/admin/escuela">Ir a mi colegio</Link>} />
+      : <LoadFailure kind={kind} what="esta sección" invalidResponse={!response.error} retryHref={href} />}</ConnectedSchoolShell>;
+  }
   let students: SchoolStudent[] = section === "students" ? (parsed.data.rows ?? []).filter((row): row is SchoolStudent => "student_code" in row) : [];
   if (section === "cafeterias") {
     const roster = await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "students", p_query: query.data, p_limit: 100 });

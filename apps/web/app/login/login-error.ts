@@ -34,6 +34,14 @@ const messages: Record<string, LoginErrorMessage> = {
     title: "Tu contraseña temporal venció",
     body: "Las contraseñas temporales caducan a los 15 minutos si no se usan. Pide una nueva al administrador de tu cafetería e inicia sesión con ella.",
   },
+  pos_authority: {
+    title: "No tienes acceso al POS",
+    body: "Tu usuario no tiene un acceso POS activo en ninguna cafetería. El administrador de la cafetería debe darte acceso y asignarte una caja.",
+  },
+  pos_unavailable: {
+    title: "No pudimos verificar tu acceso al POS",
+    body: "El servicio no respondió. Inténtalo de nuevo en unos minutos.",
+  },
   pilot_email_required: {
     title: "Revisa tu correo electrónico",
     body: "Ingresa el correo electrónico asociado a tu cuenta de PIKAS.",

@@ -27,7 +27,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const student = (read?.rows ?? []).find((r): r is SchoolStudent => "student_code" in r && r.id === studentId);
   const walletRead = !access.context.pov && (await readSchoolWalletAccess(client, school)).read;
   if (!read || !student) return <ConnectedSchoolShell context={access.context} schoolId={school} walletNav={walletRead}>
-    <ErrorState title="No encontramos este estudiante en este colegio." retry={<Link className="btn-secondary" href={roster}>Volver a Estudiantes</Link>} /></ConnectedSchoolShell>;
+    <ErrorState kind="not_found" title="No encontramos este estudiante en este colegio." description="Puede haber sido retirado o la dirección ya no es válida." action={<Link className="btn-secondary" href={roster}>Volver a Estudiantes</Link>} /></ConnectedSchoolShell>;
 
   const [wallet, customers, cafes, restrictions] = await Promise.all([
     walletRead ? client.rpc("school_wallet_read", { p_school_id: school, p_student_id: studentId }).then(r => { const p = walletReadSchema.safeParse(r.data);

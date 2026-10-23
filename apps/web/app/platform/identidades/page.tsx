@@ -7,7 +7,7 @@ import { ErrorState } from '../../../components/state-panels';
 // Phase 6A Platform identity support: credentials only. It never opens tenant data or grants roles.
 export default async function IdentitiesPage() {
   const session = await requirePlatform();
-  if (!session.capabilities.includes(IDENTITY_SUPPORT_CAPABILITY)) return <ErrorState title="No tienes permiso para dar soporte de identidad." />;
+  if (!session.capabilities.includes(IDENTITY_SUPPORT_CAPABILITY)) return <ErrorState kind="permission" title="No tienes permiso para dar soporte de identidad." description="Lo administra un administrador de la plataforma de PIKAS; pídele el acceso si lo necesitas." />;
   return <section className="space-y-5">
     <AppPageHeader title="Identidades" description="Usuario, correo, contraseña temporal y suspensión de inicio de sesión. Cada cambio queda registrado con tu nombre." />
     <IdentitySearch />

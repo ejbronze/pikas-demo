@@ -11,7 +11,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const session = await requirePlatform();
   if (!session.capabilities.includes("platform:tenant:lifecycle:read")) return <ReadFailure kind="forbidden" />;
   const parsed = filters.safeParse(await searchParams);
-  if (!parsed.success) return <ErrorState title="Los filtros no son válidos." retry={<Link className="btn-secondary" href="/platform/clientes">Limpiar filtros</Link>} />;
+  if (!parsed.success) return <ErrorState kind="validation" title="Los filtros no son válidos." description="La dirección trae filtros que no existen. Restablécelos para ver todos los clientes." action={<Link className="btn-secondary" href="/platform/clientes">Restablecer filtros</Link>} />;
   const { q, status, kind, after } = parsed.data;
   const result = await readPlatform(session, "platform:tenant:lifecycle:read", "platform_list_customers",
     { p_query: q, p_status: status || null, p_kind: kind || null, p_after: after ?? null, p_limit: 25 }, customerListSchema);
@@ -23,7 +23,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <label className="min-w-0 flex-1 basis-32">Tipo<select className="field mt-1" name="kind" defaultValue={kind}><option value="">Todos</option><option value="customer">Clientes</option><option value="sandbox">Sandbox</option></select></label>
       <button className="btn">Buscar</button><Link className="btn-tertiary" href="/platform/clientes">Limpiar</Link>
     </form>
-    {result.kind !== "ready" ? <ReadFailure kind={result.kind} /> : result.value.customers.length === 0
+    {result.kind !== "ready" ? <ReadFailure kind={result.kind} failure={result.failure} reason={"reason" in result ? result.reason : undefined} /> : result.value.customers.length === 0
       ? <EmptyState title="No hay clientes que coincidan con esta búsqueda." description="Ajusta los filtros o límpialos para ver todos los clientes." />
       : <DataList label="Clientes" rows={result.value.customers} rowKey={(c) => c.id} columns={[
         { header: "Cliente", primary: true, cell: (c) => <><CustomerLink id={c.id} name={c.name} /><span className="block text-sm font-normal text-slate-600">{c.code}</span></> },

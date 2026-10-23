@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ErrorState } from "../../../components/state-panels";
 import { money } from "../../../lib/cafeteria/operations";
 import { statusLabel, statusTone, type FinanceStatus } from "../../../lib/platform/finance";
 
@@ -27,9 +28,10 @@ export function FinanceTabs({ current }: { current: "pendientes" | "historial" }
   </ul></nav>;
 }
 
+// UX 14: the same three answers as the rest of Platform, with finance's own wording kept restrained.
 export function FinanceReadFailure({ kind }: { kind: string }) {
-  const title = kind === "forbidden" ? "No tienes permiso para consultar finanzas." : kind === "missing" ? "No encontramos esta solicitud." : "No pudimos cargar la información financiera.";
-  const description = kind === "forbidden" ? "Este destino requiere acceso de lectura financiera de PIKAS." : kind === "missing" ? undefined : "Puede ser un problema temporal. Vuelve a intentarlo.";
-  return <div role="alert" className="card space-y-3 p-5"><p className="text-lg font-bold">{title}</p>{description && <p className="text-sm text-slate-600">{description}</p>}
-    <Link className="btn-secondary" href="/platform/finanzas">Volver a Finanzas</Link></div>;
+  const back = <Link className="btn-secondary" href="/platform/finanzas">Volver a Finanzas</Link>;
+  if (kind === "forbidden") return <ErrorState kind="permission" title="No tienes permiso para consultar finanzas." description="Este destino requiere acceso de lectura financiera de PIKAS." action={back} />;
+  if (kind === "missing") return <ErrorState kind="not_found" title="No encontramos esta solicitud." description="Puede haber sido procesada con otra referencia o la dirección ya no es válida." action={back} />;
+  return <ErrorState title="No pudimos cargar la información financiera." description="Inténtalo de nuevo. Si continúa, vuelve a Finanzas más tarde." action={back} />;
 }

@@ -13,7 +13,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const f = cafeteriaReportFrame(ctx, "ventas", "Ventas", "Ventas de la cafetería en el período: totales, reembolsos y cada venta. Para buscar un recibo concreto usa Transacciones.");
   if (f.refusal) return f.refusal; if (f.invalid) return f.invalid;
   const filters = parseSalesFilters(ctx.params);
-  if (!filters.success) return f.shell(<ErrorState title="Los filtros no son válidos." retry={<Link className="btn-secondary" href={`${cafeteriaReportPath("ventas")}?cafeteria=${ctx.cafeteriaId}`}>Limpiar filtros</Link>} />);
+  if (!filters.success) return f.shell(<ErrorState kind="validation" title="Los filtros no son válidos." description="La dirección trae filtros que no existen. Restablécelos para ver el reporte completo." action={<Link className="btn-secondary" href={`${cafeteriaReportPath("ventas")}?cafeteria=${ctx.cafeteriaId}`}>Restablecer filtros</Link>} />);
   const { payment, page } = filters.data, extra = [{ label: "Método de pago", value: payment ? tenderLabel[payments[payment]] : "Todos" }];
   if (!f.period.ok) return f.shell(<>{f.header(null, extra, null)}{f.controls(payment ? { payment } : {})}</>);
   const p = f.period.value, tender = payment ? payments[payment] : null;
@@ -21,6 +21,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
     p.period === "today" && !payment ? loadToday(ctx.client, ctx.cafeteriaId) : Promise.resolve(null)]);
   const r = summary.status === "ok" ? summary.value : null;
   const head = <>{f.header(r, extra, r ? { payment } : null)}{f.controls(payment ? { payment } : {})}</>;
-  if (summary.status !== "ok" || sales.status !== "ok") return f.shell(<>{head}{f.failed(summary.status === "error" ? summary.message : sales.status === "error" ? sales.message : undefined)}</>);
+  if (summary.status !== "ok" || sales.status !== "ok") return f.shell(<>{head}{f.failed(summary.status === "error" ? summary.message : sales.status === "error" ? sales.message : undefined, summary.status === "error" ? summary.kind : sales.status === "error" ? sales.kind : undefined)}</>);
   return f.shell(<>{head}<SalesReportBody cafeteriaId={ctx.cafeteriaId} period={p} payment={payment} summary={summary.value} sales={sales.value} today={today} page={page} /></>);
 }

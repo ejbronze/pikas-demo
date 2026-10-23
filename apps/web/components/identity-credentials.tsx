@@ -1,4 +1,5 @@
 'use client';
+import { classifyStatus, type FailureKind } from '../lib/ux/state-classes';
 import { useEffect, useState } from 'react';
 import { sessionFetch } from '../lib/auth/session-fetch';
 import { auditLabels, identityErrors, identityResponseSchema, roleLabels, type IdentityCommand, type IdentitySummary } from '../lib/identity/contracts';
@@ -12,12 +13,16 @@ import { PikasMascot } from '@pikas/ui/mascot';
 // never create another Person and never grant memberships. The server decides the scope
 // (Platform support or tenant) on every call; this surface only offers what that scope allows.
 type Outcome = { summary: IdentitySummary | null; temporary?: string };
+// UX 14: a refused request carries its kind so a read can be presented as permission / not found /
+// temporary instead of one generic failure.
+export class IdentityRequestFailure extends Error { constructor(message: string, public kind: FailureKind) { super(message); } }
 export async function identityRequest(command: IdentityCommand): Promise<Outcome> {
   const response = await sessionFetch('/api/identity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(command) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw Error(identityErrors[payload.error] ?? (response.status === 403 ? identityErrors.identity_support_required : 'No se pudo completar la operación. Inténtalo de nuevo.'));
+  if (!response.ok) throw new IdentityRequestFailure(identityErrors[payload.error] ?? (response.status === 403 ? identityErrors.identity_support_required : 'No se pudo completar la operación. Inténtalo de nuevo.'),
+    classifyStatus(response.status, payload, { identity_support_required: 'permission', demo_mode_active: 'permission' }));
   const parsed = identityResponseSchema.safeParse(payload);
-  if (!parsed.success) throw Error('No se pudo completar la operación. Inténtalo de nuevo.');
+  if (!parsed.success) throw new IdentityRequestFailure('No se pudo completar la operación. Inténtalo de nuevo.', 'temporary');
   return { summary: parsed.data.result, temporary: parsed.data.temporary_password };
 }
 
@@ -125,12 +130,12 @@ export function IdentitySearch() {
 // Tenant entry (Personal POS): the identity behind one membership row. The server allows it only
 // when every role the person holds is managed by the signed-in administrator.
 export function MemberCredentialsTask({ membershipId, name, onClose }: { membershipId: string; name: string; onClose: () => void }) {
-  const [state, setState] = useState<{ summary?: IdentitySummary; error?: string }>({});
+  const [state, setState] = useState<{ summary?: IdentitySummary; error?: { message: string; kind: FailureKind } }>({});
   useEffect(() => { let live = true;
-    identityRequest({ operation: 'read_membership', membership_id: membershipId }).then(r => { if (live) setState(r.summary ? { summary: r.summary } : { error: 'No se encontró la identidad.' }); },
-      e => { if (live) setState({ error: e instanceof Error ? e.message : 'No se pudo cargar.' }); });
+    identityRequest({ operation: 'read_membership', membership_id: membershipId }).then(r => { if (live) setState(r.summary ? { summary: r.summary } : { error: { message: 'No encontramos la identidad de esta persona.', kind: 'not_found' } }); },
+      e => { if (live) setState({ error: { message: e instanceof Error ? e.message : 'No se pudo cargar.', kind: e instanceof IdentityRequestFailure ? e.kind : 'temporary' } }); });
     return () => { live = false; }; }, [membershipId]);
   return <TaskWindow title="Credenciales" context={name} onClose={onClose} footer={<TaskActions><TaskCancelButton>Cerrar</TaskCancelButton></TaskActions>}>
-    {state.summary ? <IdentityCredentials initial={state.summary} /> : state.error ? <ErrorState title={state.error} /> : <p role="status">Cargando…</p>}
+    {state.summary ? <IdentityCredentials initial={state.summary} /> : state.error ? <ErrorState kind={state.error.kind} title={state.error.message} description={state.error.kind === 'temporary' ? 'Cierra esta ventana y vuelve a abrir Credenciales.' : undefined} /> : <p role="status">Cargando…</p>}
   </TaskWindow>;
 }

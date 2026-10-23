@@ -1,4 +1,6 @@
 "use client";
+import { ErrorState } from "../../components/state-panels";
+// Route-level failure of the Platform shell: a real, unexpected failure, so it is the one alert with a retry.
 export default function PlatformError({ reset }: { reset: () => void }) {
-  return <div className="card p-5" role="alert"><p>No pudimos cargar la plataforma.</p><button className="btn mt-4" onClick={reset}>Volver a intentar</button></div>;
+  return <ErrorState title="No pudimos cargar la plataforma." description="Inténtalo de nuevo. Si continúa, vuelve a entrar más tarde." retry={<button className="btn" onClick={reset}>Volver a intentar</button>} />;
 }

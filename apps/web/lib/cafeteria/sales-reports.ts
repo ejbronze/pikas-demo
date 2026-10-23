@@ -4,13 +4,15 @@ import { transactionsErrors, transactionsResultSchema, tenderLabel, refundStatus
 import { todaySchema, type TodayRead } from "./today";
 import { one, type PeriodFilter, type SearchParams } from "../reports/filters";
 import { csvAmount, csvDocument } from "../reports/csv";
+import { classifyError, type FailureKind } from "../ux/state-classes";
 
 // PIKAS UX 9 Cafetería Reportes. Every report reads through an existing Cafetería read under the
 // Cafetería's own authority (no migration, no new capability): cafeteria_report_read (5D sales
 // summary, top products, reconciliation), cafeteria_transactions_read (5D.4) and cafeteria_today_read
 // (Hoy). Totals are the database's; nothing here adds money. Page and CSV call the same loaders.
 type Rpc = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }> };
-export type Loaded<T> = { status: "ok"; value: T } | { status: "too_many" } | { status: "error"; message?: string };
+// UX 14: a failed load names its kind (lib/ux/state-classes) so the page can say what happened.
+export type Loaded<T> = { status: "ok"; value: T } | { status: "too_many" } | { status: "error"; message?: string; kind?: FailureKind };
 
 // ── Filters ───────────────────────────────────────────────────────────────────────────────────────
 // payment uses stable product words in the URL and maps to the stored tender.
@@ -24,9 +26,9 @@ export const parseSalesFilters = (p: SearchParams) => salesFilters.safeParse({ p
 // ── Reads ─────────────────────────────────────────────────────────────────────────────────────────
 export async function loadReport<K extends ReportKind>(client: Rpc, cafeteriaId: string, kind: K, p: PeriodFilter): Promise<Loaded<z.infer<(typeof reportResultSchema)[K]>>> {
   const { data, error } = await client.rpc("cafeteria_report_read", { p_cafeteria_id: cafeteriaId, p_kind: kind, p_period: p.period, p_from: p.from, p_to: p.to });
-  if (error) return { status: "error", message: error.code === "22023" && error.message ? reportErrors[error.message] : undefined };
+  if (error) return { status: "error", kind: classifyError(error), message: error.code === "22023" && error.message ? reportErrors[error.message] : undefined };
   const parsed = reportResultSchema[kind].safeParse(data);
-  if (!parsed.success || parsed.data.cafeteria_id !== cafeteriaId || parsed.data.kind !== kind || parsed.data.period !== p.period) return { status: "error" };
+  if (!parsed.success || parsed.data.cafeteria_id !== cafeteriaId || parsed.data.kind !== kind || parsed.data.period !== p.period) return { status: "error", kind: "temporary" };
   return { status: "ok", value: parsed.data as z.infer<(typeof reportResultSchema)[K]> };
 }
 export async function loadToday(client: Rpc, cafeteriaId: string): Promise<TodayRead | null> {
@@ -42,9 +44,9 @@ export type SalesPage = { total: number; page_size: number; offset: number; rows
 const clockIn = (iso: string, tz: string) => new Intl.DateTimeFormat("es-DO", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
 export async function loadSales(client: Rpc, cafeteriaId: string, p: PeriodFilter, tender: TransactionTender | null, offset: number): Promise<Loaded<SalesPage>> {
   const { data, error } = await client.rpc("cafeteria_transactions_read", { p_cafeteria_id: cafeteriaId, p_period: p.period, p_from: p.from, p_to: p.to, p_tender: tender, p_refund_status: null, p_receipt: null, p_offset: offset });
-  if (error) return { status: "error", message: error.code === "22023" && error.message ? transactionsErrors[error.message] : undefined };
+  if (error) return { status: "error", kind: classifyError(error), message: error.code === "22023" && error.message ? transactionsErrors[error.message] : undefined };
   const r = transactionsResultSchema.safeParse(data);
-  if (!r.success || r.data.cafeteria_id !== cafeteriaId || r.data.period !== p.period || r.data.tender !== tender || r.data.offset !== offset || r.data.receipt !== null || r.data.refund_status !== null) return { status: "error" };
+  if (!r.success || r.data.cafeteria_id !== cafeteriaId || r.data.period !== p.period || r.data.tender !== tender || r.data.offset !== offset || r.data.receipt !== null || r.data.refund_status !== null) return { status: "error", kind: "temporary" };
   const tz = r.data.business_timezone;
   return { status: "ok", value: { total: r.data.total_count, page_size: r.data.page_size, offset, timezone: tz, rows: r.data.data.map(x => ({ receipt: x.receipt_number, date: x.business_date, time: clockIn(x.purchased_at, tz),
     register: x.register_name, operator: x.operator_name, tender: x.tender, total_minor: x.total_minor, refunded_minor: x.refunded_minor, refund_status: x.refund_status })) } };

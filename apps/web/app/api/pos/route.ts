@@ -74,7 +74,8 @@ export async function POST(request: Request) {
     if (!session) {
       if (op.operation !== "bootstrap") throw new PosFailure(409, "register_not_ready");
       return json({ result: bootstrapSchema.parse({ context: access.context, registers: scopedRegisters, session: null, catalog: null,
-        blocked: "No hay una caja abierta y autorizada. Abre una caja asignada desde Caja para continuar." }) });
+        blocked: scopedRegisters.length ? "No hay una caja abierta y autorizada. Abre una caja asignada desde Caja para continuar."
+          : "No tienes una caja asignada en esta cafetería. El administrador de la cafetería debe asignarte una desde Cajas." }) });
     }
     if (op.operation === "refund_lookup" || op.operation === "refund") {
       // Sandbox POV keeps its financial exclusion; refunds run only under a real operator's open session.
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
     if (catalog.cafeteria_id !== session.cafeteria_id || catalog.currency_code !== session.currency_code ||
       catalog.products.some((p) => p.currency_code !== session.currency_code)) throw new PosFailure(502, "invalid_pos_response");
     return json({ result: bootstrapSchema.parse({ context: access.context, registers: scopedRegisters, session, catalog,
-      blocked: !["manual", "active"].includes(catalog.status) ? "No hay servicio de venta activo." : !catalog.products.length ? "No hay productos disponibles para vender." : null }) });
+      blocked: !["manual", "active"].includes(catalog.status) ? "No hay servicio de venta activo. Lo activa el administrador de la cafetería en Configuración." : !catalog.products.length ? "No hay productos disponibles para vender. Los agrega el administrador de la cafetería en Productos." : null }) });
   } catch (error) {
     return error instanceof PosFailure ? json({ error: error.code, definite: error.definite }, error.status) : json({ error: "pos_operation_unavailable" }, 503);
   }

@@ -20,7 +20,15 @@ describe("authoritative customer presentation", () => {
   it("handles empty hierarchy and read failures honestly", () => {
     const customer = customerOverviewSchema.parse({ account: entity("Cliente"), tenant_kind: "customer", schools: [], administrators: [], administrator_intents: [], customer_admin_onboarding: [] });
     expect(renderToStaticMarkup(<CustomerHierarchy customer={customer} />)).toContain("No hay escuelas registradas");
-    expect(renderToStaticMarkup(<ReadFailure kind="forbidden" />)).toContain("No tienes permiso");
-    expect(renderToStaticMarkup(<ReadFailure kind="unavailable" />)).toContain("No pudimos cargar");
+    const forbidden = renderToStaticMarkup(<ReadFailure kind="forbidden" />);
+    expect(forbidden).toContain("No tienes permiso"); expect(forbidden).toContain('data-kind="permission"'); expect(forbidden).not.toContain("Reintentar");
+    const unavailable = renderToStaticMarkup(<ReadFailure kind="unavailable" />);
+    expect(unavailable).toContain("No pudimos cargar"); expect(unavailable).toContain("Reintentar"); expect(unavailable).toContain('role="alert"');
+    // UX 14: lifecycle and not-found are never presented as loading failures.
+    const lifecycle = renderToStaticMarkup(<ReadFailure kind="forbidden" failure="lifecycle" />);
+    expect(lifecycle).toContain("suspendido o cerrado"); expect(lifecycle).toContain('data-kind="lifecycle"'); expect(lifecycle).not.toContain("Reintentar");
+    const missing = renderToStaticMarkup(<ReadFailure kind="missing" />);
+    expect(missing).toContain("No encontramos este cliente."); expect(missing).toContain("Ver clientes"); expect(missing).not.toContain("Reintentar");
+    expect(renderToStaticMarkup(<ReadFailure kind="unavailable" reason="invalid_response" />)).toContain("No pudimos mostrar esta información.");
   });
 });

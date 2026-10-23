@@ -1,4 +1,5 @@
 'use client';
+import { classifyStatus, type FailureKind } from '../lib/ux/state-classes';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { postRead, type ReadSource } from '../lib/cafeteria/read-source';
 import { customRangeError, maxReportDays, type ReportPeriod } from '../lib/cafeteria/reports';
@@ -26,7 +27,7 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox, source }: { cafete
   const endpoint = source?.endpoint, accountId = source?.accountId;
   const [filters, setFilters] = useState<Filters>(initial), [draft, setDraft] = useState({ from: '', to: '' }), [rangeError, setRangeError] = useState('');
   const [receipt, setReceipt] = useState(''), [receiptQuery, setReceiptQuery] = useState<string | null>(null), [receiptError, setReceiptError] = useState('');
-  const [offset, setOffset] = useState(0), [result, setResult] = useState<TransactionsResult | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  const [offset, setOffset] = useState(0), [result, setResult] = useState<TransactionsResult | null>(null), [error, setError] = useState<{ message: string; kind: FailureKind } | null>(null), [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<TransactionRow | null>(null), [revision, setRevision] = useState(0);
   const latest = useRef(0);
   const request = useCallback((): TransactionsRequest | null => receiptQuery !== null
@@ -38,17 +39,18 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox, source }: { cafete
     if (sandbox) return;
     const body = request(); if (!body) return;
     const id = ++latest.current;
-    queueMicrotask(() => { if (id === latest.current) { setLoading(true); setError(''); } });
+    queueMicrotask(() => { if (id === latest.current) { setLoading(true); setError(null); } });
     void (async () => {
       try {
         const response = await postRead('/api/cafeteria/transactions', body, endpoint && accountId ? { endpoint, accountId } : undefined);
         const payload = await response.json().catch(() => ({}));
         if (id !== latest.current) return;
-        if (!response.ok) { setResult(null); setError(transactionsErrors[payload.error] ?? (response.status === 403 ? 'Tu rol no puede consultar las transacciones de esta cafetería.' : 'No se pudieron cargar las transacciones.')); return; }
+        if (!response.ok) { setResult(null); const kind = classifyStatus(response.status, payload, { cafeteria_authority_required: 'permission' });
+          setError({ kind, message: transactionsErrors[payload.error] ?? (kind === 'permission' ? 'Tu rol no puede consultar las transacciones de esta cafetería.' : 'No se pudieron cargar las transacciones.') }); return; }
         const parsed = transactionsResultSchema.safeParse(payload.result);
         if (!parsed.success || parsed.data.cafeteria_id !== cafeteriaId) throw Error();
         setResult(parsed.data);
-      } catch { if (id === latest.current) { setResult(null); setError('No se pudieron cargar las transacciones.'); } }
+      } catch { if (id === latest.current) { setResult(null); setError({ kind: 'temporary', message: 'No se pudieron cargar las transacciones.' }); } }
       finally { if (id === latest.current) setLoading(false); }
     })();
   }, [request, revision, sandbox, cafeteriaId, endpoint, accountId]);
@@ -87,7 +89,7 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox, source }: { cafete
       <p role="status">{loading ? 'Cargando transacciones…' : result ? `${result.total_count} ${result.total_count === 1 ? 'transacción' : 'transacciones'}${range ? ` · ${range}` : ''}` : ''}</p>
       {filtered && <button type="button" className="min-h-11 font-bold text-teal-800 underline" onClick={clear}>Limpiar filtros</button>}
     </div>
-    {error ? <ErrorState title={error} retry={<button className="btn-secondary" onClick={() => setRevision(r => r + 1)}>Reintentar</button>} />
+    {error ? <ErrorState kind={error.kind} title={error.message} description={error.kind === 'permission' ? 'Lo otorga el administrador de la cafetería; pídeselo si lo necesitas.' : error.kind === 'validation' ? 'Ajusta los filtros y vuelve a buscar.' : undefined} retry={error.kind === 'temporary' ? <button className="btn-secondary" onClick={() => setRevision(r => r + 1)}>Reintentar</button> : undefined} />
       : result && !result.data.length && !loading ? (filtered
         ? <EmptyState title={receiptQuery !== null ? `No encontramos el recibo #${receiptQuery} en esta cafetería.` : 'No encontramos transacciones con estos filtros.'} action={<button className="btn-secondary" onClick={clear}>Limpiar filtros</button>} />
         : <EmptyState title="No hay transacciones en este período." description="Prueba con un período más amplio." />)

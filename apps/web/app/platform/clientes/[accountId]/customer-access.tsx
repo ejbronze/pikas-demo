@@ -1,3 +1,4 @@
+import { ErrorState } from "../../../../components/state-panels";
 import Link from "next/link";
 import { AddStaffAction, CompleteStaffAction, GrantCafeteriaAdminAction, RenamePersonAction, StaffActivationAction } from "./access-actions";
 import { accessStatus, grantLabel, linkStatus, loginStatus, membershipStatusLabel, pendingStatus, roleLabel, supportDate, type AccessPerson, type CustomerAccess, type PendingAccess } from "../../../../lib/platform/customer-access";
@@ -73,7 +74,7 @@ export function CustomerAccessSection({ access, identities, actions }: { access:
     <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1 basis-60"><h2 id="customer-access" className="text-lg font-bold">Usuarios y accesos</h2>
       <p className="text-sm text-slate-600">{actions.provision ? "Personal del cliente con acceso a PIKAS y accesos pendientes. Desde aquí PIKAS prepara personal de caja y da acceso de administrador de cafetería." : "Personal del cliente con acceso a PIKAS y accesos pendientes. Solo consulta."}</p></div>
       {access && actions.provision && actions.cafeterias.length > 0 && <AddStaffAction accountId={actions.accountId} cafeterias={actions.cafeterias} />}</div>
-    {!access ? <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm">No pudimos cargar los accesos de este cliente. Vuelve a intentarlo.</p> : <>
+    {!access ? <ErrorState title="No pudimos cargar los accesos de este cliente." description="Actualiza la página para intentarlo de nuevo. El resto del cliente se muestra con normalidad." /> : <>
       <section aria-labelledby="access-people" className="space-y-2"><h3 id="access-people" className="font-black">Usuarios con acceso <span className="font-normal text-slate-600">({access.people.length})</span></h3>
         {access.people.length ? <ul className="space-y-2">{access.people.map(p => <PersonCard key={p.person_id} person={p} identities={identities} actions={actions} />)}</ul>
           : <p className="rounded-lg bg-slate-50 p-3 text-sm">{access.pending.length ? "No hay usuarios con acceso activo para este cliente." : "Aún no se ha dado acceso al personal de este cliente. Cuando el administrador del colegio active su acceso o se invite personal, aparecerá aquí."}</p>}

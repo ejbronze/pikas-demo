@@ -1,4 +1,5 @@
 import "server-only";
+import { classifyError, type FailureKind } from "../ux/state-classes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -33,14 +34,22 @@ export async function requirePlatform(options: { demo?: "allow" | "intercept" } 
   return { supabase, identity, capabilities: identity.platform.capabilities, demo };
 }
 export type PlatformSession = Awaited<ReturnType<typeof requirePlatform>>;
-export type ReadResult<T> = { kind: "ready"; value: T } | { kind: "forbidden" | "unavailable" | "missing" };
+// Non-ready results say why: `failure` is the UX kind (lib/ux/state-classes) and, for an unavailable
+// read, `reason` separates a failed call from a response PIKAS could not read (never "temporary" by habit).
+export type ReadResult<T> = { kind: "ready"; value: T } | { kind: "forbidden"; failure: "permission" | "lifecycle" } | { kind: "missing"; failure: "not_found" }
+  | { kind: "unavailable"; failure: FailureKind; reason: "rpc" | "invalid_response" | "exception"; code?: string };
 export async function readPlatform<T>(session: PlatformSession, capability: string, rpc: string,
   args: Record<string, unknown>, schema: z.ZodType<T>): Promise<ReadResult<T>> {
-  if (!session.capabilities.includes(capability)) return { kind: "forbidden" };
+  if (!session.capabilities.includes(capability)) return { kind: "forbidden", failure: "permission" };
   try {
     const result = await session.supabase.rpc(rpc, args);
-    if (result.error) return { kind: result.error.code === "42501" ? "forbidden" : result.error.code === "P0002" ? "missing" : "unavailable" };
+    if (result.error) {
+      const failure = classifyError(result.error);
+      if (failure === "permission" || failure === "lifecycle") return { kind: "forbidden", failure };
+      if (failure === "not_found") return { kind: "missing", failure };
+      return { kind: "unavailable", failure, reason: "rpc", code: result.error.code ?? undefined };
+    }
     const parsed = schema.safeParse(result.data);
-    return parsed.success ? { kind: "ready", value: parsed.data } : { kind: "unavailable" };
-  } catch { return { kind: "unavailable" }; }
+    return parsed.success ? { kind: "ready", value: parsed.data } : { kind: "unavailable", failure: "temporary", reason: "invalid_response" };
+  } catch { return { kind: "unavailable", failure: "temporary", reason: "exception" }; }
 }

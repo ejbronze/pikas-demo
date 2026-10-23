@@ -16,7 +16,7 @@ import { ErrorState } from '../../../../components/state-panels';
 // school:wallets:read (the sandbox admin POV keeps its financial exclusion). Every read is an
 // existing School read, scoped to this school and reduced here to wallet state and balance.
 export default async function Page({ searchParams }: { searchParams: Promise<{ school?: string; q?: string; after?: string; vista?: string }> }) {
-  if (isDemoMode()) return <ErrorState title="El reporte de PIKAS Cash no está disponible en esta demostración." />;
+  if (isDemoMode()) return <ErrorState kind="not_configured" title="PIKAS Cash no está disponible en esta demostración." description="La demostración no incluye monederos. En un colegio real, esta sección muestra los monederos de sus estudiantes." />;
   const client = await createSupabaseServerClient();
   const access = await resolveSchoolAccess(client);
   if (access.status !== 'authorized') redirect('/login?error=school_authority');
@@ -26,7 +26,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   const wallet = access.context.pov ? null : await readSchoolWalletAccess(client, schoolId);
   const shell = (children: React.ReactNode) => <ConnectedSchoolShell context={access.context} schoolId={schoolId} walletNav={Boolean(wallet?.read)}>{children}</ConnectedSchoolShell>;
   if (access.context.pov) return shell(<><AppPageHeader title="PIKAS Cash" /><p className="card p-5" role="status">Las operaciones y reportes financieros no están habilitados en este punto de vista de sandbox.</p></>);
-  if (!wallet?.read) return shell(<><AppPageHeader title="PIKAS Cash" /><ErrorState title="Tu rol no tiene acceso a PIKAS Cash en esta escuela." /></>);
+  if (!wallet?.read) return shell(<><AppPageHeader title="PIKAS Cash" /><ErrorState kind="permission" title="Tu rol no tiene acceso a PIKAS Cash en esta escuela." description="Lo otorga el administrador de la cuenta del colegio; pídeselo si lo necesitas." /></>);
 
   const query = z.string().max(80).catch('').parse(params.q ?? ''), after = z.guid().nullable().catch(null).parse(params.after ?? null), view = params.vista === 'atencion' ? 'atencion' as const : 'todos' as const;
   const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };

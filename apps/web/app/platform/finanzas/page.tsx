@@ -13,7 +13,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const session = await requirePlatform();
   if (!session.capabilities.includes(FINANCE_READ)) return <FinanceReadFailure kind="forbidden" />;
   const parsed = filtersSchema.safeParse(await searchParams);
-  if (!parsed.success) return <ErrorState title="Los filtros no son válidos." retry={<Link className="btn-secondary" href="/platform/finanzas">Limpiar filtros</Link>} />;
+  if (!parsed.success) return <ErrorState kind="validation" title="Los filtros no son válidos." description="La dirección trae filtros que no existen. Restablécelos para ver todas las solicitudes." action={<Link className="btn-secondary" href="/platform/finanzas">Restablecer filtros</Link>} />;
   const { vista, estado, q } = parsed.data, history = vista === "historial";
   const result = await readPlatform(session, FINANCE_READ, "platform_finance_replenishments_read",
     { p_view: history ? "history" : "pending", p_status: history && estado ? estadoToStatus[estado] : null, p_query: q || null }, listSchema);

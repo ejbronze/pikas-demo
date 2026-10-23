@@ -12,6 +12,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   if (!f.period.ok) return f.shell(<>{f.header(null, [], null)}{f.controls()}</>);
   const loaded = await loadReport(ctx.client, ctx.cafeteriaId, "top_products", f.period.value), r = loaded.status === "ok" ? loaded.value : null;
   const head = <>{f.header(r, [], r ? {} : null)}{f.controls()}</>;
-  if (loaded.status !== "ok") return f.shell(<>{head}{f.failed(loaded.status === "error" ? loaded.message : undefined)}</>);
+  if (loaded.status !== "ok") return f.shell(<>{head}{f.failed(loaded.status === "error" ? loaded.message : undefined, loaded.status === "error" ? loaded.kind : undefined)}</>);
   return f.shell(<>{head}<ProductsReportBody report={loaded.value} /></>);
 }

@@ -1,4 +1,5 @@
 import { PikasMascot } from "@pikas/ui/mascot";
+import { ErrorState } from "./state-panels";
 import Link from "next/link";
 import { money } from "../lib/cafeteria/operations";
 import { needsAttention, walletLabel, type WalletOverview, type WalletStudent } from "../lib/school/wallets";
@@ -24,7 +25,7 @@ export function SchoolPikasCash({ schoolId, schoolName, overview, students, view
 
     <section aria-labelledby="pc-overview" className="sch-ledger">
       <h2 id="pc-overview" className="sch-h2">Monederos</h2>
-      {!overview ? <p className="text-sm text-slate-600" role="alert">No pudimos cargar el resumen de monederos. Intenta de nuevo.</p>
+      {!overview ? <ErrorState title="No pudimos cargar el resumen de monederos." description="Inténtalo de nuevo. Si continúa, vuelve a esta sección más tarde." retryHref={base} />
         : overview.wallet_count === 0 ? <div className="sch-empty"><PikasMascot id="EMP-02" size={120} className="sch-mascot" />
             <div><p className="font-bold">Aún no hay monederos de PIKAS Cash en este colegio.</p><p className="text-sm text-slate-600">El monedero de un estudiante activo y matriculado se crea con su primera recarga, desde su PIKAS Cash.</p></div></div>
         : <dl className="sch-figures">
@@ -51,7 +52,7 @@ export function SchoolPikasCash({ schoolId, schoolName, overview, students, view
         <input id="pc-q" className="field min-w-0 flex-1" type="search" name="q" placeholder="Nombre o código" maxLength={80} defaultValue={query} />
         <button className="btn-secondary">Buscar</button>{filtered && <Link className="inline-flex min-h-11 items-center font-bold text-teal-800 underline" href={base}>Limpiar</Link>}
       </form>}
-      {students === null ? <p className="sch-panel text-sm text-slate-600" role="alert">No pudimos cargar los monederos. Intenta de nuevo.</p>
+      {students === null ? <ErrorState title="No pudimos cargar los monederos." description="Inténtalo de nuevo. Si continúa, vuelve a esta sección más tarde." retryHref={base} />
         : students.length === 0 ? <p className="sch-panel text-sm text-slate-600">{view === "atencion" ? "Ningún monedero requiere atención." : filtered || paged ? "No encontramos estudiantes con esa búsqueda." : <>Aún no hay estudiantes en este colegio. <Link className="font-bold underline" href={`/admin/escuela/estudiantes?school=${schoolId}`}>Ir a Estudiantes</Link></>}</p>
         : <ul aria-label="Monederos de estudiantes" className="pc-list">{students.map(s => <li key={s.id} data-attention={needsAttention(s) || undefined}>
             <div className="pc-who"><Link className="stu-name" href={studentHref(s.id)}>{s.name}</Link><span className="stu-meta">Código {s.code}{studentStatus[s.status] ? ` · ${studentStatus[s.status]}` : ""}</span></div>

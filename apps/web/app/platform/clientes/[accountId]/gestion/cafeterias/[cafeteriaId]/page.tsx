@@ -5,7 +5,7 @@ import { CUSTOMER_OPERATIONS_MANAGE, CUSTOMER_OPERATIONS_READ, operationsOvervie
 import { CafeteriaSwitcher, SectionNav, SupportContext, SupportProducts, SupportRegisters, SupportStaff, SupportSummary, sections, managementHref, cafeteriaHref, type Section } from "../../../../../../../components/platform/customer-operations";
 import { CafeteriaTransactions } from "../../../../../../../components/cafeteria-transactions";
 import { CafeteriaReports } from "../../../../../../../components/cafeteria-reports";
-import { ErrorState } from "../../../../../../../components/state-panels";
+import { ErrorState, LoadFailure } from "../../../../../../../components/state-panels";
 import { ConnectedCafeteriaProvider } from "../../../../../../../components/connected-cafeteria-provider";
 import { SupportCafeteriaManagement } from "../../../../../../../components/connected-cafeteria-pages";
 import type { CafeteriaRead } from "../../../../../../../lib/cafeteria/contracts";
@@ -14,16 +14,22 @@ import type { CafeteriaRead } from "../../../../../../../lib/cafeteria/contracts
 // real Platform actor, capability and explicit customer scope.
 export default async function CustomerCafeteriaPage({ params, searchParams }: { params: Promise<{ accountId: string; cafeteriaId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await requirePlatform();
-  if (!session.capabilities.includes(CUSTOMER_OPERATIONS_READ)) return <ErrorState title="No tienes permiso para gestionar la operación de clientes." retry={<Link className="btn-secondary" href="/platform/clientes">Volver a Clientes</Link>} />;
+  if (!session.capabilities.includes(CUSTOMER_OPERATIONS_READ)) return <ErrorState kind="permission" title="No tienes permiso para gestionar la operación de clientes." description="Lo administra un administrador de la plataforma de PIKAS." action={<Link className="btn-secondary" href="/platform/clientes">Volver a Clientes</Link>} />;
   const raw = await params, account = z.guid().safeParse(raw.accountId), cafeteria = z.guid().safeParse(raw.cafeteriaId);
   const requested = (await searchParams).seccion, section: Section = sections.some(([k]) => k === requested) ? requested as Section : "resumen";
-  const notFound = <ErrorState title="No encontramos esta cafetería para este cliente." retry={<Link className="btn-secondary" href={account.success ? managementHref(account.data) : "/platform/clientes"}>Ver cafeterías del cliente</Link>} />;
+  const notFound = <ErrorState kind="not_found" title="No encontramos esta cafetería para este cliente." description="Puede haber sido desactivada o la dirección ya no es válida." action={<Link className="btn-secondary" href={account.success ? managementHref(account.data) : "/platform/clientes"}>Ver cafeterías del cliente</Link>} />;
   if (!account.success || !cafeteria.success) return notFound;
   const [overview, read] = await Promise.all([
     readPlatform(session, CUSTOMER_OPERATIONS_READ, "platform_customer_operations_overview", { p_account_id: account.data }, operationsOverviewSchema),
     readPlatform(session, CUSTOMER_OPERATIONS_READ, "platform_support_cafeteria_read", { p_account_id: account.data, p_cafeteria_id: cafeteria.data }, supportCafeteriaReadSchema),
   ]);
-  if (overview.kind !== "ready" || read.kind !== "ready") return overview.kind === "unavailable" || read.kind === "unavailable" ? <ErrorState title="No pudimos cargar la cafetería." retryHref={managementHref(account.data)} /> : notFound;
+  if (overview.kind !== "ready" || read.kind !== "ready") {
+    const failed = [overview, read].find(r => r.kind === "unavailable");
+    if (failed && failed.kind === "unavailable") return <LoadFailure what="la cafetería" invalidResponse={failed.reason === "invalid_response"} retryHref={managementHref(account.data)} />;
+    if ([overview, read].some(r => r.kind === "forbidden" && r.failure === "lifecycle")) return <ErrorState kind="lifecycle" title="Este cliente no se puede gestionar en su estado actual." description="Está suspendido o cerrado. Solo la gestión de clientes de PIKAS puede restaurarlo." action={<Link className="btn-secondary" href="/platform/clientes">Volver a Clientes</Link>} />;
+    // The operator holds the capability (checked above): a refusal is a scope mismatch, so the cafetería is not this customer's.
+    return notFound;
+  }
   const d = read.value, a = account.data, c = cafeteria.data;
   if (d.scope.account_id !== a || d.scope.cafeteria_id !== c) return notFound;
   const canManage=session.capabilities.includes(CUSTOMER_OPERATIONS_MANAGE)&&d.scope.account_status==="active";

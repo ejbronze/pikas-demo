@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { getLoginErrorMessage } from "./login-error";
 
 describe("public login error messages", () => {
+  it("UX 14: a POS denial explains who grants access; an unavailable check is a temporary failure", () => {
+    expect(getLoginErrorMessage("pos_authority")?.title).toBe("No tienes acceso al POS"); expect(getLoginErrorMessage("pos_authority")?.body).toContain("administrador de la cafetería");
+    expect(getLoginErrorMessage("pos_unavailable")?.body).toContain("Inténtalo de nuevo");
+  });
   it("UX 12B closure: an expired temporary password is explained with the 15-minute rule and the way out", () => {
     const m = getLoginErrorMessage("temporary_expired"); expect(m?.title).toBe("Tu contraseña temporal venció"); expect(m?.body).toContain("15 minutos"); expect(m?.body).toContain("administrador de tu cafetería");
   });

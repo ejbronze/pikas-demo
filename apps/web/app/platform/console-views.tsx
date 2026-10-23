@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { AppPageHeader } from "../../components/app-page-header";
 import { ErrorState } from "../../components/state-panels";
+import { invalidResponseCopy } from "../../lib/ux/state-classes";
 import { statusLabel, type CustomerOverview } from "../../lib/platform/customer-contracts";
 import { countryName } from "../../lib/platform/dominican-provinces";
 
-export function ReadFailure({ kind }: { kind: string }) {
-  if (kind === "forbidden") return <ErrorState title="No tienes permiso para consultar clientes." description="Este destino requiere acceso de administración de clientes." />;
-  if (kind === "missing") return <ErrorState title="No encontramos este cliente." retry={<Link className="btn-secondary" href="/platform/clientes">Ver clientes</Link>} />;
-  return <ErrorState title="No pudimos cargar la información." description="Puede ser un problema temporal. Vuelve a intentarlo." retryHref="/platform/clientes" />;
+// UX 14: a failed Platform read says what happened. Permission and not-found never offer Reintentar;
+// a suspended/closed customer is named as such; only a real failure is an alert with a retry.
+export function ReadFailure({ kind, failure, reason, retryHref }: { kind: string; failure?: string; reason?: string; retryHref?: string }) {
+  if (kind === "forbidden") return failure === "lifecycle"
+    ? <ErrorState kind="lifecycle" title="Este cliente no está disponible en su estado actual." description="Está suspendido o cerrado. Solo la gestión de clientes de PIKAS puede restaurarlo." action={<Link className="btn-secondary" href="/platform/clientes">Ver clientes</Link>} />
+    : <ErrorState kind="permission" title="No tienes permiso para consultar clientes." description="Lo administra un administrador de la plataforma de PIKAS; pídele el acceso si lo necesitas." />;
+  if (kind === "missing") return <ErrorState kind="not_found" title="No encontramos este cliente." description="Puede haber sido cerrado o la dirección ya no es válida." action={<Link className="btn-secondary" href="/platform/clientes">Ver clientes</Link>} />;
+  if (reason === "invalid_response") return <ErrorState title={invalidResponseCopy.title} description={invalidResponseCopy.description} retryHref={retryHref ?? "/platform/clientes"} />;
+  return <ErrorState title="No pudimos cargar la información." description="Inténtalo de nuevo. Si continúa, vuelve a esta sección más tarde." retryHref={retryHref ?? "/platform/clientes"} />;
 }
 const badgeTone: Record<string, string> = { active: "bg-emerald-100 text-emerald-900", suspended: "bg-amber-100 text-amber-950", closed: "bg-slate-200 text-slate-900", inactive: "bg-slate-200 text-slate-900" };
 export function LifecycleBadge({ status }: { status: string }) {

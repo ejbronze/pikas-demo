@@ -2,6 +2,7 @@ import { z } from "zod";
 import { customerOverviewSchema, statusLabel } from "../../../../lib/platform/customer-contracts";
 import { readPlatform, requirePlatform } from "@/lib/platform/customer-console";
 import { ColegioProfile, CustomerHeading, CustomerHierarchy, ReadFailure } from "../../console-views";
+import { ErrorState } from "../../../../components/state-panels";
 import { AdminStatus } from "../../../../components/admin-interactions";
 import { CustomerActivationAction } from "./activation-action";
 import { customerActivationStatusSchema } from "../../../../lib/platform/customer-activation";
@@ -30,7 +31,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
   const id = z.guid().safeParse((await params).accountId);
   if (!id.success) return <ReadFailure kind="missing" />;
   const result = await readPlatform(session, "platform:tenant:lifecycle:read", "platform_get_customer_overview", { p_account_id: id.data }, customerOverviewSchema);
-  if (result.kind !== "ready") return <ReadFailure kind={result.kind} />;
+  if (result.kind !== "ready") return <ReadFailure kind={result.kind} failure={result.failure} reason={"reason" in result ? result.reason : undefined} />;
   const customer = result.value;
   const canPrepare = customer.tenant_kind === "customer" && customer.account.status === "active" && session.capabilities.includes("platform:customer_admin:provision");
   const canComplete = canPrepare && session.capabilities.includes("platform:identity:link");
@@ -69,7 +70,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ accou
       launch={launch && customer.account.status === "active" ? <LaunchPill status={launchStatus(launch)} lifecycle={customer.account.status} /> : undefined} />
     <WorkspaceNav sections={sections} />
     {launch && <LaunchChecklist customer={launch} />}
-    {readiness && !launch && <p className="card p-4 text-sm text-slate-600">No pudimos cargar la puesta en marcha de este cliente.</p>}
+    {readiness && !launch && <ErrorState title="No pudimos cargar la puesta en marcha de este cliente." description="Actualiza la página para intentarlo de nuevo. El resto del cliente se muestra con normalidad." />}
 
     <ColegioProfile customer={customer} action={canEditProfile ? (school) => <EditProfileAction accountId={customer.account.id} schoolId={school.id} renamesAccount={customer.schools.length === 1} accountName={customer.account.name}
       current={{ name: school.name, rnc: school.rnc ?? null, address: school.address ?? null, province: school.province ?? null }} /> : undefined} />
