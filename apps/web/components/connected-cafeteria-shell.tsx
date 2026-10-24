@@ -9,16 +9,17 @@ import type { CafeteriaContext } from '../lib/cafeteria/contracts';
 // Item order is unchanged so the mobile bottom bar keeps its first four destinations.
 const OPERATION = 'Operación', STRUCTURE = 'Mi cafetería';
 const allItems = [['', 'Hoy', 'home', OPERATION], ['/transacciones', 'Transacciones', 'receipt', OPERATION], ['/cajas', 'Cajas', 'receipt', STRUCTURE], ['/reportes', 'Reportes', 'chart', OPERATION], ['/escuelas', 'PIKAS Cash', 'wallet', OPERATION],
-  ['/personal', 'Personal POS', 'users', STRUCTURE], ['/productos', 'Productos', 'utensils', STRUCTURE], ['/menus', 'Menús', 'utensils', STRUCTURE], ['/configuracion', 'Configuración', 'shield', STRUCTURE]] as const;
+  ['/personal', 'Personal POS', 'users', STRUCTURE], ['/productos', 'Productos', 'utensils', STRUCTURE], ['/menus', 'Menús', 'utensils', STRUCTURE], ['/configuracion', 'Configuración', 'shield', STRUCTURE], ['/liquidaciones', 'Liquidaciones', 'wallet', OPERATION]] as const;
 // The current area for the location cue, most specific first (sub-routes such as reports and shifts).
 const areas = [['/admin/cafeteria/menus/turnos', 'Turnos de servicio'], ['/admin/cafeteria/menus', 'Menús'], ['/admin/cafeteria/menu', 'Menú'], ['/admin/cafeteria/reportes', 'Reportes'], ['/admin/cafeteria/transacciones', 'Transacciones'], ['/admin/cafeteria/cajas', 'Cajas'],
-  ['/admin/cafeteria/personal', 'Personal POS'], ['/admin/cafeteria/productos', 'Productos'], ['/admin/cafeteria/configuracion', 'Configuración'], ['/admin/cafeteria/escuelas', 'PIKAS Cash']] as const;
+  ['/admin/cafeteria/personal', 'Personal POS'], ['/admin/cafeteria/productos', 'Productos'], ['/admin/cafeteria/configuracion', 'Configuración'], ['/admin/cafeteria/escuelas', 'PIKAS Cash'], ['/admin/cafeteria/liquidaciones', 'Liquidaciones']] as const;
 export const currentArea = (path: string, walletNav: boolean) => { const hit = areas.find(([match]) => path === match || path.startsWith(match + '/')); return !hit ? 'Hoy' : hit[1] === 'PIKAS Cash' && !walletNav ? 'Escuelas conectadas' : hit[1]; };
 // PIKAS Cash (balances/scoped adjustments on /escuelas) is listed only when the server-derived read grants cafeteria:wallets:read;
-// Reportes only with cafeteria:pos:purchases:read on a customer tenant (the report RPC enforces both).
-export function ConnectedCafeteriaShell({ context, cafeteriaId, walletNav = false, reportsNav = false, children }: { context: CafeteriaContext; cafeteriaId: string; walletNav?: boolean; reportsNav?: boolean; children: React.ReactNode }) {
+// Reportes only with cafeteria:pos:purchases:read on a customer tenant (the report RPC enforces both); Liquidaciones only with
+// cafeteria:finance:obligations:read on a customer tenant (its own settlements, read only).
+export function ConnectedCafeteriaShell({ context, cafeteriaId, walletNav = false, reportsNav = false, settlementsNav = false, children }: { context: CafeteriaContext; cafeteriaId: string; walletNav?: boolean; reportsNav?: boolean; settlementsNav?: boolean; children: React.ReactNode }) {
   const scope = context.cafeterias.find(c => c.cafeteria_id === cafeteriaId)!, path = usePathname();
-  const nav: ShellNavItem[] = allItems.filter(([suffix]) => (walletNav || suffix !== '/escuelas') && (reportsNav || suffix !== '/reportes'))
+  const nav: ShellNavItem[] = allItems.filter(([suffix]) => (walletNav || suffix !== '/escuelas') && (reportsNav || suffix !== '/reportes') && (settlementsNav || suffix !== '/liquidaciones'))
     .map(([suffix, label, icon, group]) => ({ href: `/admin/cafeteria${suffix}?cafeteria=${cafeteriaId}`, label, icon, match: `/admin/cafeteria${suffix}`, exact: suffix === '', group }));
   return <AdministrativeShell tone="teal" area="Administración de cafetería" homeHref={`/admin/cafeteria?cafeteria=${cafeteriaId}`} navLabel="Administración" nav={nav}
     context={{ label: 'Cafetería', name: scope.cafeteria_name, detail: context.pov ? 'Datos ficticios' : `${scope.location_name} · ${scope.school_name}` }}

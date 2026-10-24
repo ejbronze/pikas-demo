@@ -10,7 +10,7 @@ import { ConnectedCafeteriaProvider } from './connected-cafeteria-provider';
 import { ConnectedCafeteriaPages, type CafeteriaSection } from './connected-cafeteria-pages';
 import { ErrorState, LoadFailure } from "./state-panels";
 import { classifyError } from "../lib/ux/state-classes";
-const sectionPath: Record<CafeteriaSection, string> = { summary: '', products: '/productos', menus: '/menus', shifts: '/menus/turnos', staff: '/personal', registers: '/cajas', settings: '/configuracion', transactions: '/transacciones', schools: '/escuelas', reports: '/reportes' };
+const sectionPath: Record<CafeteriaSection, string> = { summary: '', products: '/productos', menus: '/menus', shifts: '/menus/turnos', staff: '/personal', registers: '/cajas', settings: '/configuracion', transactions: '/transacciones', schools: '/escuelas', reports: '/reportes', settlements: '/liquidaciones' };
 export type CafeteriaSearchParams=Promise<Record<string,string|string[]|undefined>>;
 export async function CafeteriaScreen({section,searchParams}:{section:CafeteriaSection;searchParams:CafeteriaSearchParams}) {
  const client=await createSupabaseServerClient(),access=await resolveCafeteriaAccess(client);
@@ -28,5 +28,5 @@ export async function CafeteriaScreen({section,searchParams}:{section:CafeteriaS
    :<LoadFailure kind={kind} what="esta sección" invalidResponse={!error} retryHref={href}/>}</ConnectedCafeteriaShell>;
  }
  const scope=parsed.data.scope;
- return <ConnectedCafeteriaShell context={access.context} cafeteriaId={cafeteriaId} walletNav={scope.tenant_kind==='customer'&&scope.capabilities.includes('cafeteria:wallets:read')} reportsNav={scope.capabilities.includes('cafeteria:pos:purchases:read')}><ConnectedCafeteriaProvider key={`${access.context.pov?.operator_person_id ?? access.context.person_id}:${access.context.person_id}:${cafeteriaId}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} data={parsed.data}><ConnectedCafeteriaPages key={section} section={section} data={parsed.data}/></ConnectedCafeteriaProvider></ConnectedCafeteriaShell>;
+ return <ConnectedCafeteriaShell context={access.context} cafeteriaId={cafeteriaId} walletNav={scope.tenant_kind==='customer'&&scope.capabilities.includes('cafeteria:wallets:read')} reportsNav={scope.capabilities.includes('cafeteria:pos:purchases:read')} settlementsNav={scope.tenant_kind==='customer'&&scope.capabilities.includes('cafeteria:finance:obligations:read')}><ConnectedCafeteriaProvider key={`${access.context.pov?.operator_person_id ?? access.context.person_id}:${access.context.person_id}:${cafeteriaId}`} recoveryActorId={access.context.pov ? `${access.context.pov.operator_person_id}:${access.context.person_id}` : undefined} data={parsed.data}><ConnectedCafeteriaPages key={section} section={section} data={parsed.data}/></ConnectedCafeteriaProvider></ConnectedCafeteriaShell>;
 }

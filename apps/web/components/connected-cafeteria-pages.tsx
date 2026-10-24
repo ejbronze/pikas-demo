@@ -10,18 +10,19 @@ import { CafeteriaProductsEditor } from './cafeteria-products-editor';
 import { CafeteriaMenusEditor } from './cafeteria-menus-editor';
 import { CafeteriaWalletLookup } from './cafeteria-wallet-lookup';
 import { CafeteriaCashCollection } from './cafeteria-cash-collection';
+import { CafeteriaSettlements } from './cafeteria-settlements';
 import { COLLECT_CASH } from '../lib/cafeteria/cash-collection';
 import { CafeteriaReports } from './cafeteria-reports';
 import { CafeteriaToday } from './cafeteria-today';
 import { CashierRefundLimits } from './cashier-refund-limits';
 import { DataList } from './data-list';
-import { EmptyState } from './state-panels';
+import { EmptyState, ErrorState } from './state-panels';
 import { RegisterTask, StaffAccessTask, StaffStatusTask, roleLabel } from './cafeteria-admin-tasks';
 import { MemberCredentialsTask, identityRequest } from './identity-credentials';
 import { accessState, isInternalEmail } from '../lib/identity/staff-access';
 import type { IdentitySummary } from '../lib/identity/contracts';
 import { useEffect } from 'react';
-export type CafeteriaSection='summary'|'products'|'menus'|'shifts'|'staff'|'registers'|'settings'|'transactions'|'schools'|'reports';
+export type CafeteriaSection='summary'|'products'|'menus'|'shifts'|'staff'|'registers'|'settings'|'transactions'|'schools'|'reports'|'settlements';
 const statusLabel=(s:string)=>({active:'Activo',inactive:'Inactivo',suspended:'Suspendido',archived:'Archivado',pending:'Pendiente',accepted:'Completado',expired:'Vencido',revoked:'Revocado'})[s]??s;
 const value=(data:FormData,key:string)=>String(data.get(key)??'').trim();
 function Input({label,name,initial='',type='text',maxLength=120,readOnly=false}:{label:string;name:string;initial?:string;type?:string;maxLength?:number;readOnly?:boolean}) {
@@ -106,6 +107,7 @@ export function ConnectedCafeteriaPages({section,data}:{section:CafeteriaSection
  if(section==='settings')return <><AppPageHeader title="Configuración" description="Modo de servicio y controles de la operación POS."/><section className="card mt-5 space-y-3 p-5"><h2 className="text-xl font-black">Operación de cafetería</h2><p>{data.scope.cafeteria_name} · {data.scope.school_name} · {data.scope.location_name}</p><p>Moneda del catálogo: {data.settings.currency}</p><CommandForm operation="settings_save" label="Guardar modo de servicio" confirmation="¿Confirmar el modo de servicio? Cambia los productos ofrecidos en POS." payload={d=>({version:data.settings.version,scheduling_enabled:d.has('scheduling_enabled')})}><label className="flex min-h-12 items-center gap-3"><input type="checkbox" name="scheduling_enabled" defaultChecked={data.settings.scheduling_enabled}/>Activar turnos de servicio</label></CommandForm></section><section className="card mt-5 p-5"><h2 className="text-xl font-black">Controles pendientes</h2><p className="mt-2">Preferencias visuales POS, imágenes y etiquetas alimentarias adicionales aún no tienen configuración conectada. Solicitudes familiares y reportes se habilitarán en una fase posterior.</p></section>{data.scope.tenant_kind==='customer'&&data.scope.capabilities.includes('cafeteria:refund_limits:configure')&&<CashierRefundLimits cafeteriaId={data.scope.cafeteria_id}/>}</>;
  if(section==='reports')return data.scope.capabilities.includes('cafeteria:pos:purchases:read')?<CafeteriaReports cafeteriaId={data.scope.cafeteria_id} sandbox={false} reconciliation={data.scope.capabilities.includes('cafeteria:pos:sessions:read')}/>:<p className="card p-5">Tu rol no tiene acceso a reportes de esta cafetería.</p>;
  if(section==='transactions')return <CafeteriaTransactions cafeteriaId={data.scope.cafeteria_id} sandbox={false}/>;
+ if(section==='settlements'){const read=data.scope.tenant_kind==='customer'&&data.scope.capabilities.includes('cafeteria:finance:obligations:read');return <><AppPageHeader title="Liquidaciones" description="Lo que esta cafetería debe a PIKAS o lo que PIKAS le debe, semana por semana."/>{read?<CafeteriaSettlements cafeteriaId={data.scope.cafeteria_id}/>:<ErrorState kind="permission" title="Tu rol no puede consultar las liquidaciones." description="Las liquidaciones de la cafetería las consulta su administración."/>}</>;}
  if(section==='schools'){const walletRead=data.scope.tenant_kind==='customer'&&data.scope.capabilities.includes('cafeteria:wallets:read');return <><AppPageHeader title={walletRead?'PIKAS Cash':'Escuelas conectadas'} description={`${data.scope.school_name} · ${data.scope.location_name}. La escuela administra la compartición y la elegibilidad estudiantil.`}/>{walletRead&&data.scope.capabilities.includes(COLLECT_CASH)&&<CafeteriaCashCollection cafeteriaId={data.scope.cafeteria_id} actorId={data.scope.actor_id}/>}{walletRead&&<CafeteriaWalletLookup cafeteriaId={data.scope.cafeteria_id} actorId={data.scope.actor_id} canAdjust={data.scope.capabilities.includes('cafeteria:wallets:administrative_adjust')} canCollect={data.scope.capabilities.includes(COLLECT_CASH)}/>}</>;}
  return <CafeteriaToday data={data}/>;
 }

@@ -67,6 +67,8 @@ function SettlementTask({ kind, actor, target, base, recovered, onClose, onDone 
   const [amount, setAmount] = useState(''), [reference, setReference] = useState(''), [paidOn, setPaidOn] = useState(today()), [reason, setReason] = useState(''), [note, setNote] = useState('');
   const [problem, setProblem] = useState(''), [refusal, setRefusal] = useState({ text: '', settled: false }), [outcome, setOutcome] = useState(''), [next, setNext] = useState<string | undefined>();
   const inFlight = useRef(false);
+  // Once sent, the exact request is the only one this task may send again.
+  const sent = useRef<Pending | null>(recovered);
   const amountMinor = parseAmount(amount);
   const command = (): Record<string, string | null> => kind === 'run' ? { operation: 'run' } : kind === 'finalize' ? { operation: 'finalize', ...base }
     : kind === 'payment' ? { operation: 'payment', ...base, amount_minor: amountMinor, payment_reference: reference.trim(), paid_on: paidOn, note: note.trim() }
@@ -81,7 +83,8 @@ function SettlementTask({ kind, actor, target, base, recovered, onClose, onDone 
   };
   const commit = async () => {
     if (inFlight.current) return;
-    const outgoing: Pending = recovered ?? { kind, key: crypto.randomUUID(), body: command() };
+    const outgoing: Pending = sent.current ?? { kind, key: crypto.randomUUID(), body: command() };
+    sent.current = outgoing;
     try { sessionStorage.setItem(journalKey(actor, target.id), JSON.stringify(outgoing)); } catch { setProblem('No se pudo preparar la operación. No se envió.'); return; }
     inFlight.current = true; setPhase('pending');
     try {
