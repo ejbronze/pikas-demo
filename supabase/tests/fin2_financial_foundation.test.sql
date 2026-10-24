@@ -68,7 +68,7 @@ select is((select count(*)::int from financial_entries)+(select count(*)::int fr
 select is((select array_agg(version||':'||replenishment_fee_bps||':'||rounding_rule||':'||currency_code) from financial_fee_policies),array['1:300:half_up:DOP'],'Policy v1 = 300 bps, half-up, DOP');
 select is((select count(*) from pikas_private.platform_role_capabilities where capability like 'platform:finance:%'),0::bigint,'Finance capabilities exist ungranted (50)');
 select is((select count(*) from pikas_private.platform_capabilities where capability in ('platform:finance:replenishments:verify','platform:finance:read','platform:finance:settlement:manage')),3::bigint,'Three Platform finance capabilities catalogued');
-select is((select array_agg(role_code||':'||capability order by capability) from pikas_private.role_capabilities where capability in ('cafeteria:wallets:collect_cash','cafeteria:finance:obligations:read','cafeteria:wallets:replenish')),array['cafeteria_admin:cafeteria:wallets:collect_cash'],'FIN 4: only cafeteria:wallets:collect_cash (Cafetería Admin) is granted; obligations read and the legacy replenish stay withdrawn');
+select is((select array_agg(role_code||':'||capability order by capability) from pikas_private.role_capabilities where capability in ('cafeteria:wallets:collect_cash','cafeteria:finance:obligations:read','cafeteria:wallets:replenish')),array['cafeteria_admin:cafeteria:finance:obligations:read','cafeteria_admin:cafeteria:wallets:collect_cash'],'Settlement: Cafetería Admin holds collect_cash (FIN 4) and the read of its own obligations/settlements; the legacy replenish stays withdrawn');
 select ok(not has_function_privilege('authenticated','pikas_private.finance_submit_bank_replenishment(uuid,text,uuid,uuid,uuid,bigint,text,text,text,text,text)','execute')
  and not has_function_privilege('authenticated','pikas_private.finance_post_cash_replenishment(uuid,uuid,uuid,bigint,text,text)','execute')
  and not has_function_privilege('authenticated','pikas_private.finance_activate_customer(uuid,integer,text,text)','execute'),'Primitives are not client-callable');
@@ -268,12 +268,12 @@ select is(pg_temp.attempt(format($$select platform_finance_replenishment_read(%L
 select pg_temp.as_operator('00000000-0000-0000-0000-0000000f2d01');
 select is(pg_temp.attempt(format($$select platform_finance_replenishment_read(%L)$$,current_setting('t.ref'))),'42501:not_authorized','49. Platform Admin without finance authority cannot read');
 select is(pg_temp.attempt(format($$select platform_finance_decide_bank_replenishment(%L,'approve',null,'fin2-wrapper-key-0001')$$,current_setting('t.rej'))),'42501:not_authorized','50. Ungranted verify capability is unusable');
-select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
-select is(pg_temp.attempt($$select cafeteria_financial_obligations_read('00000000-0000-0000-0000-000000000111')$$),'42501:finance_authority_required','50. Cafetería obligations read unusable while ungranted');
+select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
+select is(pg_temp.attempt($$select cafeteria_financial_obligations_read('00000000-0000-0000-0000-000000000111')$$),'42501:finance_authority_required','50. Settlement grants the obligations read to Cafetería Admin only: a School Admin is refused');
 select is(pg_temp.attempt($$select count(*) from financial_obligations$$),'42501:permission denied for table financial_obligations','No direct table read');
 -- Transient, rolled-back grants prove scoping once FIN 3/4 grant these capabilities.
 reset role;
-insert into pikas_private.role_capabilities(scope_kind,role_code,capability) values('cafeteria','cafeteria_admin','cafeteria:finance:obligations:read');
+insert into pikas_private.role_capabilities(scope_kind,role_code,capability) values('cafeteria','cafeteria_admin','cafeteria:finance:obligations:read') on conflict do nothing;
 insert into pikas_private.platform_role_capabilities(role_code,capability) values('platform_admin','platform:finance:read');
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
 select ok(jsonb_array_length(cafeteria_financial_obligations_read('00000000-0000-0000-0000-000000000111')->'obligations')>=4,'With the capability, a Cafetería reads its own obligations');

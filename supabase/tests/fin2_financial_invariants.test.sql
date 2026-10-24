@@ -71,7 +71,8 @@ select set_config('t.op_person','00000000-0000-0000-0000-0000000f2e01',true);
 -- ── Capability ─────────────────────────────────────────────────────────────────────────────────
 select ok(exists(select 1 from pikas_private.platform_capabilities where capability='platform:finance:replenishments:reverse'),'A4. Finance reversal capability is catalogued');
 select is((select count(*) from pikas_private.platform_role_capabilities where capability='platform:finance:replenishments:reverse'),0::bigint,'A4. It is granted to no Platform role (not Edwin, not Platform Admin)');
-select is((select count(*) from pikas_private.role_capabilities where capability like '%finance%'),0::bigint,'No tenant role holds any finance capability');
+select is((select array_agg(scope_kind||':'||role_code||':'||capability) from pikas_private.role_capabilities where capability like '%finance%'),array['cafeteria:cafeteria_admin:cafeteria:finance:obligations:read'],
+ 'No tenant role holds finance authority: only the Cafetería Admin read of its own obligations/settlements (Settlement)');
 select ok(not has_function_privilege('authenticated','pikas_private.finance_reverse_replenishment(uuid,uuid,text,text,text)','execute'),'The reversal primitive is not client-callable');
 
 -- ── Pre-activation (legacy) history on account 1 ───────────────────────────────────────────────
