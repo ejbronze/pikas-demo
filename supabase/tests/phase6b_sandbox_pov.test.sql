@@ -119,7 +119,8 @@ select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-
 select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a007','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','cafeteria_admin')$$,'42501','sandbox_pov_not_available','An admin POV without a registered persona is not available (admin POV codes valid since 202610120002)');
 select throws_ok($$select public.platform_enter_sandbox_pov('00000000-0000-0000-0000-00000000a00f','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000111','supervisor')$$,'22023','invalid_sandbox_pov_request','Unknown POV codes are rejected');
 reset role;
-select is((select count(*) from pikas_private.sandbox_pov_sessions),0::bigint,'Rejected attempts create no sessions');
+-- Scoped to this test's operators: committed Demo history from local walkthroughs is not this test's concern.
+select is((select count(*) from pikas_private.sandbox_pov_sessions where initiator_person_id::text like '00000000-0000-0000-0000-00000000120%'),0::bigint,'Rejected attempts create no sessions');
 
 -- Fallback behavior without POV.
 select is(pikas_private.pos_actor_person_id(),'00000000-0000-0000-0000-000000001201'::uuid,'Without a POV the POS actor is the authenticated person');
@@ -184,7 +185,8 @@ select ok((select count(*) from public.audit_events where sandbox_pov_session_id
   and actor_person_id='00000000-0000-0000-0000-000000001210' and authenticated_user_id='00000000-0000-0000-0000-000000002201')>=3,'Tenant audit rows carry persona actor, real Auth id and POV session');
 select ok(position('00000000-0000-0000-0000-000000001201' in current_setting('p6b.wallet'))=0
   and position('00000000-0000-0000-0000-000000002201' in current_setting('p6b.wallet'))=0,'Checkout response does not expose the real operator');
-select is((select count(*) from public.audit_events where sandbox_pov_session_id is not null and actor_person_id<>'00000000-0000-0000-0000-000000001210'),0::bigint,'Only persona-attributed audit rows are stamped');
+select is((select count(*) from public.audit_events e join pikas_private.sandbox_pov_sessions s on s.id=e.sandbox_pov_session_id
+ where s.initiator_person_id::text like '00000000-0000-0000-0000-00000000120%' and e.actor_person_id<>'00000000-0000-0000-0000-000000001210'),0::bigint,'Only persona-attributed audit rows are stamped');
 
 -- Limits (owner-managed fixtures, same data the frozen limit RPCs maintain).
 insert into public.student_spending_controls(account_id,school_id,student_id,currency_code,daily_limit_enabled,daily_limit_minor,per_transaction_limit_enabled,per_transaction_limit_minor,updated_by_person_id)

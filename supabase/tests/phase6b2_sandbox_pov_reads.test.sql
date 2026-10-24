@@ -105,7 +105,8 @@ select is(public.platform_get_active_sandbox_pov(),null::jsonb,'Operator B canno
 reset role;
 
 -- Reads grant nothing.
-select is((select count(*) from pikas_private.sandbox_pov_sessions),1::bigint,'Reads create no sessions');
+-- Scoped to this test's operators: committed Demo history from local walkthroughs is not this test's concern.
+select is((select count(*) from pikas_private.sandbox_pov_sessions where initiator_person_id::text like '00000000-0000-0000-0000-00000000130%'),1::bigint,'Reads create no sessions');
 select is((select count(*) from pikas_private.platform_memberships where person_id::text like '00000000-0000-0000-0000-00000000130%'),4::bigint,'Reads create no platform memberships');
 select pg_temp.login('2303');
 select ok(not pikas_private.platform_has_capability('platform:sandbox:pov:enter'),'platform_admin gains no sandbox authority from the reads');

@@ -170,8 +170,8 @@ select ok((select bool_and(pikas_private.sandbox_persona_valid(id)) from pikas_p
 select is(pg_temp.q(format($$select status||'/'||end_reason from pikas_private.sandbox_pov_sessions where id=%L$$,current_setting('t.povB'))),'exited/sandbox_reset','B''s Demo session was ended by the reset');
 select is(pg_temp.q($$select count(*)::text from pikas_private.sandbox_pov_sessions$$),current_setting('t.pov_sessions'),'POV session history kept');
 select ok(pg_temp.q(format($$select count(*)::text from audit_events where account_id=%L$$,current_setting('t.sbx')))::int>current_setting('t.audit_before')::int,'Sandbox audit history kept and the reset recorded');
-select is(pg_temp.q(format($$select count(*)::text from audit_events where account_id=%L and action='sandbox_reset'$$,current_setting('t.sbx'))),'1','audit_events records the reset once');
-select is(pg_temp.q(format($$select count(*)::text from pikas_private.platform_audit_events where target_account_id=%L and reason_code='sandbox_reset'$$,current_setting('t.sbx'))),'1','Platform audit records the reset');
+select is(pg_temp.q(format($$select count(*)::text from audit_events where account_id=%L and action='sandbox_reset' and occurred_at>=now()$$,current_setting('t.sbx'))),'1','audit_events records the reset once');
+select is(pg_temp.q(format($$select count(*)::text from pikas_private.platform_audit_events where target_account_id=%L and reason_code='sandbox_reset' and occurred_at>=now()$$,current_setting('t.sbx'))),'1','Platform audit records the reset');
 select is(pg_temp.q($$select count(*)::text from pikas_private.sandbox_pov_operation_links$$),pg_temp.q($$select count(*)::text from pikas_private.sandbox_pov_operation_links$$),'(POV operation links append-only)');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000dd01');
 select is(platform_demo_lab_read()->'sandboxes'->0->'last_reset'->>'actor_name','Operadora Demo Lab A','Demo Lab shows the last reset');

@@ -86,10 +86,12 @@ select pg_temp.as_operator('2');
 select set_config('t.q',pg_temp.list('pending')::text,true);
 select is((select array_agg(e->>'reference' order by o) from jsonb_array_elements(current_setting('t.q')::jsonb->'requests') with ordinality x(e,o)),
  array[current_setting('t.r1'),current_setting('t.r2'),current_setting('t.r3'),current_setting('t.r4')],'Pending queue: oldest first');
-select is((current_setting('t.q')::jsonb->'requests'->0)-'submitted_at',jsonb_build_object('reference',current_setting('t.r1'),'status','pending','customer','SYNTHETIC-A',
+select is((current_setting('t.q')::jsonb->'requests'->0)-'submitted_at'-'method'-'cafeteria'-'submitted_by',jsonb_build_object('reference',current_setting('t.r1'),'status','pending','customer','SYNTHETIC-A',
  'school','Synthetic school A1','student','Sofia Demo',
  'student_code','STU-001','gross_minor','200000','fee_minor','6000','net_minor','194000',
  'payer_reference','BHD-48213','has_proof',true,'decided_at',null,'reversed_at',null,'decided_by',null,'reversed_by',null),'Queue row: identity, gross/fee/net, evidence indicator');
+select ok((current_setting('t.q')::jsonb->'requests'->0->>'method')='bank_transfer' and (current_setting('t.q')::jsonb->'requests'->0->'cafeteria')='null'::jsonb
+ and (current_setting('t.q')::jsonb->'requests'->0->>'submitted_by') is not null,'FIN 4: queue rows name the method, no Cafetería for a bank transfer, and the submitter');
 select is(current_setting('t.q')::jsonb->'requests'->1->>'has_proof','false','A request without proof reference says so');
 select ok(current_setting('t.q') !~ '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}','The queue carries no internal UUIDs');
 select is(jsonb_array_length(pg_temp.list('pending',null,'BHD')->'requests')||'/'||jsonb_array_length(pg_temp.list('pending',null,current_setting('t.r3'))->'requests')
