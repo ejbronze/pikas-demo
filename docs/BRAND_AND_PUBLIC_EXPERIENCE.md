@@ -77,7 +77,7 @@ Single page, server-rendered (static). Client code only for the mobile menu and 
 
 Navigation: Producto · Cómo funciona · Colegios · Cafeterías · PIKAS Cash · Contacto, plus «Iniciar sesión» (`/login`).
 The PIKAS Admin entrance (`/backoffice/login`) stays reachable only from the login page. Footer: logo, brand line,
-section links, sign-in, «© 2026 PIKAS» and «Diseñado y desarrollado por Palmchat Innovations LLC.» No legal pages are
+section links, sign-in, «© 2026 Palmchat Innovations LLC» (PIKAS is the product; Palmchat Innovations LLC is the company) and «Diseñado y desarrollado por Palmchat Innovations LLC.» No legal pages are
 linked until they exist.
 
 **Contact.** There is no lead backend. Setting `NEXT_PUBLIC_PIKAS_CONTACT_EMAIL` (build-time) turns the section into a

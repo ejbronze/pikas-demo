@@ -55,7 +55,7 @@ describe("public PIKAS website", () => {
   });
   it("footer keeps the Palmchat credit and copyright", () => {
     const t = text(render());
-    expect(t).toContain("Diseñado y desarrollado por Palmchat Innovations LLC."); expect(t).toContain("© 2026 PIKAS");
+    expect(t).toContain("Diseñado y desarrollado por Palmchat Innovations LLC."); expect(t).toContain("© 2026 Palmchat Innovations LLC"); expect(t).not.toContain("© 2026 PIKAS");
   });
   it("metadata: brand title, positioning description, canonical and social cards", () => {
     expect(metadata.title).toEqual({ absolute: "PIKAS | La cafetería escolar, por fin conectada" });

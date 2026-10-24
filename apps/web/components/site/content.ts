@@ -119,6 +119,6 @@ export const site = {
   footer: {
     line: "La cafetería escolar, por fin conectada.",
     credit: "Diseñado y desarrollado por Palmchat Innovations LLC.",
-    copyright: "© 2026 PIKAS",
+    copyright: "© 2026 Palmchat Innovations LLC",
   },
 } as const;
