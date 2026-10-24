@@ -48,6 +48,8 @@ function FinanceTask({ kind, detail, actor, recovered, onClose, onDone }: {
   const [phase, setPhase] = useState<Phase>(recovered ? 'uncertain' : kind === 'approve' ? 'confirm' : 'details');
   const [reason, setReason] = useState(''), [note, setNote] = useState(''), [problem, setProblem] = useState(''), [refusal, setRefusal] = useState({ text: '', settled: false });
   const inFlight = useRef(false);
+  // Once sent, the exact request is the only one this task may send again (an in-place retry reuses its key).
+  const sent = useRef<Pending | null>(recovered);
   const title = { approve: 'Verificar transferencia', reject: 'Rechazar transferencia', reverse: 'Revertir transferencia' }[kind];
   const review = () => {
     if (kind === 'reject' && reason.trim().length < 3) { setProblem('Escribe el motivo del rechazo (al menos 3 caracteres).'); return; }
@@ -57,8 +59,9 @@ function FinanceTask({ kind, detail, actor, recovered, onClose, onDone }: {
   };
   const commit = async () => {
     if (inFlight.current) return;
-    const outgoing: Pending = recovered ?? { kind, key: crypto.randomUUID(), body: kind === 'reverse' ? { reference: detail.reference, reason, note: note.trim() }
+    const outgoing: Pending = sent.current ?? { kind, key: crypto.randomUUID(), body: kind === 'reverse' ? { reference: detail.reference, reason, note: note.trim() }
       : kind === 'reject' ? { reference: detail.reference, decision: 'reject', reason: reason.trim() } : { reference: detail.reference, decision: 'approve' } };
+    sent.current = outgoing;
     try { sessionStorage.setItem(journalKey(actor, detail.reference), JSON.stringify(outgoing)); } catch { setProblem('No se pudo preparar la operación. No se envió.'); return; }
     inFlight.current = true; setPhase('pending');
     try {

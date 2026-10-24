@@ -19,7 +19,7 @@ beforeAll(async () => {
       import React from "react";
       import { createRoot } from "react-dom/client";
       import { FinanceActions } from "./app/platform/finanzas/[reference]/finance-actions";
-      window.fetch = () => Promise.reject(new Error("no network in this test"));
+      window.calls = []; window.fetch = (u, init) => { window.calls.push({ key: new Headers(init?.headers).get("Idempotency-Key"), body: init?.body }); return Promise.reject(new Error("no network in this test")); };
       const detail = { reference: "REC-00000002", status: "pending", method: "bank_transfer", customer: "Colegio Ficticio", customer_activated: true, school: "Colegio Ficticio",
         student: "Ana Ficticia", student_code: "A-001", currency: "DOP", policy_version: 1, fee_bps: 300, gross_minor: "150000", fee_minor: "4500", net_minor: "145500",
         payer_reference: "POP-77120", payer_name: "Carlos Peña (ficticio)", payer_note: null, proof_reference: null, submitted_at: "2026-10-22T14:00:00Z", submitted_by: "Directora Ficticia",
@@ -60,5 +60,13 @@ describe("Finance rejection task", () => {
     await dialog().getByRole("button", { name: "Continuar" }).click();
     expect(await dialog().innerText()).toContain("Motivo: Monto no coincide");
     expect(await dialog().getByRole("button", { name: "Rechazar transferencia" }).count()).toBe(1);
+  });
+  it("an uncertain answer is retried in place with exactly the original key and payload", async () => {
+    await page.getByRole("button", { name: "Rechazar" }).click(); await reason().fill("Monto no coincide");
+    await dialog().getByRole("button", { name: "Continuar" }).click(); await dialog().getByRole("button", { name: "Rechazar transferencia" }).click();
+    await dialog().getByRole("button", { name: "Reintentar la misma operación" }).click(); await dialog().getByText("Operación pendiente de confirmar").waitFor();
+    await page.waitForFunction(() => (window as unknown as { calls: unknown[] }).calls.length === 2);
+    const calls = await page.evaluate(() => (window as unknown as { calls: { key: string; body: string }[] }).calls);
+    expect(calls[1].key).toBe(calls[0].key); expect(calls[1].body).toBe(calls[0].body);
   });
 });
