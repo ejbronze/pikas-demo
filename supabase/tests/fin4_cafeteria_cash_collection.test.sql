@@ -129,6 +129,21 @@ select is((pg_temp.collect(200000,'f4000000-0000-4000-8000-000000000011')->>'rep
 select is(pg_temp.attempt($$select pg_temp.collect(150000,'f4000000-0000-4000-8000-000000000011')$$),'23505:IDEMPOTENCY_CONFLICT','Same key with a different amount is refused');
 select is(pg_temp.attempt($$select pg_temp.collect(200000,'f4000000-0000-4000-8000-000000000011','00000000-0000-0000-0000-000000000111','00000000-0000-0000-0000-000000005201','Otro pagador')$$),'23505:IDEMPOTENCY_CONFLICT','Same key with a different payer is refused');
 reset role; select is(pg_temp.money(),current_setting('t.m1'),'Retries posted nothing: one request, one credit, one obligation, one audit');
+-- 202611190002: the retry replays before authorization, so an original that posted is reported even after scope changed.
+set local session_replication_role=replica; update school_cafeteria_shares set status='revoked' where cafeteria_id='00000000-0000-0000-0000-000000000111'; set local session_replication_role=origin;
+select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
+select is((select concat_ws('/',r->>'reference',r->>'replayed',r->>'net_minor') from (select pg_temp.collect(200000,'f4000000-0000-4000-8000-000000000011') r) x),
+ current_setting('t.ref1')||'/true/194000','Retry after the School stopped sharing still returns the posted original (never «nothing recorded»)');
+select is(pg_temp.attempt($$select pg_temp.collect(200000,'f4000000-0000-4000-8000-000000000012')$$),'42501:student_not_served_by_cafeteria','…while a new collection is refused');
+reset role; set local session_replication_role=replica; update school_cafeteria_shares set status='active' where cafeteria_id='00000000-0000-0000-0000-000000000111'; set local session_replication_role=origin;
+-- Another Cafetería Admin of the same Cafetería cannot replay or reuse someone else's key.
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
+ values('00000000-0000-0000-0000-0000000f4d02','00000000-0000-0000-0000-000000000000','authenticated','authenticated','fin4.otra@example.invalid','',now(),now(),now(),'{}','{}');
+insert into persons(id,auth_user_id,display_name) values('00000000-0000-0000-0000-0000000f4e02','00000000-0000-0000-0000-0000000f4d02','Otra administradora FIN 4');
+insert into cafeteria_memberships(account_id,school_id,cafeteria_id,person_id,role_code) values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000000111','00000000-0000-0000-0000-0000000f4e02','cafeteria_admin');
+select pg_temp.as_user('00000000-0000-0000-0000-0000000f4d02');
+select is(pg_temp.attempt($$select pg_temp.collect(200000,'f4000000-0000-4000-8000-000000000011')$$),'23505:IDEMPOTENCY_CONFLICT','Another operator presenting the same key gets a conflict, not the result');
+reset role; select is(pg_temp.money(),current_setting('t.m1'),'Replays and conflicts posted nothing');
 
 -- ── A later purchase costs exactly its price: no second fee ────────────────────────────────────
 select set_config('t.b1',pg_temp.bal()::text,true); select set_config('t.fees',(select count(*)::text from financial_entries where entry_type='replenishment_fee_earned'),true);
