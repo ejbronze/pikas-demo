@@ -29,6 +29,21 @@ describe("customer server screens", () => {
     const html = renderToStaticMarkup(await CustomersPage({ searchParams: Promise.resolve({ q: "Horizonte", kind: "sandbox", status: "active" }) }));
     expect(html).toContain("No hay clientes que coincidan"); expect(mocks.readPlatform).toHaveBeenCalledWith(session, "platform:tenant:lifecycle:read", "platform_list_customers", { p_query: "Horizonte", p_kind: "sandbox", p_status: "active", p_after: null, p_limit: 25 }, expect.anything());
   });
+  it("Estado defaults to Activos in the select and the query; Limpiar returns to it; explicit states are honored", async () => {
+    mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { customers: [], next_cursor: null } });
+    const listed = () => mocks.readPlatform.mock.calls.filter(c => c[2] === "platform_list_customers").at(-1)?.[3];
+    const selected = (html: string) => html.match(/<select[^>]*name="status"[^>]*>(.*?)<\/select>/)?.[1].match(/<option value="([a-z]+)" selected="">/)?.[1];
+    for (const [params, expected, shown] of [[{}, "active", "active"], [{ status: "" }, "active", "active"], [{ q: "Norte" }, "active", "active"], [{ status: "suspended" }, "suspended", "suspended"], [{ status: "closed" }, "closed", "closed"], [{ status: "all" }, null, "all"]] as const) {
+      const html = renderToStaticMarkup(await CustomersPage({ searchParams: Promise.resolve(params) }));
+      expect(listed()).toMatchObject({ p_status: expected }); expect(selected(html)).toBe(shown);
+      expect(html).toMatch(/<a class="btn-tertiary" href="\/platform\/clientes">Limpiar<\/a>/);
+    }
+    const options = renderToStaticMarkup(await CustomersPage({ searchParams: Promise.resolve({}) })).match(/<select[^>]*name="status"[^>]*>(.*?)<\/select>/)?.[1].match(/>([^<]+)<\/option>/g);
+    expect(options).toEqual([">Activos</option>", ">Suspendidos</option>", ">Cerrados</option>", ">Todos</option>"]);
+    expect(renderToStaticMarkup(await CustomersPage({ searchParams: Promise.resolve({ q: "Norte" }) }))).toContain("La búsqueda incluye solo clientes activos");
+    mocks.readPlatform.mockResolvedValue({ kind: "ready", value: { customers: [], next_cursor: "00000000-0000-4000-8000-000000000009" } });
+    expect(renderToStaticMarkup(await CustomersPage({ searchParams: Promise.resolve({}) }))).toContain("status=active");
+  });
   it("invalid filters do not reach the read contract", async () => {
     expect(renderToStaticMarkup(await CustomersPage({ searchParams: Promise.resolve({ kind: "platform_admin" }) }))).toContain("Los filtros no son válidos"); expect(mocks.readPlatform).not.toHaveBeenCalled();
   });

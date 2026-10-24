@@ -15,7 +15,7 @@ type Op = { operation: string; request?: { request_key: string; tender: { type: 
 type Call = { url: string; body: Record<string, unknown> };
 
 beforeAll(async () => {
-  const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", define: { "process.env.NODE_ENV": '"test"' },
+  const bundle = await build({ bundle: true, write: false, format: "iife", jsx: "automatic", platform: "browser", loader: { ".svg": "dataurl" }, define: { "process.env.NODE_ENV": '"test"' },
     plugins: [{ name: "stubs", setup(b) {
       b.onResolve({ filter: /^next\/link$/ }, () => ({ path: "link", namespace: "stub" }));
       b.onLoad({ filter: /^link$/, namespace: "stub" }, () => ({ resolveDir: process.cwd(), contents: "import React from 'react'; export default ({href, children, prefetch, ...rest}) => React.createElement('a', {href, ...rest}, children)", loader: "js" }));

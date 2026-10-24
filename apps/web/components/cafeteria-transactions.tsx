@@ -9,6 +9,7 @@ import { AppPageHeader } from './app-page-header';
 import { DataList } from './data-list';
 import { MoneyValue } from './money-value';
 import { EmptyState, ErrorState } from './state-panels';
+import { PikasBusyRegion } from './pikas-loading';
 import { TaskActions, TaskSummary, TaskWindow } from './task-window';
 
 const periods: [ReportPeriod, string][] = [['today', 'Hoy'], ['last_7_days', 'Últimos 7 días'], ['last_30_days', 'Últimos 30 días'], ['custom', 'Personalizado']];
@@ -89,6 +90,8 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox, source }: { cafete
       <p role="status">{loading ? 'Cargando transacciones…' : result ? `${result.total_count} ${result.total_count === 1 ? 'transacción' : 'transacciones'}${range ? ` · ${range}` : ''}` : ''}</p>
       {filtered && <button type="button" className="min-h-11 font-bold text-teal-800 underline" onClick={clear}>Limpiar filtros</button>}
     </div>
+    {/* Brand & Public: a reload keeps the previous rows visible but softened and inert under «Pikando…». */}
+    <PikasBusyRegion busy={loading && !!result} context="Cargando transacciones.">
     {error ? <ErrorState kind={error.kind} title={error.message} description={error.kind === 'permission' ? 'Lo otorga el administrador de la cafetería; pídeselo si lo necesitas.' : error.kind === 'validation' ? 'Ajusta los filtros y vuelve a buscar.' : undefined} retry={error.kind === 'temporary' ? <button className="btn-secondary" onClick={() => setRevision(r => r + 1)}>Reintentar</button> : undefined} />
       : result && !result.data.length && !loading ? (filtered
         ? <EmptyState title={receiptQuery !== null ? `No encontramos el recibo #${receiptQuery} en esta cafetería.` : 'No encontramos transacciones con estos filtros.'} action={<button className="btn-secondary" onClick={clear}>Limpiar filtros</button>} />
@@ -101,6 +104,7 @@ export function CafeteriaTransactions({ cafeteriaId, sandbox, source }: { cafete
         { header: 'Reembolso', cell: r => <span className="inline-flex flex-wrap items-center gap-2"><RefundChip status={r.refund_status} />{r.refund_status !== 'none' && <span className="text-sm">Reembolsado <MoneyValue minor={r.refunded_minor} intent="amount" /></span>}</span> },
         { header: 'Caja', cell: r => `${r.register_name} · ${r.operator_name}` },
       ]} actions={r => <button className="btn-secondary" aria-label={`Ver detalle del recibo ${r.receipt_number}`} onClick={() => setSelected(r)}>Ver detalle</button>} />}
+    </PikasBusyRegion>
     {result && (result.offset > 0 || result.has_more) && <nav aria-label="Páginas de transacciones" className="flex flex-wrap items-center gap-3">
       <button className="btn-secondary" disabled={loading || result.offset === 0} onClick={() => setOffset(Math.max(0, result.offset - result.page_size))}>Anterior</button>
       <span className="text-sm text-slate-600">Página {page} de {Math.max(1, Math.ceil(result.total_count / result.page_size))}</span>

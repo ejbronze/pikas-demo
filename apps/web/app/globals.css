@@ -583,3 +583,32 @@ a.rpt-bar-row .rpt-bar-label{text-decoration:underline;text-underline-offset:3px
 .pos-order-bar { position:fixed; z-index:34; inset:auto 0 2.1rem; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.6rem 1rem; border-top:1px solid var(--border); background:var(--surface); box-shadow:0 -4px 12px rgb(2 26 57 / .08); }
 /* Wave F: in-page anchors and focused detail headings clear the sticky shell header. */
 [id^="report-"], h3[tabindex="-1"] { scroll-margin-top: 5rem; }
+
+/* Brand & Public: branded loading system («Pikando…»). The veil fades in quickly; the mascot and word appear
+   after a short delay so micro-loads never flash a full treatment. Under prefers-reduced-motion the global rule
+   removes every animation, so the final (visible) state applies immediately. */
+@keyframes pk-fade{from{opacity:0}to{opacity:1}}
+@keyframes pk-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pk-loading-screen{position:relative;isolation:isolate;min-height:100dvh;overflow:hidden;background:var(--background)}
+.pk-loading-screen[data-frame="content"]{min-height:calc(100dvh - 9rem);border-radius:1.25rem;background:transparent}
+.pk-loading-silhouette{position:absolute;inset:0;display:flex;flex-direction:column;opacity:.6}
+.pk-sil-bar{height:3.5rem;flex:none;background:var(--surface);border-bottom:1px solid var(--border)}
+.pk-sil-body{display:grid;align-content:start;gap:1rem;width:100%;max-width:72rem;margin:0 auto;padding:1.5rem 1rem}
+.pk-loading-screen[data-frame="content"] .pk-sil-body{padding:0}
+.pk-sil-body>div,.pk-sil-grid>div{border-radius:1rem;background:#e6ecf4}
+.pk-sil-title{height:2.25rem;width:min(18rem,70%)}
+.pk-sil-line{height:1rem;width:min(28rem,85%)}
+.pk-sil-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:1rem;background:transparent!important}
+.pk-sil-grid>div{height:7rem;border-radius:1.25rem}
+.pk-sil-block{height:14rem;border-radius:1.25rem!important}
+.pk-loading-veil{position:absolute;inset:0;background:color-mix(in srgb,var(--background) 64%,transparent);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:pk-fade .18s ease-out both}
+.pk-loading-center{position:absolute;inset:0;display:grid;place-items:center;padding:1rem}
+.pk-loading-indicator{display:grid;justify-items:center;gap:.35rem;max-width:20rem;padding:1.25rem 1.75rem 1.1rem;border-radius:1.5rem;background:color-mix(in srgb,var(--surface) 86%,transparent);box-shadow:0 14px 40px rgba(3,35,75,.10);text-align:center;animation:pk-rise .28s ease-out .4s both}
+.pk-loading-indicator img{display:block;max-width:100%;height:auto}
+.pk-loading-word{margin:0;font-family:var(--font-display),var(--font-inter),ui-rounded,system-ui,sans-serif;font-size:1.35rem;font-weight:900;letter-spacing:.01em;color:var(--primary)}
+.pk-loading-slow{margin:0;font-size:.875rem;color:var(--foreground-muted)}
+.pk-busy-region{position:relative}
+.pk-busy-content[data-blocked]{opacity:.32;filter:saturate(.5);pointer-events:none;user-select:none;transition:opacity .2s ease}
+.pk-busy-region:has(.pk-busy-overlay){min-height:15rem}
+.pk-busy-overlay{position:absolute;inset:0;z-index:5;display:flex;justify-content:center;align-items:flex-start;padding-top:clamp(1rem,8vh,5rem);animation:pk-fade .18s ease-out both}
+.pk-busy-overlay>.pk-loading-indicator{position:sticky;top:max(5rem,30vh)}
