@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## PIKAS Cash: cobro de efectivo en la cafetería (FIN 4, local)
+
+- **«Recibir efectivo»** en Cafetería · PIKAS Cash: estudiante → efectivo → revisar → confirmar. La revisión muestra **Efectivo recibido**, **Cargo por recarga PIKAS (3 %)** y **Se acredita al monedero**, y exige marcar «Recibí RD$ … en efectivo.». Un doble clic registra una sola vez; un resultado incierto solo ofrece «Reintentar la misma recarga» con la misma clave y los mismos datos.
+- **Economía bloqueada**: comisión de 3 % solo al recargar (redondeo a la mitad hacia arriba, centavos enteros); el monedero recibe el **neto**; la cafetería debe a PIKAS el **bruto** (obligación `cash_collection`). Gastar PIKAS Cash no tiene comisión y los precios del POS no cambian. **FIN 4 crea obligaciones; no las liquida.**
+- **Autoridad**: nueva capacidad `cafeteria:wallets:collect_cash` solo para el administrador de cafetería, en su cafetería y para estudiantes compartidos por la escuela; solo con activación financiera; Demo y sandbox rechazados. Todo se vuelve a comprobar tras el bloqueo del estudiante. Tras la activación, la Escuela ya no ve «Recargar».
+- **Historial** de recargas en efectivo en la cafetería (incluye «Revertida por PIKAS»); la Escuela ve «Recarga en efectivo» con bruto, cargo, neto y cafetería; **Finanzas** de la Plataforma muestra los cobros en efectivo en el historial y la revisión, y puede revertirlos (con `FINANCIAL_RESOLUTION_REQUIRED` si parte del saldo ya se usó).
+- Migraciones `202611190001_cafeteria_cash_collection.sql`, `202611190002_cafeteria_cash_collection_replay.sql` y `202611190003_school_replenish_access_after_activation.sql`. Sin tablas nuevas; sin activar clientes. [Detalle](FIN4_CAFETERIA_CASH_COLLECTION.md).
+
 ## Marca y experiencia pública (local)
 
 - **Sitio público (`/`)** con el posicionamiento aprobado: «La cafetería escolar, por fin conectada.» y «PIKAS conecta las personas, la operación y el dinero detrás de la cafetería escolar.» Secciones: Cómo funciona (una plataforma, distintas responsabilidades), historia del producto con pantallas reales de PIKAS y datos ficticios de Colegio Horizonte, Colegios, Cafeterías, PIKAS Cash (lo que hace hoy y lo que todavía no), Trazabilidad y Contacto. Navegación pública, pie con el crédito de Palmchat Innovations LLC, metadatos, imagen social generada y movimiento que respeta `prefers-reduced-motion`. [Detalle](BRAND_AND_PUBLIC_EXPERIENCE.md).

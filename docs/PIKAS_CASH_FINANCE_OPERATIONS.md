@@ -127,12 +127,16 @@ UUIDs. No table, grant or capability is added (the RLS count stays 66).
 
 - No activation UI, customer finance onboarding or CEPOINT activation.
 - No Cafetería cash collection (`cafeteria:wallets:collect_cash` is still not created) and
-  no Cafetería replenishment authority.
+  no Cafetería replenishment authority. Delivered in FIN 4 (`docs/FIN4_CAFETERIA_CASH_COLLECTION.md`).
 - No settlement batches, payouts or weekly closing.
 - No reporting dashboards, proof upload, bank integration, family-facing replenishment or
   School financial management.
 
 ## FIN 4 handoff
+
+Cash collection and the widened Finanzas reads are delivered in FIN 4
+(`docs/FIN4_CAFETERIA_CASH_COLLECTION.md`); the obligations statement is still open.
+
 
 - Cafetería cash collection: the `cafeteria:wallets:collect_cash` capability and a POS
   wrapper over `finance_post_cash_replenishment`.

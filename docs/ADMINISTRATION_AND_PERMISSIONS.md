@@ -95,6 +95,8 @@ Definida por el propietario durante la aceptación productiva de Phase 5B (migra
 | Administrador de cuenta | Leer y recargar (`manual_verified`) en las escuelas de su cuenta. Sin `manage` ni `adjust` heredado; desde 5C.3 (local) ajuste administrativo excepcional en su cuenta. |
 | Administrador escolar | Leer, recargar, `manage` y `adjust` en su escuela (sin cambios; varias por escuela). |
 | Administrador de cafetería | Solo saldo/estado de clientes que la escuela comparte con su cafetería. Sin historial, recargas, `manage` ni `adjust`; se retira la antigua capacidad `cafeteria:wallets:replenish`. |
+
+**Cobro de efectivo en la cafetería (FIN 4, local):** solo el administrador de cafetería recibe `cafeteria:wallets:collect_cash`, en su cafetería y para estudiantes que la escuela le comparte, y solo en clientes con activación financiera. Comisión del 3 % (redondeo a la mitad hacia arriba) sobre el efectivo; el monedero recibe el neto y la cafetería queda debiendo el bruto a PIKAS. POS, Escuela, Cuenta, Plataforma y POV sandbox no cobran; `cafeteria:wallets:replenish` sigue retirada. Tras la activación la Escuela deja de recargar (`collection_source_required`). Revertir es solo de Finanzas de PIKAS. FIN 4 crea obligaciones; no las liquida. Detalle: `docs/FIN4_CAFETERIA_CASH_COLLECTION.md`.
 | Plataforma | Sin acceso permanente. Diferido: acceso de soporte temporal de solo lectura autorizado por el cliente (código/sesión de corta duración, revocable y auditado). |
 | POS | Solo uso operativo del saldo en ventas; sin autoridad administrativa. |
 

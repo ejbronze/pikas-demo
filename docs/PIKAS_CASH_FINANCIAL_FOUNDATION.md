@@ -294,7 +294,8 @@ obligation correction exceeded its original. All race records were removed after
   The future tenant capability `cafeteria:finance:obligations:read` is checked but held by
   no role.
 - **Cash collection:** `cafeteria:wallets:replenish` is not granted. The cash-collection
-  capability is designed as `cafeteria:wallets:collect_cash` and is not created.
+  capability is designed as `cafeteria:wallets:collect_cash` and is not created. FIN 4 creates it
+  for `cafeteria_admin` (`docs/FIN4_CAFETERIA_CASH_COLLECTION.md`).
 - **Public wrappers, unusable until the owner grants a capability:**
   - `platform_finance_decide_bank_replenishment`
   - `platform_finance_reverse_replenishment`
