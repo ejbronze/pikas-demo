@@ -13,18 +13,22 @@ export const signedTone = (minor: string) => moneyToneClass[moneyTone(minor, 'mo
 export const signed = (minor: string) => moneyText(minor, 'movement');
 type Scope = { kind: 'school'; schoolId: string } | { kind: 'cafeteria'; cafeteriaId: string };
 type Pending = Record<string, string>;
+// Whether a positive correction may be offered. After financial activation, positive value is clearing-funded and only
+// PIKAS finance may create it (the database refuses tenants with finance_adjustment_authority_required); 'unknown' fails closed.
+export type CreditPolicy = 'allowed' | 'activated' | 'unknown';
 type Phase = 'purpose' | 'purchase' | 'reversal' | 'details' | 'confirm' | 'pending' | 'success' | 'rejected' | 'uncertain';
 
 // Phase 5C.3 exceptional balance corrections, as a focused task (Wave D.1). Purchases use Reembolso,
 // wrong recargas use Revertir recarga. Typed values stay in memory; the existing recovery journal
 // (exact key + payload) is written only at the explicit final action and retried only by the user.
-export function WalletAdjustmentDialog({ scope, studentId, studentName, actorId, balanceMinor, onClose, onDone }:
-  { scope: Scope; studentId: string; studentName: string; actorId: string; balanceMinor: string; onClose: () => void; onDone: (message: string, balanceAfter: string) => void }) {
+export function WalletAdjustmentDialog({ scope, studentId, studentName, actorId, balanceMinor, credit = 'allowed', onClose, onDone }:
+  { scope: Scope; studentId: string; studentName: string; actorId: string; balanceMinor: string; credit?: CreditPolicy; onClose: () => void; onDone: (message: string, balanceAfter: string) => void }) {
   const scopeId = scope.kind === 'school' ? scope.schoolId : scope.cafeteriaId;
   const key = `pikas:wallet-adjustment:${actorId}:${scope.kind}:${scopeId}:${studentId}`;
   const [request, setRequest] = useState<Pending | null>(() => { try { const raw = sessionStorage.getItem(key); return raw ? JSON.parse(raw) as Pending : null; } catch { return null; } });
   const [phase, setPhase] = useState<Phase>(request ? 'uncertain' : 'purpose');
-  const [direction, setDirection] = useState<'credit' | 'debit'>('credit');
+  const [chosen, setDirection] = useState<'credit' | 'debit'>('credit');
+  const direction = credit === 'allowed' ? chosen : 'debit';
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [explanation, setExplanation] = useState('');
@@ -37,7 +41,7 @@ export function WalletAdjustmentDialog({ scope, studentId, studentName, actorId,
   const reasons = adjustmentReasons.filter(([, , d]) => d === 'any' || d === direction);
   const reasonLabel = (id: string) => adjustmentReasons.find(([r]) => r === id)?.[1] ?? id;
   const review = () => {
-    if (!signedAmount) { setProblem('Introduce un monto positivo con hasta dos decimales y elige si aumenta o disminuye el saldo.'); return; }
+    if (!signedAmount) { setProblem(credit === 'allowed' ? 'Introduce un monto positivo con hasta dos decimales y elige si aumenta o disminuye el saldo.' : 'Introduce un monto positivo con hasta dos decimales.'); return; }
     if (!reason) { setProblem('Selecciona un motivo.'); return; }
     if (explanation.trim().length < 5) { setProblem('Escribe una explicación de al menos 5 caracteres.'); return; }
     setProblem(''); setPhase('confirm');
@@ -85,14 +89,18 @@ export function WalletAdjustmentDialog({ scope, studentId, studentName, actorId,
         .map(([next, label, help], index) => <button key={next} type="button" data-autofocus={index === 0 ? true : undefined} className="flex min-h-14 w-full flex-col items-start justify-center rounded-xl border px-4 py-2 text-left hover:bg-slate-50" onClick={() => { setProblem(''); setPhase(next); }}><span className="font-bold">{label}</span><span className="text-sm text-slate-600">{help}</span></button>)}
     </fieldset>}
     {phase === 'purchase' && <div className="space-y-2 rounded-xl bg-slate-100 p-3"><p className="font-bold">Usa Reembolso</p><p className="text-sm">Las compras se corrigen con un reembolso desde el POS (pestaña Reembolsos, con el número de recibo). Así el recibo y el dinero quedan enlazados.</p></div>}
-    {phase === 'reversal' && <div className="space-y-2 rounded-xl bg-slate-100 p-3"><p className="font-bold">Usa Revertir recarga</p><p className="text-sm">{scope.kind === 'school' ? 'Busca la recarga en Movimientos de PIKAS Cash y usa "Revertir recarga".' : 'La administración escolar puede revertir la recarga desde los movimientos de PIKAS Cash.'}</p></div>}
+    {phase === 'reversal' && <div className="space-y-2 rounded-xl bg-slate-100 p-3"><p className="font-bold">Usa Revertir recarga</p><p className="text-sm">{scope.kind === 'school' ? 'Busca la recarga en Movimientos de PIKAS Cash y usa "Revertir recarga".' : 'La administración escolar puede revertir la recarga desde los movimientos de PIKAS Cash.'}</p>
+      {credit === 'activated' && <p className="text-sm">Las recargas en efectivo y por transferencia solo las revierte PIKAS: comparte con PIKAS su referencia (REC-…).</p>}</div>}
     {phase === 'details' && <>
       <p className="text-sm">Un ajuste administrativo <strong>no es una recarga</strong>: corrige el saldo de forma excepcional y queda registrado con tu nombre y rol.</p>
-      <fieldset className="grid grid-cols-2 gap-2"><legend className="mb-1 font-bold">Tipo de ajuste</legend>
+      {credit === 'allowed' ? <fieldset className="grid grid-cols-2 gap-2"><legend className="mb-1 font-bold">Tipo de ajuste</legend>
         {([['credit', '+ Aumentar saldo', 'text-emerald-800'], ['debit', '− Disminuir saldo', 'text-red-800']] as const).map(([value, label, tone]) =>
           <label key={value} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 font-bold ${tone} ${direction === value ? 'border-slate-900 bg-slate-50' : ''}`}><input type="radio" name="direction" data-autofocus={value === 'credit' ? true : undefined} checked={direction === value} onChange={() => { setDirection(value); setReason(''); }} />{label}</label>)}
-      </fieldset>
-      <label className="block font-bold">Monto (RD$)<input className="field mt-1" aria-label="Monto del ajuste" inputMode="decimal" autoComplete="off" value={amount} onChange={e => setAmount(e.target.value)} /></label>
+      </fieldset> : <div className="space-y-1 rounded-xl bg-slate-100 p-3"><p className="font-bold"><span className="text-slate-700">Tipo de ajuste:</span> <span className="text-red-800">− Disminuir saldo</span></p>
+        <p className="text-sm">{credit === 'activated'
+          ? `Aquí solo se puede disminuir el saldo. Con el cargo por recarga PIKAS activo, el saldo aumenta solo con ${scope.kind === 'school' ? 'una recarga en efectivo en la cafetería' : '«Recibir efectivo»'} o una transferencia verificada por PIKAS; un aumento excepcional lo realiza PIKAS.`
+          : 'No pudimos confirmar si este cliente admite aumentos de saldo. Por ahora solo puedes disminuirlo; vuelve a consultar el saldo para intentarlo de nuevo.'}</p></div>}
+      <label className="block font-bold">Monto (RD$)<input className="field mt-1" aria-label="Monto del ajuste" inputMode="decimal" autoComplete="off" data-autofocus={credit === 'allowed' ? undefined : true} value={amount} onChange={e => setAmount(e.target.value)} /></label>
       <label className="block font-bold">Motivo<select className="field mt-1" aria-label="Motivo del ajuste" value={reason} onChange={e => setReason(e.target.value)}><option value="">Selecciona un motivo</option>{reasons.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
       <label className="block font-bold">Explicación (obligatoria)<textarea className="field mt-1" aria-label="Explicación del ajuste" maxLength={500} value={explanation} onChange={e => setExplanation(e.target.value)} /></label>
       {problem && <p role="alert" className="font-bold text-red-800">{problem}</p>}

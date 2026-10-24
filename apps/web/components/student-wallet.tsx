@@ -34,6 +34,9 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
   const [reversal,setReversal] = useState<{replenishmentId:string;amountMinor:string;reference:string|null;note:string|null;occurredAt:string}|null>(null);
   const [pendingReversal,setPendingReversal] = useState<string|null>(null);
   const [adjusting,setAdjusting] = useState(false);
+  // Every role with School adjustment authority also holds replenish, which school_wallet_access withholds only after
+  // financial activation: adjust without replenish means positive value is PIKAS finance's (fee era), never the School's.
+  const feeEra=canAdjust&&!canReplenish;
   const read = useCallback(async (cursor:string|null=null) => {
     setLoading(true); setError('');
     try {
@@ -76,9 +79,9 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     {BigInt(history.wallet?.balance_minor??'0')<0n&&<p role="alert" className="rounded-xl bg-amber-100 p-3 font-bold text-amber-950">Saldo negativo. No se pueden pagar compras con PIKAS Cash hasta que nuevas recargas cubran el saldo.</p>}
     {pendingReversal&&<p role="alert" className="text-sm">Hay una reversión pendiente de confirmar. Abre la recarga correspondiente y reintenta la misma reversión.</p>}
     {pending&&<div role="alert" className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3"><p className="font-bold">Hay una recarga de {money(pending.amount_minor)} pendiente de confirmar.</p><p className="text-sm">Revísala y reintenta la misma solicitud antes de registrar otra recarga.</p>{canReplenish&&<button type="button" className="btn-secondary" onClick={()=>setRecharging(true)}>Revisar recarga pendiente</button>}</div>}
-    {!canReplenish&&<p className="text-sm text-slate-600">Consulta de solo lectura. Tu rol no puede registrar recargas.</p>}
+    {!canReplenish&&<p className="text-sm text-slate-600">{feeEra?'Las recargas llegan en efectivo en la cafetería o por transferencia verificada por PIKAS. El colegio consulta el saldo y puede disminuirlo con «Corregir saldo».':'Consulta de solo lectura. Tu rol no puede registrar recargas.'}</p>}
     {canReplenish&&history.wallet?.status==='frozen'&&<p className="text-sm text-slate-600">PIKAS Cash congelado: no admite recargas.</p>}
-    <p className="text-sm text-slate-600">Las recargas manuales requieren fondos previamente verificados.</p>
+    {!feeEra&&<p className="text-sm text-slate-600">Las recargas manuales requieren fondos previamente verificados.</p>}
     {message&&<p role="status">{message}</p>}</section>
     <section className="space-y-3" aria-labelledby="wallet-movements"><div><h2 id="wallet-movements" className="text-lg font-bold">Movimientos de PIKAS Cash</h2><p className="text-xs text-slate-600">Más recientes primero. El saldo de cada movimiento corresponde al momento de registrarlo.</p></div>
       {!history.movements.length&&<p className="card p-5">No hay movimientos registrados.</p>}
@@ -94,7 +97,7 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     </section>
     {recharging&&<WalletRechargeTask schoolId={schoolId} studentId={studentId} studentName={history.student_name} actorId={actorId} balanceMinor={history.wallet?.balance_minor??'0'}
       onClose={()=>{setRecharging(false);try{setPending(load(sessionStorage,key));}catch{setPending(null);}}} onDone={async after=>{setRecharging(false);setPending(null);setMessage(`Recarga registrada. Saldo actual: ${money(after)}.`);await read();}}/>}
-    {adjusting&&<WalletAdjustmentDialog scope={{kind:'school',schoolId}} studentId={studentId} studentName={history.student_name} actorId={actorId} balanceMinor={history.wallet?.balance_minor??'0'}
+    {adjusting&&<WalletAdjustmentDialog scope={{kind:'school',schoolId}} studentId={studentId} studentName={history.student_name} actorId={actorId} balanceMinor={history.wallet?.balance_minor??'0'} credit={feeEra?'activated':'allowed'}
       onClose={()=>setAdjusting(false)} onDone={async text=>{setAdjusting(false);setMessage(text);await read();}}/>}
     {reversal&&<WalletReversalDialog schoolId={schoolId} studentId={studentId} studentName={history.student_name} actorId={actorId} balanceMinor={history.wallet?.balance_minor??'0'} target={reversal}
       onClose={()=>setReversal(null)} onDone={async text=>{setReversal(null);setPendingReversal(null);setMessage(text);await read(before);}}/>}</>}

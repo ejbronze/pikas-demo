@@ -294,5 +294,10 @@ select is((select count(*) from student_wallets w where w.current_balance_minor<
 select is((select count(*) from replenishment_requests where method='cafeteria_cash' and state<>'posted'),0::bigint,'Cash requests are always posted');
 select is((select count(*) from financial_entries where entry_type='replenishment_fee_earned' and replenishment_request_id is null),0::bigint,'Fees exist only on replenishment requests');
 
+-- The School UI offers a positive «Corregir saldo» only while school_wallet_access reports replenish; that is exact only
+-- if every role holding School adjustment authority also holds replenish (replenish then turns false only on activation).
+select is((select count(*) from pikas_private.role_capabilities a where a.capability='school:wallets:administrative_adjust'
+  and not exists(select 1 from pikas_private.role_capabilities r where r.role_code=a.role_code and r.scope_kind=a.scope_kind and r.capability='school:wallets:replenish')),0::bigint,
+  'Every School adjustment role also holds replenish (UI credit signal)');
 select * from finish();
 rollback;

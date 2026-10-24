@@ -8,7 +8,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 // Real components in real Chromium. fetch is scripted per test: no app server, Auth, database or money.
 const id = "5d100000-0000-4000-8000-000000000001", school = "5d100000-0000-4000-8000-000000000002";
 let browser: Browser, server: Server, page: Page, url: string;
-type W = Window & { mountRecharge(balance: string): void; mountAdjust(balance: string, scope?: string): void; mountReverse(balance: string): void; mountWallet(props: Record<string, unknown>): void; unmountAll(): void;
+type W = Window & { mountRecharge(balance: string): void; mountAdjust(balance: string, scope?: string, credit?: string): void; mountLookup(): void; byOperation(table: Record<string, { status: number; body: unknown }>): void; mountReverse(balance: string): void; mountWallet(props: Record<string, unknown>): void; unmountAll(): void;
   respond(status: number, body: unknown): void; hold(): void; echo(after: string): void; release(status: number, body: unknown): void; calls: { url: string; key: string | null; body: unknown }[]; done: string[]; closes: number };
 
 beforeAll(async () => {
@@ -25,6 +25,7 @@ beforeAll(async () => {
       import { WalletAdjustmentDialog } from "./components/wallet-adjustment-dialog";
       import { WalletReversalDialog } from "./components/wallet-reversal-dialog";
       import { StudentWallet } from "./components/student-wallet";
+      import { CafeteriaWalletLookup } from "./components/cafeteria-wallet-lookup";
       const w = window; w.calls = []; w.done = []; w.closes = 0;
       let next = null, held = null;
       w.respond = (status, body) => { next = { status, body }; };
@@ -43,7 +44,10 @@ beforeAll(async () => {
       function Host({ render }) { const [open, setOpen] = useState(false); return <><button id="trigger" onClick={() => setOpen(true)}>Abrir tarea</button><a id="outside" href="#x">Fuera</a>{open && render(() => { w.closes++; setOpen(false); }, (m) => { w.done.push(String(m)); setOpen(false); })}</>; }
       const mount = (render) => { root ??= createRoot(document.getElementById("root")); root.render(<Host key={Math.random()} render={render} />); };
       w.mountRecharge = (balance) => mount((close, done) => <WalletRechargeTask schoolId="${school}" studentId="${id}" studentName="Sol Ficticia" actorId="${id}" balanceMinor={balance} onClose={close} onDone={done} />);
-      w.mountAdjust = (balance, scope) => mount((close, done) => <WalletAdjustmentDialog scope={scope === "cafeteria" ? { kind: "cafeteria", cafeteriaId: "${school}" } : { kind: "school", schoolId: "${school}" }} studentId="${id}" studentName="Sol Ficticia" actorId="${id}" balanceMinor={balance} onClose={close} onDone={done} />);
+      w.mountAdjust = (balance, scope, credit) => mount((close, done) => <WalletAdjustmentDialog scope={scope === "cafeteria" ? { kind: "cafeteria", cafeteriaId: "${school}" } : { kind: "school", schoolId: "${school}" }} studentId="${id}" studentName="Sol Ficticia" actorId="${id}" balanceMinor={balance} credit={credit} onClose={close} onDone={done} />);
+      // Answers by request operation (the Cafetería lookup reads cash-collection state and balances).
+      w.byOperation = (table) => { next = (b) => table[b.operation ?? "lookup"] ?? { status: 500, body: {} }; };
+      w.mountLookup = () => { root ??= createRoot(document.getElementById("root")); root.render(<CafeteriaWalletLookup key={Math.random()} cafeteriaId="${school}" actorId="${id}" canAdjust canCollect />); };
       w.unmountAll = () => root?.render(null);
       w.mountWallet = (props) => { root ??= createRoot(document.getElementById("root")); root.render(<StudentWallet key={Math.random()} schoolId="${school}" studentId="${id}" actorId="${id}" {...props} />); };
       w.mountReverse = (balance) => mount((close, done) => <WalletReversalDialog schoolId="${school}" studentId="${id}" studentName="Sol Ficticia" actorId="${id}" balanceMinor={balance}
@@ -181,6 +185,45 @@ describe("Administrative adjustment", () => {
     await w(x => x.respond(403, { error: "cafeteria_authority_required" })); await dialog().getByRole("button", { name: "Aplicar ajuste +RD$ 10.00" }).click();
     await dialog().getByText("No se registró el ajuste").waitFor(); expect((await w(x => x.calls))[0].url).toBe("/api/cafeteria/wallet"); expect(await storage()).toEqual({});
   });
+  it("after financial activation only a decrease is offered and explained; the request is negative", async () => {
+    await page.evaluate(() => (window as unknown as W).mountAdjust("15500", "school", "activated")); await page.locator("#trigger").click(); await dialog().waitFor();
+    await dialog().getByRole("button", { name: /Una recarga incorrecta/ }).click(); await dialog().getByText("solo las revierte PIKAS").waitFor(); await dialog().getByRole("button", { name: "Atrás" }).click();
+    await dialog().getByRole("button", { name: /Otra corrección excepcional/ }).click();
+    expect(await dialog().getByText("+ Aumentar saldo").count()).toBe(0); expect(await dialog().getByRole("radio").count()).toBe(0);
+    await dialog().getByText("Aquí solo se puede disminuir el saldo").waitFor(); await dialog().getByText("una recarga en efectivo en la cafetería").waitFor();
+    expect(await dialog().getByLabel("Motivo del ajuste").locator("option").allInnerTexts()).not.toContain("Crédito autorizado");
+    await dialog().getByLabel("Monto del ajuste").fill("20"); await dialog().getByLabel("Motivo del ajuste").selectOption("administrative_correction");
+    await dialog().getByLabel("Explicación del ajuste").fill("Corrección ficticia"); await dialog().getByRole("button", { name: "Continuar" }).click();
+    expect(await dialog().innerText()).toMatch(/Dirección\s+Disminuye el saldo/); await w(x => x.echo("13500")); await dialog().getByRole("button", { name: "Aplicar ajuste −RD$ 20.00" }).click();
+    await dialog().getByText("Ajuste aplicado").waitFor(); expect((await w(x => x.calls))[0].body).toMatchObject({ operation: "adjust", amount_minor: "-2000" });
+  });
+  it("an unknown activation state fails closed to a decrease and says why", async () => {
+    await page.evaluate(() => (window as unknown as W).mountAdjust("15500", "cafeteria", "unknown")); await page.locator("#trigger").click(); await dialog().waitFor();
+    await dialog().getByRole("button", { name: /Otra corrección excepcional/ }).click(); await dialog().getByText("No pudimos confirmar si este cliente admite aumentos de saldo").waitFor();
+    expect(await dialog().getByText("+ Aumentar saldo").count()).toBe(0); expect(await w(x => x.calls.length)).toBe(0);
+  });
+});
+
+describe("Cafetería Corregir saldo follows financial activation", () => {
+  const students = { cafeteria_id: school, students: [{ student_id: id, display_name: "Sol Ficticia", balance_minor: "15500", wallet_status: "active" }] };
+  const cash = (enabled: boolean) => ({ cafeteria_id: school, enabled, fee_bps: enabled ? 300 : null, policy_version: enabled ? 1 : null, currency: enabled ? "DOP" : null, collections: [], next_before: null });
+  const openAdjust = async () => {
+    await page.getByLabel("Buscar cliente por nombre").fill("Sol"); await page.getByRole("button", { name: "Consultar saldo" }).click();
+    await page.getByRole("button", { name: "Corregir saldo de Sol Ficticia" }).click(); await dialog().getByRole("button", { name: /Otra corrección excepcional/ }).click();
+  };
+  it("activated: only a decrease, with «Recibir efectivo» named as the way to add value", async () => {
+    await page.evaluate(t => (window as unknown as W).byOperation(t), { read: { status: 200, body: { result: cash(true) } }, lookup: { status: 200, body: { result: students } } }); await page.evaluate(() => (window as unknown as W).mountLookup());
+    await openAdjust(); await dialog().getByText("Aquí solo se puede disminuir el saldo").waitFor(); await dialog().getByText("«Recibir efectivo»").waitFor();
+    expect(await dialog().getByText("+ Aumentar saldo").count()).toBe(0);
+  });
+  it("not activated: both directions as before", async () => {
+    await page.evaluate(t => (window as unknown as W).byOperation(t), { read: { status: 200, body: { result: cash(false) } }, lookup: { status: 200, body: { result: students } } }); await page.evaluate(() => (window as unknown as W).mountLookup());
+    await openAdjust(); await dialog().getByText("+ Aumentar saldo").waitFor(); await dialog().getByText("− Disminuir saldo").waitFor();
+  });
+  it("activation state unavailable: fails closed to a decrease", async () => {
+    await page.evaluate(t => (window as unknown as W).byOperation(t), { read: { status: 502, body: { error: "cash_uncertain" } }, lookup: { status: 200, body: { result: students } } }); await page.evaluate(() => (window as unknown as W).mountLookup());
+    await openAdjust(); await dialog().getByText("No pudimos confirmar").waitFor(); expect(await dialog().getByText("+ Aumentar saldo").count()).toBe(0);
+  });
 });
 
 describe("Recarga reversal", () => {
@@ -226,6 +269,14 @@ describe("PIKAS Cash page actions", () => {
     for (const name of ["Recargar", "Corregir saldo", "Revertir recarga"]) expect(await page.getByRole("button", { name, exact: true }).count()).toBe(0);
     await page.getByText("Consulta de solo lectura").waitFor();
     await mountWallet({ canReplenish: true }, "frozen"); expect(await page.getByRole("button", { name: "Recargar", exact: true }).isDisabled()).toBe(true); await page.getByText("no admite recargas").waitFor();
+  });
+  it("activated customer: no Recargar, accurate copy, and Corregir saldo offers only a decrease", async () => {
+    await mountWallet({ canReplenish: false, canReverse: true, canAdjust: true });
+    expect(await page.getByRole("button", { name: "Recargar", exact: true }).count()).toBe(0);
+    await page.getByText("Las recargas llegan en efectivo en la cafetería o por transferencia verificada por PIKAS").waitFor();
+    expect(await page.getByText("Consulta de solo lectura").count()).toBe(0); expect(await page.getByText("Las recargas manuales requieren fondos").count()).toBe(0);
+    await page.getByRole("button", { name: "Corregir saldo", exact: true }).click(); await dialog().getByRole("button", { name: /Otra corrección excepcional/ }).click();
+    await dialog().getByText("Aquí solo se puede disminuir el saldo").waitFor(); expect(await dialog().getByText("+ Aumentar saldo").count()).toBe(0);
   });
   it("an unconfirmed recarga from before a reload is surfaced for explicit review and never sent automatically", async () => {
     await page.evaluate(([key, cmd]) => sessionStorage.setItem(key, JSON.stringify({ command: cmd })), [`pikas:wallet:${id}:${school}:${id}`,

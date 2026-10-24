@@ -72,6 +72,19 @@ nothing. Legacy (pre-activation) School replenishment rules are unchanged.
 `school_wallet_access` now reports `replenish = false` once the customer is activated, so
 the School's «Recargar» button matches what the database already refused.
 
+«Corregir saldo» follows the same rule (app only; the database already refuses positive tenant
+adjustments after activation with `finance_adjustment_authority_required`). For an activated
+customer the School and the Cafetería are offered only «− Disminuir saldo», with the reason:
+value is added only by cash at the Cafetería or a transfer verified by PIKAS, and an exceptional
+increase is made by PIKAS (`platform:finance:adjustments:fund`). Negative corrections keep their
+existing tenant authority.
+
+- **School signal:** adjustment without replenish. Every role holding
+  `school:wallets:administrative_adjust` also holds `school:wallets:replenish` (asserted in the FIN 4
+  database test), so `replenish` turns false only on activation.
+- **Cafetería signal:** `enabled` from `cafeteria_cash_collections_read`. If it cannot be read,
+  the dialog fails closed to a decrease and says it could not confirm.
+
 ## Idempotency and retries
 
 - Every collection carries a request key, sent as the `Idempotency-Key` header and stored in
@@ -149,12 +162,12 @@ The School cannot reverse a fee-era cash credit; only legacy credits keep its
 - No activation UI and no CEPOINT or production activation.
 - No POS (cashier/supervisor) collection, family-facing replenishment or receipts printing
   for collections.
-- The School's «Corregir saldo» still offers a positive adjustment after activation that the
-  database refuses (FIN 2 design); aligning the UI is deferred.
 
-## Owner decisions before release
+## Owner decisions
 
-- Production finance role and grants (read, verify, reverse).
-- Activation procedure and the legal/accounting custody gate.
-- Whether POS supervisors or cashiers may collect cash.
-- The School «Corregir saldo» behaviour after activation.
+Decided at owner review (2026-10-24): FIN 4 releases dormant; no production finance role is
+created or assigned (the future bundle is read + verify + reverse, never `adjustments:fund` or
+settlement by default); no customer is activated; collection stays with the Cafetería Admin only;
+«Corregir saldo» offers only decreases after activation. Still open, behind the
+legal/accounting gate: the activation procedure, stored-value custody, the Cafetería collection
+relationship, fee treatment, record retention, reversals, outstanding obligations and settlement terms.
