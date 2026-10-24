@@ -615,3 +615,22 @@ a.rpt-bar-row .rpt-bar-label{text-decoration:underline;text-underline-offset:3px
 .pk-busy-region:has(.pk-busy-overlay){min-height:15rem}
 .pk-busy-overlay{position:absolute;inset:0;z-index:5;display:flex;justify-content:center;align-items:flex-start;padding-top:clamp(1rem,8vh,5rem);animation:pk-fade .18s ease-out both}
 .pk-busy-overlay>.pk-loading-indicator{position:sticky;top:max(5rem,30vh)}
+
+/* FIN 4 · Cafetería cash collection: gross / fee / net always labelled; rows stack on phones. */
+.cash-breakdown{display:grid;gap:.4rem;margin:0;padding:.85rem 1rem;border-radius:1rem;background:var(--background);border:1px solid var(--border)}
+.cash-breakdown>div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.25rem 1rem}
+.cash-breakdown dt{color:var(--foreground-muted)}.cash-breakdown dd{margin:0;font-variant-numeric:tabular-nums;font-weight:700}
+.cash-breakdown-net{padding-top:.4rem;border-top:1px solid var(--border)}.cash-breakdown-net dt{color:var(--foreground);font-weight:800}.cash-breakdown-net dd{font-size:1.15rem;font-weight:900;color:var(--primary)}
+.cash-pick{display:flex;align-items:flex-start;gap:.75rem;min-height:2.75rem;padding:.75rem;border:1px solid var(--border);border-radius:1rem;cursor:pointer}
+.cash-pick:has(input:checked){border-color:var(--accent);background:#f0fdfa}.cash-pick input{margin-top:.3rem;width:1.15rem;height:1.15rem;flex:none}
+.cash-confirm{display:flex;align-items:flex-start;gap:.75rem;padding:.85rem 1rem;border-radius:1rem;background:var(--attention-surface);border:1px solid var(--attention-border)}
+.cash-confirm input{margin-top:.2rem;width:1.25rem;height:1.25rem;flex:none}
+.cash-list{display:grid;margin:0;padding:0;list-style:none}
+.cash-row{display:grid;gap:.6rem;padding:.9rem 0;border-top:1px solid var(--border)}.cash-row:first-child{border-top:0}
+.cash-row .chip{justify-self:start}
+.cash-who{min-width:0;overflow-wrap:anywhere}
+.cash-amounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin:0}
+.cash-amounts dt{font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--foreground-muted)}
+.cash-amounts dd{margin:.15rem 0 0;font-variant-numeric:tabular-nums}
+@media(max-width:479px){.cash-amounts{grid-template-columns:1fr}.cash-amounts>div{display:flex;justify-content:space-between;gap:1rem}}
+@media(min-width:1024px){.cash-row{grid-template-columns:minmax(0,1.3fr) minmax(0,1.6fr) auto;align-items:center}.cash-row .chip{justify-self:end}}

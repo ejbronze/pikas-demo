@@ -5,7 +5,7 @@ import { cafeteriaReadSchema, type CafeteriaWalletRead } from '../lib/wallet/con
 import { MoneyValue } from './money-value';
 import { WalletAdjustmentDialog } from './wallet-adjustment-dialog';
 // Balances of eligible customers; with 5C.3 capability, scoped administrative adjustments for those students only.
-export function CafeteriaWalletLookup({ cafeteriaId, actorId = '', canAdjust = false }: { cafeteriaId: string; actorId?: string; canAdjust?: boolean }) {
+export function CafeteriaWalletLookup({ cafeteriaId, actorId = '', canAdjust = false, canCollect = false }: { cafeteriaId: string; actorId?: string; canAdjust?: boolean; canCollect?: boolean }) {
   const [result,setResult] = useState<CafeteriaWalletRead|null>(null);
   const [lastQuery,setLastQuery] = useState('');
   const [loading,setLoading] = useState(false);
@@ -23,7 +23,7 @@ export function CafeteriaWalletLookup({ cafeteriaId, actorId = '', canAdjust = f
     finally{setLoading(false);}
   };
   return <section className="card mt-5 space-y-3 p-5"><h2 className="text-xl font-black">Saldo PIKAS Cash de clientes</h2>
-    <p className="text-sm text-slate-600">Consulta para estudiantes que la escuela comparte con esta cafetería. Las recargas las realiza la administración escolar.{canAdjust?' Los ajustes administrativos son solo para correcciones excepcionales.':''}</p>
+    <p className="text-sm text-slate-600">Consulta para estudiantes que la escuela comparte con esta cafetería. {canCollect?'Las recargas en efectivo se registran en «Recargas en efectivo».':'Las recargas las realiza la administración escolar.'}{canAdjust?' Los ajustes administrativos son solo para correcciones excepcionales.':''}</p>
     <form className="flex flex-wrap gap-3" onSubmit={event=>{event.preventDefault(); if(!loading) void lookup(String(new FormData(event.currentTarget).get('query')??'').trim());}}>
       <input name="query" className="field min-w-0 flex-1" aria-label="Buscar cliente por nombre" placeholder="Buscar por nombre" maxLength={80} />
       <button className="btn-secondary" disabled={loading}>{loading?'Consultando…':'Consultar saldo'}</button>
