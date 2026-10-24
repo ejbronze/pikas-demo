@@ -1,5 +1,13 @@
 # Registro de cambios del producto
 
+## Marca y experiencia pública (local)
+
+- **Sitio público (`/`)** con el posicionamiento aprobado: «La cafetería escolar, por fin conectada.» y «PIKAS conecta las personas, la operación y el dinero detrás de la cafetería escolar.» Secciones: Cómo funciona (una plataforma, distintas responsabilidades), historia del producto con pantallas reales de PIKAS y datos ficticios de Colegio Horizonte, Colegios, Cafeterías, PIKAS Cash (lo que hace hoy y lo que todavía no), Trazabilidad y Contacto. Navegación pública, pie con el crédito de Palmchat Innovations LLC, metadatos, imagen social generada y movimiento que respeta `prefers-reduced-motion`. [Detalle](BRAND_AND_PUBLIC_EXPERIENCE.md).
+- **Carga «Pikando…»**: sistema reutilizable de carga con la mascota LOAD-01 centrado, la pantalla suavizada detrás y sin destellos en esperas cortas; en Plataforma, administración escolar y de cafetería, y en las recargas de Transacciones.
+- **Plataforma · Clientes**: Estado empieza en **Activos** (selector, dirección y consulta); «Limpiar» vuelve a Activos; Todos, Suspendidos y Cerrados se respetan cuando se piden.
+- Pulido: el panel de inicio de sesión ya no promete experiencias de familias y estudiantes en producción; el POS muestra «Contexto confirmado» con fecha y hora legibles; el Demo Lab ya no muestra un punto doble en la hora de vencimiento.
+- Sin migraciones ni cambios de datos.
+
 ## Demo Lab y cliente sandbox (local)
 
 - **Un Demo es un cliente real con `tenant_kind = sandbox`** (Colegio Horizonte) y se usa con las estructuras y flujos reales de PIKAS: colegio, sede, cafetería, cajas, estudiantes, productos, ventas, reportes y PIKAS Cash en modo consulta. El mecanismo de UX 11 (POV) sigue siendo la única puerta: **Abrir como…** desde el nuevo **Demo Lab** de la Plataforma. Documentación interna en `docs/DEMO_LAB.md`.

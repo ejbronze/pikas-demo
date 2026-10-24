@@ -30,7 +30,10 @@ colours are never replaced by the picture; motion already stops under `prefers-r
 | School · PIKAS Cash, no wallets yet | EMP-02 | static | decorative | balances/amounts (none shown in this state) |
 | Platform · Inicio, no customers | EMP-02 | static | decorative | incident/outage notices |
 | Platform · Identidades, no result | SUP-02 | static | decorative | — |
-| Root `loading.tsx`, Platform `loading.tsx` | LOAD-01 | loop (CSS, reduced-motion aware) | decorative + status text | waits under 1 s show nothing |
+| Branded loading system (`apps/web/components/pikas-loading.tsx`): root, Platform, School and Cafetería `loading.tsx`, Cafetería Transacciones reloads | LOAD-01 + «Pikando…» | loop (CSS, reduced-motion aware) | decorative + status text | indicator after 400 ms; plain sentence after 10 s |
+| Public website: hero | FND-06 | static | decorative | — |
+| Public website: PIKAS Cash note | FND-09 | static | decorative | amounts (none in that card) |
+| Public website: contact | FND-03 | WAVE (the page's only animation) | decorative | — |
 
 Not used (by decision): the UX 11 Demo bar (safety surface — deferred to Demo Lab), Cafetería Admin and POS
 (frozen milestones), finance screens, any error/permission/credential screen, the logo.
