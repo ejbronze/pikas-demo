@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { ErrorState } from "../../../components/state-panels";
 import { money } from "../../../lib/cafeteria/operations";
-import { statusLabel, statusTone, type FinanceStatus } from "../../../lib/platform/finance";
+import { statusText, statusTone, type FinanceMethod, type FinanceStatus } from "../../../lib/platform/finance";
 
-export function FinanceStatusBadge({ status }: { status: FinanceStatus }) {
-  return <span className={`chip ${statusTone[status]}`}>{statusLabel[status]}</span>;
+export function FinanceStatusBadge({ status, method = "bank_transfer" }: { status: FinanceStatus; method?: FinanceMethod }) {
+  return <span className={`chip ${statusTone[status]}`}>{statusText(status, method)}</span>;
 }
 
 // Gross → fee → net as a small statement: the fee is a replenishment charge, never a spending fee.
-export function AmountBreakdown({ gross, fee, net, feeBps = 300, compact = false, credited = false }: {
-  gross: string; fee: string; net: string; feeBps?: number; compact?: boolean; credited?: boolean;
+export function AmountBreakdown({ gross, fee, net, feeBps = 300, compact = false, credited = false, cash = false }: {
+  gross: string; fee: string; net: string; feeBps?: number; compact?: boolean; credited?: boolean; cash?: boolean;
 }) {
   const rate = `${(feeBps / 100).toLocaleString("es-DO", { maximumFractionDigits: 2 })} %`;
-  const rows: [string, string, string][] = [["Pagado", money(gross), ""], [`Cargo por recarga PIKAS (${rate})`, `− ${money(fee)}`, "text-slate-600"],
+  const rows: [string, string, string][] = [[cash ? "Efectivo recibido" : "Pagado", money(gross), ""], [`Cargo por recarga PIKAS (${rate})`, `− ${money(fee)}`, "text-slate-600"],
     [credited ? "Se acreditó a PIKAS Cash" : "Se acredita a PIKAS Cash", money(net), "font-black"]];
   return <dl className={`tabular-nums ${compact ? "text-sm" : ""}`} aria-label="Montos de la recarga">
     {rows.map(([label, value, tone], index) => <div key={label} className={`flex flex-wrap items-baseline justify-between gap-x-4 ${compact ? "py-0.5" : "py-2"} ${index === 2 ? "border-t border-slate-300" : ""}`}>

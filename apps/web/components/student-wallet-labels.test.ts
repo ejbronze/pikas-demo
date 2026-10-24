@@ -17,3 +17,10 @@ describe('School wallet history: PIKAS finance attribution',()=>{
   expect(movementTypeLabel(parse({type:'replenishment',source:'manual_verified',actor:'Directora Ficticia'}))).toBe('Recarga verificada');});
  it('only the PIKAS marker is accepted from the database',()=>{expect(()=>parse({type:'adjustment',actor_kind:'platform_finance_operator'})).toThrow();});
 });
+describe('School wallet history: FIN 4 cash collection support record',()=>{
+ it('reads as a cash replenishment at the Cafetería, keeps gross/fee/net and the collector, and is never School-reversible',()=>{
+  const m=parse({type:'replenishment',source:'cafeteria_cash_collected',reference:'REC-00000077',replenishment_id:id,actor:'Admin Ficticia',method:'cafeteria_cash',gross_minor:'200000',fee_minor:'6000',net_minor:'194000',cafeteria:'Cafetería Norte'});
+  expect(movementTypeLabel(m)).toBe('Recarga en efectivo');expect(movementActorLabel(m)).toBe('Admin Ficticia');expect(originLabel[m.source!]).toBe('Efectivo recibido en la cafetería');
+  expect([m.gross_minor,m.fee_minor,m.net_minor,m.method]).toEqual(['200000','6000','194000','cafeteria_cash']);});
+ it('rows without the FIN 4 fields still parse (legacy and purchases)',()=>{expect(parse({type:'purchase',amount_minor:'-5000'}).gross_minor).toBeUndefined();});
+});

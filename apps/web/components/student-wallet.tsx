@@ -19,7 +19,7 @@ export const originLabel: Record<string,string> = {manual_verified:'Fondos manua
 type Movement = History['movements'][number];
 // Fee-era credits are reversed only by PIKAS finance (FIN 3); the School keeps legacy reversals.
 const feeEraSources=new Set(['bank_transfer_verified','cafeteria_cash_collected']);
-export const movementTypeLabel=(m:Movement)=>m.actor_kind==='pikas'?{replenishment:'Recarga por transferencia',adjustment:'Ajuste realizado por PIKAS',replenishment_reversal:'Reversión realizada por PIKAS'}[m.type as string]??'Movimiento de PIKAS':m.type==='adjustment'&&m.actor_role?'Ajuste administrativo':{replenishment:'Recarga verificada',purchase:'Compra',adjustment:'Ajuste histórico',refund:'Reembolso histórico',replenishment_reversal:'Reversión de recarga'}[m.type];
+export const movementTypeLabel=(m:Movement)=>m.source==='cafeteria_cash_collected'&&m.type==='replenishment'?'Recarga en efectivo':m.actor_kind==='pikas'?{replenishment:'Recarga por transferencia',adjustment:'Ajuste realizado por PIKAS',replenishment_reversal:'Reversión realizada por PIKAS'}[m.type as string]??'Movimiento de PIKAS':m.type==='adjustment'&&m.actor_role?'Ajuste administrativo':{replenishment:'Recarga verificada',purchase:'Compra',adjustment:'Ajuste histórico',refund:'Reembolso histórico',replenishment_reversal:'Reversión de recarga'}[m.type];
 export const movementActorLabel=(m:Movement)=>m.actor_kind==='pikas'?'PIKAS':m.actor??'Actor registrado';
 export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canReverse = false, canAdjust = false, back }: {schoolId:string;studentId:string;actorId:string;canReplenish:boolean;canReverse?:boolean;canAdjust?:boolean;back?:{href:string;label:string}}) {
   const key = rechargeJournalKey(actorId, schoolId, studentId);
@@ -54,6 +54,11 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     ...(m.type==='adjustment'&&m.actor_role?[['Motivo',adjustmentLabel[m.adjustment_reason??'']??m.adjustment_reason??'—'],['Rol',roleLabel[m.actor_role]??m.actor_role],...(m.cafeteria?[['Cafetería',m.cafeteria]]:[]),...(m.balance_before_minor?[['Saldo antes',<MoneyValue key="b" minor={m.balance_before_minor} intent="balance"/>]]:[])] as [string,React.ReactNode][]:[]),
     ...(m.type==='replenishment_reversal'?[['Motivo',reasonLabel[m.reversal_reason??'']??m.reversal_reason??'—'],...(m.reversal_note?[['Explicación',m.reversal_note]]:[]),...(m.original_reference?[['Referencia original',m.original_reference]]:[])] as [string,React.ReactNode][]:[]),
     ...(m.replenishment_id?[['Origen',originLabel[m.source??'']??'Recarga verificada']] as [string,React.ReactNode][]:[]),
+    // FIN 4: a fee-era replenishment explains its support record (gross received, PIKAS fee, credited net) without any
+    // obligation, clearing or settlement data.
+    ...(m.type==='replenishment'&&m.gross_minor&&m.fee_minor&&m.net_minor?[[m.method==='cafeteria_cash'?'Efectivo recibido':'Pago recibido',<MoneyValue key="g" minor={m.gross_minor} intent="amount"/>],
+      ['Cargo por recarga PIKAS',<MoneyValue key="f" minor={m.fee_minor} intent="amount"/>],['Acreditado al monedero',<MoneyValue key="n" minor={m.net_minor} intent="amount"/>],
+      ...(m.method==='cafeteria_cash'&&m.cafeteria?[['Cafetería',m.cafeteria]]:[])] as [string,React.ReactNode][]:[]),
     ...(m.reference?[['Referencia',m.reference]] as [string,React.ReactNode][]:[]),...(m.note?[['Nota',m.note]] as [string,React.ReactNode][]:[]),
     ['Registrado por',movementActorLabel(m)],['Fecha',when(m.occurred_at)],['Saldo después',<MoneyValue key="a" minor={m.balance_after_minor} intent="balance"/>],
   ];

@@ -4,7 +4,7 @@ import { AppPageHeader } from "../../../components/app-page-header";
 import { DataList } from "../../../components/data-list";
 import { EmptyState, ErrorState } from "../../../components/state-panels";
 import { money } from "../../../lib/cafeteria/operations";
-import { FINANCE_READ, customerLine, estadoToStatus, filtersSchema, financeWhen, listSchema, type FinanceListRow } from "../../../lib/platform/finance";
+import { FINANCE_READ, customerLine, estadoToStatus, filtersSchema, financeWhen, listSchema, type FinanceListRow, methodLabel } from "../../../lib/platform/finance";
 import { AmountBreakdown, FinanceReadFailure, FinanceStatusBadge, FinanceTabs } from "./finance-views";
 
 // FIN 3: "What needs financial review right now?" Pending bank transfers first; recent decisions in
@@ -55,12 +55,13 @@ function PendingQueue({ rows }: { rows: FinanceListRow[] }) {
 
 function HistoryList({ rows }: { rows: FinanceListRow[] }) {
   const decision = (r: FinanceListRow) => r.status === "reversed" && r.reversed_at ? `Revertida ${financeWhen(r.reversed_at)}${r.reversed_by ? ` por ${r.reversed_by}` : ""}`
+    : r.method === "cafeteria_cash" ? `Recibida en ${r.cafeteria ?? "la cafetería"} ${financeWhen(r.submitted_at)}${r.submitted_by ? ` por ${r.submitted_by}` : ""}`
     : r.decided_at ? `${r.status === "rejected" ? "Rechazada" : "Verificada"} ${financeWhen(r.decided_at)}${r.decided_by ? ` por ${r.decided_by}` : ""}` : "—";
-  return <DataList label="Historial de transferencias" rows={rows} rowKey={r => r.reference} columns={[
+  return <DataList label="Historial de recargas" rows={rows} rowKey={r => r.reference} columns={[
     { header: "Referencia", primary: true, cell: r => <Link className="whitespace-nowrap font-mono underline-offset-2 hover:underline" href={`/platform/finanzas/${r.reference}`}>{r.reference}</Link> },
-    { header: "Estado", cell: r => <FinanceStatusBadge status={r.status} /> },
-    { header: "Estudiante", cell: r => <span className="break-words">{student(r)}<span className="block text-slate-600">{customerLine(r.customer, r.school)}</span></span> },
-    { header: "Pagado", align: "end", cell: r => <span className="whitespace-nowrap tabular-nums">{money(r.gross_minor)}</span> },
+    { header: "Estado", cell: r => <FinanceStatusBadge status={r.status} method={r.method} /> },
+    { header: "Estudiante", cell: r => <span className="break-words">{student(r)}<span className="block text-slate-600">{customerLine(r.customer, r.school)} · {methodLabel(r.method, r.cafeteria)}</span></span> },
+    { header: "Recibido", align: "end", cell: r => <span className="whitespace-nowrap tabular-nums">{money(r.gross_minor)}</span> },
     { header: "Acreditado", align: "end", cell: r => <span className="whitespace-nowrap tabular-nums">{r.status === "rejected" ? "—" : money(r.net_minor)}</span> },
     { header: "Decisión", cell: r => decision(r) },
   ]} />;

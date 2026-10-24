@@ -70,3 +70,15 @@ describe('finance messages',()=>{
   expect(financeMessage('FINANCIAL_RESOLUTION_REQUIRED')).toBe('No se puede revertir automáticamente porque parte del saldo acreditado ya fue utilizado. Este caso requiere resolución financiera.');
   expect(financeMessage('REQUEST_ALREADY_DECIDED')).toBe('Esta solicitud ya fue procesada.');expect(financeMessage('23514')).toBe('PIKAS no pudo completar la operación. No se movió dinero.');});
 });
+describe('FIN 4: Cafetería cash collections in Finanzas',()=>{
+ const cash={...row,reference:'REC-00000002',status:'posted',method:'cafeteria_cash',cafeteria:'Cafetería Norte',submitted_by:'Admin Ficticia',payer_reference:null,has_proof:false,decided_at:null};
+ it('history names the method and Cafetería, says «Acreditada» and who received the cash; the queue keeps bank transfers',async()=>{
+  mocks.read.mockResolvedValue(list([cash],'history'));const html=await page({vista:'historial'});
+  expect(html).toContain('Efectivo en Cafetería Norte');expect(html).toContain('Acreditada');expect(html).toContain('Recibida en Cafetería Norte');expect(html).toContain('Admin Ficticia');expect(html).not.toMatch(uuid);});
+ it('detail explains the cash collection without verification controls; reversal stays available with its capability',async()=>{
+  const html=await open({...detail,reference:'REC-00000002',status:'posted',method:'cafeteria_cash',cafeteria:'Cafetería Norte',payer_reference:null,payer_name:'Madre Ficticia',payer_note:null,proof_reference:null,
+   submitted_by:'Admin Ficticia',submitted_role:'cafeteria_staff',posted_at:'2026-10-24T14:00:00Z',wallet:{status:'active',balance_minor:'244000',covers_net:true}});
+  for(const s of['Efectivo en Cafetería Norte','Efectivo recibido','Cargo por recarga PIKAS (3 %)','Se acreditó a PIKAS Cash','Efectivo recibido en la cafetería','Recibido por','Admin Ficticia','Entregado por','Madre Ficticia','Acreditada'])expect(html).toContain(s);
+  expect(html).not.toContain('Evidencia de la transferencia');expect(html).not.toContain('Verificar');expect(html).toContain('Revertir');expect(html).not.toMatch(uuid);});
+ it('a legacy bank row without the new fields still parses as a bank transfer',async()=>{mocks.read.mockResolvedValue(list([row]));const html=await page();expect(html).toContain('REC-00000001');expect(html).not.toContain('Efectivo en');});
+});

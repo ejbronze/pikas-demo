@@ -11,6 +11,8 @@ export const FINANCE_REVERSE = "platform:finance:replenishments:reverse";
 const minor = z.string().regex(/^-?[0-9]+$/);
 const reference = z.string().regex(/^REC-[0-9]{8}$/);
 export const statusSchema = z.enum(["pending", "posted", "rejected", "reversed"]);
+export const methodSchema = z.enum(["bank_transfer", "cafeteria_cash"]);
+export type FinanceMethod = z.infer<typeof methodSchema>;
 export type FinanceStatus = z.infer<typeof statusSchema>;
 
 export const listRowSchema = z.object({
@@ -18,12 +20,14 @@ export const listRowSchema = z.object({
   gross_minor: minor, fee_minor: minor, net_minor: minor, payer_reference: z.string().nullable(), has_proof: z.boolean(),
   submitted_at: z.string(), decided_at: z.string().nullable(), reversed_at: z.string().nullable(),
   decided_by: z.string().nullable(), reversed_by: z.string().nullable(),
+  // FIN 4: history also lists Cafetería cash collections (posted on receipt; no verification step).
+  method: methodSchema.default("bank_transfer"), cafeteria: z.string().nullable().default(null), submitted_by: z.string().nullable().default(null),
 });
 export type FinanceListRow = z.infer<typeof listRowSchema>;
 export const listSchema = z.object({ view: z.enum(["pending", "history"]), status: z.string().nullable(), query: z.string().nullable(), requests: z.array(listRowSchema), truncated: z.boolean() });
 
 export const detailSchema = z.object({
-  reference, status: statusSchema, method: z.literal("bank_transfer"), customer: z.string(), customer_activated: z.boolean(), school: z.string(),
+  reference, status: statusSchema, method: methodSchema, customer: z.string(), customer_activated: z.boolean(), school: z.string(), cafeteria: z.string().nullable().default(null),
   student: z.string(), student_code: z.string().nullable(), currency: z.string(), policy_version: z.number().int(), fee_bps: z.number().int(),
   gross_minor: minor, fee_minor: minor, net_minor: minor,
   payer_reference: z.string().nullable(), payer_name: z.string().nullable(), payer_note: z.string().nullable(), proof_reference: z.string().nullable(),
@@ -43,6 +47,9 @@ export const filtersSchema = z.object({
 export const estadoToStatus = { verificadas: "posted", rechazadas: "rejected", revertidas: "reversed" } as const;
 
 export const statusLabel: Record<FinanceStatus, string> = { pending: "Por verificar", posted: "Verificada", rejected: "Rechazada", reversed: "Revertida" };
+// A cash collection is credited on receipt by the Cafetería: it is never «verified» by finance.
+export const statusText = (status: FinanceStatus, method: FinanceMethod = "bank_transfer") => method === "cafeteria_cash" && status === "posted" ? "Acreditada" : statusLabel[status];
+export const methodLabel = (method: FinanceMethod, cafeteria?: string | null) => method === "cafeteria_cash" ? `Efectivo en ${cafeteria ?? "la cafetería"}` : "Transferencia bancaria";
 export const statusTone: Record<FinanceStatus, string> = {
   pending: "bg-amber-100 text-amber-950", posted: "bg-emerald-100 text-emerald-900", rejected: "bg-slate-200 text-slate-900", reversed: "bg-rose-100 text-rose-900",
 };
