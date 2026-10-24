@@ -9,7 +9,8 @@
 - **Autoridad**: `platform:finance:settlement:manage` existe sin concederse a ningún rol (ni a Platform Admin); la administración de cafetería lee sus propias liquidaciones (`cafeteria:finance:obligations:read`). Escuela, POS, sandbox y Demo sin acceso.
 - **Corrección**: en Finanzas, «Reintentar la misma operación» dentro de la tarea reutiliza ahora exactamente la clave y los datos originales.
 - **Fin de la activación**: la activación financiera rige la actividad financiera nueva, no la liquidación de lo ya debido. Si la activación termina (o el cliente o la cafetería se suspenden o cierran), Finanzas de PIKAS sigue pudiendo calcular, revisar y confirmar el pago de las obligaciones creadas mientras estaba activo; no se permite actividad financiera nueva ni se reabre el acceso del cliente.
-- Migraciones `202611200001_settlement_financial_operations.sql` y `202611210001_settlement_after_activation_ends.sql`. [Detalle](SETTLEMENT_FINANCIAL_OPERATIONS.md).
+- **Reembolsos históricos**: el tratamiento financiero de un reembolso lo decide la compra original, no la activación del día. Reembolsar una venta con PIKAS Cash hecha durante la activación crea siempre la corrección a la cafetería por el monto reembolsado, aunque la activación ya haya terminado; las ventas en efectivo o fuera de la activación no crean correcciones.
+- Migraciones `202611200001_settlement_financial_operations.sql`, `202611210001_settlement_after_activation_ends.sql` y `202611220001_historical_refund_correction.sql`. [Detalle](SETTLEMENT_FINANCIAL_OPERATIONS.md).
 
 ## PIKAS Cash: cobro de efectivo en la cafetería (FIN 4, local)
 

@@ -4,10 +4,12 @@ Implemented locally on 2026-10-24 (the planned FIN 5 + FIN 6). It builds on FIN 
 (`docs/PIKAS_CASH_FINANCIAL_FOUNDATION.md`), FIN 3 (`docs/PIKAS_CASH_FINANCE_OPERATIONS.md`) and
 FIN 4 (`docs/FIN4_CAFETERIA_CASH_COLLECTION.md`) and changes none of their financial semantics.
 
-- **Migrations:** `202611200001_settlement_financial_operations.sql` and `202611210001_settlement_after_activation_ends.sql`.
+- **Migrations:** `202611200001_settlement_financial_operations.sql`, `202611210001_settlement_after_activation_ends.sql` and
+  `202611220001_historical_refund_correction.sql`.
 - **Tests:**
   - Database: `supabase/tests/settlement_financial_operations.test.sql` (93 assertions) and
-    `supabase/tests/settlement_activation_end.test.sql` (35 assertions).
+    `supabase/tests/settlement_activation_end.test.sql` (35 assertions) and
+    `supabase/tests/settlement_historical_refund.test.sql` (34 assertions).
   - App routes: `app/api/platform/finance/settlement/route.test.ts`, `app/api/cafeteria/settlements/route.test.ts`.
   - Pages: `app/platform/finanzas/liquidaciones/settlements.test.tsx`.
   - Real Chromium: `components/settlements.browser.test.tsx`.
@@ -157,6 +159,19 @@ It must not include `platform:finance:adjustments:fund`.
   - finalize it (explicitly or through the run);
   - put it in review;
   - confirm its payment or payout.
+- **Refunds follow the original purchase** (`202611220001_historical_refund_correction.sql`).
+  - **The rule:** a refund of a PIKAS Cash sale that created a clearing → Cafetería payable always records
+    `stored_value_restored` plus a `wallet_refund_correction` (Cafetería → clearing) for exactly the refunded wallet
+    amount. This holds even after activation ends.
+  - **The evidence** is the original purchase's payable. A sale made before activation, or after it ended, and a cash
+    sale have no payable, so their refunds create no PIKAS correction. Arbitrary obligations are impossible.
+  - **Partial and itemized refunds** correct only what they refund. The FIN 2 guard still caps corrections at the
+    payable.
+  - **Settlement:** a refund of a sale whose week is finalized enters a later settlement as a late line, traceable to
+    the original payable inside the original settlement.
+  - **No replenishment, fee or new funding** is created.
+  - **Before the fix:** after activation ended, the wallet was restored but the payable was not corrected, which
+    overpaid the Cafetería.
 - **Customer and Cafetería lifecycle** (suspended, closed, inactive) never gates Platform settlement. Tenant
   operational access is not reopened: the Cafetería read still requires an active Cafetería Admin scope, so a
   suspended customer's Cafetería cannot read until it is reactivated. While its access is active, the Cafetería keeps
