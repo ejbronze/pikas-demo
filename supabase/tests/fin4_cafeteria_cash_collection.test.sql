@@ -40,7 +40,7 @@ grant execute on all functions in schema pg_temp to authenticated;
 
 -- Fictional Platform finance operator (read + reverse only) for the Platform side.
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
- values('00000000-0000-0000-0000-0000000f4d01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','fin4.finanzas@example.invalid','',now(),now(),now(),'{}','{}');
+ values('00000000-0000-0000-0000-0000000f4d01','00000000-0000-0000-0000-000000000000','authenticated','authenticated','fin4.test.finanzas@example.invalid','',now(),now(),now(),'{}','{}');
 insert into persons(id,auth_user_id,display_name) values('00000000-0000-0000-0000-0000000f4e01','00000000-0000-0000-0000-0000000f4d01','Finanzas FIN 4 ficticia');
 insert into pikas_private.platform_roles(role_code) values('fin4_finanzas');
 insert into pikas_private.platform_role_capabilities(role_code,capability) values('fin4_finanzas','platform:finance:read'),('fin4_finanzas','platform:finance:replenishments:reverse');
@@ -72,6 +72,11 @@ reset role; select is(pg_temp.money(),current_setting('t.m0'),'Activation off: n
 -- Backend-only activation (internal primitive, exactly as the owner-approved procedure calls it).
 select ok((pikas_private.finance_activate_customer('00000000-0000-0000-0000-000000000001',1,'Piloto ficticio FIN 4','fin4-activation-key-0001')->>'activation_id') is not null,'Fictional account 1 activated (backend only)');
 select is(pg_temp.attempt($$select pikas_private.finance_activate_customer('03e71159-69e9-4387-9b3b-65799d49faf0',1,'Sandbox','fin4-activation-key-0002')$$),'23514:ACTIVATION_REQUIRES_ACTIVE_CUSTOMER','A sandbox can never be activated');
+-- 202611190003: after activation the School is told it cannot top up directly (the FIN 2 guard already refuses it).
+select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
+select is((select concat_ws('/',x->>'read',x->>'replenish') from (select school_wallet_access('00000000-0000-0000-0000-000000000011') x) y),'true/false','Activated customer: School reads PIKAS Cash but no longer sees a direct top-up');
+select is(pg_temp.attempt($$select school_wallet_replenish('00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201',1000,'f4000000-0000-4000-8000-0000000000f1','Ref','Nota')$$) like '%collection_source_required%',true,'…and a direct School top-up stays refused by the database');
+reset role;
 
 -- Open a register so the later wallet purchase is a real POS sale.
 select pg_temp.as_user('00000000-0000-0000-0000-000000002008');
@@ -138,7 +143,7 @@ select is(pg_temp.attempt($$select pg_temp.collect(200000,'f4000000-0000-4000-80
 reset role; set local session_replication_role=replica; update school_cafeteria_shares set status='active' where cafeteria_id='00000000-0000-0000-0000-000000000111'; set local session_replication_role=origin;
 -- Another Cafetería Admin of the same Cafetería cannot replay or reuse someone else's key.
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
- values('00000000-0000-0000-0000-0000000f4d02','00000000-0000-0000-0000-000000000000','authenticated','authenticated','fin4.otra@example.invalid','',now(),now(),now(),'{}','{}');
+ values('00000000-0000-0000-0000-0000000f4d02','00000000-0000-0000-0000-000000000000','authenticated','authenticated','fin4.test.otra@example.invalid','',now(),now(),now(),'{}','{}');
 insert into persons(id,auth_user_id,display_name) values('00000000-0000-0000-0000-0000000f4e02','00000000-0000-0000-0000-0000000f4d02','Otra administradora FIN 4');
 insert into cafeteria_memberships(account_id,school_id,cafeteria_id,person_id,role_code) values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000000111','00000000-0000-0000-0000-0000000f4e02','cafeteria_admin');
 select pg_temp.as_user('00000000-0000-0000-0000-0000000f4d02');
