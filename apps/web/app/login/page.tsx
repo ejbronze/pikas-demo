@@ -32,7 +32,7 @@ export default function Login() {
 
   return <main className="grid min-h-screen bg-pikas-navy lg:grid-cols-2">
     <section className="hidden items-end bg-[radial-gradient(circle_at_top_left,#04c7c5,#03234b_62%)] p-12 text-white lg:flex">
-      <div><span className="inline-flex rounded-2xl bg-white p-2"><BrandLogo compact className="size-14"/></span><h1 className="mt-8 max-w-lg text-5xl font-black">Una entrada para toda tu comunidad escolar.</h1><p className="mt-5 max-w-md text-blue-100">Familias, estudiantes y personal de cafetería llegan al espacio correcto según su rol.</p></div>
+      <div><span className="inline-flex rounded-2xl bg-white p-2"><BrandLogo compact className="size-14"/></span><h1 className="mt-8 max-w-lg text-5xl font-black">{demoMode?"Una entrada para toda tu comunidad escolar.":"La cafetería escolar, por fin conectada."}</h1><p className="mt-5 max-w-md text-blue-100">{demoMode?"Familias, estudiantes y personal de cafetería llegan al espacio correcto según su rol.":"Colegio, cafetería y punto de venta entran a su propio espacio, con la información que le toca a cada rol."}</p></div>
     </section>
     <section className="grid place-items-center bg-slate-50 p-4"><div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl sm:p-8">
       <Link href="/" className="inline-flex min-h-11 items-center" aria-label="Volver al inicio"><BrandLogo className="h-auto w-32"/></Link>

@@ -1,67 +1,155 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import {ArrowRight, ShieldCheck, HeartPulse, Utensils, WalletCards} from "@/components/icons";
-import {BrandLogo} from "@/components/brand-logo";
+import { PikasMascot } from "@pikas/ui/mascot";
+import { BrandLogo } from "../components/brand-logo";
+import { SiteHeader } from "../components/site/site-header";
+import { ProductStory } from "../components/site/product-story";
+import { ProductShot } from "../components/site/product-shot";
+import { site } from "../components/site/content";
+import "./site.css";
 
-const benefits = [
-  [WalletCards, "Compras sin efectivo", "Consulta el saldo y el historial sin manejar efectivo."],
-  [ShieldCheck, "Controles familiares", "Define límites y productos bloqueados con claridad."],
-  [HeartPulse, "Cuidado alimentario", "Registra alergias para advertir antes de una preorden."],
-  [Utensils, "Preórdenes escolares", "Elige el menú y sigue el estado del pedido."],
-] as const;
+// Public PIKAS website (Brand & Public Experience). Server-rendered; only the header menu and the product
+// story are client components. Every product image is a real PIKAS screen with fictional demo data.
+export const metadata: Metadata = {
+  title: { absolute: site.meta.title },
+  description: site.meta.description,
+  alternates: { canonical: "/" },
+  openGraph: { type: "website", locale: "es_DO", siteName: "PIKAS", url: "/", title: site.meta.title, description: site.meta.description },
+  twitter: { card: "summary_large_image", title: site.meta.title, description: site.meta.description },
+};
+
+// The public contact channel is configuration, not code. Without it the section says how to reach PIKAS
+// truthfully instead of offering a form with nowhere to go.
+const contactEmail = process.env.NEXT_PUBLIC_PIKAS_CONTACT_EMAIL?.trim() || null;
+
+function SectionHead({ eyebrow, title, lede, id }: { eyebrow: string; title: string; lede?: string; id: string }) {
+  return <div className="site-section-head site-reveal">
+    <p className="site-eyebrow">{eyebrow}</p>
+    <h2 id={id} className="site-h2">{title}</h2>
+    {lede && <p className="site-lede">{lede}</p>}
+  </div>;
+}
 
 export default function Home() {
-  return <div className="min-h-screen bg-white">
-    <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-      <Link href="/" className="flex min-h-11 items-center" aria-label="PIKAS, inicio"><BrandLogo priority className="h-auto w-32 sm:w-36"/></Link>
-      <nav className="flex items-center gap-3" aria-label="Navegación pública">
-        <a href="#como-funciona" className="hidden min-h-11 items-center font-semibold text-slate-600 sm:flex">Cómo funciona</a>
-        <Link className="btn" href="/login">Iniciar sesión</Link>
-      </nav>
-    </header>
-    <main>
-      <section className="relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 py-12 lg:grid-cols-2 lg:py-16">
+  const { hero, system, story, schools, cafeterias, pikasCash, trace, contact, footer } = site;
+  return <div className="site">
+    <a href="#contenido" className="site-skip">Saltar al contenido</a>
+    <SiteHeader />
+    <main id="contenido">
+      <section className="site-hero" aria-labelledby="hero-title">
+        <div className="site-wrap site-hero-grid">
+          <div className="site-hero-copy">
+            <p className="site-eyebrow">{hero.eyebrow}</p>
+            <h1 id="hero-title" className="site-h1">{hero.title[0]} <br /><span className="site-h1-accent">{hero.title[1]}</span></h1>
+            <p className="site-hero-lede">{hero.lede}</p>
+            <div className="site-cta-row">
+              <a className="site-btn site-btn-primary" href={hero.primary.href}>{hero.primary.label}</a>
+              <a className="site-btn site-btn-secondary" href={hero.secondary.href}>{hero.secondary.label}</a>
+            </div>
+            <ul className="site-connects" aria-label="PIKAS conecta">{hero.connects.map(c => <li key={c}>{c}</li>)}</ul>
+          </div>
+          <div className="site-hero-visual">
+            <ProductShot id="cafeteria-hoy" mobile="cafeteria-hoy-m" priority alt="Pantalla Hoy de una cafetería en PIKAS: colegio, sede y cafetería que administra y su guía de puesta en marcha." sizes="(min-width: 1024px) 52vw, 100vw" className="site-hero-shot" />
+            <div className="site-hero-pos"><ProductShot id="pos-venta" alt="Punto de venta de PIKAS con una venta en curso para una estudiante." sizes="(min-width: 1024px) 26vw, 60vw" /></div>
+            <PikasMascot id="FND-06" size={168} className="site-hero-mascot" />
+          </div>
+        </div>
+        <p className="site-wrap site-fiction">{site.fiction}</p>
+      </section>
+
+      <section id="como-funciona" className="site-section" aria-labelledby="sistema-title">
+        <div className="site-wrap">
+          <SectionHead id="sistema-title" eyebrow={system.eyebrow} title={system.title} lede={system.lede} />
+          <ol className="site-roles">
+            {system.roles.map((r, i) => <li key={r.who} className="site-role site-reveal" data-role={i}>
+              <p className="site-role-who">{r.who}</p>
+              <p className="site-role-verb">{r.verb}.</p>
+              <p className="site-body">{r.text}</p>
+            </li>)}
+          </ol>
+          <ol className="site-flow site-reveal" aria-label="Cómo fluye la información">
+            {system.flow.map(f => <li key={f.from}><span className="site-flow-route"><strong>{f.from}</strong><span aria-hidden className="site-flow-arrow">→</span><strong>{f.to}</strong></span><span className="site-flow-what">{f.what}</span></li>)}
+          </ol>
+        </div>
+      </section>
+
+      <section id="producto" className="site-section site-section-tint" aria-labelledby="producto-title">
+        <div className="site-wrap">
+          <SectionHead id="producto-title" eyebrow={story.eyebrow} title={story.title} />
+          <ProductStory />
+          <p className="site-fiction">{site.fiction}</p>
+        </div>
+      </section>
+
+      <section className="site-section" aria-label="Para colegios y cafeterías">
+        <div className="site-wrap site-audiences">
+          <article id="colegios" aria-labelledby="colegios-title" className="site-audience">
+            <SectionHead id="colegios-title" eyebrow={schools.eyebrow} title={schools.title} lede={schools.lede} />
+            <ul className="site-features">{schools.items.map(it => <li key={it.title} className="site-reveal"><h3 className="site-h4">{it.title}</h3><p className="site-body">{it.text}</p></li>)}</ul>
+            <p className="site-note">{schools.note}</p>
+          </article>
+          <article id="cafeterias" aria-labelledby="cafeterias-title" className="site-audience">
+            <SectionHead id="cafeterias-title" eyebrow={cafeterias.eyebrow} title={cafeterias.title} lede={cafeterias.lede} />
+            <ul className="site-features">{cafeterias.items.map(it => <li key={it.title} className="site-reveal"><h3 className="site-h4">{it.title}</h3><p className="site-body">{it.text}</p></li>)}</ul>
+            <ProductShot id="cafeteria-productos" alt="Catálogo de productos de una cafetería en PIKAS con precio, categoría y disponibilidad." sizes="(min-width: 1024px) 40vw, 100vw" className="site-audience-shot" />
+          </article>
+        </div>
+      </section>
+
+      <section id="pikas-cash" className="site-section site-section-navy" aria-labelledby="cash-title">
+        <div className="site-wrap site-cash">
           <div>
-            <span className="chip bg-blue-50 text-blue-700">La vida escolar, mejor conectada</span>
-            <h1 className="mt-4 text-4xl font-black leading-tight text-blue-950 sm:text-5xl">Más autonomía para estudiantes. Más tranquilidad para familias.</h1>
-            <p className="mt-4 max-w-xl text-lg leading-7 text-slate-600">PIKAS reúne compras escolares sin efectivo con PIKAS Cash, controles de alimentación y la actividad de compras de cada estudiante en un solo lugar.</p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/login" className="btn">Entrar a PIKAS <ArrowRight size={18}/></Link>
-              <a href="#experiencias" className="btn-secondary">Conocer la experiencia</a>
-            </div>
+            <SectionHead id="cash-title" eyebrow={pikasCash.eyebrow} title={pikasCash.title} lede={pikasCash.lede} />
+            <ul className="site-checks">{pikasCash.today.map(t => <li key={t}>{t}</li>)}</ul>
           </div>
-          <div className="relative rounded-3xl bg-pikas-navy p-4 shadow-lg">
-            <div className="rounded-2xl bg-violet-50 p-5">
-              <div className="flex justify-between gap-4">
-                <div><p className="text-sm font-bold text-violet-700">Hola, Sofi</p><p className="text-3xl font-black">RD$2,450</p><small>Saldo disponible</small></div>
-                <BrandLogo compact className="size-12 rounded-xl bg-white p-1.5"/>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="card p-3"><small>Para hoy</small><strong className="block text-lg">RD$190</strong></div>
-                <div className="card p-3"><small>Próximo pedido</small><strong className="block">Pasta · 12:30</strong></div>
-              </div>
-            </div>
-          </div>
+          <aside className="site-cash-aside site-reveal" aria-labelledby="cash-not-yet">
+            <PikasMascot id="FND-09" size={128} />
+            <h3 id="cash-not-yet" className="site-h4">{pikasCash.notYetTitle}</h3>
+            <p className="site-body">{pikasCash.notYet}</p>
+          </aside>
         </div>
       </section>
-      <section id="como-funciona" className="bg-slate-50 py-14">
-        <div className="mx-auto max-w-7xl px-5">
-          <span className="label text-pikas-teal-dark">Un registro, tres experiencias</span>
-          <h2 className="mt-2 max-w-2xl text-3xl font-black">Todo lo importante del día escolar, visible y fácil de manejar.</h2>
-          <div className="mt-7 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {benefits.map(([Icon, title, copy]) => <article className="card p-5" key={title}>
-              <Icon className="text-blue-700"/>
-              <h3 className="mt-4 text-lg font-black">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p>
-            </article>)}
-          </div>
+
+      <section id="trazabilidad" className="site-section" aria-labelledby="traza-title">
+        <div className="site-wrap">
+          <SectionHead id="traza-title" eyebrow={trace.eyebrow} title={trace.title} lede={trace.lede} />
+          <ul className="site-trace">{trace.items.map(it => <li key={it.title} className="site-reveal"><h3 className="site-h4">{it.title}</h3><p className="site-body">{it.text}</p></li>)}</ul>
         </div>
       </section>
-      <section id="experiencias" className="mx-auto grid max-w-7xl gap-5 px-5 py-14 md:grid-cols-2">
-        <article className="rounded-2xl bg-blue-900 p-6 text-white"><span className="text-sm font-bold text-blue-200">PARA FAMILIAS</span><h2 className="mt-2 text-2xl font-black">Visibilidad sin complicaciones</h2><p className="mt-3 text-blue-100">Saldos, límites, alertas, estudiantes y pedidos comparten una única fuente de información.</p></article>
-        <article className="rounded-2xl bg-violet-700 p-6 text-white"><span className="text-sm font-bold text-violet-200">PARA ESTUDIANTES</span><h2 className="mt-2 text-2xl font-black">Tu día, a tu alcance</h2><p className="mt-3 text-violet-100">Una vista móvil, clara y rápida para comprar, planificar y aprender a organizar el dinero.</p></article>
+
+      <section id="contacto" className="site-section site-contact-band" aria-labelledby="contacto-title">
+        <div className="site-wrap site-contact">
+          <PikasMascot id="FND-03" size={176} animated className="site-contact-mascot" />
+          <div>
+            <p className="site-eyebrow">{contact.eyebrow}</p>
+            <h2 id="contacto-title" className="site-h2">{contact.title}</h2>
+            <p className="site-lede">{contact.lede}</p>
+            <div className="site-cta-row">
+              {contactEmail
+                ? <><a className="site-btn site-btn-primary" href={`mailto:${contactEmail}?subject=${encodeURIComponent("Quiero conocer PIKAS")}`}>{contact.write}</a><span className="site-contact-address">{contactEmail}</span></>
+                : <p className="site-body site-contact-fallback">{contact.fallback}</p>}
+            </div>
+            <p className="site-body">{contact.already} <Link className="site-link" href="/login">Inicia sesión</Link></p>
+          </div>
+        </div>
       </section>
     </main>
-    <footer className="border-t px-5 py-6 text-center text-sm text-slate-500"><p>PIKAS · Experiencia de demostración. No procesa dinero real.</p><p className="mt-2 font-semibold text-slate-600">Diseñada y desarrollada por Palmchat Innovations LLC.</p></footer>
+
+    <footer className="site-footer">
+      <div className="site-wrap site-footer-grid">
+        <div>
+          <BrandLogo className="h-auto w-28" />
+          <p className="site-footer-line">{footer.line}</p>
+        </div>
+        <nav aria-label="Pie de página" className="site-footer-nav">
+          {site.nav.map(item => <a key={item.href} href={item.href}>{item.label}</a>)}
+          <Link href="/login">{site.signIn}</Link>
+        </nav>
+      </div>
+      <div className="site-wrap site-footer-legal">
+        <p>{footer.copyright}</p>
+        <p>{footer.credit}</p>
+      </div>
+    </footer>
   </div>;
 }
