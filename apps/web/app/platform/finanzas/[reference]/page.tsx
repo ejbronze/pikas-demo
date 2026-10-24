@@ -29,7 +29,7 @@ export default async function FinanceRequestPage({ params }: { params: Promise<{
         <Section title="Quién recibe el crédito"><Rows rows={[["Estudiante", `${d.student}${d.student_code ? ` · ${d.student_code}` : ""}`], ...(d.customer === d.school ? [["Colegio", d.school] as [string, string]] : [["Colegio", d.school], ["Cliente", d.customer]] as [string, string][]),
           ["Monedero", `PIKAS Cash en ${d.currency === "DOP" ? "pesos dominicanos (RD$)" : d.currency}`], ["Política", `Versión ${d.policy_version} · cargo de ${d.fee_bps / 100} %`]]} /></Section>
         {d.method === "cafeteria_cash" ? <Section title="Efectivo recibido en la cafetería">
-          <p className="rounded-xl bg-slate-50 p-3 text-sm">La cafetería recibió el efectivo y la recarga se acreditó al registrarla. La cafetería debe a la compensación el efectivo recibido; la liquidación todavía no está disponible.</p>
+          <p className="rounded-xl bg-slate-50 p-3 text-sm">La cafetería recibió el efectivo y la recarga se acreditó al registrarla. La cafetería debe a la compensación el efectivo recibido; ese monto entra en su liquidación semanal (Liquidaciones).</p>
           <Rows rows={[["Cafetería", d.cafeteria ?? "—"], ["Recibido por", d.submitted_by ?? "—"], ["Entregado por", d.payer_name ?? "No registrado"], ["Fecha", financeWhen(d.posted_at ?? d.submitted_at)]]} />
         </Section> : <Section title="Evidencia de la transferencia">
           <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-950">PIKAS no confirma transacciones bancarias automáticamente. Comprueba el depósito en el banco antes de decidir.</p>

@@ -20,10 +20,11 @@ export function AmountBreakdown({ gross, fee, net, feeBps = 300, compact = false
   </dl>;
 }
 
-export function FinanceTabs({ current }: { current: "pendientes" | "historial" }) {
+// Transfers and weekly Cafetería settlements stay distinct destinations (never one ambiguous queue).
+export function FinanceTabs({ current }: { current: "pendientes" | "historial" | "liquidaciones" }) {
   return <nav aria-label="Vistas de finanzas" className="overflow-x-auto"><ul className="flex w-max gap-1 rounded-2xl bg-slate-100 p-1">
-    {([["pendientes", "Por verificar"], ["historial", "Historial"]] as const).map(([key, label]) => <li key={key}>
-      <Link href={key === "pendientes" ? "/platform/finanzas" : "/platform/finanzas?vista=historial"} aria-current={key === current ? "page" : undefined}
+    {([["pendientes", "Por verificar", "/platform/finanzas"], ["historial", "Historial", "/platform/finanzas?vista=historial"], ["liquidaciones", "Liquidaciones", "/platform/finanzas/liquidaciones"]] as const).map(([key, label, href]) => <li key={key}>
+      <Link href={href} aria-current={key === current ? "page" : undefined}
         className={`flex min-h-11 items-center rounded-xl px-4 text-sm font-bold ${key === current ? "bg-white text-slate-950 shadow-sm" : "text-slate-600"}`}>{label}</Link></li>)}
   </ul></nav>;
 }
