@@ -89,7 +89,7 @@ select is((select count(*) from (select ('2026-01-05'::date + 7*g) w from genera
 select set_config('t.w',pikas_private.settlement_week_start(clock_timestamp())::text,true);
 select set_config('t.m0',pg_temp.money(),true);
 select is(pg_temp.attempt($$select pg_temp.fin('select pikas_private.settlement_finalize(''00000000-0000-0000-0000-000000000111'','''||current_setting('t.w')||''',''00000000-0000-0000-0000-0000000f5e01'',''settle-test-key-inactive-1'',clock_timestamp()+interval ''8 days'')')$$),
- '23514:FINANCIAL_POLICY_NOT_ACTIVE','Activation off: finalization refused');
+ '23514:NOTHING_TO_SETTLE','Never activated: no obligation exists, so there is nothing to settle (settlement follows obligations, not current activation)');
 select is(pg_temp.attempt($$select pg_temp.fin('select pikas_private.settlement_finalize((select id from cafeterias where account_id=''03e71159-69e9-4387-9b3b-65799d49faf0'' limit 1),'''||current_setting('t.w')||''',''00000000-0000-0000-0000-0000000f5e01'',''settle-test-key-sandbox-1'',clock_timestamp()+interval ''8 days'')')$$),
  '42501:SETTLEMENT_SANDBOX_REFUSED','Sandbox (Colegio Horizonte): settlement refused');
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');

@@ -8,7 +8,8 @@
 - **Fija e idempotente**: una liquidación por cafetería y semana; cada obligación entra una sola vez; lo que llega tarde entra en la siguiente liquidación marcado como posterior. Neto cero se liquida al calcularse.
 - **Autoridad**: `platform:finance:settlement:manage` existe sin concederse a ningún rol (ni a Platform Admin); la administración de cafetería lee sus propias liquidaciones (`cafeteria:finance:obligations:read`). Escuela, POS, sandbox y Demo sin acceso.
 - **Corrección**: en Finanzas, «Reintentar la misma operación» dentro de la tarea reutiliza ahora exactamente la clave y los datos originales.
-- Migración `202611200001_settlement_financial_operations.sql`. [Detalle](SETTLEMENT_FINANCIAL_OPERATIONS.md).
+- **Fin de la activación**: la activación financiera rige la actividad financiera nueva, no la liquidación de lo ya debido. Si la activación termina (o el cliente o la cafetería se suspenden o cierran), Finanzas de PIKAS sigue pudiendo calcular, revisar y confirmar el pago de las obligaciones creadas mientras estaba activo; no se permite actividad financiera nueva ni se reabre el acceso del cliente.
+- Migraciones `202611200001_settlement_financial_operations.sql` y `202611210001_settlement_after_activation_ends.sql`. [Detalle](SETTLEMENT_FINANCIAL_OPERATIONS.md).
 
 ## PIKAS Cash: cobro de efectivo en la cafetería (FIN 4, local)
 

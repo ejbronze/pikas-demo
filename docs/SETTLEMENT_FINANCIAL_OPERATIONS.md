@@ -4,9 +4,10 @@ Implemented locally on 2026-10-24 (the planned FIN 5 + FIN 6). It builds on FIN 
 (`docs/PIKAS_CASH_FINANCIAL_FOUNDATION.md`), FIN 3 (`docs/PIKAS_CASH_FINANCE_OPERATIONS.md`) and
 FIN 4 (`docs/FIN4_CAFETERIA_CASH_COLLECTION.md`) and changes none of their financial semantics.
 
-- **Migration:** `202611200001_settlement_financial_operations.sql`.
+- **Migrations:** `202611200001_settlement_financial_operations.sql` and `202611210001_settlement_after_activation_ends.sql`.
 - **Tests:**
-  - Database: `supabase/tests/settlement_financial_operations.test.sql`, 93 assertions.
+  - Database: `supabase/tests/settlement_financial_operations.test.sql` (93 assertions) and
+    `supabase/tests/settlement_activation_end.test.sql` (35 assertions).
   - App routes: `app/api/platform/finance/settlement/route.test.ts`, `app/api/cafeteria/settlements/route.test.ts`.
   - Pages: `app/platform/finanzas/liquidaciones/settlements.test.tsx`.
   - Real Chromium: `components/settlements.browser.test.tsx`.
@@ -130,7 +131,7 @@ correction never exceeds the original), and no refund model was invented here.
 | Cafetería Admin with `cafeteria:finance:obligations:read` (granted here) | Read its own settlements: open week, weeks in calculation, settlements, lines and history. PIKAS operators are not named. No state change |
 | School, Account Admin, POS cashier and supervisor | None. The School sees student-level support only |
 | Sandbox customer or Demo POV | Refused (`SETTLEMENT_SANDBOX_REFUSED`, `finance_authority_required`, `demo_mode_active`) |
-| Customer without an active financial activation | Refused (`FINANCIAL_POLICY_NOT_ACTIVE`) |
+| Customer whose activation ended, or that is suspended or closed; Cafetería suspended or inactive | Platform finance still settles its historical obligations (see *Activation ending and lifecycle*). The tenant gets no new financial activity and no reopened access |
 
 **Recommended initial production finance bundle when the owner approves one:**
 
@@ -140,6 +141,44 @@ correction never exceeds the original), and no refund model was invented here.
 - `platform:finance:settlement:manage`
 
 It must not include `platform:finance:adjustments:fund`.
+
+## Activation ending and lifecycle
+
+**Financial activation governs NEW financial activity, not the settlement of obligations that already exist.**
+
+- **New events need an active policy, unchanged.** Cash collection, bank-transfer posting and PIKAS-funded adjustments
+  are refused with `FINANCIAL_POLICY_NOT_ACTIVE`. After activation ends, a POS sale is the pre-activation model again
+  and creates no obligation.
+- **Existing obligations stay settleable.** Every obligation was created under an active policy (FIN 2 writes none
+  otherwise), so settlement eligibility is the obligation itself. This was fixed by
+  `202611210001_settlement_after_activation_ends.sql`; before it, finalization was refused once activation ended.
+  After the end, Platform finance can still:
+  - see the ready week;
+  - finalize it (explicitly or through the run);
+  - put it in review;
+  - confirm its payment or payout.
+- **Customer and Cafetería lifecycle** (suspended, closed, inactive) never gates Platform settlement. Tenant
+  operational access is not reopened: the Cafetería read still requires an active Cafetería Admin scope, so a
+  suspended customer's Cafetería cannot read until it is reactivated. While its access is active, the Cafetería keeps
+  seeing its settlements after activation ends.
+- **Finalized snapshots never change.**
+- **Re-activation** creates a new activation and duplicates nothing. It recreates no obligation, no settlement and no
+  line. New obligations settle in their own later settlement.
+- **Sandbox** stays refused.
+
+## Owner decisions (2026-10-24)
+
+- **Cafetería read access approved:** read-only access to its own settlements via `cafeteria:finance:obligations:read`.
+- **Production finance bundle approved:**
+  - `platform:finance:read`
+  - `platform:finance:replenishments:verify`
+  - `platform:finance:replenishments:reverse`
+  - `platform:finance:settlement:manage`
+
+  Never `platform:finance:adjustments:fund` by default. No production finance member until separately approved.
+- **Calculation stays manual** in this release. Recorded for Pilot Hardening: evaluate automatic calculation of ended
+  weeks each Monday through the same idempotent engine.
+- **Financial activation stays blocked** behind the legal/accounting gate.
 
 ## Security and audit
 
@@ -171,5 +210,3 @@ It must not include `platform:finance:adjustments:fund`.
 - Register cash reconciliation is not a prerequisite. Lines carry REC- references and receipt numbers for
   investigation.
 - No broad reporting (UX10 stays paused), no activation UI, and no production activation.
-- If a customer's activation ends while obligations are unsettled, finalization is refused. That case needs an owner
-  procedure.
