@@ -157,7 +157,8 @@ The School cannot reverse a fee-era cash credit; only legacy credits keep its
 
 ## Not in FIN 4
 
-- No settlement, payouts, batches, weekly closing or reconciliation against register cash.
+- No settlement, payouts, batches, weekly closing or reconciliation against register cash. (Weekly settlement is
+  delivered separately: `docs/SETTLEMENT_FINANCIAL_OPERATIONS.md`.)
 - No Cafetería obligations statement UI.
 - No activation UI and no CEPOINT or production activation.
 - No POS (cashier/supervisor) collection, family-facing replenishment or receipts printing

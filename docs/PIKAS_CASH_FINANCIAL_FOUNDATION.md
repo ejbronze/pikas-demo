@@ -352,7 +352,7 @@ Opening liability and adjustments are never replenishment revenue.
   - The Cafetería statement on `cafeteria_financial_obligations_read`.
   - Weekly views by `settlement_week_start`.
   - Reconciliation against register cash.
-- **FIN 5, settlement:**
+- **FIN 5, settlement:** delivered as Settlement & Financial Operations (`docs/SETTLEMENT_FINANCIAL_OPERATIONS.md`).
   - Settlement batches and payments under `platform:finance:settlement:manage`, which close
     obligations by week (due Tuesday).
   - Requires the legal/accounting approval above before any real money moves.

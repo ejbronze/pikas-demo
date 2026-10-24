@@ -1,5 +1,15 @@
 # Registro de cambios del producto
 
+## Liquidaciones semanales con cada cafetería (Settlement & Financial Operations, local)
+
+- **Liquidaciones**: cada semana (lunes a domingo, hora de Santo Domingo; vence el martes siguiente) PIKAS compara lo que la cafetería debe (efectivo recibido para PIKAS Cash y reembolsos) con lo que PIKAS le debe (ventas pagadas con PIKAS Cash) y fija una liquidación con el bruto en ambos sentidos, el neto y quién paga. **La liquidación registra y concilia obligaciones; no mueve dinero por sí sola.** No se recalcula ni se cobra ningún cargo adicional.
+- **Plataforma · Finanzas → Liquidaciones** (separada de la verificación de transferencias): semanas cerradas por liquidar con todos sus movimientos, «Liquidar semanas cerradas», pendientes de pago o en revisión, historial y detalle. Confirmar un pago o un pago a la cafetería con referencia y fecha; un monto distinto queda registrado y pasa a revisión (sin pagos parciales). La revisión nunca cambia los totales.
+- **Cafetería · Liquidaciones** (solo lectura): semana en curso, semanas en cálculo y liquidaciones con «Debes enviar a PIKAS» / «PIKAS te debe» / «Sin saldo pendiente», cada movimiento con su REC- o número de recibo.
+- **Fija e idempotente**: una liquidación por cafetería y semana; cada obligación entra una sola vez; lo que llega tarde entra en la siguiente liquidación marcado como posterior. Neto cero se liquida al calcularse.
+- **Autoridad**: `platform:finance:settlement:manage` existe sin concederse a ningún rol (ni a Platform Admin); la administración de cafetería lee sus propias liquidaciones (`cafeteria:finance:obligations:read`). Escuela, POS, sandbox y Demo sin acceso.
+- **Corrección**: en Finanzas, «Reintentar la misma operación» dentro de la tarea reutiliza ahora exactamente la clave y los datos originales.
+- Migración `202611200001_settlement_financial_operations.sql`. [Detalle](SETTLEMENT_FINANCIAL_OPERATIONS.md).
+
 ## PIKAS Cash: cobro de efectivo en la cafetería (FIN 4, local)
 
 - **«Recibir efectivo»** en Cafetería · PIKAS Cash: estudiante → efectivo → revisar → confirmar. La revisión muestra **Efectivo recibido**, **Cargo por recarga PIKAS (3 %)** y **Se acredita al monedero**, y exige marcar «Recibí RD$ … en efectivo.». Un doble clic registra una sola vez; un resultado incierto solo ofrece «Reintentar la misma recarga» con la misma clave y los mismos datos.

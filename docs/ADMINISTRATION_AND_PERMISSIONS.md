@@ -97,6 +97,8 @@ Definida por el propietario durante la aceptación productiva de Phase 5B (migra
 | Administrador de cafetería | Solo saldo/estado de clientes que la escuela comparte con su cafetería. Sin historial, recargas, `manage` ni `adjust`; se retira la antigua capacidad `cafeteria:wallets:replenish`. |
 
 **Cobro de efectivo en la cafetería (FIN 4, local):** solo el administrador de cafetería recibe `cafeteria:wallets:collect_cash`, en su cafetería y para estudiantes que la escuela le comparte, y solo en clientes con activación financiera. Comisión del 3 % (redondeo a la mitad hacia arriba) sobre el efectivo; el monedero recibe el neto y la cafetería queda debiendo el bruto a PIKAS. POS, Escuela, Cuenta, Plataforma y POV sandbox no cobran; `cafeteria:wallets:replenish` sigue retirada. Tras la activación la Escuela deja de recargar (`collection_source_required`). Revertir es solo de Finanzas de PIKAS. FIN 4 crea obligaciones; no las liquida. Detalle: `docs/FIN4_CAFETERIA_CASH_COLLECTION.md`.
+
+**Liquidaciones (Settlement & Financial Operations, local):** calcular, confirmar pagos y revisar requiere `platform:finance:settlement:manage`, concedida a ningún rol (tampoco a Platform Admin); consultar requiere `platform:finance:read`. La administración de cafetería lee solo sus propias liquidaciones (`cafeteria:finance:obligations:read`, concedida a `cafeteria_admin`) sin cambiar su estado. Escuela, cuenta, POS, sandbox y Demo no tienen acceso. Detalle: `docs/SETTLEMENT_FINANCIAL_OPERATIONS.md`.
 | Plataforma | Sin acceso permanente. Diferido: acceso de soporte temporal de solo lectura autorizado por el cliente (código/sesión de corta duración, revocable y auditado). |
 | POS | Solo uso operativo del saldo en ventas; sin autoridad administrativa. |
 
