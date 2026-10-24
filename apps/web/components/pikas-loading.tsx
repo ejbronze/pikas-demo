@@ -28,6 +28,7 @@ function useSlow(active: boolean) {
 
 export function PikandoIndicator({ context, slow = false, size = 132 }: { context: string; slow?: boolean; size?: number }) {
   return <div className="pk-loading-indicator" data-slow={slow || undefined}>
+    {/* eslint-disable-next-line @next/next/no-img-element -- animated SVG: its CSS motion only plays as a plain image, and next/image adds nothing for SVG */}
     <img src={assetUrl(motionFiles["LOAD-01"])} width={size} alt="" aria-hidden decoding="async" draggable={false} data-mascot="LOAD-01" data-animated="true" />
     <p className="pk-loading-word" aria-hidden>{PIKANDO}</p>
     {slow && <p className="pk-loading-slow">{SLOW}</p>}
@@ -36,17 +37,21 @@ export function PikandoIndicator({ context, slow = false, size = 132 }: { contex
 }
 
 // Route fallback. `frame` draws the outline of the screen that is coming: "app" for full-page workspaces
-// (School, Cafetería, POS), "content" inside a persistent shell (Platform), "page" for anything else.
-export function PikasLoadingScreen({ context = "Cargando la pantalla.", frame = "page" }: { context?: string; frame?: "app" | "content" | "page" }) {
+// (POS and other full pages), "workspace" for School/Cafetería administration (sidebar + header), "content"
+// inside a persistent shell (Platform), "page" for anything else.
+export function PikasLoadingScreen({ context = "Cargando la pantalla.", frame = "page" }: { context?: string; frame?: "app" | "content" | "page" | "workspace" }) {
   const slow = useSlow(true);
   return <div className="pk-loading-screen" data-frame={frame} role="status" aria-live="polite" aria-busy="true">
     <div className="pk-loading-silhouette" aria-hidden>
-      {frame === "app" && <div className="pk-sil-bar" />}
+      {frame === "workspace" && <div className="pk-sil-side" />}
+      <div className="pk-sil-main">
+      {(frame === "app" || frame === "workspace") && <div className="pk-sil-bar" />}
       <div className="pk-sil-body">
         <div className="pk-sil-title" />
         <div className="pk-sil-line" />
         <div className="pk-sil-grid"><div /><div /><div /></div>
         <div className="pk-sil-block" />
+      </div>
       </div>
     </div>
     <div className="pk-loading-veil" aria-hidden />

@@ -48,6 +48,15 @@ describe("PikasLoadingScreen", () => {
     expect(await page.locator(".pk-loading-veil").evaluate(e => getComputedStyle(e).backdropFilter)).toContain("blur");
     expect(await page.locator(".pk-loading-screen").innerText()).not.toContain("tardando");
   });
+  it("workspace frame outlines the administration sidebar from tablet width and keeps the indicator centered", async () => {
+    await win(`w => w.screen("workspace")`); await page.clock.runFor(1000);
+    expect(await page.locator(".pk-sil-side").evaluate(e => getComputedStyle(e).display)).toBe("block");
+    await page.locator(".pk-loading-indicator").evaluate(e => Promise.all(e.getAnimations().map(a => a.finished)));
+    const box = await page.locator(".pk-loading-indicator").boundingBox(); if (!box) throw Error("indicator");
+    expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThan(4);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.locator(".pk-sil-side").evaluate(e => getComputedStyle(e).display)).toBe("none");
+  });
   it("after ten seconds a visible sentence says the wait is longer than usual", async () => {
     await win(`w => w.screen("content")`); await page.clock.runFor(10_500);
     expect(await page.getByRole("status").innerText()).toContain("Esto está tardando más de lo normal…");
@@ -77,6 +86,7 @@ describe("PikasBusyRegion", () => {
     const overlay = page.locator(".pk-busy-overlay"); await overlay.waitFor();
     expect(await overlay.getAttribute("role")).toBe("status"); expect(await overlay.innerText()).toContain("Pikando…");
     expect(await page.locator(".pk-busy-content").getAttribute("inert")).not.toBeNull();
+    await page.locator(".pk-busy-content").evaluate(e => Promise.all(e.getAnimations().map(a => a.finished)));
     expect(Number(await page.locator(".pk-busy-content").evaluate(e => getComputedStyle(e).opacity))).toBeLessThan(.5);
     await page.locator("#outside").focus(); await page.keyboard.press("Tab");
     expect(await page.evaluate(() => document.activeElement?.textContent ?? "")).not.toMatch(/^Fila/);

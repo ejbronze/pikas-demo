@@ -31,7 +31,7 @@ function ActiveDemoCard({ active }: { active: ActiveDemo }) {
   return <section aria-labelledby="demo-active-title" className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-5">
     <p role="status" className="inline-flex items-center gap-1 rounded-full bg-amber-300/70 px-2 py-0.5 text-xs font-bold text-amber-950"><span aria-hidden>●</span>Demo activo</p>
     <h2 id="demo-active-title" className="mt-2 text-xl font-black">Estás dentro como {active.personaName}</h2>
-    <p className="text-slate-700">{personaRole[active.povCode].role} · {active.cafeteriaName} · {active.accountName}. Vence {when(active.expiresAt)}.</p>
+    <p className="text-slate-700">{personaRole[active.povCode].role} · {active.cafeteriaName} · {active.accountName}. Vence {when(active.expiresAt).replace(/\.$/, "")}.</p>
     <div className="mt-4 flex flex-col gap-2 sm:flex-row">
       <button type="button" className="btn" disabled={busy} onClick={go}>{busy ? "Abriendo…" : `Continuar como ${firstName(active.personaName)}`}</button>
       <ExitDemoButton />
