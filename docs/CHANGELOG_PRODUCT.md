@@ -1,5 +1,17 @@
 # Registro de cambios del producto
 
+## Preparación del piloto (Pilot Hardening, local)
+
+- **«Reportar un problema»** para administradores de cuenta, colegio y cafetería y personal POS (en el POS se abre en otra pestaña). Categorías Técnico, Acceso, Punto de venta, PIKAS Cash, Reporte / datos y Otro. Estados Recibido, En revisión, Necesitamos información, Resuelto y Cerrado. «Mis reportes» muestra solo los propios; el personal de PIKAS aparece como «Soporte PIKAS».
+- **Plataforma · Soporte** (`platform:support:read` / `:manage`, Platform Admin): lista con filtros e «Incluir Demo», detalle con colegio, sede, cafetería, caja, página, versión y navegador; responder, nota interna, pedir información, en revisión, resolver, cerrar y reabrir; historial que no se borra.
+- **Seguridad**: se rechaza texto con contraseñas o tokens; solo se guarda la ruta de la página; claves de solicitud ligadas a la persona y al contenido; 20 reportes por persona y día. Un Demo («Abrir como») no reporta y el personal de un cliente suspendido o cerrado tampoco. Las capturas de pantalla quedan para después.
+- **Demo PIKAS Cash**: la lista y «Requiere atención» del colegio leen con la misma autoridad que el resumen, sin «Sin monedero» junto a monederos contados. La página de cada estudiante abre en Demo en solo lectura; ninguna operación de dinero.
+- **Resumen del colegio**: «Compartición activa» sale de la misma lectura que «Cafetería compartida · COMPLETO», también en Demo.
+- **Detalle de movimientos**: ya no muestra identificadores internos (por ejemplo «Recarga 82fce881-…»).
+- **Fechas del colegio**: la fecha por defecto al crear estudiantes y las validaciones y valores por defecto de matrícula, traslado, retiro y vínculos usan la fecha de Santo Domingo, también después de las 20:00.
+- **Seguridad de funciones**: ninguna función privada conserva EXECUTE para PUBLIC.
+- Migraciones `202611240001` a `202611240008`. Guías operativas: activación financiera, respuesta a incidentes, soporte, lista de preparación del piloto y borradores de privacidad y términos para revisión legal. [Detalle](PILOT_HARDENING.md).
+
 ## Reportes de la Plataforma (Reporting Consolidation, local)
 
 - **Plataforma · Reportes** (con lectura de operaciones de clientes o lectura financiera): **Clientes** (ciclo de vida, presencia —colegios, sedes, cafeterías y cajas por estado— y puesta en marcha), **Red y adopción** (cafeterías en operación: lista para operar, servicio a estudiantes y ventas en el período, cada una con su definición y sin puntuación) y **Finanzas (resumen)** solo con lectura financiera (activación, recargas, obligaciones y liquidaciones; las acciones siguen en Finanzas).

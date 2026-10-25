@@ -8,6 +8,12 @@ El [registro canónico de Phase 4D](PRODUCT_BASELINE.md) enumera los componentes
 
 La aceptación probó un cliente nuevo hasta una venta No Usuario + Efectivo comprometida con recibo. La búsqueda POS del estudiante recién inscrito queda como seguimiento acotado; no se declara probado ese camino de venta estudiantil. Las capacidades completadas no equivalen a pruebas individuales de cada función durante 4D.8.
 
+## Soporte del piloto (Pilot Hardening, local)
+
+- **Clientes**: «Reportar un problema» desde el menú de cuenta (escuela, cafetería) y la cabecera del POS; «Mis reportes» con la conversación y respuestas mientras el cliente esté activo.
+- **Plataforma · Soporte**: cola de tickets con filtros (estado, categoría, búsqueda, Incluir Demo), detalle con contexto del servidor (colegio, sede, cafetería, caja, página, versión, navegador) y acciones: responder, nota interna, pedir información, en revisión, resolver, cerrar, reabrir.
+- Sin capturas de pantalla todavía, sin notificaciones por correo y sin reportes de familias. Operación: [SUPPORT_OPERATIONS.md](SUPPORT_OPERATIONS.md).
+
 ## Backoffice: Agregar colegio y Customer Management (local)
 
 - **Agregar colegio** (`platform:tenant:provision`): una página con nombre, RNC, dirección, República Dominicana fija y provincia canónica; códigos generados por PIKAS; cliente, colegio, sede y cafetería principales en una transacción. Administrador del colegio por el flujo Phase 6A existente.
