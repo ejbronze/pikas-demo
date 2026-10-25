@@ -46,6 +46,11 @@ create function pg_temp.untouched() returns text language sql security definer a
  (select count(*) from public.replenishment_requests),(select count(*) from public.wallet_replenishments),
  (select count(*) from public.financial_entries where entry_type in ('replenishment_gross_collected','replenishment_fee_earned','stored_value_issued','clearing_funded_adjustment')),
  (select count(*) from public.customer_financial_activations where status='active')) $$;
+-- Test clock: business dates and settlement weeks are America/Santo_Domingo, never the session's UTC date or "now + N days"
+-- (which on a Sunday already crosses two week ends). after_week(k) is one hour after week W+k ends.
+create function pg_temp.sd_today() returns date language sql as $$select (clock_timestamp() at time zone 'America/Santo_Domingo')::date$$;
+create function pg_temp.after_week(k integer) returns timestamptz language sql as $$
+ select pikas_private.settlement_period_end(current_setting('t.w')::date + 7*k) + interval '1 hour'$$;
 grant execute on all functions in schema pg_temp to authenticated;
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
@@ -75,7 +80,7 @@ select is((pg_temp.payable(current_setting('t.p4')::uuid)).id,null,'F. The cash 
 select set_config('t.a3',pg_temp.approve(current_setting('t.p3')::uuid,1,'settle-refund-appr-p3-01')::text,true);
 select pg_temp.refund(current_setting('t.p3')::uuid,1,'settle-refund-p3-key-0001',current_setting('t.a3')::uuid);
 select is(pg_temp.corrections(current_setting('t.p3')::uuid),'wallet_refund_correction:5000','D. Same-period refund while active: correction RD$ 50 (existing behavior)');
-select set_config('t.s1',pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f7e01','settle-refund-final-key-1',clock_timestamp()+interval '8 days')$$)::text,true);
+select set_config('t.s1',pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f7e01','settle-refund-final-key-1',pg_temp.after_week(0))$$)::text,true);
 select is((select concat_ws('/',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'net_direction',x->>'net_amount_minor',x->>'line_count') from (select current_setting('t.s1')::jsonb x) y),
  '105000/65000/cafeteria_to_clearing/40000/6','D. The original week settles with the same-period refund inside it (cash 1,000 + refund 50 vs sales 650)');
 select set_config('t.ref1',current_setting('t.s1')::jsonb->>'reference',true);
@@ -139,7 +144,7 @@ select ok(pg_temp.attempt($$select pg_temp.approve('$$||current_setting('t.p5')|
 select is((select count(*) from financial_obligations)::text,current_setting('t.c0'),'I. …and nothing is written');
 
 -- ── B. Settle after the refunds, activation still ended (customer suspended) ───────────────────
-select set_config('t.s2',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f7e01','settle-refund-run-key-01',clock_timestamp()+interval '15 days')$$)::text,true);
+select set_config('t.s2',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f7e01','settle-refund-run-key-01',pg_temp.after_week(1))$$)::text,true);
 select is((select concat_ws('/',x->>'week_start',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'net_direction',x->>'net_amount_minor',x->>'line_count',x->>'late_line_count')
  from (select current_setting('t.s2')::jsonb->'finalized'->0 x) y),(current_setting('t.w')::date+7)||'/40000/0/cafeteria_to_clearing/40000/3/3',
  'B/C. The next settlement carries the three historical corrections (100 + 200 + 100) as late lines: the Cafetería returns RD$ 400');
@@ -150,7 +155,7 @@ select is((select count(*) from settlement_lines l join financial_obligations o 
 select pg_temp.as_operator('00000000-0000-0000-0000-0000000f7d01');
 select ok((select bool_and(e->>'receipt_number' is not null and (e->>'late')::boolean) from jsonb_array_elements(platform_finance_settlement_detail(current_setting('t.s2')::jsonb->'finalized'->0->>'reference')->'lines') e),
  'C. The detail shows each correction with the original receipt, marked late');
-select is((platform_finance_settlement_confirm_payment(current_setting('t.s2')::jsonb->'finalized'->0->>'reference',40000,'TRX-REEMB-01',current_date,null,'settle-refund-pay-key-01')->>'status'),'settled',
+select is((platform_finance_settlement_confirm_payment(current_setting('t.s2')::jsonb->'finalized'->0->>'reference',40000,'TRX-REEMB-01',pg_temp.sd_today(),null,'settle-refund-pay-key-01')->>'status'),'settled',
  'B. Payment of the correction settlement confirmed while activation is ended and the customer suspended');
 reset role;
 select is((select count(*) from (select obligation_id from settlement_lines group by 1 having count(*)>1) x),0::bigint,'No obligation in two settlements');

@@ -910,7 +910,7 @@ select throws_ok($$insert into public.register_sessions(account_id,school_id,sch
   '00000000-0000-0000-0000-000000000211','00000000-0000-0000-0000-000000000111',
   '00000000-0000-0000-0000-000000009401','00000000-0000-0000-0000-000000009501',
   '00000000-0000-0000-0000-000000004601','00000000-0000-0000-0000-000000001008','pos_cashier',
-  'CAJA-1','Caja 1',now(),current_date,'America/Santo_Domingo','DOP',0,
+  'CAJA-1','Caja 1',now(),(clock_timestamp() at time zone 'America/Santo_Domingo')::date,'America/Santo_Domingo','DOP',0,
   'direct-session-request-0001',repeat('a',64))$$,'42501',null,
   'RLS denies direct session insert despite broadened grants');
 with changed as (update public.cafeteria_registers set display_name='Direct rewrite',version=999

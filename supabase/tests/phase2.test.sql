@@ -45,7 +45,7 @@ select ok((select auth_user_id is not null from persons where id='00000000-0000-
   'Staff person may be linked to Auth independently');
 select throws_ok($$update students set status='inactive' where id='00000000-0000-0000-0000-000000005201'$$,
   '23514',null,'Student cannot be deactivated while a current enrollment remains');
-select throws_ok($$update student_enrollments set status='withdrawn',ends_on=current_date
+select throws_ok($$update student_enrollments set status='withdrawn',ends_on=(clock_timestamp() at time zone 'America/Santo_Domingo')::date
   where id='00000000-0000-0000-0000-000000005302'$$,
   '23514',null,'Enrollment cannot be ended while its current placement remains active');
 
@@ -61,7 +61,7 @@ select throws_ok($$insert into students(account_id,school_id,person_id,student_c
   '23503',null,'Student cannot combine account and school ancestry');
 select throws_ok($$insert into student_enrollments(account_id,school_id,student_id,starts_on)
   values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
-  '00000000-0000-0000-0000-000000005201',current_date)$$,
+  '00000000-0000-0000-0000-000000005201',(clock_timestamp() at time zone 'America/Santo_Domingo')::date)$$,
   '23P01',null,'Student cannot have a second current enrollment');
 select throws_ok($$insert into student_enrollments(account_id,school_id,student_id,starts_on,ends_on,status)
   values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
@@ -73,18 +73,18 @@ values ('00000000-0000-0000-0000-000000005203','00000000-0000-0000-0000-00000000
   '00000000-0000-0000-0000-000000005197','STU-003','Placement','Test','Placement Test Student');
 select throws_ok($$insert into student_enrollments(account_id,school_id,student_id,starts_on)
   values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
-  '00000000-0000-0000-0000-000000005203',current_date+1)$$,
+  '00000000-0000-0000-0000-000000005203',(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)$$,
   '23514',null,'Future-dated enrollment cannot be marked current');
 insert into public.student_enrollments(id,account_id,school_id,student_id,starts_on)
 values ('00000000-0000-0000-0000-000000005304','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
-  '00000000-0000-0000-0000-000000005203',current_date);
+  '00000000-0000-0000-0000-000000005203',(clock_timestamp() at time zone 'America/Santo_Domingo')::date);
 select throws_ok($$insert into student_campus_placements(account_id,school_id,enrollment_id,school_location_id,starts_on)
   values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
-  '00000000-0000-0000-0000-000000005304','00000000-0000-0000-0000-000000000211',current_date+1)$$,
+  '00000000-0000-0000-0000-000000005304','00000000-0000-0000-0000-000000000211',(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)$$,
   '23514',null,'Future-dated placement cannot be marked current');
 select throws_ok($$insert into student_campus_placements(account_id,school_id,enrollment_id,school_location_id,starts_on,ends_on,status)
   values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
-  '00000000-0000-0000-0000-000000005304','00000000-0000-0000-0000-000000000221',current_date,current_date+1,'ended')$$,
+  '00000000-0000-0000-0000-000000005304','00000000-0000-0000-0000-000000000221',(clock_timestamp() at time zone 'America/Santo_Domingo')::date,(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1,'ended')$$,
   '23503',null,'Placement cannot use another account campus');
 select throws_ok($$insert into student_campus_placements(account_id,school_id,enrollment_id,school_location_id,starts_on)
   values('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
@@ -192,49 +192,49 @@ select is((select count(*) from family_student_relationships r join students s o
   'Idempotent family association does not duplicate active link');
 select lives_ok($$select public.end_family_student_relationship('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select r.id from family_student_relationships r join students s on s.id=r.student_id
-  join families f on f.id=r.family_id where s.code_key='test-001' and f.code_key='test-fam' and r.status='active'),current_date+1)$$,
+  join families f on f.id=r.family_id where s.code_key='test-001' and f.code_key='test-fam' and r.status='active'),(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)$$,
   'School Admin ends a family/student relationship without deleting history');
 select is((select count(*) from family_student_relationships r join students s on s.id=r.student_id
   join families f on f.id=r.family_id where s.code_key='test-001' and f.code_key='test-fam' and r.status='ended'),1::bigint,
   'Ended family/student relationship remains historical');
 select lives_ok($$select public.enroll_student('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select id from students where code_key='test-001'),
-  current_date-12,'00000000-0000-0000-0000-000000000211','Grade 1','1-A')$$,
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date-12,'00000000-0000-0000-0000-000000000211','Grade 1','1-A')$$,
   'School Admin creates enrollment and initial campus placement');
 select lives_ok($$select public.enroll_student('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select id from students where code_key='test-001'),
-  current_date-12,'00000000-0000-0000-0000-000000000211','Grade 1','1-A')$$,
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date-12,'00000000-0000-0000-0000-000000000211','Grade 1','1-A')$$,
   'Identical enrollment retry returns the existing enrollment');
 select throws_ok($$select public.set_student_status('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select id from students where code_key='test-001'),'inactive')$$,
   '23514',null,'Student cannot be deactivated while enrolled');
 select throws_ok($$select public.transfer_student_campus('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select e.id from student_enrollments e join students s on s.id=e.student_id where s.code_key='test-001' and e.status='active'),
-  current_date+1,'00000000-0000-0000-0000-000000000213','Grade 2','2-A')$$,
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date+1,'00000000-0000-0000-0000-000000000213','Grade 2','2-A')$$,
   '22023',null,'Future-effective transfer is rejected instead of replacing current placement early');
 select throws_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select e.id from student_enrollments e join students s on s.id=e.student_id where s.code_key='test-001' and e.status='active'),
-  current_date+1)$$,'22023',null,'Future-effective withdrawal is rejected');
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)$$,'22023',null,'Future-effective withdrawal is rejected');
 select lives_ok($$select public.transfer_student_campus('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select e.id from student_enrollments e join students s on s.id=e.student_id where s.code_key='test-001' and e.status='active'),
-  current_date-10,'00000000-0000-0000-0000-000000000213','Grade 2','2-A')$$,
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date-10,'00000000-0000-0000-0000-000000000213','Grade 2','2-A')$$,
   'Campus transfer closes prior placement and starts a new placement');
 select lives_ok($$select public.transfer_student_campus('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select e.id from student_enrollments e join students s on s.id=e.student_id where s.code_key='test-001' and e.status='active'),
-  current_date-10,'00000000-0000-0000-0000-000000000213','Grade 2','2-A')$$,
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date-10,'00000000-0000-0000-0000-000000000213','Grade 2','2-A')$$,
   'Identical campus transfer retry returns the current placement');
 select is((select count(*) from student_campus_placements p join student_enrollments e on e.id=p.enrollment_id
   join students s on s.id=e.student_id where s.code_key='test-001' and p.status='active'),1::bigint,
   'Transfer retains exactly one current placement');
 select lives_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select e.id from student_enrollments e join students s on s.id=e.student_id where s.code_key='test-001' and e.status='active'),
-  current_date-8)$$,'Withdrawal closes active placement and enrollment');
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date-8)$$,'Withdrawal closes active placement and enrollment');
 select lives_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select e.id from student_enrollments e join students s on s.id=e.student_id where s.code_key='test-001' and e.status='withdrawn'),
-  current_date-8)$$,'Identical withdrawal retry succeeds without changing history');
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date-8)$$,'Identical withdrawal retry succeeds without changing history');
 select lives_ok($$select public.enroll_student('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select id from students where code_key='test-001'),
-  current_date-6,null,'Grade 2')$$,'Re-enrollment preserves student identity');
+  (clock_timestamp() at time zone 'America/Santo_Domingo')::date-6,null,'Grade 2')$$,'Re-enrollment preserves student identity');
 select is((select count(*) from student_enrollments e join students s on s.id=e.student_id
   where s.code_key='test-001' and e.status='active'),1::bigint,'Re-enrolled student has one current enrollment');
 select lives_ok($$select public.add_student_guardian('00000000-0000-0000-0000-000000000001',
@@ -242,7 +242,7 @@ select lives_ok($$select public.add_student_guardian('00000000-0000-0000-0000-00
   '00000000-0000-0000-0000-000000005198','guardian')$$,'School Admin records guardian relationship without granting login');
 select lives_ok($$select public.end_student_guardian_relationship('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select g.id from student_guardians g join students s on s.id=g.student_id
-  where s.code_key='test-001' and g.person_id='00000000-0000-0000-0000-000000005198' and g.status='active'),current_date+1)$$,
+  where s.code_key='test-001' and g.person_id='00000000-0000-0000-0000-000000005198' and g.status='active'),(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)$$,
   'School Admin revokes a student-specific guardian relationship');
 select is((select count(*) from student_guardians g join students s on s.id=g.student_id
   where s.code_key='test-001' and g.status='ended'),1::bigint,'Guardian revocation preserves its relationship history');
@@ -261,7 +261,7 @@ select lives_ok($$select public.add_staff_campus_affiliation('00000000-0000-0000
   '00000000-0000-0000-0000-000000000011',(select id from school_staff_affiliations where employee_code_key='test-staff'),
   '00000000-0000-0000-0000-000000000213')$$,'School Admin associates staff with a campus');
 select lives_ok($$select public.deactivate_school_staff_affiliation('00000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000011',(select id from school_staff_affiliations where employee_code_key='test-staff'),current_date+1)$$,
+  '00000000-0000-0000-0000-000000000011',(select id from school_staff_affiliations where employee_code_key='test-staff'),(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)$$,
   'Staff deactivation closes active campus affiliations');
 select is((select count(*) from staff_campus_affiliations c join school_staff_affiliations s on s.id=c.staff_affiliation_id
   where s.employee_code_key='test-staff' and c.status='ended'),1::bigint,'Staff campus history remains after affiliation ends');
@@ -269,7 +269,7 @@ select lives_ok($$select public.add_student_restriction('00000000-0000-0000-0000
   '00000000-0000-0000-0000-000000000011',(select id from students where code_key='test-001'),
   'allergen','tree-nut','Tree nut')$$,'School Admin records operational restriction');
 select lives_ok($$select public.deactivate_student_restriction('00000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000011',(select id from student_dietary_restrictions where code_key='tree-nut'),current_date+1)$$,
+  '00000000-0000-0000-0000-000000000011',(select id from student_dietary_restrictions where code_key='tree-nut'),(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)$$,
   'School Admin deactivates an outdated restriction');
 select is((select count(*) from student_dietary_restrictions where code_key='tree-nut' and status='inactive'),1::bigint,
   'Inactive restriction remains historical');
@@ -373,18 +373,18 @@ select is((select count(*) from cafeteria_customer_projection('00000000-0000-000
   'Inactive customer link is excluded from lookup');
 reset role;
 update public.cafeteria_customers set status='active' where id='00000000-0000-0000-0000-000000006901';
-update public.student_campus_placements set status='ended',ends_on=current_date
+update public.student_campus_placements set status='ended',ends_on=(clock_timestamp() at time zone 'America/Santo_Domingo')::date
   where id='00000000-0000-0000-0000-000000005402';
-update public.student_enrollments set status='withdrawn',ends_on=current_date
+update public.student_enrollments set status='withdrawn',ends_on=(clock_timestamp() at time zone 'America/Santo_Domingo')::date
   where id='00000000-0000-0000-0000-000000005302';
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002007',true);
 set local role authenticated;
 select is((select count(*) from cafeteria_customer_projection('00000000-0000-0000-0000-000000000111','STU-001')),0::bigint,
   'Withdrawn student is excluded from lookup');
 reset role;
-update public.staff_campus_affiliations set status='ended',ends_on=current_date+1
+update public.staff_campus_affiliations set status='ended',ends_on=(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1
   where id='00000000-0000-0000-0000-000000006601';
-update public.school_staff_affiliations set status='inactive',ends_on=current_date+1
+update public.school_staff_affiliations set status='inactive',ends_on=(clock_timestamp() at time zone 'America/Santo_Domingo')::date+1
   where id='00000000-0000-0000-0000-000000006501';
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002007',true);
 set local role authenticated;
@@ -430,7 +430,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002002'
 set local role authenticated;
 select lives_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select e.id from student_enrollments e join students s on s.id=e.student_id
-  where s.code_key='test-001' and e.status='active'),current_date-4)$$,
+  where s.code_key='test-001' and e.status='active'),(clock_timestamp() at time zone 'America/Santo_Domingo')::date-4)$$,
   'School Admin withdraws student before deactivation');
 select lives_ok($$select public.set_student_status('00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000011',(select id from students where code_key='test-001'),'inactive')$$,

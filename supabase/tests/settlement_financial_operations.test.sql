@@ -39,6 +39,11 @@ create function pg_temp.settlements() returns bigint language sql security defin
 create function pg_temp.money() returns text language sql security definer as $$ select concat_ws('|',
  (select count(*) from public.financial_entries),(select count(*) from public.financial_obligations),(select sum(current_balance_minor) from public.student_wallets),
  (select count(*) from public.wallet_ledger_entries),(select count(*) from public.purchases),(select count(*) from public.refunds),(select count(*) from public.replenishment_requests)) $$;
+-- Test clock: business dates and settlement weeks are America/Santo_Domingo, never the session's UTC date or "now + N days"
+-- (which on a Sunday already crosses two week ends). after_week(k) is one hour after week W+k ends.
+create function pg_temp.sd_today() returns date language sql as $$select (clock_timestamp() at time zone 'America/Santo_Domingo')::date$$;
+create function pg_temp.after_week(k integer) returns timestamptz language sql as $$
+ select pikas_private.settlement_period_end(current_setting('t.w')::date + 7*k) + interval '1 hour'$$;
 grant execute on all functions in schema pg_temp to authenticated;
 
 -- Fictional finance operators: F1 read + settlement manage; F2 read only. Local roles, removed by rollback.
@@ -139,7 +144,7 @@ select is(pg_temp.attempt($$select cafeteria_settlements_read('00000000-0000-000
 reset role;
 
 -- ── Finalize W (week ended): Cafetería owes 205000, PIKAS owes 85000 → Cafetería sends 120000 ──
-select set_config('t.f1',pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f5e01','settle-test-key-final-01',clock_timestamp()+interval '8 days')$$)::text,true);
+select set_config('t.f1',pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f5e01','settle-test-key-final-01',pg_temp.after_week(0))$$)::text,true);
 select is((select concat_ws('/',x->>'status',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'net_direction',x->>'net_amount_minor',x->>'line_count',x->>'late_line_count',x->>'replayed')
  from (select current_setting('t.f1')::jsonb x) y),'due/205000/85000/cafeteria_to_clearing/120000/4/0/false','Finalized: gross both ways preserved, net Cafetería → PIKAS 120000, due');
 select is((current_setting('t.f1')::jsonb->>'due_on')::date,current_setting('t.w')::date+8,'Due the following Tuesday');
@@ -151,9 +156,9 @@ select is((select count(*) from financial_obligations o where o.cafeteria_id='00
 select is((select sum(amount_minor) filter (where direction='cafeteria_to_clearing')||'/'||sum(amount_minor) filter (where direction='clearing_to_cafeteria') from settlement_lines l join settlements s on s.id=l.settlement_id
  where s.reference=current_setting('t.ref1')),'205000/85000','Lines add up to the snapshot (no fee recalculated: cash obligation is gross 200000)');
 -- Idempotent: the same period again (another key, another run) returns the same settlement.
-select is((pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f5e01','settle-test-key-final-02',clock_timestamp()+interval '8 days')$$)
+select is((pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f5e01','settle-test-key-final-02',pg_temp.after_week(0))$$)
  ->>'reference'),current_setting('t.ref1'),'Repeat finalization replays the same settlement');
-select is((pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0001',clock_timestamp()+interval '8 days')$$)->>'count')::int,0,
+select is((pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0001',pg_temp.after_week(0))$$)->>'count')::int,0,
  'Run after finalization: nothing left to finalize');
 select is(pg_temp.settlements(),1::bigint,'Still one settlement for the period');
 select ok(exists(select 1 from audit_events where action='settlement_finalized' and actor_person_id='00000000-0000-0000-0000-0000000f5e01' and actor_role='platform_finance_operator'
@@ -171,9 +176,9 @@ select is(pg_temp.attempt($$insert into settlement_lines(settlement_id,account_i
 -- ── Late activity: a refund of the closed week's sale goes to a later settlement, never into the finalized one ──
 select pg_temp.refund(current_setting('t.pa')::uuid,4,'settle-refund-a-0001');
 select is((select cafeteria_owes_minor||'/'||clearing_owes_minor||'/'||line_count from settlements where reference=current_setting('t.ref1')),'205000/85000/4','Finalized settlement unchanged by the later refund');
-select is((pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0002',clock_timestamp()+interval '8 days')$$)->>'count')::int,0,
+select is((pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0002',pg_temp.after_week(0))$$)->>'count')::int,0,
  'While its own week is settled and no later week has ended, the refund waits in the open period');
-select set_config('t.r2',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0003',clock_timestamp()+interval '15 days')$$)::text,true);
+select set_config('t.r2',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0003',pg_temp.after_week(1))$$)::text,true);
 select is((select concat_ws('/',x->>'week_start',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'net_direction',x->>'net_amount_minor',x->>'late_line_count')
  from (select current_setting('t.r2')::jsonb->'finalized'->0 x) y),(current_setting('t.w')::date+7)||'/20000/0/cafeteria_to_clearing/20000/1',
  'Next ended week carries the late refund (RD$ 200, marked late)');
@@ -185,7 +190,7 @@ select is((select l.late::text||':'||l.obligation_week_start from settlement_lin
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
 select ok((cafeteria_wallet_collect_cash('00000000-0000-0000-0000-000000000111','00000000-0000-0000-0000-000000005201',10000,null,'5e000000-0000-4000-8000-000000000002')->>'reference') is not null,'Cash RD$ 100');
 select pg_temp.as_user('00000000-0000-0000-0000-000000002008'); select pg_temp.sale('settle-sale-key-zero01',2); reset role;
-select set_config('t.r3',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0004',clock_timestamp()+interval '22 days')$$)::text,true);
+select set_config('t.r3',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0004',pg_temp.after_week(2))$$)::text,true);
 select is((select concat_ws('/',x->>'status',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'net_direction',x->>'net_amount_minor')
  from (select current_setting('t.r3')::jsonb->'finalized'->0 x) y),'settled/10000/10000/none/0','Net zero: RD$ 0, settled at finalization, no payment');
 select is((select count(*) from settlement_events e join settlements s on s.id=e.settlement_id where s.reference=current_setting('t.r3')::jsonb->'finalized'->0->>'reference' and e.kind like 'payment%'),0::bigint,
@@ -193,7 +198,7 @@ select is((select count(*) from settlement_events e join settlements s on s.id=e
 
 -- ── PIKAS owes: wallet sales RD$ 200 only → clearing → Cafetería 20000 ──
 select pg_temp.as_user('00000000-0000-0000-0000-000000002008'); select pg_temp.sale('settle-sale-key-pikas1',4); reset role;
-select set_config('t.r4',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0005',clock_timestamp()+interval '29 days')$$)::text,true);
+select set_config('t.r4',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f5e01','settle-test-key-run-0005',pg_temp.after_week(3))$$)::text,true);
 select is((select concat_ws('/',x->>'status',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'net_direction',x->>'net_amount_minor')
  from (select current_setting('t.r4')::jsonb->'finalized'->0 x) y),'due/0/20000/clearing_to_cafeteria/20000','PIKAS owes the Cafetería RD$ 200');
 select set_config('t.ref4',current_setting('t.r4')::jsonb->'finalized'->0->>'reference',true);
@@ -204,16 +209,16 @@ select is((select count(*) from settlement_lines)::bigint,(select count(*) from 
 
 -- ── Payment confirmation ───────────────────────────────────────────────────────────────────────
 select pg_temp.as_operator('00000000-0000-0000-0000-0000000f5d01');
-select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TX',current_date,null,'settle-pay-key-0000001')$$),'22023:INVALID_PAYMENT_REFERENCE','Payment reference required (3+)');
-select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TRX-0001',current_date+3,null,'settle-pay-key-0000002')$$),'22023:INVALID_PAYMENT_DATE','Payment date cannot be in the future');
+select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TX',pg_temp.sd_today(),null,'settle-pay-key-0000001')$$),'22023:INVALID_PAYMENT_REFERENCE','Payment reference required (3+)');
+select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TRX-0001',pg_temp.sd_today()+3,null,'settle-pay-key-0000002')$$),'22023:INVALID_PAYMENT_DATE','Payment date cannot be in the future');
 -- A different amount is recorded and sent to review, never settled partially.
-select is((platform_finance_settlement_confirm_payment(current_setting('t.ref1'),100000,'TRX-0001',current_date,'Llegó menos','settle-pay-key-0000003')->>'status'),'in_review',
+select is((platform_finance_settlement_confirm_payment(current_setting('t.ref1'),100000,'TRX-0001',pg_temp.sd_today(),'Llegó menos','settle-pay-key-0000003')->>'status'),'in_review',
  'Payment RD$ 1,000 against RD$ 1,200: recorded as a mismatch, settlement goes to review');
-select set_config('t.pay',(platform_finance_settlement_confirm_payment(current_setting('t.ref1'),120000,'TRX-0002',current_date,null,'settle-pay-key-0000004'))::text,true);
+select set_config('t.pay',(platform_finance_settlement_confirm_payment(current_setting('t.ref1'),120000,'TRX-0002',pg_temp.sd_today(),null,'settle-pay-key-0000004'))::text,true);
 select is((current_setting('t.pay')::jsonb->>'status')||'/'||(current_setting('t.pay')::jsonb->>'event'),'settled/payment_confirmed','Exact amount: settled');
-select is((platform_finance_settlement_confirm_payment(current_setting('t.ref1'),120000,'TRX-0002',current_date,null,'settle-pay-key-0000004')->>'replayed')::boolean,true,'Same key, same payment: replay');
-select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TRX-0099',current_date,null,'settle-pay-key-0000004')$$),'23505:IDEMPOTENCY_CONFLICT','Same key, other payment: conflict');
-select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TRX-0003',current_date,null,'settle-pay-key-0000005')$$),'23514:SETTLEMENT_ALREADY_SETTLED','A settled settlement cannot be paid again');
+select is((platform_finance_settlement_confirm_payment(current_setting('t.ref1'),120000,'TRX-0002',pg_temp.sd_today(),null,'settle-pay-key-0000004')->>'replayed')::boolean,true,'Same key, same payment: replay');
+select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TRX-0099',pg_temp.sd_today(),null,'settle-pay-key-0000004')$$),'23505:IDEMPOTENCY_CONFLICT','Same key, other payment: conflict');
+select is(pg_temp.attempt($$select platform_finance_settlement_confirm_payment('$$||current_setting('t.ref1')||$$',120000,'TRX-0003',pg_temp.sd_today(),null,'settle-pay-key-0000005')$$),'23514:SETTLEMENT_ALREADY_SETTLED','A settled settlement cannot be paid again');
 reset role;
 select is((select string_agg(kind||':'||coalesce(from_status,'-')||'>'||to_status||':'||coalesce(amount_minor::text,'-'),',' order by e.occurred_at,e.id) from settlement_events e join settlements s on s.id=e.settlement_id
  where s.reference=current_setting('t.ref1')),'finalized:->due:-,payment_mismatch:due>in_review:100000,payment_confirmed:in_review>settled:120000','Event history: finalized → mismatch → confirmed');

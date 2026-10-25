@@ -30,6 +30,11 @@ create function pg_temp.money() returns text language sql security definer as $$
  (select count(*) from public.wallet_ledger_entries),(select count(*) from public.replenishment_requests),(select count(*) from public.wallet_adjustments)) $$;
 create function pg_temp.obligations() returns text language sql security definer as $$
  select string_agg(reason||':'||amount_minor,',' order by reason,amount_minor) from public.financial_obligations where cafeteria_id='00000000-0000-0000-0000-000000000111'$$;
+-- Test clock: business dates and settlement weeks are America/Santo_Domingo, never the session's UTC date or "now + N days"
+-- (which on a Sunday already crosses two week ends). after_week(k) is one hour after week W+k ends.
+create function pg_temp.sd_today() returns date language sql as $$select (clock_timestamp() at time zone 'America/Santo_Domingo')::date$$;
+create function pg_temp.after_week(k integer) returns timestamptz language sql as $$
+ select pikas_private.settlement_period_end(current_setting('t.w')::date + 7*k) + interval '1 hour'$$;
 grant execute on all functions in schema pg_temp to authenticated;
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at,raw_app_meta_data,raw_user_meta_data)
@@ -87,19 +92,19 @@ select set_config('t.m2',pg_temp.money(),true);
 select pg_temp.as_operator('00000000-0000-0000-0000-0000000f6d01');
 select is(jsonb_array_length(platform_finance_settlements_read('action',null)->'ready'),0,'Week still open (real clock): nothing ready yet');
 reset role;
-select set_config('t.f',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f6e01','settle-end-run-key-0001',clock_timestamp()+interval '8 days')$$)::text,true);
+select set_config('t.f',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f6e01','settle-end-run-key-0001',pg_temp.after_week(0))$$)::text,true);
 select is((select concat_ws('/',x->>'status',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'net_direction',x->>'net_amount_minor',x->>'line_count')
  from (select current_setting('t.f')::jsonb->'finalized'->0 x) y),'due/200000/10000/cafeteria_to_clearing/190000/2',
  'Activation ended + customer and Cafetería suspended: the historical week is still calculated with both obligations');
 select set_config('t.ref',current_setting('t.f')::jsonb->'finalized'->0->>'reference',true);
-select is((pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f6e01','settle-end-final-key-01',clock_timestamp()+interval '8 days')$$)->>'replayed')::boolean,true,
+select is((pg_temp.fin($$select pikas_private.settlement_finalize('00000000-0000-0000-0000-000000000111','$$||current_setting('t.w')||$$','00000000-0000-0000-0000-0000000f6e01','settle-end-final-key-01',pg_temp.after_week(0))$$)->>'replayed')::boolean,true,
  'Direct finalization of the same week replays it');
 update accounts set status='closed' where id='00000000-0000-0000-0000-000000000001';
 update cafeterias set status='inactive' where id='00000000-0000-0000-0000-000000000111';
 select pg_temp.as_operator('00000000-0000-0000-0000-0000000f6d01');
 select is((platform_finance_settlement_detail(current_setting('t.ref'))->>'status'),'due','Closed customer, inactive Cafetería: Platform finance still reads the settlement');
 select is((platform_finance_settlement_review(current_setting('t.ref'),'open','cafeteria_dispute','Revisión tras el cierre del piloto','settle-end-rev-key-00001')->>'status'),'in_review','…can place it in review');
-select is((platform_finance_settlement_confirm_payment(current_setting('t.ref'),190000,'TRX-CIERRE-01',current_date,'Pago final del piloto','settle-end-pay-key-00001')->>'status'),'settled','…and confirm its payment: settled');
+select is((platform_finance_settlement_confirm_payment(current_setting('t.ref'),190000,'TRX-CIERRE-01',pg_temp.sd_today(),'Pago final del piloto','settle-end-pay-key-00001')->>'status'),'settled','…and confirm its payment: settled');
 select is((select concat_ws('/',jsonb_array_length(x->'settlements'),x->'settlements'->0->>'status') from (select platform_finance_settlements_read('history',null) x) y),'1/settled','History shows it settled');
 reset role;
 select is(pg_temp.money(),current_setting('t.m2'),'Settling wrote no financial entry, obligation, request, adjustment or wallet change');
@@ -116,7 +121,7 @@ update cafeterias set status='active' where id='00000000-0000-0000-0000-00000000
 select ok((pikas_private.finance_activate_customer('00000000-0000-0000-0000-000000000001',1,'Reanudación ficticia','settle-end-activation-02')->>'activation_id') is not null,'Financial activation resumes');
 select is((select count(*) from customer_financial_activations where account_id='00000000-0000-0000-0000-000000000001'),2::bigint,'Two activations: the ended one is kept, a new one is active');
 select is(pg_temp.obligations(),'cash_collection:200000,wallet_purchase_fulfillment:10000','Re-activation recreates no obligation');
-select is((pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f6e01','settle-end-run-key-0002',clock_timestamp()+interval '8 days')$$)->>'count')::int,0,
+select is((pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f6e01','settle-end-run-key-0002',pg_temp.after_week(0))$$)->>'count')::int,0,
  'Re-running settlement after re-activation: nothing to finalize');
 select is((select count(*) from settlements where cafeteria_id='00000000-0000-0000-0000-000000000111'),1::bigint,'No duplicate settlement');
 select is((select count(*) from settlement_lines where cafeteria_id='00000000-0000-0000-0000-000000000111'),2::bigint,'No reattached line');
@@ -125,7 +130,7 @@ select is((select status||'/'||net_amount_minor||'/'||cafeteria_owes_minor||'/'|
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
 select ok((cafeteria_wallet_collect_cash('00000000-0000-0000-0000-000000000111','00000000-0000-0000-0000-000000005201',30000,null,'5e100000-0000-4000-8000-000000000003')->>'reference') is not null,'After re-activation: cash collection works again');
 reset role;
-select set_config('t.f2',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f6e01','settle-end-run-key-0003',clock_timestamp()+interval '15 days')$$)::text,true);
+select set_config('t.f2',pg_temp.fin($$select pikas_private.settlement_run('00000000-0000-0000-0000-0000000f6e01','settle-end-run-key-0003',pg_temp.after_week(1))$$)::text,true);
 select is((select concat_ws('/',x->>'cafeteria_owes_minor',x->>'clearing_owes_minor',x->>'late_line_count',x->>'week_start') from (select current_setting('t.f2')::jsonb->'finalized'->0 x) y),
  '30000/0/1/'||(current_setting('t.w')::date+7),'The new obligation (this week, already settled) carries into the next settlement as late, alone');
 

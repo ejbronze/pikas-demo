@@ -66,7 +66,7 @@ values('00000000-0000-0000-0000-000000005204','00000000-0000-0000-0000-000000000
   '00000000-0000-0000-0000-000000005106','WAL-004','Wallet','Creation','Wallet Creation Student');
 insert into public.student_enrollments(id,account_id,school_id,student_id,starts_on)
 values('00000000-0000-0000-0000-000000005305','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',
-  '00000000-0000-0000-0000-000000005204',current_date);
+  '00000000-0000-0000-0000-000000005204',(clock_timestamp() at time zone 'America/Santo_Domingo')::date);
 
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002002',true);
@@ -323,7 +323,7 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002002',true);
 set local role authenticated;
 select lives_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005302',current_date)$$,
+  '00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005302',(clock_timestamp() at time zone 'America/Santo_Domingo')::date)$$,
   'School Admin withdraws a student without deleting the wallet');
 select is((select current_balance_minor from student_wallets where id='00000000-0000-0000-0000-000000007001'),53001::bigint,
   'Withdrawal itself preserves wallet balance');

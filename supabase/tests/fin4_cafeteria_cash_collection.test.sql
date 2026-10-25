@@ -204,7 +204,7 @@ reset role; select is(pg_temp.money(),current_setting('t.m4'),'Scope/authority r
 
 -- ── Lifecycle ──────────────────────────────────────────────────────────────────────────────────
 select set_config('t.m5',pg_temp.money(),true);
-set local session_replication_role=replica; update student_enrollments set status='withdrawn', ends_on=current_date where student_id='00000000-0000-0000-0000-000000005201' and status='active'; set local session_replication_role=origin;
+set local session_replication_role=replica; update student_enrollments set status='withdrawn', ends_on=(clock_timestamp() at time zone 'America/Santo_Domingo')::date where student_id='00000000-0000-0000-0000-000000005201' and status='active'; set local session_replication_role=origin;
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
 select is(pg_temp.attempt($$select pg_temp.collect(100000,'f4000000-0000-4000-8000-000000000061')$$),'23514:active_enrollment_required_for_replenishment','Withdrawn enrollment: refused');
 reset role; set local session_replication_role=replica; update student_enrollments set status='active', ends_on=null where student_id='00000000-0000-0000-0000-000000005201' and status='withdrawn'; set local session_replication_role=origin;
@@ -269,8 +269,11 @@ select is(pg_temp.bal(),current_setting('t.b2')::bigint-194000,'Reversal removes
 select is(pg_temp.entries(current_setting('t.ref1'),'replenishment_fee_earned')-coalesce((select sum(e.amount_minor)::bigint from financial_entries e join financial_entries o on o.id=e.reverses_entry_id
  join replenishment_requests r on r.id=o.replenishment_request_id where r.reference=current_setting('t.ref1') and e.entry_type='replenishment_fee_reversed'),0),0::bigint,'Fee fully reversed');
 select is((pg_temp.obligation(current_setting('t.ref1'),'cash_collection')).amount_minor,200000::bigint,'Original obligation is kept (history)');
-select is((select sum(o.amount_minor)::bigint from financial_obligations o where o.reason='cash_collection_reversal' and o.corrects_obligation_id=(pg_temp.obligation(current_setting('t.ref1'),'cash_collection')).id),
- 200000::bigint,'…and corrected by a clearing → Cafetería cash_collection_reversal of GROSS');
+-- Exactly one correction of the original obligation: reason, GROSS amount and direction (clearing owes the Cafetería).
+-- Compared as the full set (not a sum), so any unexpected or missing correction is reported as it actually is.
+select is((select coalesce(string_agg(o.reason||':'||o.amount_minor||':'||(o.debtor_party_id=pikas_private.clearing_party())::text,',' order by o.created_at,o.id),'none')
+ from financial_obligations o where o.corrects_obligation_id=(pg_temp.obligation(current_setting('t.ref1'),'cash_collection')).id),
+ 'cash_collection_reversal:200000:true','…and corrected by exactly one clearing → Cafetería cash_collection_reversal of GROSS');
 select pg_temp.as_user('00000000-0000-0000-0000-000000002003');
 select is((select x->>'status' from jsonb_array_elements(cafeteria_cash_collections_read('00000000-0000-0000-0000-000000000111')->'collections') x where x->>'reference'=current_setting('t.ref1')),'reversed','Cafetería history shows it reversed');
 reset role;

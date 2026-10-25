@@ -216,7 +216,7 @@ reset role;
 -- Lifecycle changes use frozen RPCs and preserve original destination.
 select pg_temp.login('2002');
 set local role authenticated;
-select lives_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005302',current_date)$$,'Synthetic student withdrawn through frozen RPC');
+select lives_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005302',(clock_timestamp() at time zone 'America/Santo_Domingo')::date)$$,'Synthetic student withdrawn through frozen RPC');
 select lives_ok($$select public.deactivate_cafeteria_customer('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000006901')$$,'Historical customer deactivated');
 reset role;
 update public.school_cafeteria_shares set status='revoked' where cafeteria_id='00000000-0000-0000-0000-000000000111';
@@ -226,7 +226,7 @@ select lives_ok($$select public.create_purchase_refund(current_setting('p3c.wall
 reset role;
 select pg_temp.login('2002');
 set local role authenticated;
-select lives_ok($$select public.enroll_student('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201',current_date,'00000000-0000-0000-0000-000000000211','Synthetic grade')$$,'Student re-enrolled at another campus');
+select lives_ok($$select public.enroll_student('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005201',(clock_timestamp() at time zone 'America/Santo_Domingo')::date,'00000000-0000-0000-0000-000000000211','Synthetic grade')$$,'Student re-enrolled at another campus');
 reset role;
 select pg_temp.login('2011');
 set local role authenticated;
@@ -338,7 +338,7 @@ reset role;
 -- Production exposes no caller timestamp or timezone override.
 select set_config('p3c.old_zone',(select business_timezone from public.schools where id='00000000-0000-0000-0000-000000000011'),true);
 update public.schools set business_timezone='America/New_York' where id='00000000-0000-0000-0000-000000000011';
-select set_config('p3c.dst_day',(select (make_date(extract(year from current_date)::integer+1,11,1)+(7-extract(dow from make_date(extract(year from current_date)::integer+1,11,1))::integer)%7)::text),true);
+select set_config('p3c.dst_day',(select (make_date(extract(year from (clock_timestamp() at time zone 'America/Santo_Domingo')::date)::integer+1,11,1)+(7-extract(dow from make_date(extract(year from (clock_timestamp() at time zone 'America/Santo_Domingo')::date)::integer+1,11,1))::integer)%7)::text),true);
 do $$begin execute format('create or replace function pikas_private.refund_clock() returns timestamptz language sql volatile set search_path='''' as %L',format('select %L::timestamptz',current_setting('p3c.dst_day')||' 05:30:00+00')); end $$;
 select pg_temp.login('2011');
 set local role authenticated;

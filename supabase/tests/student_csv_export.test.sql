@@ -20,9 +20,9 @@ insert into persons(id,display_name) select id,'B2C Export Peña '||n from sourc
 insert into students(id,account_id,school_id,person_id,student_code,first_name,last_name,display_name,status)
  select id,'03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,'B2C-EXPORT-'||n,'B2C Export','Peña','B2C Export Peña '||n,case when n<=1000 then 'active' else 'inactive' end from source;
 insert into student_enrollments(id,account_id,school_id,student_id,starts_on)
- select id,'03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,current_date from source where n<=1000;
+ select id,'03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,(clock_timestamp() at time zone 'America/Santo_Domingo')::date from source where n<=1000;
 insert into student_campus_placements(account_id,school_id,enrollment_id,school_location_id,grade_label,class_label,homeroom_label,starts_on)
- select '03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,case when n<=600 then 'cc7ca5f3-d27e-43ea-b3c9-8a6ef4e327d4'::uuid else 'b2c00000-0000-4000-8000-000000000099'::uuid end,case when n<=700 then 'B2C 4' else 'B2C 40' end,'A','Aula Ñ',current_date from source where n<=1000;
+ select '03e71159-69e9-4387-9b3b-65799d49faf0','df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',id,case when n<=600 then 'cc7ca5f3-d27e-43ea-b3c9-8a6ef4e327d4'::uuid else 'b2c00000-0000-4000-8000-000000000099'::uuid end,case when n<=700 then 'B2C 4' else 'B2C 40' end,'A','Aula Ñ',(clock_timestamp() at time zone 'America/Santo_Domingo')::date from source where n<=1000;
 create function pg_temp.export_rows(p_status text default '',p_location uuid default null,p_grade text default null,p_query text default 'B2C Export') returns jsonb language sql as $$select public.school_student_export('df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',p_query,p_status,p_location,p_grade)$$;
 set local role authenticated;
 select is(jsonb_array_length(pg_temp.export_rows('active')->'rows'),1000,'exact upper bound exports complete authoritative set');

@@ -66,7 +66,7 @@ select is((select platform_set_customer_structure_status('10000000-0000-4000-800
 -- Open caja blocks leaving operation.
 reset role;
 insert into register_sessions(id,account_id,school_id,school_location_id,cafeteria_id,register_id,assignment_id,operator_membership_id,operator_person_id,operator_role_code,register_code_snapshot,register_name_snapshot,opened_at,opened_business_date,business_timezone_snapshot,currency_code,opening_cash_minor,status,open_request_key,open_payload_fingerprint)
- select '10000000-0000-4000-8000-00000000aa01',r.account_id,r.school_id,r.school_location_id,r.cafeteria_id,r.id,a.id,a.cafeteria_membership_id,a.operator_person_id,'pos_cashier',r.register_code,r.display_name,clock_timestamp(),current_date,'America/Santo_Domingo','DOP',0,'open','10000000-0000-4000-8000-00000000aa02',encode(extensions.digest('lam','sha256'),'hex')
+ select '10000000-0000-4000-8000-00000000aa01',r.account_id,r.school_id,r.school_location_id,r.cafeteria_id,r.id,a.id,a.cafeteria_membership_id,a.operator_person_id,'pos_cashier',r.register_code,r.display_name,clock_timestamp(),(clock_timestamp() at time zone 'America/Santo_Domingo')::date,'America/Santo_Domingo','DOP',0,'open','10000000-0000-4000-8000-00000000aa02',encode(extensions.digest('lam','sha256'),'hex')
  from cafeteria_registers r join cafeteria_register_assignments a on a.register_id=r.id and a.status='active' where r.cafeteria_id='00000000-0000-0000-0000-000000000111' limit 1;
 select pg_temp.as_user('00000000-0000-0000-0000-00000000ad21');
 select is(pg_temp.attempt($$select platform_set_customer_structure_status('10000000-0000-4000-8000-000000000008','00000000-0000-0000-0000-000000000001','cafeteria','00000000-0000-0000-0000-000000000111','active','suspended','con caja abierta')$$),

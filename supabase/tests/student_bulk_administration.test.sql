@@ -14,7 +14,7 @@ insert into auth.sessions(id,user_id,created_at,updated_at) select sid,uid,clock
 select set_config('request.jwt.claims',jsonb_build_object('sub',uid,'role','authenticated','session_id',sid)::text,true) from fixture;
 select public.pikas_session_start();
 select public.platform_enter_sandbox_pov(gen_random_uuid(),'03e71159-69e9-4387-9b3b-65799d49faf0','b9496342-5079-46ae-83b8-05c39bcbd7fe','school_admin');
-create function pg_temp.rows(p_code text) returns jsonb language sql as $$select jsonb_build_array(jsonb_build_object('source_row',2,'first_name','  Ana  ','last_name','Test','student_code',p_code,'starts_on',current_date::text,'location_id','cc7ca5f3-d27e-43ea-b3c9-8a6ef4e327d4','grade','  Primero  '));$$;
+create function pg_temp.rows(p_code text) returns jsonb language sql as $$select jsonb_build_array(jsonb_build_object('source_row',2,'first_name','  Ana  ','last_name','Test','student_code',p_code,'starts_on',(clock_timestamp() at time zone 'America/Santo_Domingo')::date::text,'location_id','cc7ca5f3-d27e-43ea-b3c9-8a6ef4e327d4','grade','  Primero  '));$$;
 create function pg_temp.validate(p_rows jsonb) returns jsonb language sql as $$select public.school_student_bulk_validate('df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',p_rows);$$;
 create function pg_temp.commit_batch(p_rows jsonb,p_key uuid default 'b2a00000-0000-4000-8000-000000000002',p_include integer[] default array[2]) returns jsonb language sql as $$select public.school_student_bulk_commit('df8fcd98-6ece-4f87-b4e9-2f5f3ec8e488',p_key,p_rows,p_include,true);$$;
 set local role authenticated;
@@ -22,7 +22,7 @@ select is(pg_temp.validate(pg_temp.rows('B2A-VALID'))->>'valid','true','valid co
 select is(pg_temp.validate(pg_temp.rows('B2A-VALID'))#>>'{rows,0,row,first_name}','Ana','names trimmed consistently');
 select is(pg_temp.validate(pg_temp.rows('B2A-VALID'))#>>'{rows,0,row,grade}','Primero','placement labels trimmed');
 select is(pg_temp.validate(pg_temp.rows('B2A-VALID')||jsonb_build_array(jsonb_build_object('source_row',9,'first_name','','last_name','Test','student_code','B2A-BAD','starts_on','2026-02-30')))->>'valid','false','invalid row rejects validation');
-select is(pg_temp.validate(jsonb_set(pg_temp.rows('B2A-VALID'),'{0,starts_on}',to_jsonb((current_date+1)::text)))->>'valid','false','future enrollment denied');
+select is(pg_temp.validate(jsonb_set(pg_temp.rows('B2A-VALID'),'{0,starts_on}',to_jsonb(((clock_timestamp() at time zone 'America/Santo_Domingo')::date+1)::text)))->>'valid','false','future enrollment denied');
 select is(pg_temp.validate(pg_temp.rows('Case-Code')||jsonb_set(pg_temp.rows('  case-code  '),'{0,source_row}','9'))->>'valid','false','normalized duplicates are reported');
 select is(pg_temp.validate(jsonb_set(pg_temp.rows('B2A-VALID'),'{0,location_id}','"00000000-0000-4000-8000-000000000099"'))->>'valid','false','unknown campus denied');
 select is(pg_temp.validate(jsonb_set(pg_temp.rows('B2A-VALID'),'{0,location_id}','"not-uuid"'))->>'valid','false','malformed campus reported');
@@ -74,7 +74,7 @@ select set_config('request.jwt.claims',jsonb_build_object('sub',uid,'role','auth
 select public.pikas_session_start();
 select is(pg_temp.commit_batch(pg_temp.rows('B2A-CREATED')),(select result from successful),'same real user after reauthentication recovers exact original result');
 -- Exercise the hard boundary under the new bulk RPC's bounded 30-second statement budget.
-create temporary table boundary as select jsonb_agg(jsonb_build_object('source_row',n,'first_name','Boundary','last_name','Local','student_code','B2A-BOUNDARY-'||n,'starts_on',current_date::text)) rows,array_agg(n) included from generate_series(1,200) n;
+create temporary table boundary as select jsonb_agg(jsonb_build_object('source_row',n,'first_name','Boundary','last_name','Local','student_code','B2A-BOUNDARY-'||n,'starts_on',(clock_timestamp() at time zone 'America/Santo_Domingo')::date::text)) rows,array_agg(n) included from generate_series(1,200) n;
 select is(pg_temp.validate((select rows from boundary))->>'valid','true','all 200 source rows validated');
 set local statement_timeout='30s';
 create temporary table boundary_result as select pg_temp.commit_batch(rows,gen_random_uuid(),included) result from boundary;

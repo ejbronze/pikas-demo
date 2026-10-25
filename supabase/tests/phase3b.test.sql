@@ -596,7 +596,7 @@ update public.persons set status='active' where id='00000000-0000-0000-0000-0000
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002002',true);
 set local role authenticated;
 select lives_ok($$select public.withdraw_student_enrollment('00000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005302',current_date)$$,
+  '00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000005302',(clock_timestamp() at time zone 'America/Santo_Domingo')::date)$$,
   'School Admin withdraws the synthetic student through the Phase 2 lifecycle RPC');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000002008',true);
