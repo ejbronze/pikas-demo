@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Building2, CircleUser, Home, LogOut, MonitorPlay, MoreHorizontal, ReceiptText, ShieldCheck, Users, UsersRound, Utensils, WalletCards } from "lucide-react";
+import { BarChart3, Building2, CircleUser, Home, LifeBuoy, LogOut, MonitorPlay, MoreHorizontal, ReceiptText, ShieldCheck, Users, UsersRound, Utensils, WalletCards } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
 
 // Wave C: one structural shell for Platform, Account, School and Cafeteria administration.
 // It renders only what the server already decided: navigation items, context, account and whether
 // logout belongs here (never inside a Demo persona). No authority is derived in the browser.
-const icons = { home: Home, users: Users, shield: ShieldCheck, utensils: Utensils, receipt: ReceiptText, chart: BarChart3, wallet: WalletCards, clients: Building2, team: UsersRound, demo: MonitorPlay } as const;
+// support: customer shells offer «Reportar un problema» (never in a Demo persona); it carries only the current path.
+const icons = { home: Home, users: Users, shield: ShieldCheck, utensils: Utensils, receipt: ReceiptText, chart: BarChart3, wallet: WalletCards, clients: Building2, team: UsersRound, demo: MonitorPlay, support: LifeBuoy } as const;
 export type ShellIcon = keyof typeof icons;
 // UX 12A: items may carry a group label; the sidebar and the mobile "Más" menu then show the groups
 // (in order of first appearance). The compact bottom bar keeps the first four items as before.
@@ -27,11 +28,11 @@ function ContextSwitcher({ switcher, compact = false }: { switcher: ShellSwitche
   </form>;
 }
 
-export function AdministrativeShell({ tone, area, homeHref, context, switcher, nav, navLabel, account, logout, demo, notice, trail, children }: {
+export function AdministrativeShell({ tone, area, homeHref, context, switcher, nav, navLabel, account, logout, support = false, demo, notice, trail, children }: {
   tone: keyof typeof tones; area: string; homeHref: string;
   context?: { label: string; name: string; detail?: string };
   switcher?: ShellSwitcher; nav: ShellNavItem[]; navLabel: string;
-  account: { name: string; role: string }; logout: boolean;
+  account: { name: string; role: string }; logout: boolean; support?: boolean;
   demo?: React.ReactNode; notice?: React.ReactNode; trail?: React.ReactNode; children: React.ReactNode;
 }) {
   const path = usePathname();
@@ -60,6 +61,7 @@ export function AdministrativeShell({ tone, area, homeHref, context, switcher, n
       onClick={variant === "menu" ? event => event.currentTarget.closest("details")?.removeAttribute("open") : undefined}>
       <Icon aria-hidden className="shrink-0" size={18} /><span className={variant === "mobile" ? "max-w-full hyphens-auto text-center" : "min-w-0 break-words"}>{item.label}</span></Link>;
   };
+  const supportLink = (className: string) => <Link className={className} href={`/soporte?desde=${encodeURIComponent(path)}`}><LifeBuoy aria-hidden size={18} />Reportar un problema</Link>;
   const logoutForm = (className: string) => <form method="post" action="/api/auth/logout"><button className={className}><LogOut aria-hidden size={18} />Cerrar sesión</button></form>;
   return <div className="admin-ux min-h-screen bg-slate-50 md:grid md:grid-cols-[216px_minmax(0,1fr)] lg:grid-cols-[248px_minmax(0,1fr)]" data-testid="admin-shell">
     <aside className={`sticky top-0 hidden h-screen flex-col overflow-y-auto p-3 text-white md:flex lg:p-4 ${t.aside}`}>
@@ -68,6 +70,7 @@ export function AdministrativeShell({ tone, area, homeHref, context, switcher, n
       <nav className="mt-6 space-y-1" aria-label={navLabel}>{grouped(nav, "side")}</nav>
       <div className="mt-auto space-y-2 border-t border-white/15 pt-3">
         <p className="flex items-start gap-2 px-1 text-sm"><CircleUser aria-hidden className="mt-0.5 shrink-0" size={18} /><span className="min-w-0 break-words"><span className="block font-bold">{account.name}</span><span className="block text-xs text-white/70">{account.role}</span></span></p>
+        {support && supportLink(`nav-link w-full ${t.idle}`)}
         {logout && logoutForm(`nav-link w-full ${t.idle}`)}
       </div>
     </aside>
@@ -82,6 +85,7 @@ export function AdministrativeShell({ tone, area, homeHref, context, switcher, n
           <div className="absolute right-0 top-full z-50 mt-1 w-72 max-w-[calc(100vw-1.5rem)] space-y-3 rounded-xl border bg-white p-3 shadow-lg">
             <p className="text-sm"><span className="block font-bold">{account.name}</span><span className="text-slate-500">{account.role}</span></p>
             {canSwitch && <ContextSwitcher switcher={switcher} compact />}
+            {support && supportLink("btn-secondary w-full")}
             {logout && logoutForm("btn-secondary w-full")}
           </div>
         </details>

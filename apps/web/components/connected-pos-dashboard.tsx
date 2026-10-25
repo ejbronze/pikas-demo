@@ -96,7 +96,7 @@ export function ConnectedPosView({ sale, state, initialWorkspace = "sale" }: { s
             <span className="rounded-xl bg-white p-1"><BrandLogo compact className="size-9" /></span>
             <div><strong>PIKAS · {scopes.map((s) => s.cafeteria_name).join(" · ")}</strong><p className="text-xs">{[...new Set(scopes.map((s) => s.account_name))].join(" · ")}</p></div>
           </div>
-          <div className="flex items-center gap-3"><strong>{context.actor.display_name} · {roleLabel(context)}</strong><form action="/api/auth/logout" method="post"><button className="btn">Cerrar sesión</button></form></div>
+          <div className="flex flex-wrap items-center gap-3"><strong>{context.actor.display_name} · {roleLabel(context)}</strong>{/* A new tab: reporting never interrupts a sale in progress. */}<a className="btn-secondary" href="/soporte?desde=%2Fpos%2Fcaja" target="_blank" rel="noopener">Reportar un problema</a><form action="/api/auth/logout" method="post"><button className="btn">Cerrar sesión</button></form></div>
         </header>
         <PosAccessBanner context={context} />
         {scopes[0].tenant_kind === "sandbox" && <p role="status" className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-950">DEMO / SANDBOX · {scopes[0].cafeteria_name} · Datos de prueba</p>}

@@ -26,6 +26,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     ...(capabilities.includes("platform:customer:operations:read") || capabilities.includes("platform:finance:read") ? [{ href: "/platform/reportes", label: "Reportes", icon: "chart", match: "/platform/reportes" } as const] : []),
     ...(capabilities.includes("platform:team:manage") ? [{ href: "/platform/equipo", label: "Equipo", icon: "team", match: "/platform/equipo" } as const] : []),
     ...(capabilities.includes("platform:finance:read") ? [{ href: "/platform/finanzas", label: "Finanzas", icon: "wallet", match: "/platform/finanzas" } as const] : []),
+    ...(capabilities.includes("platform:support:read") ? [{ href: "/platform/soporte", label: "Soporte", icon: "support", match: "/platform/soporte" } as const] : []),
     ...(capabilities.includes("platform:identity:support") ? [{ href: "/platform/identidades", label: "Identidades", icon: "shield", match: "/platform/identidades" } as const] : []),
     ...(capabilities.includes("platform:sandbox:pov:enter") ? [{ href: "/platform/demostracion", label: "Demo Lab", icon: "demo", match: "/platform/demostracion" } as const] : []),
   ];

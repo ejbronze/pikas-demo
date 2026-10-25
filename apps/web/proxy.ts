@@ -162,6 +162,7 @@ export const config = {
     "/admin/escuela/:path*",
     "/admin/cafeteria/:path*",
     "/pilot/connected",
+    "/soporte",
     "/platform",
     "/platform/:path*",
   ],

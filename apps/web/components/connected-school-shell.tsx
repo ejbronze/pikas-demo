@@ -16,6 +16,7 @@ export function ConnectedSchoolShell({ context, schoolId, role, walletNav = fals
     switcher={context.pov ? undefined : { id: "workspace-school", name: "school", label: "Escuela", value: schoolId, options: context.schools.map(s => ({ value: s.school_id, label: s.school_name })) }}
     account={context.pov ? { name: context.pov.operator_name, role: "Operador de PIKAS · Demo" } : { name: context.display_name, role: labels.role }}
     logout={!context.pov}
+    support={!context.pov}
     demo={context.pov ? <DemoEnvironmentBar pov={context.pov} persona={context.display_name} context={scope.account_name} /> : undefined}
     notice={!context.pov && scope.tenant_kind === "sandbox" ? <div className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-950" role="status">DEMO / SANDBOX · {scope.school_name} · Datos de prueba</div> : undefined}>
     {children}
