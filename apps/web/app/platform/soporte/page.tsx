@@ -12,11 +12,11 @@ export default async function SupportQueuePage({ searchParams }: { searchParams:
   if (!session.capabilities.includes(SUPPORT_READ)) return <ErrorState kind="permission" title="No tienes acceso a Soporte." description="Pide a un administrador de PIKAS el permiso de lectura de soporte." />;
   const parsed = platformFiltersSchema.safeParse(await searchParams);
   if (!parsed.success) return <ErrorState kind="validation" title="Los filtros no son válidos." description="Restablécelos para ver los tickets." action={<Link className="btn-secondary" href="/platform/soporte">Restablecer filtros</Link>} />;
-  const { estado, categoria, q } = parsed.data;
-  const result = await readPlatform(session, SUPPORT_READ, "platform_support_list", { p_status: estado, p_category: categoria ?? null, p_query: q || null }, platformListSchema);
+  const { estado, categoria, q } = parsed.data, demo = parsed.data.demo === "1";
+  const result = await readPlatform(session, SUPPORT_READ, "platform_support_list", { p_status: estado, p_category: categoria ?? null, p_query: q || null, p_include_demo: demo }, platformListSchema);
   const counts = result.kind === "ready" ? result.value.counts ?? {} : {};
   const open = (counts.received ?? 0) + (counts.in_review ?? 0) + (counts.info_requested ?? 0);
-  const filtered = estado !== "open" || !!categoria || !!q;
+  const filtered = estado !== "open" || !!categoria || !!q || demo;
   return <>
     <AppPageHeader title="Soporte" description="Reportes de colegios, cafeterías y cajas. Responde, pide información, resuelve y cierra; cada paso queda en el historial del ticket." />
     {result.kind === "ready" && <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -29,8 +29,10 @@ export default async function SupportQueuePage({ searchParams }: { searchParams:
         <option value="open">Abiertos</option><option value="all">Todos</option>{statuses.map(s => <option key={s} value={s}>{statusLabel[s]}</option>)}</select></label>
       <label className="basis-44">Categoría<select className="field mt-1 w-full" name="categoria" defaultValue={categoria ?? ""}>
         <option value="">Todas</option>{categories.map(c => <option key={c} value={c}>{categoryLabel[c]}</option>)}</select></label>
+      <label className="flex min-h-11 items-center gap-2"><input type="checkbox" name="demo" value="1" defaultChecked={demo} className="size-5" />Incluir Demo</label>
       <button className="btn">Filtrar</button>{filtered && <Link className="btn-tertiary" href="/platform/soporte">Limpiar</Link>}
     </form>
+    {demo && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-950">Incluye tickets Demo (datos ficticios), marcados «Demo».</p>}
     {result.kind !== "ready" ? <LoadFailure kind={result.failure} what="los tickets de soporte" retryHref="/platform/soporte" />
       : result.value.rows.length === 0 ? <EmptyState title={filtered ? "No hay tickets que coincidan." : "No hay tickets abiertos."} description={filtered ? "Cambia o limpia los filtros." : "Cuando un cliente reporte un problema, aparecerá aquí."} />
       : <ul className="space-y-3" aria-label="Tickets">{result.value.rows.map(r => <TicketRow key={r.id} row={r} />)}</ul>}
@@ -38,9 +40,9 @@ export default async function SupportQueuePage({ searchParams }: { searchParams:
 }
 
 function TicketRow({ row }: { row: PlatformTicketRow }) {
-  const where = [row.cafeteria_name, row.school_name].filter(Boolean).join(" · ");
+  const where = [row.register_name, row.cafeteria_name, row.school_name].filter(Boolean).join(" · ");
   return <li className="card p-4"><Link href={`/platform/soporte/${row.id}`} className="flex flex-wrap items-start justify-between gap-3">
-    <span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-500">{row.reference} · {categoryLabel[row.category]}</span>
+    <span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-500">{row.is_demo && <span className="mr-1 rounded bg-amber-100 px-1.5 text-amber-950">Demo</span>}{row.reference} · {categoryLabel[row.category]}</span>
       <span className="block break-words font-bold text-indigo-900 underline-offset-2 hover:underline">{row.subject}</span>
       <span className="block text-sm text-slate-600">{row.account_name}{where && ` · ${where}`} · {row.reporter_name} ({roleLabel[row.reporter_role] ?? row.reporter_role})</span></span>
     <span className="flex flex-col items-end gap-1"><SupportStatusBadge status={row.status} /><span className="text-xs text-slate-500">{supportWhen(row.updated_at)}</span></span>

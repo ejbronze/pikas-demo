@@ -25,9 +25,12 @@ export default async function SupportTicketPage({ params }: { params: Promise<{ 
   return <>
     <AppPageHeader title={t.subject} description={`${t.reference} · ${categoryLabel[t.category]}`} back={{ href: "/platform/soporte", label: "Soporte" }} meta={<SupportStatusBadge status={t.status} />} />
     <TaskSummary rows={[["Cliente", <Link key="c" className="underline" href={`/platform/clientes/${t.account_id}`}>{t.account_name}</Link>],
-      ...(t.school_name ? [["Colegio", t.school_name] as [string, React.ReactNode]] : []), ...(t.cafeteria_name ? [["Cafetería", t.cafeteria_name] as [string, React.ReactNode]] : []),
+      ...(t.is_demo ? [["Entorno", "Demo · datos ficticios"] as [string, React.ReactNode]] : []),
+      ...(t.school_name ? [["Colegio", t.school_name] as [string, React.ReactNode]] : []), ...(t.location_name ? [["Sede", t.location_name] as [string, React.ReactNode]] : []),
+      ...(t.cafeteria_name ? [["Cafetería", t.cafeteria_name] as [string, React.ReactNode]] : []), ...(t.register_name ? [["Caja", t.register_name] as [string, React.ReactNode]] : []),
       ["Reportado por", `${t.reporter_name} · ${roleLabel[t.reporter_role] ?? t.reporter_role}`], ["Recibido", supportWhen(t.created_at)], ["Estado", statusLabel[t.status]],
-      ...(t.page_path ? [["Página", t.page_path] as [string, React.ReactNode]] : [])]} />
+      ...(t.page_path ? [["Página", t.page_path] as [string, React.ReactNode]] : []), ...(t.app_version ? [["Versión", t.app_version] as [string, React.ReactNode]] : []),
+      ...(t.user_agent ? [["Navegador", <span key="ua" className="break-all text-xs">{t.user_agent}</span>] as [string, React.ReactNode]] : [])]} />
     <section className="card space-y-2 p-5" aria-labelledby="descripcion"><h2 id="descripcion" className="font-bold">Lo que reportó</h2><p className="whitespace-pre-wrap break-words text-sm">{t.description}</p></section>
     {canManage ? <SupportActions actor={actor} ticketId={t.id} reference={t.reference} actions={actionsFor(t.status)} />
       : <p className="card p-4 text-sm">Puedes leer este ticket. Gestionarlo requiere el permiso de gestión de soporte.</p>}

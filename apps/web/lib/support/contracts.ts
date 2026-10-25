@@ -24,6 +24,9 @@ export const eventLabel: Record<string, string> = {
   info_requested: "Necesitamos información", review_started: "En revisión", resolved: "Resuelto", closed: "Cerrado", reopened: "Reabierto",
 };
 
+// The deployed commit (Vercel) or "local"; recorded with each report by the server.
+export const appVersion = () => (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 12) || "local";
+
 // Only a bare page path travels with a report (never a query string, fragment, token or form content).
 export const pagePath = (value: string | null | undefined) => value && /^\/[A-Za-z0-9/_-]{0,199}$/.test(value) ? value : null;
 // Mirrors the database screen (support_text_ok) so the reporter hears it before sending; the database decides.
@@ -51,11 +54,11 @@ export const reporterCommandSchema = z.discriminatedUnion("operation", [
 export type ReporterCommand = z.infer<typeof reporterCommandSchema>;
 
 const platformRowSchema = z.object({ id: z.uuid(), reference: z.string(), category: z.enum(categories), subject: z.string(), status: z.enum(statuses),
-  account_id: z.uuid(), account_name: z.string(), school_name: z.string().nullable(), cafeteria_name: z.string().nullable(),
-  reporter_name: z.string(), reporter_role: z.string(), created_at: z.string(), updated_at: z.string() });
+  account_id: z.uuid(), account_name: z.string(), school_name: z.string().nullable(), location_name: z.string().nullable(), cafeteria_name: z.string().nullable(),
+  register_name: z.string().nullable(), reporter_name: z.string(), reporter_role: z.string(), is_demo: z.boolean(), created_at: z.string(), updated_at: z.string() });
 export type PlatformTicketRow = z.infer<typeof platformRowSchema>;
-export const platformListSchema = z.object({ counts: z.record(z.string(), z.number()).nullable(), rows: z.array(platformRowSchema) });
-export const platformTicketSchema = platformRowSchema.extend({ description: z.string(), page_path: z.string().nullable(), can_manage: z.boolean(),
+export const platformListSchema = z.object({ include_demo: z.boolean(), counts: z.record(z.string(), z.number()).nullable(), rows: z.array(platformRowSchema) });
+export const platformTicketSchema = platformRowSchema.extend({ description: z.string(), page_path: z.string().nullable(), app_version: z.string().nullable(), user_agent: z.string().nullable(), can_manage: z.boolean(),
   events: z.array(z.object({ kind: z.string(), visibility: z.enum(["reporter", "internal"]), body: z.string().nullable(), author: z.string(), side: z.enum(["reporter", "platform"]),
     from_status: z.string().nullable(), to_status: z.string().nullable(), created_at: z.string() })) });
 export type PlatformTicket = z.infer<typeof platformTicketSchema>;
@@ -65,7 +68,7 @@ export const platformActions = ["reply", "note", "request_info", "review", "reso
 export type PlatformAction = typeof platformActions[number];
 export const platformCommandSchema = z.object({ ticket_id: z.uuid(), action: z.enum(platformActions), body: z.string().trim().max(4000).nullable() });
 export const platformFiltersSchema = z.object({
-  estado: z.enum(["open", "all", ...statuses]).default("open"), categoria: z.enum(categories).optional(), q: z.string().trim().max(100).default(""),
+  estado: z.enum(["open", "all", ...statuses]).default("open"), categoria: z.enum(categories).optional(), q: z.string().trim().max(100).default(""), demo: z.literal("1").optional(),
 });
 // Which actions each status offers (the database enforces the same transitions).
 export const actionsFor = (status: SupportStatus): PlatformAction[] => status === "closed" ? ["note", "reopen"]

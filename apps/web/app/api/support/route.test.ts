@@ -8,14 +8,14 @@ const create = { operation: "create", account_id: acct, school_id: school, cafet
 const view = { id: ticket, reference: "SOP-000001", category: "pikas_cash", subject: "Saldo no coincide", description: "El saldo ficticio no coincide.", status: "received",
   created_at: "2026-10-25T12:00:00Z", updated_at: "2026-10-25T12:00:00Z", scope: { account_name: "Cliente Ficticio", school_name: "Colegio Ficticio", cafeteria_name: null }, events: [], replayed: false };
 const req = (body: unknown = create, origin = "http://localhost", k: string | null = key) => new Request("http://localhost/api/support",
-  { method: "POST", headers: { origin, "Content-Type": "application/json", ...(k ? { "Idempotency-Key": k } : {}) }, body: JSON.stringify(body) });
+  { method: "POST", headers: { origin, "Content-Type": "application/json", "User-Agent": "Navegador Ficticio/1.0", ...(k ? { "Idempotency-Key": k } : {}) }, body: JSON.stringify(body) });
 beforeEach(() => { vi.resetAllMocks(); mocks.create.mockResolvedValue({ rpc: mocks.rpc, auth: { getUser: mocks.user } }); mocks.user.mockResolvedValue({ data: { user: { id: key } } }); mocks.rpc.mockResolvedValue({ data: view, error: null }); });
 
 describe("Reportar un problema API", () => {
   it("creates with the Idempotency-Key as the database request key, server-side scope check, no-store", async () => {
     const r = await POST(req()); expect(r.status).toBe(200); expect(r.headers.get("cache-control")).toBe("no-store");
     expect(mocks.rpc).toHaveBeenCalledWith("support_create_ticket", { p_request_key: key, p_account_id: acct, p_school_id: school, p_cafeteria_id: null, p_category: "pikas_cash",
-      p_subject: "Saldo no coincide", p_description: "El saldo ficticio no coincide.", p_page_path: "/admin/escuela/pikas-cash" });
+      p_subject: "Saldo no coincide", p_description: "El saldo ficticio no coincide.", p_page_path: "/admin/escuela/pikas-cash", p_app_version: "local", p_user_agent: "Navegador Ficticio/1.0" });
   });
   it("never forwards a query string or fragment as the page path", async () => {
     await POST(req({ ...create, page_path: "/admin/escuela?token=abc" })); expect(mocks.rpc).toHaveBeenCalledWith("support_create_ticket", expect.objectContaining({ p_page_path: null }));

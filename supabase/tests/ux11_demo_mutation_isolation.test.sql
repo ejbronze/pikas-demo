@@ -28,7 +28,7 @@ select set_config('t.cashier',(select p.id::text from persons p where p.auth_use
 
 -- The guard itself and its coverage.
 select ok(not has_function_privilege('authenticated','pikas_private.require_no_current_demo()','execute'),'The shared guard is not client-callable');
-select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosrc ~ 'require_no_current_demo'),26::bigint,'26 real mutation RPCs carry the shared guard (Lifecycle: none; Demo Lab: platform_reset_sandbox; FIN 4: cafeteria_wallet_collect_cash)');
+select is((select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosrc ~ 'require_no_current_demo'),29::bigint,'29 real mutation RPCs carry the shared guard (Lifecycle: none; Demo Lab: platform_reset_sandbox; FIN 4: cafeteria_wallet_collect_cash; Support: support_create_ticket, support_reporter_reply, platform_support_act)');
 select ok((select prosrc ~ 'require_no_current_demo' from pg_proc where proname='cafeteria_wallet_collect_cash'),'FIN 4 cash collection refuses an active Demo');
 select is((select string_agg(p.proname,',' order by p.proname) from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_language l on l.oid=p.prolang
   where n.nspname='public' and (p.proname like 'platform\_%' or p.proname like 'identity\_%') and has_function_privilege('authenticated',p.oid,'execute') and p.provolatile='v'

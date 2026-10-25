@@ -6,8 +6,9 @@ vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: mocks.crea
 import { POST } from "./route";
 
 const key = "5d000000-0000-4000-8000-000000000001", ticket = "5d000000-0000-4000-8000-000000000002";
-const detail = { id: ticket, reference: "SOP-000001", category: "pos", subject: "Impresora", status: "info_requested", account_id: key, account_name: "Cliente Ficticio", school_name: null, cafeteria_name: null,
-  reporter_name: "Cajera Ficticia", reporter_role: "pos_cashier", created_at: "2026-10-25T12:00:00Z", updated_at: "2026-10-25T12:00:00Z", description: "No imprime.", page_path: null, can_manage: true, events: [], replayed: false };
+const detail = { id: ticket, reference: "SOP-000001", category: "pos", subject: "Impresora", status: "info_requested", account_id: key, account_name: "Cliente Ficticio", school_name: null, location_name: null, cafeteria_name: null,
+  register_name: "Caja 1", reporter_name: "Cajera Ficticia", reporter_role: "pos_cashier", is_demo: false, created_at: "2026-10-25T12:00:00Z", updated_at: "2026-10-25T12:00:00Z", description: "No imprime.", page_path: null,
+  app_version: "local", user_agent: null, can_manage: true, events: [], replayed: false };
 const caps = (...c: string[]) => mocks.identity.mockResolvedValue({ status: "ready", platform: { capabilities: c } });
 const req = (body: unknown) => new NextRequest("http://localhost:3000/api/platform/support", { method: "POST", headers: { origin: "http://localhost:3000", "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(body) });
 beforeEach(() => { vi.clearAllMocks(); mocks.create.mockResolvedValue({ rpc: mocks.rpc }); caps("platform:support:read", "platform:support:manage"); });
