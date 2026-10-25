@@ -12,7 +12,7 @@ import type { cafeteriaReportPage } from "./report-access";
 type PageCtx = Awaited<ReturnType<typeof cafeteriaReportPage>>;
 export function cafeteriaReportFrame(ctx: PageCtx, report: string, title: string, purpose: string, { needs = "sales" as "sales" | "sessions" } = {}) {
   const generated = generatedAt(), path = cafeteriaReportPath(report), back = { href: `${cafeteriaReportPath()}?cafeteria=${ctx.cafeteriaId}`, label: "Reportes" };
-  const shell = (children: React.ReactNode) => <ConnectedCafeteriaShell context={ctx.context} cafeteriaId={ctx.cafeteriaId} walletNav={ctx.walletNav} reportsNav={ctx.sales}><ReportFrame generated={generated}>{children}</ReportFrame></ConnectedCafeteriaShell>;
+  const shell = (children: React.ReactNode) => <ConnectedCafeteriaShell context={ctx.context} cafeteriaId={ctx.cafeteriaId} walletNav={ctx.walletNav} reportsNav={ctx.sales} settlementsNav={ctx.settlements}><ReportFrame generated={generated}>{children}</ReportFrame></ConnectedCafeteriaShell>;
   const allowed = needs === "sessions" ? ctx.sessions : ctx.sales;
   const sandbox = ctx.cafeteria.tenant_kind === "sandbox";
   const refusal = allowed ? null : shell(<ErrorState kind={sandbox ? "not_configured" : "permission"} title={sandbox ? "Los reportes financieros no están disponibles en el entorno sandbox." : needs === "sessions" ? "Tu rol no tiene acceso al historial de cajas de esta cafetería." : "Tu rol no tiene acceso a reportes de esta cafetería."}

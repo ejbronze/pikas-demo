@@ -11,5 +11,5 @@ export async function GET(request: Request) {
   if (!period.ok) return Response.json({ error: "invalid_filters" }, { status: 400 });
   const loaded = await loadReport(access.client, access.cafeteriaId, "sales_summary", period.value);
   if (loaded.status !== "ok") return Response.json({ error: "export_unavailable" }, { status: 502 });
-  return csvResponse(paymentsCsv(loaded.value), csvFilename(" efectivo, PIKAS Cash y crédito de personal.:reporte-metodos-de-pago"), 1);
+  return csvResponse(paymentsCsv(loaded.value), csvFilename("reporte-metodos-de-pago"), 1);
 }

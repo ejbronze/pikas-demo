@@ -14,6 +14,7 @@ import Productos from "./productos/page";
 import Cajas from "./cajas/page";
 import { GET as ventasCsv } from "./ventas/csv/route";
 import { GET as cajasCsv } from "./cajas/csv/route";
+import { GET as pagosCsv } from "./pagos/csv/route";
 import { cafeteriaRead, id } from "../../../../lib/cafeteria/test-fixtures";
 import { reconciliation, summary, topProducts } from "../../../../lib/cafeteria/report-fixtures";
 
@@ -40,6 +41,10 @@ describe("Cafetería Reportes pages", () => {
   it("landing lists only reports this role can open", async () => {
     expect(text(await page(Landing))).toMatch(/Reportes .*¿qué quieres analizar\? .*Ventas .*Métodos de pago .*Productos .*Cajas y cierres/);
     reads(caps.sales); const t = text(await page(Landing)); expect(t).toContain("Productos"); expect(t).not.toContain("Cajas y cierres");
+    // Liquidaciones are linked (never copied) only with the read-only settlement capability.
+    expect(text(await page(Landing))).not.toContain("Liquidaciones");
+    reads([...caps.all, "cafeteria:finance:obligations:read"]); const h = await page(Landing);
+    expect(h).toContain(`href="/admin/cafeteria/liquidaciones?cafeteria=${id}"`);
   });
   it("authority: unauthenticated → login; another cafetería → back to Cafetería", async () => {
     mocks.access.mockResolvedValueOnce({ status: "unauthenticated" }); await expect(page(Landing)).rejects.toMatchObject({ url: "/login?next=%2Fadmin%2Fcafeteria" });
@@ -92,3 +97,11 @@ describe("Cafetería Reportes CSV", () => {
     expect((await get(ventasCsv, `cafeteria=${id}&payment=tarjeta`)).status).toBe(400);
   });
 });
+
+describe("export filenames", () => {
+  it("Métodos de pago downloads as a clean, dated filename", async () => {
+    const res = await get(pagosCsv, `cafeteria=${id}&period=today`);
+    expect(res.headers.get("Content-Disposition")).toMatch(/^attachment; filename="reporte-metodos-de-pago-\d{4}-\d{2}-\d{2}\.csv"$/);
+  });
+});
+

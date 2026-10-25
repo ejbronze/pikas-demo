@@ -20,7 +20,7 @@ const neg = (minor: string) => minor === "0" ? "0" : `-${minor}`;
 const periodKeep = (p: PeriodFilter) => ({ period: p.period, from: p.from, to: p.to });
 
 // Landing: what do you want to analyze? Only reports this role can open are listed.
-export function CafeteriaReportsIndex({ cafeteriaId, name, sessions }: { cafeteriaId: string; name: string; sessions: boolean }) {
+export function CafeteriaReportsIndex({ cafeteriaId, name, sessions, settlements = false }: { cafeteriaId: string; name: string; sessions: boolean; settlements?: boolean }) {
   const reports = [
     { report: "ventas", icon: BarChart3, name: "Ventas", purpose: "Ventas brutas, transacciones, ticket promedio, reembolsos y el detalle de cada venta." },
     { report: "pagos", icon: CreditCard, name: "Métodos de pago", purpose: "Cómo pagaron: efectivo, PIKAS Cash y crédito de personal." },
@@ -34,6 +34,7 @@ export function CafeteriaReportsIndex({ cafeteriaId, name, sessions }: { cafeter
       <Link href={`${cafeteriaReportPath(r.report)}?cafeteria=${cafeteriaId}`}><r.icon aria-hidden size={22} className="rpt-index-icon" />
         <span className="min-w-0 flex-1"><span className="rpt-index-name">{r.name}</span><span className="rpt-index-purpose">{r.purpose}</span></span>
         <ChevronRight aria-hidden size={20} className="shrink-0 text-slate-400" /></Link></li>)}</ul>
+    {settlements && <p className="text-sm text-slate-600">Lo que debes a PIKAS o PIKAS te debe cada semana está en <Link className="font-bold underline" href={`/admin/cafeteria/liquidaciones?cafeteria=${cafeteriaId}`}>Liquidaciones</Link>.</p>}
     <p className="text-sm text-slate-600">Cada reporte muestra solo esta cafetería, se puede imprimir y exportar en CSV con los filtros aplicados. Para buscar una venta concreta usa Transacciones.</p>
   </div>;
 }

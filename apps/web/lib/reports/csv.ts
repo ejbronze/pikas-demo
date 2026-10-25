@@ -12,7 +12,9 @@ export type CsvNumber = { readonly csvNumber: string };
 export function csvAmount(minor: string): CsvNumber { const n = BigInt(minor), abs = n < 0n ? -n : n; return { csvNumber: `${n < 0n ? "-" : ""}${abs / 100n}.${String(abs % 100n).padStart(2, "0")}` }; }
 const cell = (v: string | null | CsvNumber) => v !== null && typeof v === "object" ? `"${v.csvNumber}"` : csvCell(v);
 export const csvDocument = (headers: string[], rows: (string | null | CsvNumber)[][]) => "﻿" + [headers, ...rows].map(r => r.map(cell).join(",")).join("\r\n") + "\r\n";
-export const csvFilename = (report: string, date = new Date()) => `${report}-${date.toISOString().slice(0, 10)}.csv`;
+// The business calendar date in Santo Domingo (never the UTC date: after 20:00 AST, UTC is already tomorrow).
+export const businessDate = (date = new Date()) => date.toLocaleDateString("en-CA", { timeZone: "America/Santo_Domingo" });
+export const csvFilename = (report: string, date = new Date()) => `${report}-${businessDate(date)}.csv`;
 export const csvResponse = (body: string, filename: string, rows: number) => new Response(body, { headers: { "Content-Type": "text/csv; charset=utf-8",
   "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Pikas-Export-Rows": String(rows) } });
 // A CSV download is a same-site navigation; a cross-site request is refused before any read.

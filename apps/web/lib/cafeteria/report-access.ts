@@ -23,7 +23,9 @@ export async function cafeteriaReportPage(searchParams: Promise<SearchParams>) {
   const scope = !error && parsed.success && parsed.data.scope.cafeteria_id === cafeteriaId && parsed.data.scope.actor_id === access.context.person_id ? parsed.data.scope : null;
   const caps = scope?.capabilities ?? [], customer = scope?.tenant_kind === "customer" && cafeteria.tenant_kind === "customer", reportable = !!scope && scope.tenant_kind === cafeteria.tenant_kind;
   const sales = reportable && caps.includes("cafeteria:pos:purchases:read"), sessions = sales && caps.includes("cafeteria:pos:sessions:read");
-  return { client, context: access.context, params, cafeteriaId, cafeteria, scope, sales, sessions, walletNav: customer && caps.includes("cafeteria:wallets:read") };
+  // Liquidaciones are read-only and live in their own workspace; Reportes only links to them (never copies them).
+  const settlements = customer && caps.includes("cafeteria:finance:obligations:read");
+  return { client, context: access.context, params, cafeteriaId, cafeteria, scope, sales, sessions, settlements, walletNav: customer && caps.includes("cafeteria:wallets:read") };
 }
 
 // CSV routes: same checks answered as HTTP errors. Capabilities are enforced by the report RPCs (the sandbox

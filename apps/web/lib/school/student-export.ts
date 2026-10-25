@@ -13,11 +13,12 @@ export function visibleExportRows(students: SchoolStudent[], locations: { id: st
 }
 // The cell format is shared by every PIKAS report CSV (UX 8).
 export { csvCell } from "../reports/csv";
+import { businessDate } from "../reports/csv";
 export function studentExportCsv(rows: ExportStudent[]): string {
  const headers = ["Código estudiantil", "Nombre", "Apellido", "Nombre completo", "Estado", "Campus / sede", "Grado", "Sección", "Aula / grupo"];
  const status = { active: "Activo", suspended: "Suspendido", inactive: "Inactivo" };
  return "\uFEFF" + [headers.map(csvCell).join(","), ...rows.map(r => [r.student_code, r.first_name, r.last_name, r.display_name, status[r.status], r.campus, r.grade, r.class, r.homeroom].map(csvCell).join(","))].join("\r\n") + "\r\n";
 }
 export function studentExportFilename(scope: "pagina-visible" | "resultados-filtrados", date = new Date()): string {
- return `estudiantes-${scope}-${date.toISOString().slice(0,10)}.csv`;
+ return `estudiantes-${scope}-${businessDate(date)}.csv`;
 }

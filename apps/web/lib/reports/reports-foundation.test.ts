@@ -28,3 +28,15 @@ describe("report CSV", () => {
     expect([crossSite(req()), crossSite(req("same-origin")), crossSite(req("none")), crossSite(req("cross-site")), crossSite(req("same-site"))]).toEqual([false, false, false, true, true]);
   });
 });
+
+describe("business dates in exports (America/Santo_Domingo, never the UTC date)", () => {
+  it("21:30 AST is still the same business day although UTC is already tomorrow", async () => {
+    const { businessDate, csvFilename } = await import("./csv");
+    const { studentExportFilename } = await import("../school/student-export");
+    const late = new Date("2026-10-25T01:30:00Z");
+    expect(businessDate(late)).toBe("2026-10-24"); expect(csvFilename("reporte-ventas", late)).toBe("reporte-ventas-2026-10-24.csv");
+    expect(studentExportFilename("pagina-visible", late)).toBe("estudiantes-pagina-visible-2026-10-24.csv");
+    expect(businessDate(new Date("2026-10-25T04:00:00Z"))).toBe("2026-10-25");
+  });
+});
+
