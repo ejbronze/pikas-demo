@@ -55,5 +55,13 @@ select is(school_wallet_access(current_setting('t.sandbox_school')::uuid)->>'rea
 select is(school_wallet_access(current_setting('t.sandbox_school')::uuid)->>'replenish','false','…and still refuses the Demo write');
 reset role;
 
+-- 202611240003: no private function keeps PUBLIC EXECUTE; trigger functions need no client grant; the persons RLS helper
+-- stays executable by authenticated (its only policy role) and nothing else.
+select is((select count(*) from pg_proc p where p.pronamespace='pikas_private'::regnamespace and pg_temp.public_execute(p.oid::regprocedure)),0::bigint,'No pikas_private function is executable by PUBLIC');
+select is((select count(*) from pg_proc p where p.oid in ('pikas_private.guard_phase2_identity()'::regprocedure,'pikas_private.guard_student_enrollment_period()'::regprocedure,
+ 'pikas_private.guard_student_lifecycle()'::regprocedure,'pikas_private.guard_student_placement_period()'::regprocedure,'pikas_private.audit_phase2_change()'::regprocedure)
+ and exists(select 1 from aclexplode(p.proacl) a where a.grantee<>p.proowner)),0::bigint,'Phase 2 trigger functions: owner only');
+select ok(has_function_privilege('authenticated','pikas_private.can_read_school_person(uuid)','execute') and not has_function_privilege('anon','pikas_private.can_read_school_person(uuid)','execute')
+ and not has_function_privilege('service_role','pikas_private.can_read_school_person(uuid)','execute'),'can_read_school_person: authenticated only (persons RLS policy)');
 select * from finish();
 rollback;
