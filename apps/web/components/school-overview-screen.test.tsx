@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), access: vi.fn(), wallet: vi.fn(), pages: vi.fn(), shares: vi.fn() }));
-// UX 13: the School's own sharing rows are read from the table (RLS); the mock answers through `shares`.
-vi.mock("../lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ rpc: mocks.rpc, from: (table: string) => ({ select: () => ({ eq: () => mocks.shares(table) }) }) }) }));
+// UX 13: the School's own sharing rows come from school_sharing_rows (same authority as the cafeterías read, Demo POV
+// included); the mock answers it through `shares`. No direct table read exists: `from` is absent.
+vi.mock("../lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ rpc: (name: string, args: unknown) => name === "school_sharing_rows" ? mocks.shares(name, args) : mocks.rpc(name, args) }) }));
 vi.mock("../lib/auth/school-access", () => ({ resolveSchoolAccess: mocks.access }));
 vi.mock("../lib/wallet/access", () => ({ readSchoolWalletAccess: mocks.wallet }));
 vi.mock("./connected-school-shell", () => ({ ConnectedSchoolShell: ({ children }: { children: React.ReactNode }) => children }));
@@ -34,7 +35,7 @@ describe("School Overview server reads", () => {
     const props = await run(), json = JSON.stringify(props.overview);
     expect(mocks.rpc.mock.calls.map(c => [c[0], (c[1] as { p_section?: string; p_period?: string }).p_section ?? (c[1] as { p_period?: string }).p_period]))
       .toEqual(expect.arrayContaining([["school_admin_read", "summary"], ["school_admin_read", "cafeterias"], ["school_admin_read", "administrators"], ["school_wallet_report", "last_7_days"]]));
-    expect(json).toContain('"wallets_with_movement":1'); expect(json).toContain('"enabled_students":1'); expect(json).toContain('"sharing_state":"active"'); expect(mocks.shares).toHaveBeenCalledWith("school_cafeteria_shares");
+    expect(json).toContain('"wallets_with_movement":1'); expect(json).toContain('"enabled_students":1'); expect(json).toContain('"sharing_state":"active"'); expect(mocks.shares).toHaveBeenCalledWith("school_sharing_rows", { p_school_id: id });
     expect((props as { sharing?: unknown }).sharing).toEqual({ [cafeteria.id]: "active" });
     expect(json).not.toMatch(/424242|spent|purchase|Estudiante Privada|x@example/);
   });
@@ -59,6 +60,13 @@ describe("School Overview server reads", () => {
     const o = (await run()).overview as { cafeterias: { sharing_state: string }[] }; expect(o.cafeterias[0].sharing_state).toBe("inactive");
     mocks.shares.mockResolvedValue({ data: null, error: { code: "42501" } });
     expect(((await run()).overview as { cafeterias: { sharing_state: string }[] }).cafeterias[0].sharing_state).toBe("inactive");
+  });
+  it("Pilot Hardening: an active share is «Compartición activa» whatever the share-rows read says, so the label never contradicts «Cafetería compartida · COMPLETO»", async () => {
+    for (const rows of [{ data: [], error: null }, { data: null, error: { code: "42501" } }]) {
+      mocks.shares.mockResolvedValue(rows);
+      const o = (await run()).overview as { cafeterias: { sharing_state: string; sharing: boolean }[] };
+      expect(o.cafeterias[0]).toMatchObject({ sharing: true, sharing_state: "active" });
+    }
   });
   it("Estudiantes: the roster gets the school's own status counts; another school's counts are discarded", async () => {
     mocks.wallet.mockResolvedValue({ read: false });

@@ -11,13 +11,14 @@ export const walletSummary = (r: WalletReport): WalletSummary => ({ active_walle
 
 export type CafeteriaRow = { id: string; name: string; location: string; status: string; sharing_status: "active" | "revoked"; customers: { student_id: string }[] };
 // UX 13: the sharing read (school_admin_read) reports "revoked" for a relationship that was never
-// shared. The School's own school_cafeteria_shares rows (RLS: school:sharing:read) tell the truth:
+// shared. The School's own share rows (school_sharing_rows, same authority) tell revoked from never:
 // no row = never shared. "inactive" is the fallback when that read is unavailable: not active,
-// unknown whether it was ever shared.
+// unknown whether it was ever shared. Whether it is active comes only from school_admin_read, the
+// same read that marks "Cafetería compartida" complete, so the label never contradicts the step.
 export type SharingState = "active" | "revoked" | "never" | "inactive";
 export type SharingRows = Record<string, "active" | "revoked"> | null;
 export const sharingState = (row: { id: string; sharing_status: "active" | "revoked" }, shares: SharingRows): SharingState =>
-  shares ? (shares[row.id] ?? "never") : row.sharing_status === "active" ? "active" : "inactive";
+  row.sharing_status === "active" ? "active" : !shares ? "inactive" : shares[row.id] ? "revoked" : "never";
 export const sharingLabel: Record<SharingState, string> = { active: "Compartición activa", revoked: "Compartición revocada", never: "Sin compartir todavía", inactive: "Sin compartición activa" };
 export type ServiceRow = { id: string; name: string; location: string; active: boolean; sharing: boolean; sharing_state: SharingState; enabled_students: number; enabled_capped: boolean };
 export type OverviewInputs = {

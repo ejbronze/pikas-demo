@@ -55,9 +55,10 @@ export async function SchoolScreen({ section, searchParams }: { section: SchoolS
   const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };
   // Estudiantes: the school's own status totals for the roster chips (school:read summary).
   const studentCounts = section === "students" ? await client.rpc("school_admin_read", { p_school_id: schoolId, p_section: "summary", p_query: "", p_status: "", p_after: null, p_limit: 50 }).then(r => own(r)?.counts, () => undefined) : undefined;
-  // UX 13: the School's own sharing rows (RLS school:sharing:read). Unavailable → null (neutral wording, never "revocada").
+  // UX 13: the School's own sharing rows (school:sharing:read, the same authority as the cafeterías read, Demo POV included).
+  // Unavailable → null (neutral wording, never "revocada").
   const shares: SharingRows = section === "summary" || section === "cafeterias"
-    ? await client.from("school_cafeteria_shares").select("cafeteria_id,status").eq("school_id", schoolId)
+    ? await client.rpc("school_sharing_rows", { p_school_id: schoolId })
         .then(r => { const p = shareRowsSchema.safeParse(r.data); return !r.error && p.success ? Object.fromEntries(p.data.map(x => [x.cafeteria_id, x.status])) : null; }, () => null)
     : null;
   // School Overview: extra reads with the School's own authority; each one fails on its own.

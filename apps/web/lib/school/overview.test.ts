@@ -28,6 +28,8 @@ describe("UX 13 sharing states", () => {
   it("the School's own share rows distinguish never-shared from revoked; without them the read is only 'not active'", () => {
     expect(sharingState(row, {})).toBe("never"); expect(sharingState(row, { c1: "revoked" })).toBe("revoked"); expect(sharingState({ ...row, sharing_status: "active" }, { c1: "active" })).toBe("active");
     expect(sharingState(row, null)).toBe("inactive"); expect(sharingState({ ...row, sharing_status: "active" }, null)).toBe("active");
+    expect(sharingState({ ...row, sharing_status: "active" }, {})).toBe("active"); // authoritative active wins over an empty rows read
+    expect(sharingState(row, { c1: "active" })).toBe("revoked");                   // a row exists but the authoritative read says not active
     expect(serviceRows([{ id: "c1", name: "C", location: "S", status: "active", sharing_status: "revoked", customers: [] }], {})[0].sharing_state).toBe("never");
   });
 });
