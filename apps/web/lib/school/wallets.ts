@@ -12,7 +12,8 @@ export const walletOverview = (r: WalletReport): WalletOverview => ({ wallet_cou
   negative: r.current.negative_wallet_count, total_balance_minor: r.current.total_balance_minor, with_movement: r.movements.wallets_with_movement, from: r.from, to: r.to });
 
 // One row per student: identity from the roster/student read, wallet from the student_wallets row.
-export const walletRowsSchema = z.array(z.object({ student_id: z.guid(), status: z.enum(["active", "frozen"]), current_balance_minor: z.union([z.number().int(), z.string().regex(/^-?\d+$/)]) }));
+export const walletRowsSchema = z.array(z.object({ student_id: z.guid(), status: z.enum(["active", "frozen"]), current_balance_minor: z.union([z.number().int(), z.string().regex(/^-?\d+$/)]),
+  display_name: z.string().optional(), student_code: z.string().optional(), student_status: z.enum(["active", "suspended", "inactive"]).optional() }));
 export const studentRowsSchema = z.array(z.object({ id: z.guid(), display_name: z.string(), student_code: z.string(), status: z.enum(["active", "suspended", "inactive"]) }));
 export type WalletStudent = { id: string; name: string; code: string; status: "active" | "suspended" | "inactive"; wallet: { status: "active" | "frozen"; balance_minor: string } | null };
 export function joinWallets(students: z.infer<typeof studentRowsSchema>, wallets: z.infer<typeof walletRowsSchema>): WalletStudent[] {

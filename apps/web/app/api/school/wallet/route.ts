@@ -16,7 +16,9 @@ export async function POST(request: Request) {
     const access = await resolveSchoolAccess(client);
     if (access.status === 'unauthenticated') return json({error:'authentication_required'},401);
     if (access.status === 'unavailable') return json({error:'authority_unavailable'},503);
-    if (access.status !== 'authorized' || access.context.pov || !access.context.schools.some(s=>s.school_id===input.school_id)) return json({error:'wallet_authority_required'},403);
+    // A Demo POV may READ fictional PIKAS Cash (the database scopes it to the sandbox); it never mutates a wallet.
+    if (access.status !== 'authorized' || !access.context.schools.some(s=>s.school_id===input.school_id)) return json({error:'wallet_authority_required'},403);
+    if (access.context.pov && input.operation !== 'read') return json({error:'demo_mode_active'},403);
     const {data,error} = input.operation === 'replenish'
       ? await client.rpc('school_wallet_replenish',{p_school_id:input.school_id,p_student_id:input.student_id,p_amount_minor:input.amount_minor,p_request_key:input.request_key,p_reference:input.reference,p_note:input.note})
       : input.operation === 'adjust'

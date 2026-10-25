@@ -25,8 +25,11 @@ const tables: Record<string, unknown[]> = {}, calls: { table: string; ops: [stri
 const builder = (table: string) => { const call = { table, ops: [] as [string, unknown[]][] }; calls.push(call); const b: Record<string, unknown> = {};
   for (const m of ["select", "eq", "in", "or", "order", "limit"]) b[m] = (...a: unknown[]) => { call.ops.push([m, a]); return b; };
   b.then = (ok: (v: unknown) => unknown) => Promise.resolve({ data: typeof tables[table] === "function" ? (tables[table] as unknown as (c: typeof call) => unknown)(call) : tables[table] ?? [], error: null }).then(ok); return b; };
-const roster = (rosterScope = scope(), rows = [st(ana, "Ana", "EST-1"), st(beto, "Beto", "EST-2")]) => mocks.rpc.mockImplementation(async (rpc: string) => ({ error: null, data:
-  rpc === "school_student_roster" ? { scope: rosterScope, locations: [], rows, grades: [], next_cursor: null } : rpc === "school_wallet_report" ? report : null }));
+// school_wallet_rows: the page's students' wallets, or the attention list (frozen / below zero) with the student identity.
+const walletRows = (a: Record<string, unknown>) => a.p_attention ? [{ student_id: caro, status: "frozen", current_balance_minor: "-500", display_name: "Caro Ficticia", student_code: "EST-3", student_status: "active" }]
+  : [{ student_id: ana, status: "active", current_balance_minor: "15000", display_name: "Ana Ficticia", student_code: "EST-1", student_status: "active" }].filter(w => (a.p_student_ids as string[]).includes(w.student_id));
+const roster = (rosterScope = scope(), rows = [st(ana, "Ana", "EST-1"), st(beto, "Beto", "EST-2")]) => mocks.rpc.mockImplementation(async (rpc: string, a: Record<string, unknown>) => ({ error: null, data:
+  rpc === "school_student_roster" ? { scope: rosterScope, locations: [], rows, grades: [], next_cursor: null } : rpc === "school_wallet_report" ? report : rpc === "school_wallet_rows" ? walletRows(a) : null }));
 const run = async (sp: Record<string, string> = {}) => { renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ school, ...sp }) })); return mocks.cash.mock.calls.at(-1)?.[0] as Record<string, unknown> | undefined; };
 beforeEach(() => { vi.clearAllMocks(); calls.length = 0; mocks.wallet.mockResolvedValue({ read: true });
   mocks.access.mockResolvedValue({ status: "authorized", context: { person_id: school, pov: null, schools: [{ school_id: school, school_name: "Colegio Ficticio" }] } }); mocks.from.mockImplementation(builder);
@@ -43,18 +46,22 @@ describe("School PIKAS Cash server reads", () => {
     expect(props!.overview).toEqual({ wallet_count: 3, active: 2, frozen: 1, negative: 1, total_balance_minor: "24500", with_movement: 2, from: "2026-10-15", to: "2026-10-21" });
     expect(props!.attentionCount).toBe(1);
   });
-  it("every read is scoped to this school; wallet reads are limited to the page's students and to DOP", async () => {
+  it("every read is scoped to this school and goes through the School wallet authority (no direct table reads)", async () => {
     await run({ q: "Ana" });
     expect(mocks.rpc).toHaveBeenCalledWith("school_student_roster", expect.objectContaining({ p_school_id: school, p_query: "Ana", p_limit: 50 }));
     expect(mocks.rpc).toHaveBeenCalledWith("school_wallet_report", expect.objectContaining({ p_school_id: school, p_period: "last_7_days" }));
-    for (const c of calls) expect(c.ops).toContainEqual(["eq", ["school_id", school]]);
-    const page = calls.find(c => c.table === "student_wallets" && c.ops.some(([m]) => m === "in"))!;
-    expect(page.ops).toContainEqual(["in", ["student_id", [ana, beto]]]); expect(page.ops).toContainEqual(["eq", ["currency_code", "DOP"]]);
+    expect(mocks.rpc).toHaveBeenCalledWith("school_wallet_rows", { p_school_id: school, p_student_ids: [ana, beto], p_attention: false });
+    expect(mocks.rpc).toHaveBeenCalledWith("school_wallet_rows", { p_school_id: school, p_student_ids: null, p_attention: true });
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+  it("Demo POV (sandbox School Admin) sees the same consistent rows as the summary — never «Sin monedero» beside counted wallets", async () => {
+    mocks.access.mockResolvedValue({ status: "authorized", context: { person_id: school, pov: { operator_person_id: other }, schools: [{ school_id: school, school_name: "Colegio Horizonte" }] } });
+    const props = await run();
+    expect((props!.students as { wallet: unknown }[])[0].wallet).toEqual({ status: "active", balance_minor: "15000" }); expect(props!.attentionCount).toBe(1);
   });
   it("attention is factual: frozen or below zero only, capped, never ordered by balance", async () => {
     const props = await run({ vista: "atencion" });
-    const att = calls.find(c => c.ops.some(([m]) => m === "or"))!;
-    expect(att.ops).toContainEqual(["or", ["status.eq.frozen,current_balance_minor.lt.0"]]); expect(att.ops).toContainEqual(["order", ["student_id"]]); expect(att.ops).toContainEqual(["limit", [50]]);
+    expect(mocks.rpc).toHaveBeenCalledWith("school_wallet_rows", { p_school_id: school, p_student_ids: null, p_attention: true }); // the database caps it at 50, ordered by student
     expect(mocks.rpc.mock.calls.map(c => c[0])).not.toContain("school_student_roster");
     expect(props!.students).toEqual([{ id: caro, name: "Caro Ficticia", code: "EST-3", status: "active", wallet: { status: "frozen", balance_minor: "-500" } }]);
   });

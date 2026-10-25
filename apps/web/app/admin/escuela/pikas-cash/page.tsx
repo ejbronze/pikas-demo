@@ -29,15 +29,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
 
   const query = z.string().max(80).catch('').parse(params.q ?? ''), after = z.guid().nullable().catch(null).parse(params.after ?? null), view = params.vista === 'atencion' ? 'atencion' as const : 'todos' as const;
   const own = (r: { data: unknown; error: unknown }) => { const p = readSchema.safeParse(r.data); return !r.error && p.success && p.data.scope.school_id === schoolId && p.data.scope.actor_id === access.context.person_id ? p.data : null; };
-  const walletsFor = async (ids: string[]) => ids.length === 0 ? [] : await client.from('student_wallets').select('student_id,status,current_balance_minor').eq('school_id', schoolId).eq('currency_code', 'DOP').in('student_id', ids)
+  // Rows and attention come from school_wallet_rows under the same authority as the summary (require_school_admin), so
+  // a real School Admin and the sandbox School Admin POV see the same consistent state.
+  const walletRows = (args: { p_student_ids: string[] | null; p_attention: boolean }) => client.rpc('school_wallet_rows', { p_school_id: schoolId, ...args })
     .then(r => { const p = walletRowsSchema.safeParse(r.data); return !r.error && p.success ? p.data : null; }, () => null);
+  const walletsFor = async (ids: string[]) => ids.length === 0 ? [] : await walletRows({ p_student_ids: ids, p_attention: false });
 
   const [report, roster, attentionWallets] = await Promise.all([
     client.rpc('school_wallet_report', { p_school_id: schoolId, p_period: 'last_7_days', p_from: null, p_to: null }).then(r => { const p = walletReportSchema.safeParse(r.data); return !r.error && p.success && p.data.school_id === schoolId ? p.data : null; }, () => null),
     view === 'todos' ? client.rpc('school_student_roster', { p_school_id: schoolId, p_query: query, p_status: '', p_after: after, p_limit: 50, p_location_id: null, p_grade: null }).then(own, () => null) : Promise.resolve(null),
     // Frozen or below-zero wallets (the two wallet states the product records), at most 50.
-    client.from('student_wallets').select('student_id,status,current_balance_minor').eq('school_id', schoolId).eq('currency_code', 'DOP').or('status.eq.frozen,current_balance_minor.lt.0').order('student_id').limit(50)
-      .then(r => { const p = walletRowsSchema.safeParse(r.data); return !r.error && p.success ? p.data : null; }, () => null),
+    walletRows({ p_student_ids: null, p_attention: true }),
   ]);
   let students: WalletStudent[] | null = null, nextCursor: string | null = null;
   if (view === 'todos' && roster) {
@@ -48,10 +50,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   }
   let attention: WalletStudent[] | null = null;
   if (attentionWallets) {
-    const ids = attentionWallets.map(w => w.student_id);
-    const names = ids.length === 0 ? [] : await client.from('students').select('id,display_name,student_code,status').eq('school_id', schoolId).in('id', ids)
-      .then(r => { const p = studentRowsSchema.safeParse(r.data); return !r.error && p.success ? p.data : null; }, () => null);
-    attention = names ? joinWallets(names, attentionWallets).sort((a, b) => a.name.localeCompare(b.name, 'es')) : null;
+    const names = studentRowsSchema.safeParse(attentionWallets.map(w => ({ id: w.student_id, display_name: w.display_name, student_code: w.student_code, status: w.student_status })));
+    attention = names.success ? joinWallets(names.data, attentionWallets).sort((a, b) => a.name.localeCompare(b.name, 'es')) : null;
   }
   return shell(<SchoolPikasCash schoolId={schoolId} schoolName={access.context.schools.find(s => s.school_id === schoolId)!.school_name}
     overview={report ? walletOverview(report) : null} students={view === 'todos' ? students : attention} view={view} attentionCount={attention?.length ?? null}
