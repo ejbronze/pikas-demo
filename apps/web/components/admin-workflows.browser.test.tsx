@@ -116,7 +116,7 @@ describe("Estudiantes workspace", () => {
       await dlg().getByLabel("Código estudiantil *").fill("H-1"); await dlg().getByRole("button", { name: "Continuar" }).click();
       expect(await dlg().getByLabel("Fecha efectiva").inputValue(), at).toBe(expected);
     }
-  });
+  }, 30000); // three clock scenarios, each with a reload
   it("create draft: kept only when chosen, restored after reload for the same operator and school, never sent, discardable", async () => {
     await mountStudents(); await page.getByRole("button", { name: "Crear estudiante" }).first().click(); await dlg().getByLabel("Nombre *").fill("Borrador");
     await page.keyboard.press("Escape"); await dlg().getByRole("button", { name: "Cerrar y conservar borrador" }).click(); await dlg().waitFor({ state: "detached" });
