@@ -182,6 +182,9 @@ describe("PIKAS Cash student page", () => {
     expect(await rows.nth(0).getByText("Sándwich ficticio").isVisible()).toBe(false);
     await rows.nth(0).getByText("Ver detalle").click(); await rows.nth(0).getByText("1 × Sándwich ficticio").waitFor();
     await rows.nth(1).getByText("Ver detalle").click(); expect(await rows.nth(1).innerText()).toContain("Pago de octubre");
+    // Pilot Hardening: the detail names movements by receipt, cafetería and reference, never by internal UUID.
+    for (const i of [0, 1]) expect(await rows.nth(i).innerText()).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    expect(await rows.nth(0).innerText()).toContain("#41");
     expect(await calls()).toEqual([{ url: "/api/school/wallet", key: null, body: { operation: "read", school_id: school, student_id: U(11), before: null } }]);
   });
 });

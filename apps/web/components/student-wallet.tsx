@@ -65,7 +65,6 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
     ...(m.reference?[['Referencia',m.reference]] as [string,React.ReactNode][]:[]),...(m.note?[['Nota',m.note]] as [string,React.ReactNode][]:[]),
     ['Registrado por',movementActorLabel(m)],['Fecha',when(m.occurred_at)],['Saldo después',<MoneyValue key="a" minor={m.balance_after_minor} intent="balance"/>],
   ];
-  const ids=(m:History['movements'][number])=>[m.purchase_id&&`Compra ${m.purchase_id}`,m.replenishment_id&&`Recarga ${m.replenishment_id}`,m.reversed_replenishment_id&&`Revierte la recarga ${m.reversed_replenishment_id}`].filter(Boolean) as string[];
   return <div className="space-y-5">
     <AppPageHeader back={back} title={history?.student_name??'PIKAS Cash'} description={history?'PIKAS Cash del estudiante':undefined}
       action={<button type="button" className="btn-secondary" disabled={loading} onClick={()=>void read(before)}>{loading?'Actualizando…':'Actualizar'}</button>}/>
@@ -90,8 +89,7 @@ export function StudentWallet({ schoolId, studentId, actorId, canReplenish, canR
           {m.type==='replenishment'&&m.reversal_id&&<p className="mt-1"><span className="chip bg-amber-100 text-amber-900">Revertida · {reasonLabel[m.reversal_reason??'']??m.reversal_reason}</span></p>}</div>
           <div className="text-right"><p className="text-lg font-black"><MoneyValue minor={m.amount_minor} intent="movement"/></p><p className="text-xs text-slate-600">Saldo después: <MoneyValue minor={m.balance_after_minor} intent="balance"/></p></div></div>
         <details className="group"><summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-teal-800">Ver detalle</summary><div className="mt-2 space-y-3"><TaskSummary rows={details(m)}/>
-          {m.items.length>0&&<div><p className="text-sm font-bold">Artículos</p><ul className="text-sm">{m.items.map((i,n)=><li key={n} className="flex justify-between gap-3"><span>{i.quantity} × {i.name}</span><MoneyValue minor={i.line_total_minor} intent="amount"/></li>)}</ul></div>}
-          {ids(m).map(text=><p key={text} className="break-all text-xs text-slate-500">{text}</p>)}</div></details>
+          {m.items.length>0&&<div><p className="text-sm font-bold">Artículos</p><ul className="text-sm">{m.items.map((i,n)=><li key={n} className="flex justify-between gap-3"><span>{i.quantity} × {i.name}</span><MoneyValue minor={i.line_total_minor} intent="amount"/></li>)}</ul></div>}</div></details>
         {m.type==='replenishment'&&!m.reversal_id&&canReverse&&m.replenishment_id&&!feeEraSources.has(m.source??'')&&<button type="button" className="btn-secondary" onClick={()=>{setMessage('');setReversal({replenishmentId:m.replenishment_id!,amountMinor:m.amount_minor,reference:m.reference,note:m.note,occurredAt:m.occurred_at});}}>{pendingReversal===m.replenishment_id?'Recuperar reversión pendiente':'Revertir recarga'}</button>}</li>)}</ul>}
       <div className="flex flex-wrap gap-3">{before&&<button className="btn-secondary" disabled={loading} onClick={()=>void read()}>Más recientes</button>}{history.next_before&&<button className="btn-secondary" disabled={loading} onClick={()=>void read(history.next_before)}>Movimientos anteriores</button>}</div>
     </section>
