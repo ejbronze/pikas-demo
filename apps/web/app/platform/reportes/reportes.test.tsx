@@ -90,7 +90,7 @@ describe("Reportes / Red y adopción", () => {
     const h = await page(Red), t = text(h);
     expect(mocks.read).toHaveBeenCalledWith(expect.anything(), ops, "platform_network_report", { p_period: "last_30_days", p_from: null, p_to: null, p_include_demo: false }, expect.anything());
     expect(t).toMatch(/Clientes activos 3 /); expect(t).toMatch(/Cafeterías en operación 3 /); expect(t).toContain("Ventas en el período 12");
-    expect(t).toMatch(/Lista para operar 2 de 3/); expect(t).toMatch(/Servicio a estudiantes listo 2 de 3/); expect(t).toMatch(/Con ventas en el período 1 de 3/);
+    expect(t).toMatch(/Lista para operar 2 de 3/); expect(h).toMatch(/width:66\.6\d*%/); expect(h).toMatch(/width:33\.3\d*%/); // bars scale to the 3 cafeterías, not to the largest bar expect(t).toMatch(/Servicio a estudiantes listo 2 de 3/); expect(t).toMatch(/Con ventas en el período 1 de 3/);
     expect(t).toContain("no se suman en una puntuación"); expect(t).toContain("Una primera venta no la vuelve «lista»"); expect(t).toContain("Ninguna caja tiene personal asignado");
     expect(t).toContain("Zona horaria Santo Domingo"); expect(t).toContain("25/09/2026 – 24/10/2026"); expect(t).not.toContain("Horizonte"); expect(t).not.toMatch(/RD\$/);
     expect(t).toMatch(/2 cafeterías en operación no registraron ventas en el período/); expect(h).toContain('href="/platform/reportes/red?period=last_30_days&amp;demo=1"');

@@ -107,7 +107,7 @@ export function NetworkReportBody({ report, demo }: { report: NetworkReport; dem
     <section aria-labelledby="rpt-adoption" className="sch-panel space-y-3">
       <h2 id="rpt-adoption" className="sch-h2">Cafeterías en operación: preparación y uso</h2>
       <p className="rpt-help">De {n(t.cafeterias, "cafetería en operación", "cafeterías en operación")}. Cada barra es una condición distinta; no se suman en una puntuación.</p>
-      <BarList label="Cafeterías por condición" items={[
+      <BarList label="Cafeterías por condición" max={t.cafeterias} items={[
         { key: "ready", label: "Lista para operar", count: t.ready, value: pct(t.ready) },
         { key: "students", label: "Servicio a estudiantes listo", count: t.studentService, value: pct(t.studentService) },
         { key: "sales", label: "Con ventas en el período", count: t.withSales, value: pct(t.withSales) },

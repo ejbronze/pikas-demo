@@ -50,9 +50,9 @@ export function ReportTable<T>({ label, rows, rowKey, columns, foot }: { label: 
 
 // Horizontal bars for a comparison between groups. The value is always written out (never color
 // alone): a count with its unit, or a preformatted value (an amount). A bar links to the report
-// filtered to that group only when that filter exists.
-export function BarList({ label, items, unit }: { label: string; items: { key: string; label: string; count: number; value?: string; href?: string }[]; unit?: [string, string] }) {
-  const max = Math.max(...items.map(i => i.count), 1);
+// filtered to that group only when that filter exists. `max` scales «k of N» bars to N (default: the largest item).
+export function BarList({ label, items, unit, max: scale }: { label: string; items: { key: string; label: string; count: number; value?: string; href?: string }[]; unit?: [string, string]; max?: number }) {
+  const max = Math.max(scale ?? 0, ...items.map(i => i.count), 1);
   return <ul className="rpt-bars" aria-label={label}>{items.map(i => {
     const text = i.value ?? `${i.count.toLocaleString("es-DO")} ${unit ? (i.count === 1 ? unit[0] : unit[1]) : ""}`.trim(), body = <>
       <span className="rpt-bar-label">{i.label}</span>
