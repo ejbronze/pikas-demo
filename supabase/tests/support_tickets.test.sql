@@ -144,5 +144,21 @@ select is((select count(*)::int from jsonb_array_elements(platform_support_list(
 reset role;
 select is(pg_temp.q($$select count(*)::text from pikas_private.support_tickets t join accounts a on a.id=t.account_id where (a.tenant_kind='sandbox') <> t.is_demo$$),'0','Demo flag equals «sandbox tenant» for every ticket');
 select ok((select bool_and(prosrc ~ 'require_no_current_demo') from pg_proc where proname in ('support_create_ticket','support_reporter_reply','platform_support_act')),'Every support mutation carries the shared Demo guard');
+
+-- ── Customer lifecycle (202611240008): a suspended or closed customer's staff neither report nor answer ──
+update accounts set status='suspended' where id='00000000-0000-0000-0000-000000000001';
+select pg_temp.as_user('00000000-0000-0000-0000-000000002002');
+select is(jsonb_array_length(support_reporter_context()->'scopes'),0,'A suspended customer gives its staff no reporting scope');
+select is(jsonb_array_length(support_reporter_context()->'tickets'),0,'…and «Mis reportes» shows nothing, like every tenant surface');
+select is(pg_temp.attempt($$select support_create_ticket(gen_random_uuid(),'00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011',null,'access','No puedo operar','Nos aparece suspendido el acceso.',null)$$),
+ '42501:support_scope_required','A suspended customer''s staff cannot report (they use the contact channel)');
+select is(pg_temp.attempt(format($$select support_reporter_reply(gen_random_uuid(),%L,'Seguimos sin acceso')$$,current_setting('t.tid'))),'42501:support_scope_required','…nor answer an existing ticket');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000ee01');
+select is(platform_support_act(gen_random_uuid(),current_setting('t.tid')::uuid,'reply','Te escribimos por correo.')->>'status','in_review','Platform still reads and answers the suspended customer''s ticket');
+reset role;
+update accounts set status='closed' where id='00000000-0000-0000-0000-000000000001';
+select pg_temp.as_user('00000000-0000-0000-0000-000000002008');
+select is(jsonb_array_length(support_reporter_context()->'scopes'),0,'A closed customer gives its staff no reporting scope');
+reset role;
 select * from finish();
 rollback;
