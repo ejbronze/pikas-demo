@@ -40,7 +40,8 @@ export default async function SupportQueuePage({ searchParams }: { searchParams:
 }
 
 function TicketRow({ row }: { row: PlatformTicketRow }) {
-  const where = [row.register_name, row.cafeteria_name, row.school_name].filter(Boolean).join(" · ");
+  // A one-school customer often shares its school's name; say it once.
+  const where = [row.register_name, row.cafeteria_name, row.school_name === row.account_name ? null : row.school_name].filter(Boolean).join(" · ");
   return <li className="card p-4"><Link href={`/platform/soporte/${row.id}`} className="flex flex-wrap items-start justify-between gap-3">
     <span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-500">{row.is_demo && <span className="mr-1 rounded bg-amber-100 px-1.5 text-amber-950">Demo</span>}{row.reference} · {categoryLabel[row.category]}</span>
       <span className="block break-words font-bold text-indigo-900 underline-offset-2 hover:underline">{row.subject}</span>
