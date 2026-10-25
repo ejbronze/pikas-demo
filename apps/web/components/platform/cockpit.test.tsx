@@ -18,8 +18,11 @@ const cockpit = (d: Readiness, activity: { id: string; label: string; customer: 
 describe("Platform cockpit", () => {
   it("summarises real customers by launch status, keeps Demo apart and leads with attention", () => {
     const html = cockpit(data([cepointLike, fx(2), fx(3, "configured", { name: "Academia Operando", sales: sold })]), [{ id: "1", label: "Perfil del cliente actualizado", customer: "Academia Operando", when: "20 oct 2026, 10:00" }]);
-    expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display">3</); expect(html).toMatch(/En configuración<\/dt><dd class="num-display">1</);
-    expect(html).toMatch(/Listos para operar<\/dt><dd class="num-display">1</); expect(html).toMatch(/Operando<\/dt><dd class="num-display">1</);
+    expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display"><a [^>]*>3</); expect(html).toMatch(/En configuración<\/dt><dd class="num-display"><a [^>]*>1</);
+    expect(html).toMatch(/Listos para operar<\/dt><dd class="num-display"><a [^>]*>1</); expect(html).toMatch(/Operando<\/dt><dd class="num-display"><a [^>]*>1</);
+    // Each figure traces to Reportes / Clientes filtered to exactly those customers; attention opens the same report.
+    expect(html).toContain('href="/platform/reportes/clientes?status=active"'); expect(html).toContain('href="/platform/reportes/clientes?readiness=operating"');
+    expect(html).toContain('href="/platform/reportes/clientes?attention=1"');
     expect(html).toContain("Requiere atención · 1"); expect(html).toContain("El enlace de activación venció sin usarse");
     expect(html).toContain('<span class="net-more">+3 pendientes</span>'); expect(html).not.toContain("También pendiente");
     expect(html).toContain('href="/platform/clientes/7e00d000-0000-4000-8000-000000000001#puesta-en-marcha"');
@@ -34,13 +37,13 @@ describe("Platform cockpit", () => {
   });
   it("zero real customers (sandbox only): empty invitation, sandbox still apart, no zero-heavy lists", () => {
     const html = cockpit(data([]));
-    expect(html).toContain("Todavía no hay clientes en la red."); expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display">0</);
+    expect(html).toContain("Todavía no hay clientes en la red."); expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display"><a [^>]*>0</);
     expect(html).not.toContain("Requiere atención"); expect(html).toContain("Colegio Horizonte"); expect(html).toContain('href="/platform/clientes/nuevo"');
     expect(html).toMatch(/<img[^>]*alt=""[^>]*aria-hidden="true"[^>]*data-mascot="EMP-02"/); expect(cockpit(data([fx(2)]))).not.toContain("data-mascot"); // mascot Phase 1: only the empty network
   });
   it("suspended customers are not counted and never listed as needing setup", () => {
     const html = cockpit(data([fx(4, "empty", { status: "suspended" })]));
-    expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display">0</); expect(html).toContain("1 cliente suspendido o cerrado no se cuenta");
+    expect(html).toMatch(/Clientes activos<\/dt><dd class="num-display"><a [^>]*>0</); expect(html).toContain("1 cliente suspendido o cerrado no se cuenta");
     expect(html).toContain("Todo en orden"); expect(html).toContain(">Suspendido<");
   });
   it("activity is secondary and honest about missing audit access", () => {

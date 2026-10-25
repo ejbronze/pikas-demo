@@ -3,6 +3,7 @@ import Link from "next/link";
 import { attentionItems, completeCount, customerHref, launchLabel, launchStatus, networkSummary, nextStep, readinessSteps, shortDate,
   type CustomerReadiness, type LaunchStatus, type Readiness, type Step } from "../../lib/platform/readiness";
 import { statusLabel } from "../../lib/platform/customer-contracts";
+import { TraceLink } from "../report-frame";
 
 // PIKAS UX 2. Presentation only (Inicio previews the 3 most recent activity events): every state comes from lib/platform/readiness over the
 // platform_customer_readiness facts. Status is always written as text, never color alone.
@@ -33,10 +34,11 @@ export function PlatformCockpit({ data, activity, recent = null, canAdd, demoHre
 
     <section aria-label="Resumen de la red" className="net-band">
       <dl className="net-figures">
-        <div><dt>Clientes activos</dt><dd className="num-display">{summary.active}</dd></div>
-        <div><dt>En configuración</dt><dd className="num-display">{summary.configuring}</dd></div>
-        <div><dt>Listos para operar</dt><dd className="num-display">{summary.ready}</dd></div>
-        <div><dt>Operando</dt><dd className="num-display">{summary.operating}</dd></div>
+        {/* Each figure opens Reportes / Clientes filtered to exactly the customers it counts (same read, same derivation). */}
+        <div><dt>Clientes activos</dt><dd className="num-display"><TraceLink href={`${reports}?status=active`} label={`${summary.active} clientes activos: ver el reporte de clientes`}>{summary.active}</TraceLink></dd></div>
+        <div><dt>En configuración</dt><dd className="num-display"><TraceLink href={`${reports}?readiness=configuring`} label={`${summary.configuring} en configuración: ver esos clientes`}>{summary.configuring}</TraceLink></dd></div>
+        <div><dt>Listos para operar</dt><dd className="num-display"><TraceLink href={`${reports}?readiness=ready`} label={`${summary.ready} listos para operar: ver esos clientes`}>{summary.ready}</TraceLink></dd></div>
+        <div><dt>Operando</dt><dd className="num-display"><TraceLink href={`${reports}?readiness=operating`} label={`${summary.operating} operando: ver esos clientes`}>{summary.operating}</TraceLink></dd></div>
       </dl>
       <p className="net-band-note">Operando: con al menos una venta real. {summary.inactive > 0 ? `${summary.inactive} ${summary.inactive === 1 ? "cliente suspendido o cerrado no se cuenta" : "clientes suspendidos o cerrados no se cuentan"}. ` : ""}Las demostraciones no se cuentan.</p>
     </section>
@@ -44,7 +46,8 @@ export function PlatformCockpit({ data, activity, recent = null, canAdd, demoHre
     {data.customers.length === 0 ? <div className="net-empty"><PikasMascot id="EMP-02" size={120} className="sch-mascot" />
         <div><p className="font-bold">Todavía no hay clientes en la red.</p><p className="text-sm text-slate-600">Cuando agregues el primer colegio, aquí verás su puesta en marcha y lo que necesita.</p></div></div>
       : <section aria-labelledby="net-attention" className={attention.length ? "net-attention" : "net-panel"}>
-        <h2 id="net-attention" className="net-h2">{attention.length ? `Requiere atención · ${attention.length}` : "Todo en orden"}</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="net-attention" className="net-h2">{attention.length ? `Requiere atención · ${attention.length}` : "Todo en orden"}</h2>
+          {attention.length > 0 && <Link className="net-action" href={`${reports}?attention=1`}>Ver en Reportes</Link>}</div>
         {attention.length === 0 ? <p className="net-calm"><span aria-hidden>✓</span> Ningún cliente activo tiene pasos de puesta en marcha pendientes.</p>
           : <ul className="net-list">{attention.map(item => <li key={item.customer.account_id} data-severity={item.severity}>
             <div className="min-w-0 flex-1"><p className="font-bold break-words">{item.customer.name}</p>
@@ -86,6 +89,7 @@ export function PlatformCockpit({ data, activity, recent = null, canAdd, demoHre
     </div>
   </div>;
 }
+const reports = "/platform/reportes/clientes";
 const order: Record<LaunchStatus, number> = { configuring: 0, ready: 1, operating: 2, inactive: 3 };
 
 // Puesta en marcha on the customer page. Links to the existing controls; never repeats their forms.

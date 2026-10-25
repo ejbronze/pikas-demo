@@ -24,7 +24,7 @@ beforeEach(() => { vi.clearAllMocks(); mocks.require.mockResolvedValue(session(n
 describe("6–11. Platform shell modes", () => {
   it("6. normal mode keeps the capability-driven navigation and no Demo chrome", async () => {
     const html = renderToStaticMarkup(await PlatformLayout({ children: "x" }));
-    expect(navHrefs(html)).toEqual(["/platform", "/platform/clientes", "/platform/equipo", "/platform/finanzas", "/platform/identidades", "/platform/demostracion"]);
+    expect(navHrefs(html)).toEqual(["/platform", "/platform/clientes", "/platform/reportes", "/platform/equipo", "/platform/finanzas", "/platform/identidades", "/platform/demostracion"]);
     expect(html).not.toContain("Demo activo"); expect(html).not.toContain("Entorno Demo"); expect(html).toContain("Plataforma PIKAS");
   });
   it("7–11. Demo mode: real destinations leave the navigation; the indicator, persona and global exit appear", async () => {
@@ -32,7 +32,7 @@ describe("6–11. Platform shell modes", () => {
     const html = renderToStaticMarkup(await PlatformLayout({ children: "x" }));
     expect(mocks.require).toHaveBeenCalledWith({ demo: "allow" });
     expect(navHrefs(html)).toEqual(["/platform/demostracion"]);
-    for (const absent of ["/platform/clientes", "/platform/equipo", "/platform/identidades", "/platform/finanzas", 'href="/platform"']) expect(html).not.toContain(absent);
+    for (const absent of ["/platform/clientes", "/platform/reportes", "/platform/equipo", "/platform/identidades", "/platform/finanzas", 'href="/platform"']) expect(html).not.toContain(absent);
     for (const present of ["Demo activo", "Demo Lab", "Administrador de cafetería", "· Administrador de cafetería · Marta Demo · Colegio Horizonte", "Colegio Horizonte", "Salir del Demo", 'aria-label="Entorno Demo"', "Operador de PIKAS · Demo"]) expect(html).toContain(present);
     expect(html).toContain("Cerrar sesión");
   });

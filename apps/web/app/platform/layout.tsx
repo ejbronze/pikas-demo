@@ -22,6 +22,8 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   const nav: ShellNavItem[] = [
     { href: "/platform", label: "Inicio", icon: "home", match: "/platform", exact: true },
     ...(capabilities.includes("platform:tenant:lifecycle:read") ? [{ href: "/platform/clientes", label: "Clientes", icon: "clients", match: "/platform/clientes" } as const] : []),
+    // Reportes: network reports (platform:customer:operations:read) and/or the finance summary (platform:finance:read).
+    ...(capabilities.includes("platform:customer:operations:read") || capabilities.includes("platform:finance:read") ? [{ href: "/platform/reportes", label: "Reportes", icon: "chart", match: "/platform/reportes" } as const] : []),
     ...(capabilities.includes("platform:team:manage") ? [{ href: "/platform/equipo", label: "Equipo", icon: "team", match: "/platform/equipo" } as const] : []),
     ...(capabilities.includes("platform:finance:read") ? [{ href: "/platform/finanzas", label: "Finanzas", icon: "wallet", match: "/platform/finanzas" } as const] : []),
     ...(capabilities.includes("platform:identity:support") ? [{ href: "/platform/identidades", label: "Identidades", icon: "shield", match: "/platform/identidades" } as const] : []),
