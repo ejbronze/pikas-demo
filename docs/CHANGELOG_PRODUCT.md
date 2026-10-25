@@ -1,5 +1,12 @@
 # Registro de cambios del producto
 
+## Reportes de la Plataforma (Reporting Consolidation, local)
+
+- **Plataforma · Reportes** (con lectura de operaciones de clientes o lectura financiera): **Clientes** (ciclo de vida, presencia —colegios, sedes, cafeterías y cajas por estado— y puesta en marcha), **Red y adopción** (cafeterías en operación: lista para operar, servicio a estudiantes y ventas en el período, cada una con su definición y sin puntuación) y **Finanzas (resumen)** solo con lectura financiera (activación, recargas, obligaciones y liquidaciones; las acciones siguen en Finanzas).
+- **Demo excluida por defecto**; «Incluir Demo» la muestra marcada y lo dice en la página y en el CSV. Las cifras de Inicio enlazan al reporte filtrado.
+- **Fechas de Santo Domingo**: «Hoy» y los períodos usan la fecha de Santo Domingo también después de las 20:00; los nombres de los CSV de todos los roles ya no usan la fecha UTC. Corregido el nombre del CSV de Métodos de pago. Reportes de la cafetería enlaza a Liquidaciones y conserva su entrada de navegación.
+- Migración `202611230001_platform_network_reports.sql` (dos lecturas, sin tablas ni capacidades nuevas). Retoma el trabajo pausado de UX 10 sin fusionarlo. [Detalle](REPORTING_CONSOLIDATION.md).
+
 ## Liquidaciones semanales con cada cafetería (Settlement & Financial Operations, local)
 
 - **Liquidaciones**: cada semana (lunes a domingo, hora de Santo Domingo; vence el martes siguiente) PIKAS compara lo que la cafetería debe (efectivo recibido para PIKAS Cash y reembolsos) con lo que PIKAS le debe (ventas pagadas con PIKAS Cash) y fija una liquidación con el bruto en ambos sentidos, el neto y quién paga. **La liquidación registra y concilia obligaciones; no mueve dinero por sí sola.** No se recalcula ni se cobra ningún cargo adicional.
