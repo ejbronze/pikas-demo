@@ -109,6 +109,14 @@ describe("Estudiantes workspace", () => {
     expect(await storage("pikas:school:request")).toEqual([]); expect(await storage("pikas:student-draft")).toEqual([]);
     await dlg().getByRole("button", { name: "Crear otro estudiante" }).click(); expect(await dlg().getByLabel("Nombre *").inputValue()).toBe("");
   });
+  it("enrollment date defaults to today in Santo Domingo, also at 21:00 AST when UTC is already tomorrow, and after a reload", async () => {
+    for (const [at, expected] of [["2026-10-24T15:00:00Z", "2026-10-24"], ["2026-10-25T01:00:00Z", "2026-10-24"], ["2026-10-25T04:30:00Z", "2026-10-25"]] as const) {
+      await page.evaluate(() => { sessionStorage.clear(); localStorage.clear(); }); await page.clock.setFixedTime(new Date(at)); await page.reload(); await mountStudents();
+      await page.getByRole("button", { name: "Crear estudiante" }).first().click(); await dlg().getByLabel("Nombre *").fill("Hora"); await dlg().getByLabel("Apellido *").fill("Límite");
+      await dlg().getByLabel("Código estudiantil *").fill("H-1"); await dlg().getByRole("button", { name: "Continuar" }).click();
+      expect(await dlg().getByLabel("Fecha efectiva").inputValue(), at).toBe(expected);
+    }
+  });
   it("create draft: kept only when chosen, restored after reload for the same operator and school, never sent, discardable", async () => {
     await mountStudents(); await page.getByRole("button", { name: "Crear estudiante" }).first().click(); await dlg().getByLabel("Nombre *").fill("Borrador");
     await page.keyboard.press("Escape"); await dlg().getByRole("button", { name: "Cerrar y conservar borrador" }).click(); await dlg().waitFor({ state: "detached" });

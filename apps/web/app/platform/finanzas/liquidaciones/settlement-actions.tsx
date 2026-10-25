@@ -6,6 +6,7 @@ import { money } from '../../../../lib/cafeteria/operations';
 import { parseAmount, platformDirection, reviewReasonLabel, reviewReasons, settledByOthers, settlementMessage, settlementResultSchema, weekLabel,
   type SettlementDirection, type SettlementStatus } from '../../../../lib/platform/settlements';
 import { TaskActions, TaskCancelButton, TaskOutcome, TaskSummary, TaskWindow } from '../../../../components/task-window';
+import { businessDate } from '../../../../lib/business-date';
 
 type Kind = 'run' | 'finalize' | 'payment' | 'review_open' | 'review_resolve';
 // The exact request (key + body) is kept until PIKAS answers, so a retry can only replay it.
@@ -58,7 +59,7 @@ function SettlementAction({ actor, target, kinds, body = {} }: { actor: string; 
 }
 
 type Phase = 'details' | 'confirm' | 'pending' | 'success' | 'rejected' | 'uncertain';
-const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santo_Domingo' });
+const today = () => businessDate();
 
 function SettlementTask({ kind, actor, target, base, recovered, onClose, onDone }: {
   kind: Kind; actor: string; target: Target; base: Record<string, string>; recovered: Pending | null; onClose: () => void; onDone: (message: string, next?: string) => void;

@@ -12,9 +12,11 @@ import { TaskActions, TaskSummary, TaskWindow } from "./task-window";
 import { useSessionDraft } from "../lib/session-draft";
 import { loadCommand, recoveryKey } from "../lib/school/command";
 import type { SchoolRead, SchoolStudent } from "../lib/school/contracts";
+import { businessDate } from "../lib/business-date";
 
 export const statusLabel = (status: string) => ({ active: "Activo", suspended: "Suspendido", inactive: "Inactivo" })[status] ?? "No disponible";
-const today = () => new Date().toISOString().slice(0, 10);
+// Enrollment defaults to today in the school's calendar (America/Santo_Domingo), never the UTC date.
+const today = () => businessDate();
 type Names = { first_name: string; last_name: string; student_code: string };
 type Place = { location_id: string; starts_on: string; grade: string; class: string; homeroom: string };
 type Task = { kind: "create"; n: number } | { kind: "profile" | "info" | "placement" | "withdraw" | "status"; id: string };
